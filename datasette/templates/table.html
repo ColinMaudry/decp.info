@@ -135,6 +135,7 @@
 {% if query.sql and allow_execute_sql %}
     - <a class="not-underlined" title="{{ query.sql }}" href="{{ urls.database(database) }}?{{ {'sql': query.sql}|urlencode|safe }}{% if query.params %}&amp;{{ query.params|urlencode|safe }}{% endif %}">&#x270e; <span class="underlined">Voir et éditer le SQL</span></a>
 {% endif %}
+{% if table == "decp-titulaires" %}Veuillez patienter pendant le chargement de la carte ci-dessous...{% endif %}
 </p>
 
 <!-- {% if suggested_facets %}
