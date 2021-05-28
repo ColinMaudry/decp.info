@@ -1,0 +1,12 @@
+{
+  "sql_time_limit_ms": 10000,
+  "max_returned_rows": 50000,
+  "num_sql_threads": 6,
+  "default_cache_ttl": 3600,
+  "max_csv_mb": 0,
+  "force_https_urls": 1,
+  "allow_facet": "off",
+  "suggest_facets": "off",
+  "template_debug": 1,
+  "hash_urls": 1
+}

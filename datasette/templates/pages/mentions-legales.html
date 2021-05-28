@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Mentions légales{% endblock %}
+{% block nav %}
+    <p class="crumbs">
+        <a href="{{ urls.instance() }}">accueil</a>
+    </p>
+    {{ super() }}
+{% endblock %}
+{% block content %}
+
+<div style="max-width: 700px;margin:auto">
+
+<h1 id="mentionslgales">Mentions légales</h1>
+
+<p>Le site decp.info est édité par Colin Maudry, inscrit au répertoire SIRENE sous le numéro 812 231 132, dont le siège social est situé à Rennes, et dont l'adresse email est <a href="mailto:colin@maudry.com">colin@maudry.com</a>.</p>
+<p>Le site est hébergé en France par :</p>
+
+<p>Scaleway par ONLINE, SAS, au capital de 214 410,50 Euros<br/>
+Siège social : 8 rue de la ville l'Evêque-75008 PARIS<br/>
+RCS Paris B 433 115 904, TVA FR35433115904<br/>
+<a href="https://www.scaleway.com" rel="nofollow">https://www.scaleway.com</a></p>
+
+<p>Les icônes de la page d'accueil ont été dessinées par <a href="https://www.flaticon.com/authors/gregor-cresnar" title="Gregor Cresnar">Gregor Cresnar</a> de <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a></p>
+
+
+<h1 id="vieprive">Vie privée</h1>
+
+<h2>Les cookies</h2>
+
+
+<p>Ce site dépose un petit fichier texte (un « cookie ») sur votre ordinateur lorsque vous le consultez (<a href="https://fr.wikipedia.org/wiki/Cookie_(informatique)">Wikipédia</a>). Cela me permet de mesurer le nombre de visites et de distinguer les nouveaux visiteurs des utilisateurs réguliers.</p>
+
+<div style="background-color: #ccc;"><iframe style="border: 0; height: 200px; width: 100%;" title="Opt-out du cookie de suivi" src="https://analytics.maudry.com/index.php?module=CoreAdminHome&amp;action=optOut&amp;language=fr&amp;backgroundColor=&amp;fontColor=&amp;fontSize=&amp;fontFamily="></iframe></div>
+
+<h3 id="cesitenaffichepasdebanniredeconsentementauxcookiespourquoi">Ce site n’affiche pas de bannière de consentement aux cookies, pourquoi ?</h3>
+
+<p>C’est vrai, vous n’avez pas eu à cliquer sur un bloc qui recouvre la moitié de la page pour dire que vous êtes d’accord avec le dépôt de cookies.</p>
+
+<p>Rien d’exceptionnel, je respecte simplement la loi, qui dit que certains outils de suivi d’audience, correctement configurés pour respecter la vie privée, sont exemptés d’autorisation préalable.</p>
+
+<p>J’utilise pour cela <a href="https://matomo.org/">Matomo</a>, un outil <a href="https://matomo.org/free-software/">libre</a>, paramétré pour être en conformité avec la <a href="https://www.cnil.fr/fr/solutions-pour-les-cookies-de-mesure-daudience">recommandation « Cookies »</a> de la <a href="http://sigl.es/cnil">CNIL</a>. Cela signifie que votre adresse IP, par exemple, est anonymisée avant d’être enregistrée. Il m’est donc impossible d’associer vos visites sur ce site à votre personne.</p>
+<h2>La lettre d'information et conformité RGPD</h2>
+
+Ce site <a href="/inscription">vous propose</a> de vous inscrire à une lettre d'information. Pour ce faire, vous devez donner votre accord par deux fois : au moment de remplir le formulaire, et en cliquant sur un lien dans le mail de confirmation.
+
+Tous les emails qui vous sont envoyés dans le cadre de cette lettre d'information comportent un lien de désinscription.
+
+Votre adresse email est stockée en France chez Sendinblue, entreprise française.
+</div>
+
+
+
+{% endblock %}

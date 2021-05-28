@@ -1,0 +1,12 @@
+{
+  "db": {
+    "hash": "e7781c4da0df3983d9e8bfc09d513162302d787bff766e3cfee2dd5dcd272b85",
+    "size": 121118720,
+    "file": "datasette/db.db",
+    "tables": {
+      "decp": {
+        "count": 292374
+      }
+    }
+  }
+}

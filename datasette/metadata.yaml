@@ -1,0 +1,31 @@
+---
+extra_css_urls:
+- "/static/custom.css"
+title: Exploration et téléchargement des données essentielles de la commande publique
+  (format tabulaire)
+description: Ce site vous permet de filtrer et trier les données sur les marchés publics,
+  et de télécharger le résultat sous la forme d'un fichier que vous pourrez ouvrir
+  dans un logiciel de tableur (MS Excel, LibreOffice, OpenOffice).
+source: Données essentielles de la commande publique
+source_url: https://www.data.gouv.fr/fr/datasets/608c055b35eb4e6ee20eb325/
+license: Licence ouverte
+license_url: https://www.etalab.gouv.fr/wp-content/uploads/2014/05/Licence_Ouverte.pdf
+databases:
+  db:
+    tables:
+      decp:
+        title: Marchés et titulaires (= DECP)
+        description_html: |-
+          Marché publics et leurs titulaires, données équivalentes au <a href="https://139bercy.github.io/decp-docs/schemas/">format réglementaire</a>. Une ligne = un titulaire de marché, donc ces données ne sont pas adaptées pour travailler avec les montants de marché ou compter les marchés.
+        size: 40
+        download: https://www.data.gouv.fr/fr/datasets/r/8587fe77-fb31-4155-8753-f6a3c5e0f5c9
+      decp-sans-titulaires:
+        title: Marchés publics sans leurs titulaires
+        description_html: Marchés publics sans les titulaires (pas de colonnes titulaire). Une ligne = un marché, donc ces données sont adaptées pour travailler avec les montants de marchés et compter les marchés.
+        size: 40
+        download: https://www.data.gouv.fr/fr/datasets/r/834c14dd-037c-4825-958d-0a841c4777ae
+      decp-titulaires:
+        title: Données sur les titulaires et géolocalisation
+        description_html: Données détaillées sur les titulaires, dont leur géolocalisation. Les colonnes <tt>formePrix</tt>, <tt>procedure</tt>, <tt>objetModification</tt> et <tt>datePublicationDonnees</tt> sont absentes. Une ligne = un titulaire de marché, donc ces données ne sont pas adaptées pour travailler avec les montants de marché ou compter les marchés.
+        size: 40
+        download: https://www.data.gouv.fr/fr/datasets/r/25fcd9e6-ce5a-41a7-b6c0-f140abb2a060
