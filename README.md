@@ -13,14 +13,15 @@ Dépôts de code connexe :
 
 ### 1.2.0 (28/05/2021)
 
+- ajout d'une page "Notes de version"
+- meilleur lien pour la documentation des champs
 - déplacement du code de decp.info depuis [ColinMaudry/decp-table-schema-utils](https://github.com/ColinMaudry/decp-table-schema-utils) vers [ColinMaudry/decp.info](https://github.com/ColinMaudry/decp.info)
-- remplacement du fichier `.sqlite.gz` par `.sqlite` 
 
 ### 1.1.0 (25/05/2021)
 
 - ajout de nouvelles vues :
-  - vue dédiée aux titulaires de marchés (`decp-titulaires`) avec données provenant du répertoire SIRENE
-  - vue sans les titulaires (`decp-sans-titulaires`) pour analyser les nombres de marchés et les montants
+  - Marchés publics sans leurs titulaires : vue dédiée aux titulaires de marchés avec des données provenant du répertoire SIRENE
+  - Données sur les titulaires et géolocalisation : vue sans les titulaires pour analyser les nombres de marchés et les montants
 - amélioration de la page d'accueil
 - développement de la page "db" avec description des vues et liste des colonnes
 - les codes APE sont cliquables
