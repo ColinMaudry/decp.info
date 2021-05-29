@@ -7,8 +7,8 @@
 {% block content %}
 <h1>{{ metadata.title or "Datasette" }}{% if private %} 🔒{% endif %}</h1>
 
-{% block description_source_license %}{% include "_description_source_license.html" %}{% endblock %}
-
+<!-- {% block description_source_license %}{% include "_description_source_license.html" %}{% endblock %}
+ -->
 <p><a class="explore nodec" href="/db"><i class="flaticon-magnifying-glass"></i></a> <a class="explore" href="/db">Explorer les données</a></p>
 
 <p><a class="explore nodec" href="https://teamopendata.org/t/decp-info-les-donnees-de-la-commande-publique-pour-tous-questions-reponses-discussions/2948"><i class="flaticon-chat-2"></i></a> <a href="https://teamopendata.org/t/decp-info-les-donnees-de-la-commande-publique-pour-tous-questions-reponses-discussions/2948">Présentation / FAQ / discussions</a></p>
