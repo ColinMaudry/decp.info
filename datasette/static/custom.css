@@ -81,6 +81,10 @@ td.col-longitude,th.col-longitude,td.col-latitude,th.col-latitude {
 }
 
 
+.versions ul ul {
+    margin-left: 22px;
+}
+
 
 /*
 Flaticon icon font: Flaticon
