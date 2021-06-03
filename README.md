@@ -4,12 +4,19 @@ Outil d'exploration et de téléchargement des données essentielles de la comma
 
 => https://decp.info
 
-Dépôts de code connexe :
+Dépôts de code connexes :
 
 - [decp-table-schema-utils](https://github.com/ColinMaudry/decp-table-schema-utils) (traitement et publication des données)
 - [decp-table-schema](https://github.com/ColinMaudry/decp-table-schema) (schéma de données tabulaire)
 
 ## Notes de version
+
+### 1.3.0 (03/06/2021)
+
+- utilisation de noms de colonnes plus lisibles dans l'application
+- suppression des références à la licence et aux données source sur la page d'accueil
+- correction des liens vers le code source
+- correction de l'indentation des puces dans les notes de version
 
 ### 1.2.0 (28/05/2021)
 
