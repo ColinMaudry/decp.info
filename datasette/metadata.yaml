@@ -43,6 +43,18 @@ databases:
           source: Source des données
           donneesActuelles: Données actuelles ?
           anomalies: Anomalies
+        operation_labels:
+            exact: est égal à
+            not: est différent de
+            contains: contient
+            endswith: finit par
+            startswith: commence par
+            gt: est supérieur à (>)
+            lt: est inférieur à (<)
+            lte: est inférieur ou égal à (<=)
+            gte: est supérieur ou égal à (>=)
+            isnull__1: est vide
+            notnull__1: n'est pas vide
       decp-sans-titulaires:
         title: Marchés publics sans leurs titulaires
         description_html: Marchés publics sans les titulaires (pas de colonnes titulaire). Une ligne = un marché, donc ces données sont adaptées pour travailler avec les montants de marchés et compter les marchés.
