@@ -81,6 +81,18 @@ databases:
           source: Source des données
           donneesActuelles: Données actuelles ?
           anomalies: Anomalies
+        operation_labels:
+            exact: est égal à
+            not: est différent de
+            contains: contient
+            endswith: finit par
+            startswith: commence par
+            gt: est supérieur à (>)
+            lt: est inférieur à (<)
+            lte: est inférieur ou égal à (<=)
+            gte: est supérieur ou égal à (>=)
+            isnull__1: est vide
+            notnull__1: n'est pas vide
       decp-titulaires:
         title: Données sur les titulaires et géolocalisation
         description_html: Données détaillées sur les titulaires ayant un numéro SIRET, dont leur géolocalisation. Les colonnes <tt>formePrix</tt>, <tt>procedure</tt>, <tt>objetModification</tt> et <tt>datePublicationDonnees</tt> sont absentes. Une ligne = un titulaire de marché, donc ces données ne sont pas adaptées pour travailler avec les montants de marché ou compter les marchés.
@@ -120,3 +132,15 @@ databases:
           titulaire.id: Identifiant du titulaire
           titulaire.typeIdentifiant: Identifiant du titulaire (type)
           titulaire.denominationSociale: Nom du titulaire
+        operation_labels:
+            exact: est égal à
+            not: est différent de
+            contains: contient
+            endswith: finit par
+            startswith: commence par
+            gt: est supérieur à (>)
+            lt: est inférieur à (<)
+            lte: est inférieur ou égal à (<=)
+            gte: est supérieur ou égal à (>=)
+            isnull__1: est vide
+            notnull__1: n'est pas vide
