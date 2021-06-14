@@ -11,6 +11,12 @@ Dépôts de code connexes :
 
 ## Notes de version
 
+### 1.4.0 (14/06/2021)
+
+- traduction des opérations de filtrage (ex : contains => contient)
+- élargissement des menus de filtrage
+- correction du titre de la page des notes de versions
+
 ### 1.3.0 (03/06/2021)
 
 - utilisation de noms de colonnes plus lisibles dans l'application
