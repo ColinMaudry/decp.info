@@ -85,6 +85,14 @@ td.col-longitude,th.col-longitude,td.col-latitude,th.col-latitude {
     margin-left: 22px;
 }
 
+div.select-wrapper {
+    width: 160px;
+}
+
+div.select-wrapper.filter-op {
+    width: 160px;
+}
+
 
 /*
 Flaticon icon font: Flaticon

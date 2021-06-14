@@ -54,7 +54,7 @@
 
 {% if filtered_table_rows_count or human_description_en %}
     <h4>{% if filtered_table_rows_count or filtered_table_rows_count == 0 %}{{ "{:,}".format(filtered_table_rows_count) }} ligne{% if filtered_table_rows_count == 1 %}{% else %}s{% endif %}{% endif %}
-        {% if human_description_en %}{{ human_description_en }}{% endif %}
+        <!-- {% if human_description_en %}{{ human_description_en }}{% endif %} -->
     </h4>
 {% endif %}
 
@@ -74,7 +74,9 @@
             </div><div class="select-wrapper filter-op">
                 <select name="_filter_op_{{ loop.index }}">
                     {% for key, display, no_argument in filters.lookups() %}
-                        <option value="{{ key }}{% if no_argument %}__1{% endif %}"{% if key == lookup %} selected{% endif %}>{{ display }}</option>
+                    {% if metadata.operation_labels[key] %}
+                        <option value="{{ key }}{% if no_argument %}__1{% endif %}"{% if key == lookup %} selected{% endif %}>{{ metadata.operation_labels[key] }}</option>
+                    {% endif %}
                     {% endfor %}
                 </select>
             </div><input type="text" name="_filter_value_{{ loop.index }}" class="filter-value" value="{{ value }}">
@@ -91,7 +93,9 @@
         </div><div class="select-wrapper filter-op">
             <select name="_filter_op">
                 {% for key, display, no_argument in filters.lookups() %}
-                    <option value="{{ key }}{% if no_argument %}__1{% endif %}"{% if key == lookup %} selected{% endif %}>{{ display }}</option>
+                {% if metadata.operation_labels[key] %}
+                    <option value="{{ key }}{% if no_argument %}__1{% endif %}"{% if key == lookup %} selected{% endif %}>{{ metadata.operation_labels[key] }}</option>
+                {% endif %}
                 {% endfor %}
             </select>
         </div><input type="text" name="_filter_value" class="filter-value">
