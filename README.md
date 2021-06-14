@@ -11,6 +11,10 @@ Dépôts de code connexes :
 
 ## Notes de version
 
+#### 1.4.1 (14/06/2021)
+
+- ajout des traductions des opérations de filtrage à toutes les vues, pas seulement /db/decp
+
 ### 1.4.0 (14/06/2021)
 
 - traduction des opérations de filtrage (ex : contains => contient)
