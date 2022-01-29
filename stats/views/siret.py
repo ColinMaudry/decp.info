@@ -1,12 +1,8 @@
-import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 import pandas as pd
-import plotly.io as pio
-from os import getenv
-
-app = dash.Dash("trackdechets-public-stats", title='DECP.info : statistiques', external_stylesheets=[dbc.themes.GRID])
-pio.templates.default = "none"
+from dash.dependencies import Input, Output
+from app import app
 
 SIRET = '20004525000012'
 
@@ -30,8 +26,18 @@ def fn(input_number) -> str:
     return '{:,.0f}'.format(input_number).replace(',', ' ')
 
 
-def generateYears(years: list) -> [dbc.Row]:
-    result = []
+layout = html.Div(id='stats')
+
+
+@app.callback(Output('stats', 'children'),
+              Input('url', 'pathname'))
+def generateYears(pathname) -> [dbc.Row]:
+    siret = pathname.split('/')[2]
+    print(siret)
+    years = ['2022', '2021', '2020']
+    result = [dbc.Row([
+                html.H2('Par année')
+            ])]
     for year in years:
         df_marches_year = df_marches[df_marches['anneeNotification'] == year]
         df_attributions_year = df_attributions[df_attributions['anneeNotification'] == year]
@@ -40,7 +46,7 @@ def generateYears(years: list) -> [dbc.Row]:
                 dbc.Row([
                     html.H3(year),
                     html.A('Télécharger les données', href=f'https://decp.info/db/decp?_sort=rowid&dateNotification__'
-                                                           f'startswith={year}&acheteur.id__exact={SIRET}')
+                                                           f'startswith={year}&acheteur.id__exact={siret}')
                          ]),
                 dbc.Row([
                     dbc.Col([
@@ -57,20 +63,3 @@ def generateYears(years: list) -> [dbc.Row]:
         ])
         result.append(row)
     return result
-
-
-acheteur_years = generateYears(['2022', '2021', '2020'])
-print(len(acheteur_years))
-app.layout = html.Div(children=[
-    dbc.Row([
-                html.H2('Par année')
-            ])
-
-] + acheteur_years)
-
-
-if __name__ == '__main__':
-    port = getenv('PORT', 8050)
-
-    # Scalingo requires 0.0.0.0 as host, instead of the default 127.0.0.1
-    app.run_server(debug=bool(getenv('DEVELOPMENT')), host='0.0.0.0', port=int(port))
