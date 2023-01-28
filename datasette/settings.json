@@ -7,6 +7,5 @@
   "force_https_urls": 1,
   "allow_facet": "off",
   "suggest_facets": "off",
-  "template_debug": 1,
-  "hash_urls": 1
+  "template_debug": 1
 }

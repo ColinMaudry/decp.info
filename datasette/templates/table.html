@@ -200,7 +200,7 @@
                 Options CSV :
                 <label><input type="checkbox" name="_dl"> télécharger le fichier</label>
                 {% if expandable_columns %}<label><input type="checkbox" name="_labels" checked> récupérer les libellés</label>{% endif %}
-                {% if next_url and config.allow_csv_stream %}<label><input type="checkbox" name="_stream"> stream de lignes</label>{% endif %}
+                {% if next_url %}<label><input type="checkbox" name="_stream"> stream de lignes</label>{% endif %}
                 <input type="submit" value="Exporter le CSV">
                 {% for key, value in url_csv_hidden_args %}
                     <input type="hidden" name="{{ key }}" value="{{ value }}">
