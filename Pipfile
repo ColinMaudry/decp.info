@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 datasette = "*"
 openpyxl = "*"
+datasette-cluster-map = {git = "https://github.com/ColinMaudry/datasette-cluster-map.git"}
 
 [dev-packages]
 
