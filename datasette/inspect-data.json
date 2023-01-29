@@ -1,11 +1,17 @@
 {
   "db": {
-    "hash": "e7781c4da0df3983d9e8bfc09d513162302d787bff766e3cfee2dd5dcd272b85",
-    "size": 121118720,
+    "hash": "e9fe2958f1e9fb97d9b35868dd9985b127f36fb70b75a6f34a7e97769a1cb40d",
+    "size": 599478272,
     "file": "datasette/db.db",
     "tables": {
       "decp": {
-        "count": 292374
+        "count": 603271
+      },
+      "decp-sans-titulaires": {
+        "count": 527600
+      },
+      "decp-titulaires": {
+        "count": 295857
       }
     }
   }

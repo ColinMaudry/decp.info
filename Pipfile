@@ -1,0 +1,14 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+datasette = "*"
+openpyxl = "*"
+datasette-cluster-map = {git = "https://github.com/ColinMaudry/datasette-cluster-map.git"}
+
+[dev-packages]
+
+[requires]
+python_version = "3.10"
