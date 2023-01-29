@@ -2,14 +2,24 @@
 
 Outil d'exploration et de téléchargement des données essentielles de la commande publique.
 
-=> https://decp.info
+=> [decp.info](https://decp.info)
 
-Dépôts de code connexes :
+## Installation et lancement
+
+```shell
+pipenv install
+pipenv run scripts/start-datasette.sh
+```
+## Dépôts de code connexes
 
 - [decp-table-schema-utils](https://github.com/ColinMaudry/decp-table-schema-utils) (traitement et publication des données)
 - [decp-table-schema](https://github.com/ColinMaudry/decp-table-schema) (schéma de données tabulaire)
 
 ## Notes de version
+
+### 1.5.0 (28/01/2023
+
+- fixation des dépendances Python pour plus de stabilité en cas de réinstallation (Pipfile)
 
 #### 1.4.1 (14/06/2021)
 
