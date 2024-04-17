@@ -1,9 +1,8 @@
 from datasette import hookimpl
 from datasette.utils.asgi import Response
 from openpyxl import Workbook
-from openpyxl.writer.excel import save_virtual_workbook
 from openpyxl.cell import WriteOnlyCell
-from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.styles import Alignment, PatternFill
 from tempfile import NamedTemporaryFile
 
 
