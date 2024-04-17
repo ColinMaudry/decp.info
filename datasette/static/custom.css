@@ -92,6 +92,9 @@ div.select-wrapper {
 div.select-wrapper.filter-op {
     width: 160px;
 }
+svg.dropdown-menu-icon {
+    display: none;
+}
 
 
 /*
