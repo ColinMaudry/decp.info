@@ -1,0 +1,17 @@
+[project]
+name = "decp.info"
+description = ""
+version = "2.0.0"
+requires-python = ">= 3.10"
+authors = [
+    { name = "Colin Maudry", email = "colin+decp@maudry.com" }
+]
+dependencies = [
+    "dash",
+    "polars"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+]
