@@ -16,7 +16,7 @@ databases:
       decp:
         title: Marchés et titulaires (= DECP)
         description_html: |-
-          Marché publics et leurs titulaires, données équivalentes au <a href="https://github.com/139bercy/format-commande-publique/">format réglementaire</a> de 2019. Une ligne = un titulaire de marché, donc ces données ne sont pas adaptées pour travailler avec les montants de marché ou compter les marchés.
+          Marché publics et leurs titulaires, données équivalentes au <a href="https://github.com/139bercy/format-commande-publique/">format réglementaire</a> de 2019. Une ligne = un titulaire de marché, donc ces données ne sont pas adaptées pour travailler avec les montants de marché ou compter les marchés. En effet, si un marché a plusieurs titulaires, chaque ligne répètre le montant total du marché. Pour avoir une ligne par marché (mais pas de données sur les titulaires), vous pouvez utiliser <a href="https://decp.info/db/decp-sans-titulaires">decp-sans-titulaires</a>.
         size: 40
         download: https://www.data.gouv.fr/fr/datasets/r/8587fe77-fb31-4155-8753-f6a3c5e0f5c9
         column_labels:
