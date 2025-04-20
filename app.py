@@ -3,7 +3,9 @@ import plotly.express as px
 import polars as pl
 import dash_bootstrap_components as dbc
 
-df = pl.read_ipc("/home/colin/git/decp-processing/dist/decp.arrow")
+df = pl.read_parquet(
+    "https://www.data.gouv.fr/fr/datasets/r/11cea8e8-df3e-4ed1-932b-781e2635e432"
+)
 
 app = Dash(external_stylesheets=[dbc.themes.UNITED])
 server = app.server
