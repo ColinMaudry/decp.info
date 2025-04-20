@@ -1,2 +1,4 @@
 *.db
-.egg-info
+*.egg-info
+__pycache__
+.idea
