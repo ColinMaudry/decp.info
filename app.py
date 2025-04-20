@@ -10,6 +10,7 @@ app = Dash(external_stylesheets=[dbc.themes.UNITED], title="decp.info")
 server = app.server
 
 datatable = dash_table.DataTable(
+    cell_selectable=False,
     id="table",
     data=df.to_dicts(),
     page_size=20,
@@ -17,7 +18,7 @@ datatable = dash_table.DataTable(
     page_action="native",
     # filter_action="native",
     columns=[
-        {"name": i, "id": i, "deletable": True, "selectable": True} for i in df.columns
+        {"name": i, "id": i, "deletable": True, "selectable": False} for i in df.columns
     ],
     selected_columns=[],
     selected_rows=[],
@@ -53,11 +54,11 @@ def global_search(text):
     return new_df.to_dicts()
 
 
-@callback(
-    Output("table", "data"), Input("table", "page_current"), Input("table", "page_size")
-)
-def update_table(page_current, page_size):
-    return df[page_current * page_size : (page_current + 1) * page_size].to_dicts()
+# @callback(
+#     Output("table", "data"), Input("table", "page_current"), Input("table", "page_size")
+# )
+# def update_table(page_current, page_size):
+#     return df[page_current * page_size : (page_current + 1) * page_size].to_dicts()
 
 
 if __name__ == "__main__":
