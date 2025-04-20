@@ -6,32 +6,38 @@ df = pl.read_parquet(
     "https://www.data.gouv.fr/fr/datasets/r/11cea8e8-df3e-4ed1-932b-781e2635e432"
 )
 
-app = Dash(external_stylesheets=[dbc.themes.UNITED])
+app = Dash(external_stylesheets=[dbc.themes.UNITED], title="decp.info")
 server = app.server
 
+datatable = dash_table.DataTable(
+    id="table",
+    data=df.to_dicts(),
+    page_size=20,
+    page_current=0,
+    page_action="native",
+    # filter_action="native",
+    columns=[
+        {"name": i, "id": i, "deletable": True, "selectable": True} for i in df.columns
+    ],
+    selected_columns=[],
+    selected_rows=[],
+    sort_action="native",
+    sort_mode="multi",
+)
+
 app.layout = [
+    html.H1(children="decp.info", style={"textAlign": "center"}),
     html.Div(
         [
-            "Recherche (acheteur, titulaire, objet) : ",
+            "Recherche dans objet : ",
             dcc.Input(id="search", value="", type="text"),
         ]
     ),
-    html.H1(children="decp.info", style={"textAlign": "center"}),
-    dash_table.DataTable(
-        id="table",
-        data=df.to_dicts(),
-        page_size=20,
-        page_current=0,
-        page_action="native",
-        filter_action="native",
-        columns=[
-            {"name": i, "id": i, "deletable": True, "selectable": True}
-            for i in df.columns
-        ],
-        selected_columns=[],
-        selected_rows=[],
-        sort_action="native",
-        sort_mode="multi",
+    dcc.Loading(
+        overlay_style={"visibility": "visible", "filter": "blur(2px)"},
+        id="loading-1",
+        type="default",
+        children=datatable,
     ),
 ]
 
