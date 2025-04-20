@@ -9,7 +9,8 @@ authors = [
 dependencies = [
     "dash",
     "polars",
-    "gunicorn"
+    "gunicorn",
+    "dash-bootstrap-components"
 ]
 
 [project.optional-dependencies]
