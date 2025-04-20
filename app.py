@@ -1,14 +1,20 @@
 from dash import Dash, html, dcc, callback, Output, Input, dash_table
 import plotly.express as px
 import polars as pl
+import dash_bootstrap_components as dbc
 
-df = pl.read_parquet(
-    "https://www.data.gouv.fr/fr/datasets/r/11cea8e8-df3e-4ed1-932b-781e2635e432"
-)
+df = pl.read_ipc("/home/colin/git/decp-processing/dist/decp.arrow")
 
-app = Dash()
+app = Dash(external_stylesheets=[dbc.themes.UNITED])
+server = app.server
 
 app.layout = [
+    html.Div(
+        [
+            "Recherche (acheteur, titulaire, objet) : ",
+            dcc.Input(id="search", value="", type="text"),
+        ]
+    ),
     html.H1(children="decp.info", style={"textAlign": "center"}),
     dash_table.DataTable(
         id="table",
@@ -27,6 +33,17 @@ app.layout = [
         sort_mode="multi",
     ),
 ]
+
+
+@callback(
+    Output(component_id="table", component_property="data", allow_duplicate=True),
+    Input(component_id="search", component_property="value"),
+    prevent_initial_call=True,
+)
+def global_search(text):
+    new_df = df
+    new_df = new_df.filter(pl.col("objet").str.contains("(?i)" + text))
+    return new_df.to_dicts()
 
 
 @callback(

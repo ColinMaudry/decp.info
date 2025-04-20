@@ -10,7 +10,7 @@ Outil d'exploration et de téléchargement des données essentielles de la comma
 python -m venv .venv
 source .venv/bin/activate
 pip install .
-python src/app.py
+gunicorn app:server
 ```
 ## Dépôts de code connexes
 
