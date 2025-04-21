@@ -4,6 +4,6 @@ from src.app import app
 # To use `gunicorn run:server` (prod)
 server = app.server
 
-# To use `python index.py` (dev)
+# To use `python run.py` (dev)
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run_server(debug=True)
