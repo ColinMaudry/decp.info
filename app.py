@@ -16,7 +16,8 @@ datatable = dash_table.DataTable(
     page_size=20,
     page_current=0,
     page_action="native",
-    # filter_action="native",
+    filter_action="native",
+    filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
     columns=[
         {"name": i, "id": i, "deletable": True, "selectable": False} for i in df.columns
     ],
@@ -24,6 +25,9 @@ datatable = dash_table.DataTable(
     selected_rows=[],
     sort_action="native",
     sort_mode="multi",
+    export_format="xlsx",
+    export_columns="visible",
+    export_headers="ids",
 )
 
 app.layout = [
