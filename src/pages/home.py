@@ -1,16 +1,12 @@
-from dash import (
-    html,
-    dcc,
-    dash_table,
-    register_page,
-)
+from dash import html, dcc, dash_table, register_page, Input, Output, State, callback
 from dotenv import load_dotenv
 import os
 import polars as pl
+from src.utils import split_filter_part
 
 load_dotenv()
 
-df = pl.read_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
+df = pl.scan_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
 
 title = "Tableau"
 register_page(__name__, path="/", title=f"decp.info - {title}", name=title, order=1)
@@ -18,19 +14,18 @@ register_page(__name__, path="/", title=f"decp.info - {title}", name=title, orde
 datatable = dash_table.DataTable(
     cell_selectable=False,
     id="table",
-    data=df.to_dicts(),
     page_size=20,
     page_current=0,
-    page_action="native",
-    filter_action="native",
-    filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
+    page_action="custom",
+    filter_action="custom",
+    # filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
     columns=[
         {"name": i, "id": i, "deletable": True, "selectable": False} for i in df.columns
     ],
     selected_columns=[],
     selected_rows=[],
-    sort_action="native",
-    sort_mode="multi",
+    # sort_action="native",
+    # sort_mode="multi",
     export_format="xlsx",
     export_columns="visible",
     export_headers="ids",
@@ -44,6 +39,7 @@ datatable = dash_table.DataTable(
             "whiteSpace": "normal",
         },
     ],
+    data_timestamp=0,
 )
 
 layout = [
@@ -88,3 +84,51 @@ layout = [
         children=datatable,
     ),
 ]
+
+
+@callback(
+    Output("table", "data"),
+    Output("table", "data_timestamp"),
+    Input("table", "page_current"),
+    Input("table", "page_size"),
+    Input("table", "filter_query"),
+    State("table", "data_timestamp"),
+)
+def update_table(page_current, page_size, filter_query, data_timestamp):
+    print(" + + + + + + + + + + + + + + + + + + ")
+    print("Filter query:", filter_query)
+    # 1. Apply Filters
+    dff = df  # start from the original data
+    if filter_query:
+        filtering_expressions = filter_query.split(" && ")
+        for filter_part in filtering_expressions:
+            col_name, operator, filter_value = split_filter_part(filter_part)
+            print("filter_value:", filter_value)
+            print("filter_value_type:", type(filter_value))
+
+            if operator in ("<", "<=", ">", ">="):
+                filter_value = int(filter_value)
+                if operator == "<":
+                    dff = dff.filter(pl.col(col_name) < filter_value)
+                elif operator == ">":
+                    dff = dff.filter(pl.col(col_name) > filter_value)
+                elif operator == ">=":
+                    dff = dff.filter(pl.col(col_name) >= filter_value)
+                elif operator == "<=":
+                    dff = dff.filter(pl.col(col_name) <= filter_value)
+                # these operators match polars series filter operators
+
+            elif operator == "contains":
+                dff = dff.filter(pl.col(col_name).str.contains("(?i)" + filter_value))
+            # elif operator == 'datestartswith':
+            # dff = dff.filter(pl.col(col_name).str.startswith(filter_value)")
+
+    # 2. Paginate Data
+    start_row = page_current * page_size
+    # end_row = (page_current + 1) * page_size
+
+    dff = dff.slice(start_row, page_size).collect()
+    # print("dff_sliced:", dff.select("titulaire.typeId"))
+    dff = dff.to_dicts()
+
+    return dff, data_timestamp + 1  # update data, update timestamp
