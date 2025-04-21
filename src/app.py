@@ -2,9 +2,7 @@ from dash import Dash, html, dcc, callback, Output, Input, dash_table
 import polars as pl
 import dash_bootstrap_components as dbc
 
-df = pl.read_parquet(
-    "https://www.data.gouv.fr/fr/datasets/r/11cea8e8-df3e-4ed1-932b-781e2635e432"
-)
+df = pl.read_parquet("/home/colin/git/decp-processing/dist/2025-04-21/decp.parquet")
 
 app = Dash(external_stylesheets=[dbc.themes.UNITED], title="decp.info")
 server = app.server
@@ -32,6 +30,20 @@ datatable = dash_table.DataTable(
 
 app.layout = [
     html.H1(children="decp.info", style={"textAlign": "center"}),
+    html.Details(
+        children=[
+            html.Summary("Utilisation"),
+            dcc.Markdown(
+                """
+    Vous pouvez appliquer un filtre pour chaque colonne en entrant du texte sous le nom de la colonne, puis en tapant sur `Entrée`.
+
+    - Champs textuels : la recherche est insensible à la casse (majuscules/minuscules).
+    - Champs numériques : possibilité d'ajouter < ou > devant le chiffre recherché pour chercher des valeurs inférieures ou supérieur.
+    """
+            ),
+        ],
+        id="instructions",
+    ),
     html.Div(
         [
             "Recherche dans objet : ",
