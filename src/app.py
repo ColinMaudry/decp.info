@@ -26,10 +26,20 @@ datatable = dash_table.DataTable(
     export_format="xlsx",
     export_columns="visible",
     export_headers="ids",
+    style_cell_conditional=[
+        {
+            "if": {"column_id": "objet"},
+            "minWidth": "300px",
+            "textAlign": "left",
+            "overflow": "hidden",
+            "lineHeight": "14px",
+            "whiteSpace": "normal",
+        },
+    ],
 )
 
 app.layout = [
-    html.H1(children="decp.info", style={"textAlign": "center"}),
+    html.H1(children="decp.info"),
     html.Details(
         children=[
             html.Summary("Utilisation"),

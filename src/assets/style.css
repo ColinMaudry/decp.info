@@ -11,3 +11,9 @@ button.export:before {
 input.dash-filter--case {
   display: none;
 }
+
+/* Réduire la taille du texte de la colonne Objet */
+
+td[data-dash-column="objet"] {
+  font-size: 85%;
+}
