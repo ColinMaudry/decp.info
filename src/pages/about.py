@@ -1,4 +1,4 @@
-from dash import register_page, html, page_registry
+from dash import register_page, html
 
 title = "À propos"
 

@@ -1,12 +1,7 @@
 from dash import (
-    Dash,
     html,
     dcc,
-    callback,
-    Output,
-    Input,
     dash_table,
-    page_container,
     register_page,
 )
 from dotenv import load_dotenv
