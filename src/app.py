@@ -1,19 +1,21 @@
 from dash import Dash, html, page_container, page_registry, dcc
 import dash_bootstrap_components as dbc
 
+
 app = Dash(external_stylesheets=[dbc.themes.UNITED], title="decp.info", use_pages=True)
 server = app.server
+
 
 app.layout = [
     html.Div(
         [
             html.H1("decp.info"),
-            html.Div(
-                [
-                    dcc.Link(page["name"], href=page["relative_path"], className="nav")
-                    for page in page_registry.values()
-                ]
-            ),
+            # html.Div(
+            #     [
+            #         dcc.Link(page["name"], href=page["relative_path"], className="nav")
+            #         for page in page_registry.values()
+            #     ]
+            # ),
         ],
         className="navbar",
     ),

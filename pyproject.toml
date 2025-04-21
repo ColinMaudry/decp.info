@@ -11,7 +11,7 @@ dependencies = [
     "polars",
     "gunicorn",
     "dash-bootstrap-components",
-    "python-dotenv"
+    "python-dotenv",
 ]
 
 [project.optional-dependencies]
