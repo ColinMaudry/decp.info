@@ -10,7 +10,8 @@ dependencies = [
     "dash",
     "polars",
     "gunicorn",
-    "dash-bootstrap-components"
+    "dash-bootstrap-components",
+    "python-dotenv"
 ]
 
 [project.optional-dependencies]

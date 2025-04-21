@@ -17,3 +17,44 @@ input.dash-filter--case {
 td[data-dash-column="objet"] {
   font-size: 85%;
 }
+
+.dash-table-container
+  .dash-spreadsheet-container
+  .dash-spreadsheet-inner
+  th.dash-header {
+  background-color: #666986;
+  color: white;
+}
+
+.dash-table-container
+  .dash-spreadsheet-container
+  .dash-spreadsheet-inner
+  th.dash-filter {
+  background-color: #d0d2e6;
+}
+
+#header > *,
+.dash-spreadsheet-menu button.export {
+  margin: 0 0 20px 20px;
+}
+
+.navbar {
+  width: 100%;
+  height: 100px;
+  padding: 10px;
+}
+
+a.nav {
+  float: left;
+  margin-right: 40px;
+  font-size: 120%;
+}
+
+h1 {
+  float: left;
+  width: 50%;
+}
+
+h3 {
+  display: inline;
+}
