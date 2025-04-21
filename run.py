@@ -6,4 +6,4 @@ server = app.server
 
 # To use `python run.py` (dev)
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run(debug=True)

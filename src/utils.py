@@ -1,7 +1,7 @@
 operators = [
     ["s<", "<"],
     ["s>", ">"],
-    ["scontains", "contains"],
+    ["icontains", "contains"],
 ]
 
 

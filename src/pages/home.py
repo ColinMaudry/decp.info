@@ -18,10 +18,8 @@ datatable = dash_table.DataTable(
     page_current=0,
     page_action="custom",
     filter_action="custom",
-    # filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
-    columns=[
-        {"name": i, "id": i, "deletable": True, "selectable": False} for i in df.columns
-    ],
+    filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
+    columns=[{"name": i, "id": i} for i in df.collect_schema().names()],
     selected_columns=[],
     selected_rows=[],
     # sort_action="native",
@@ -32,7 +30,7 @@ datatable = dash_table.DataTable(
     style_cell_conditional=[
         {
             "if": {"column_id": "objet"},
-            "minWidth": "300px",
+            "minWidth": "350px",
             "textAlign": "left",
             "overflow": "hidden",
             "lineHeight": "14px",

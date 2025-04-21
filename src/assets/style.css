@@ -22,7 +22,7 @@ td[data-dash-column="objet"] {
   .dash-spreadsheet-container
   .dash-spreadsheet-inner
   th.dash-header {
-  background-color: #666986;
+  background-color: #b33821;
   color: white;
 }
 
@@ -30,7 +30,11 @@ td[data-dash-column="objet"] {
   .dash-spreadsheet-container
   .dash-spreadsheet-inner
   th.dash-filter {
-  background-color: #d0d2e6;
+  background-color: #f0afa3;
+}
+
+#table tr:nth-child(even) td {
+  background-color: #feeeee;
 }
 
 #header > *,
