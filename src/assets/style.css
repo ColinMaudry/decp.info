@@ -1,0 +1,13 @@
+/* Change le texte du bout d'export  */
+button.export {
+  font-size: 0;
+}
+button.export:before {
+  content: "Télécharger au format Excel";
+  font-size: 14px;
+}
+
+/* Masquer le bouton de configuration de la casse dans les filtres */
+input.dash-filter--case {
+  display: none;
+}
