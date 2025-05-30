@@ -55,11 +55,11 @@ layout = [
     - Champs textuels : la recherche est insensible à la casse (majuscules/minuscules).
     - Champs numériques : possibilité d'ajouter < ou > devant le chiffre recherché pour chercher des valeurs inférieures ou supérieur.
 
+    Vous pouvez filtrer plusieurs colonnes à la fois. Vos filtres sont perdus quand vous rafraîchissez la page.
+
     **Télécharger le résultat**
 
-    Vous pouvez télécharger le résultat de vos filtres et tris en cliquant sur Télécharger au format Excel.
-
-    Les colonnes supprimées seront absentes du fichier téléchargé.
+    Vous pouvez télécharger le résultat de vos filtres en cliquant sur Télécharger au format Excel.
 
     Si vous téléchargez un volume important de données, il se peut que vous attendiez quelques minutes avant le début du téléchargement.
     """
