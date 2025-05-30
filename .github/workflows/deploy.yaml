@@ -16,12 +16,13 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.ARTIFACT_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-            ssh-keyscan -p 22240 ${{ secrets.ARTIFACT_HOST }} >> ~/.ssh/known_hosts
+          echo ${{ secrets.ARTIFACT_PORT }}
+          ssh-keyscan -p ${{ secrets.ARTIFACT_PORT }} ${{ secrets.ARTIFACT_HOST }} >> ~/.ssh/known_hosts
           sudo apt-get install sshpass python3 python3-pip
 
       - name: Deploy to server
         run: |
-          sshpass -p '${{ secrets.SSH_PSWD }}' ssh -v -o StrictHostKeyChecking=no ${{ secrets.USER }}@${{ secrets.ARTIFACT_HOST }} <<'ENDSSH'
+          sshpass -p '${{ secrets.SSH_PSWD }}' ssh -v -o StrictHostKeyChecking=no ${{ secrets.USER }}@${{ secrets.ARTIFACT_HOST }}:${{ secrets.ARTIFACT_PORT }} <<'ENDSSH'
           cd ${{ secrets.APP_PATH }}
           git pull
           pip install .
