@@ -22,7 +22,7 @@ jobs:
 
       - name: Deploy to server
         run: |
-          sshpass -p '${{ secrets.SSH_PSWD }}' ssh -v -o StrictHostKeyChecking=no ${{ secrets.USER }}@${{ secrets.ARTIFACT_HOST }}:${{ secrets.ARTIFACT_PORT }} <<'ENDSSH'
+          sshpass -p '${{ secrets.SSH_PSWD }}' ssh -v -o StrictHostKeyChecking=no ${{ secrets.USER }}@${{ secrets.ARTIFACT_HOST }} -p ${{ secrets.ARTIFACT_PORT }} <<'ENDSSH'
           cd ${{ secrets.APP_PATH }}
           git pull
           pip install .
