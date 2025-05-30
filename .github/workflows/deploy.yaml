@@ -6,6 +6,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: dev
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -16,7 +17,6 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.ARTIFACT_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          echo ${{ secrets.ARTIFACT_PORT }}
           ssh-keyscan -p ${{ secrets.ARTIFACT_PORT }} ${{ secrets.ARTIFACT_HOST }} >> ~/.ssh/known_hosts
           sudo apt-get install sshpass python3 python3-pip
 
