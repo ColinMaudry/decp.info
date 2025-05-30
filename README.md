@@ -7,15 +7,21 @@ Outil d'exploration et de téléchargement des données essentielles de la comma
 ## Installation et lancement
 
 ```shell
-pipenv install
-pipenv run scripts/start-datasette.sh
+python -m venv .venv
+source .venv/bin/activate
+pip install .
+gunicorn app:server
 ```
 ## Dépôts de code connexes
 
-- [decp-table-schema-utils](https://github.com/ColinMaudry/decp-table-schema-utils) (traitement et publication des données)
+- [decp-processing](https://github.com/ColinMaudry/decp-processing) (traitement et publication des données)
 - [decp-table-schema](https://github.com/ColinMaudry/decp-table-schema) (schéma de données tabulaire)
 
 ## Notes de version
+
+### 2.0.0-alpha
+
+- Data table fonctionnelle
 
 ### 1.5.0 (28/01/2023
 
