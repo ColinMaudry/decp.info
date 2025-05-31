@@ -1,14 +1,24 @@
-name: Deploy to yunohost
 on:
+  workflow_dispatch:
+  pull_request:
+    types:
+      - closed
   push:
     branches:
       - dev
 jobs:
   deploy:
+    # Trigger deploy workflow if
+    # ...I clicked on "Run workflow" in Github actions, thus deploy main to production env (main)
+    # or
+    # ...I merged a PR or pushed on the dev branch, thus deploy to the test env (dev)
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.ref_name == 'main') ||
+      ((github.event.pull_request.merged == true || github.event.push == true) && github.ref_name == 'dev')
     runs-on: ubuntu-latest
-    environment: dev
+    environment: ${{ github.ref_name }}
     steps:
-      - name: Checkout repository
+      - name: Checkout repositorypu
         uses: actions/checkout@v3
 
       - name: Set up SSH key
