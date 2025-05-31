@@ -21,7 +21,8 @@ app.index_string = """
             {%renderer%}
         </footer>
         <script type="application/javascript">
-            var _paq = window._paq = window._paq || [];
+        console.log("Matomo")
+        var _paq = window._paq = window._paq || [];
         /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
         _paq.push(['trackPageView']);
         _paq.push(['enableLinkTracking']);
