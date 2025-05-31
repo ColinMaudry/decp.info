@@ -1,3 +1,5 @@
+import polars as pl
+
 operators = [
     ["s<", "<"],
     ["s>", ">"],
@@ -17,3 +19,26 @@ def split_filter_part(filter_part):
             return name, operator_group[1], value
 
     return [None] * 3
+
+
+def add_annuaire_link(df: pl.LazyFrame):
+    df = df.with_columns(
+        pl.when(pl.col("titulaire_typeIdentifiant") == "SIRET")
+        .then(
+            pl.col("titulaire_id")
+            + f' <a href="https://annuaire-entreprises.data.gouv.fr/etablissement/'
+            + pl.col("titulaire_id")
+            + '" target="_blank">📑</a>'
+        )
+        .otherwise(pl.col("titulaire_id"))
+        .alias("titulaire_id")
+    )
+    df = df.with_columns(
+        (
+            pl.col("acheteur_id")
+            + f' <a href="https://annuaire-entreprises.data.gouv.fr/etablissement/'
+            + pl.col("acheteur_id")
+            + '" target="_blank">📑</a>'
+        ).alias("acheteur_id")
+    )
+    return df
