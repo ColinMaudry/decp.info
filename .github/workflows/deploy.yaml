@@ -14,7 +14,7 @@ jobs:
     # ...I merged a PR or pushed on the dev branch, thus deploy to the test env (dev)
     if: |
       (github.event_name == 'workflow_dispatch' && github.ref_name == 'main') ||
-      ((github.event.pull_request.merged == true || github.event.push == true) && github.ref_name == 'dev')
+      ((github.event_name == 'pull_request' || github.event_name == 'push') && github.ref_name == 'dev')
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
     steps:

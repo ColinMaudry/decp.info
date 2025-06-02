@@ -2,11 +2,14 @@ from dash import html, dcc, dash_table, register_page, Input, Output, State, cal
 from dotenv import load_dotenv
 import os
 import polars as pl
-from src.utils import split_filter_part
+from src.utils import split_filter_part, add_annuaire_link
 
 load_dotenv()
 
-df = pl.scan_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
+df: pl.LazyFrame = pl.scan_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
+
+# Ajout des liens vers l'annuaire
+df = add_annuaire_link(df)
 
 title = "Tableau"
 register_page(__name__, path="/", title=f"decp.info - {title}", name=title, order=1)
@@ -19,7 +22,10 @@ datatable = dash_table.DataTable(
     page_action="custom",
     filter_action="custom",
     filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
-    columns=[{"name": i, "id": i} for i in df.collect_schema().names()],
+    columns=[
+        {"name": i, "id": i, "presentation": "markdown"}
+        for i in df.collect_schema().names()
+    ],
     selected_columns=[],
     selected_rows=[],
     # sort_action="native",
@@ -38,6 +44,7 @@ datatable = dash_table.DataTable(
         },
     ],
     data_timestamp=0,
+    markdown_options={"html": True},
 )
 
 layout = [
