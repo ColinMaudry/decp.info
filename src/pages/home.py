@@ -29,10 +29,15 @@ except ComputeError:
     sleep(seconds=10)
     df: pl.DataFrame = pl.read_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
 
-df: pl.LazyFrame = df.lazy()
+lf: pl.LazyFrame = df.lazy()
+
+# Suppression des colonnes inutiles
+lf = lf.remove(
+    ["titulaire_siren", "acheteur_siren", "typeGroupementOperateurs", "sourceOpenData"]
+)
 
 # Ajout des liens vers l'annuaire
-df = add_annuaire_link(df)
+lf = add_annuaire_link(lf)
 
 title = "Tableau"
 register_page(__name__, path="/", title=f"decp.info - {title}", name=title, order=1)
@@ -47,7 +52,7 @@ datatable = dash_table.DataTable(
     filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
     columns=[
         {"name": i, "id": i, "presentation": "markdown"}
-        for i in df.collect_schema().names()
+        for i in lf.collect_schema().names()
     ],
     selected_columns=[],
     selected_rows=[],
@@ -126,7 +131,7 @@ def update_table(page_current, page_size, filter_query, data_timestamp):
     print(" + + + + + + + + + + + + + + + + + + ")
     print("Filter query:", filter_query)
     # 1. Apply Filters
-    dff = df  # start from the original data
+    lff: pl.LazyFrame = lf  # start from the original data
     if filter_query:
         filtering_expressions = filter_query.split(" && ")
         for filter_part in filtering_expressions:
@@ -137,26 +142,26 @@ def update_table(page_current, page_size, filter_query, data_timestamp):
             if operator in ("<", "<=", ">", ">="):
                 filter_value = int(filter_value)
                 if operator == "<":
-                    dff = dff.filter(pl.col(col_name) < filter_value)
+                    lff = lff.filter(pl.col(col_name) < filter_value)
                 elif operator == ">":
-                    dff = dff.filter(pl.col(col_name) > filter_value)
+                    lff = lff.filter(pl.col(col_name) > filter_value)
                 elif operator == ">=":
-                    dff = dff.filter(pl.col(col_name) >= filter_value)
+                    lff = lff.filter(pl.col(col_name) >= filter_value)
                 elif operator == "<=":
-                    dff = dff.filter(pl.col(col_name) <= filter_value)
+                    lff = lff.filter(pl.col(col_name) <= filter_value)
                 # these operators match polars series filter operators
 
             elif operator == "contains":
-                dff = dff.filter(pl.col(col_name).str.contains("(?i)" + filter_value))
+                lff = lff.filter(pl.col(col_name).str.contains("(?i)" + filter_value))
             # elif operator == 'datestartswith':
-            # dff = dff.filter(pl.col(col_name).str.startswith(filter_value)")
+            # lff = lff.filter(pl.col(col_name).str.startswith(filter_value)")
 
     # 2. Paginate Data
     start_row = page_current * page_size
     # end_row = (page_current + 1) * page_size
 
-    dff = dff.slice(start_row, page_size).collect()
-    # print("dff_sliced:", dff.select("titulaire.typeId"))
+    dff = lff.slice(start_row, page_size).collect()
+    # print("dff_sliced:", lff.select("titulaire.typeId"))
     dff = dff.to_dicts()
 
     return dff, data_timestamp + 1  # update data, update timestamp
