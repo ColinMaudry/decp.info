@@ -26,7 +26,7 @@ def add_annuaire_link(df: pl.LazyFrame):
         pl.when(pl.col("titulaire_typeIdentifiant") == "SIRET")
         .then(
             pl.col("titulaire_id")
-            + f' <a href="https://annuaire-entreprises.data.gouv.fr/etablissement/'
+            + ' <a href="https://annuaire-entreprises.data.gouv.fr/etablissement/'
             + pl.col("titulaire_id")
             + '" target="_blank">📑</a>'
         )
@@ -36,7 +36,7 @@ def add_annuaire_link(df: pl.LazyFrame):
     df = df.with_columns(
         (
             pl.col("acheteur_id")
-            + f' <a href="https://annuaire-entreprises.data.gouv.fr/etablissement/'
+            + ' <a href="https://annuaire-entreprises.data.gouv.fr/etablissement/'
             + pl.col("acheteur_id")
             + '" target="_blank">📑</a>'
         ).alias("acheteur_id")

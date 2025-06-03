@@ -1,5 +1,3 @@
-from os import getenv
-
 from src.app import app
 
 # To use `gunicorn run:server` (prod)

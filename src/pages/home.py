@@ -5,7 +5,6 @@ from time import sleep
 import polars as pl
 from dash import Input, Output, State, callback, dash_table, dcc, html, register_page
 from dotenv import load_dotenv
-from narwhals.exceptions import ComputeError
 from polars.exceptions import ComputeError
 
 from src.utils import add_annuaire_link, split_filter_part
