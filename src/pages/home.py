@@ -32,7 +32,7 @@ except ComputeError:
 lf: pl.LazyFrame = df.lazy()
 
 # Suppression des colonnes inutiles
-lf = lf.remove(
+lf = lf.drop(
     ["titulaire_siren", "acheteur_siren", "typeGroupementOperateurs", "sourceOpenData"]
 )
 
