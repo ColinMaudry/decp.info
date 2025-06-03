@@ -1,12 +1,35 @@
+from time import sleep
+
+from narwhals.exceptions import ComputeError
 from dash import html, dcc, dash_table, register_page, Input, Output, State, callback
 from dotenv import load_dotenv
 import os
 import polars as pl
+from polars.exceptions import ComputeError
 from src.utils import split_filter_part, add_annuaire_link
+import logging
+
+logger = logging.getLogger("decp.info")
+logging.basicConfig(
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    level=logging.INFO,
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 load_dotenv()
 
-df: pl.LazyFrame = pl.scan_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
+try:
+    logger.info(
+        f"Lecture du fichier parquet ({os.getenv('DATA_FILE_PARQUET_PATH')})..."
+    )
+    df: pl.DataFrame = pl.read_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
+except ComputeError:
+    # Le fichier est probablement en cours de mise à jour
+    logger.info("Échec, nouvelle tentative dans 10s...")
+    sleep(seconds=10)
+    df: pl.DataFrame = pl.read_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
+
+df: pl.LazyFrame = df.lazy()
 
 # Ajout des liens vers l'annuaire
 df = add_annuaire_link(df)
