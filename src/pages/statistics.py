@@ -1,4 +1,4 @@
-from dash import register_page, html
+from dash import html, register_page
 
 title = "Statistiques"
 

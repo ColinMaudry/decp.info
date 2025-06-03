@@ -1,6 +1,5 @@
-from dash import Dash, html, page_container, page_registry, dcc
 import dash_bootstrap_components as dbc
-
+from dash import Dash, dcc, html, page_container, page_registry
 
 app = Dash(external_stylesheets=[dbc.themes.UNITED], title="decp.info", use_pages=True)
 

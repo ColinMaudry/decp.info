@@ -1,13 +1,14 @@
+import logging
+import os
 from time import sleep
 
-from narwhals.exceptions import ComputeError
-from dash import html, dcc, dash_table, register_page, Input, Output, State, callback
-from dotenv import load_dotenv
-import os
 import polars as pl
+from dash import Input, Output, State, callback, dash_table, dcc, html, register_page
+from dotenv import load_dotenv
+from narwhals.exceptions import ComputeError
 from polars.exceptions import ComputeError
-from src.utils import split_filter_part, add_annuaire_link
-import logging
+
+from src.utils import add_annuaire_link, split_filter_part
 
 logger = logging.getLogger("decp.info")
 logging.basicConfig(

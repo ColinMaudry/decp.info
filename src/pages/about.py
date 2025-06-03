@@ -1,4 +1,4 @@
-from dash import register_page, html, dcc
+from dash import dcc, html, register_page
 
 title = "À propos"
 
