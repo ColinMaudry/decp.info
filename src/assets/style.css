@@ -33,6 +33,10 @@ td[data-dash-column="objet"] {
   background-color: #f0afa3;
 }
 
+.dash-table-container p {
+  margin-bottom: 0;
+}
+
 #table tr:nth-child(even) td {
   background-color: #feeeee;
 }
@@ -54,7 +58,7 @@ a.nav {
   font-size: 120%;
 }
 
-h1 {
+.navbar.h1 {
   float: left;
   width: 50%;
 }

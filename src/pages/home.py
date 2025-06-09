@@ -18,6 +18,10 @@ logging.basicConfig(
 
 load_dotenv()
 
+# Chargement du fichier parquet
+# Le fichier est chargé en mémoire, ce qui est plus rapide qu'une base de données pour le moment.
+# On utilise polars pour la rapidité et la facilité de manipulation des données.
+
 try:
     logger.info(
         f"Lecture du fichier parquet ({os.getenv('DATA_FILE_PARQUET_PATH')})..."
@@ -40,7 +44,7 @@ lf = lf.drop(
 lf = add_annuaire_link(lf)
 
 title = "Tableau"
-register_page(__name__, path="/", title=f"decp.info - {title}", name=title, order=1)
+register_page(__name__, path="/", title="decp.info", name=title, order=1)
 
 datatable = dash_table.DataTable(
     cell_selectable=False,
