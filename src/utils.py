@@ -1,4 +1,5 @@
 import polars as pl
+import polars.selectors as cs
 
 operators = [
     ["s<", "<"],
@@ -28,7 +29,7 @@ def add_annuaire_link(df: pl.LazyFrame):
             pl.col("titulaire_id")
             + ' <a href="https://annuaire-entreprises.data.gouv.fr/etablissement/'
             + pl.col("titulaire_id")
-            + '" target="_blank">📑</a>'
+            + '">📑</a>'
         )
         .otherwise(pl.col("titulaire_id"))
         .alias("titulaire_id")
@@ -42,3 +43,24 @@ def add_annuaire_link(df: pl.LazyFrame):
         ).alias("acheteur_id")
     )
     return df
+
+
+def booleans_to_strings(lf: pl.LazyFrame) -> pl.LazyFrame:
+    """
+    Convert all boolean columns to string type.
+    """
+    lf = lf.with_columns(
+        pl.col(cs.Boolean)
+        .cast(pl.String)
+        .str.replace("true", "oui")
+        .str.replace("false", "non")
+    )
+    return lf
+
+
+def numbers_to_strings(lf: pl.LazyFrame) -> pl.LazyFrame:
+    """
+    Convert all numeric columns to string type.
+    """
+    lf = lf.with_columns(pl.col(pl.Float64, pl.Int16).cast(pl.String).fill_null(""))
+    return lf

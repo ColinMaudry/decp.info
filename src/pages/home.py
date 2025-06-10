@@ -7,7 +7,12 @@ from dash import Input, Output, State, callback, dash_table, dcc, html, register
 from dotenv import load_dotenv
 from polars.exceptions import ComputeError
 
-from src.utils import add_annuaire_link, split_filter_part
+from src.utils import (
+    add_annuaire_link,
+    booleans_to_strings,
+    numbers_to_strings,
+    split_filter_part,
+)
 
 logger = logging.getLogger("decp.info")
 logging.basicConfig(
@@ -41,6 +46,13 @@ lf = lf.drop(
     ["titulaire_siren", "acheteur_siren", "typeGroupementOperateurs", "sourceOpenData"]
 )
 
+# Convertir les colonnes booléennes en chaînes de caractères
+lf = booleans_to_strings(lf)
+
+# Remplacer les valeurs manquantes par des chaînes vides
+lf = lf.fill_null("")
+
+
 # Ajout des liens vers l'annuaire
 lf = add_annuaire_link(lf)
 
@@ -56,7 +68,13 @@ datatable = dash_table.DataTable(
     filter_action="custom",
     filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
     columns=[
-        {"name": i, "id": i, "presentation": "markdown"}
+        {
+            "name": i,
+            "id": i,
+            "presentation": "markdown",
+            "type": "text",
+            "format": {"nully": "N/A"},
+        }
         for i in lf.collect_schema().names()
     ],
     selected_columns=[],
@@ -172,6 +190,9 @@ def update_table(page_current, page_size, filter_query, data_timestamp):
     # 2. Paginate Data
     start_row = page_current * page_size
     # end_row = (page_current + 1) * page_size
+
+    # Remplacement des valeurs numériques par des chaînes de caractères
+    lff = numbers_to_strings(lff)
 
     dff = lff.slice(start_row, page_size).collect()
     # print("dff_sliced:", lff.select("titulaire.typeId"))
