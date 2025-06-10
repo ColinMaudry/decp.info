@@ -33,6 +33,7 @@ except ComputeError:
     sleep(seconds=10)
     df: pl.DataFrame = pl.read_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
 
+schema = df.schema
 lf: pl.LazyFrame = df.lazy()
 
 # Suppression des colonnes inutiles
@@ -133,13 +134,13 @@ layout = [
 )
 def update_table(page_current, page_size, filter_query, data_timestamp):
     print(" + + + + + + + + + + + + + + + + + + ")
-    print("Filter query:", filter_query)
     # 1. Apply Filters
     lff: pl.LazyFrame = lf  # start from the original data
     if filter_query:
         filtering_expressions = filter_query.split(" && ")
         for filter_part in filtering_expressions:
             col_name, operator, filter_value = split_filter_part(filter_part)
+            col_type = str(schema[col_name])
             print("filter_value:", filter_value)
             print("filter_value_type:", type(filter_value))
 
@@ -153,10 +154,18 @@ def update_table(page_current, page_size, filter_query, data_timestamp):
                     lff = lff.filter(pl.col(col_name) >= filter_value)
                 elif operator == "<=":
                     lff = lff.filter(pl.col(col_name) <= filter_value)
-                # these operators match polars series filter operators
 
-            elif operator == "contains":
+            elif col_type.startswith("Int") or col_type.startswith("Float"):
+                try:
+                    filter_value = int(filter_value)
+                except ValueError:
+                    logger.error(f"Invalid numeric filter value: {filter_value}")
+                    continue
+                lff = lff.filter(pl.col(col_name) == filter_value)
+
+            elif operator == "contains" and col_type == "String":
                 lff = lff.filter(pl.col(col_name).str.contains("(?i)" + filter_value))
+
             # elif operator == 'datestartswith':
             # lff = lff.filter(pl.col(col_name).str.startswith(filter_value)")
 
