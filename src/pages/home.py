@@ -105,7 +105,7 @@ layout = [
     html.Div(
         html.Details(
             children=[
-                html.Summary(html.H3("Utilisation")),
+                html.Summary(html.H3("Mode d'emploi")),
                 dcc.Markdown(
                     """
 
@@ -219,7 +219,7 @@ def update_table(page_current, page_size, filter_query, data_timestamp):
     # print("dff_sliced:", lff.select("titulaire.typeId"))
     dicts = dff.to_dicts()
 
-    return dicts, data_timestamp + 1, nb_rows  # update data, update timestamp
+    return dicts, data_timestamp + 1, nb_rows
 
 
 @callback(
