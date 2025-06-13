@@ -1,44 +1,20 @@
-import logging
-import os
 from datetime import datetime
-from time import sleep
 
 import polars as pl
 from dash import Input, Output, State, callback, dash_table, dcc, html, register_page
 from dotenv import load_dotenv
-from polars.exceptions import ComputeError
 
 from src.utils import (
     add_annuaire_link,
     booleans_to_strings,
+    df,
     format_number,
+    logger,
     numbers_to_strings,
     split_filter_part,
 )
 
-logger = logging.getLogger("decp.info")
-logging.basicConfig(
-    format="%(asctime)s %(levelname)-8s %(message)s",
-    level=logging.INFO,
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-
 load_dotenv()
-
-# Chargement du fichier parquet
-# Le fichier est chargé en mémoire, ce qui est plus rapide qu'une base de données pour le moment.
-# On utilise polars pour la rapidité et la facilité de manipulation des données.
-
-try:
-    logger.info(
-        f"Lecture du fichier parquet ({os.getenv('DATA_FILE_PARQUET_PATH')})..."
-    )
-    df: pl.DataFrame = pl.read_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
-except ComputeError:
-    # Le fichier est probablement en cours de mise à jour
-    logger.info("Échec, nouvelle tentative dans 10s...")
-    sleep(seconds=10)
-    df: pl.DataFrame = pl.read_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
 
 schema = df.schema
 df_filtered = pl.DataFrame()

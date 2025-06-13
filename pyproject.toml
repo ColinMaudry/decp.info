@@ -12,7 +12,8 @@ dependencies = [
     "gunicorn",
     "dash-bootstrap-components",
     "python-dotenv",
-    "xlsxwriter"
+    "xlsxwriter",
+    "plotly[express]",
 ]
 
 [project.optional-dependencies]

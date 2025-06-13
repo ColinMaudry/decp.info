@@ -1,11 +1,26 @@
+import logging
+import os
+from time import sleep
+
 import polars as pl
 import polars.selectors as cs
+from dotenv import load_dotenv
+from polars.exceptions import ComputeError
+
+load_dotenv()
 
 operators = [
     ["s<", "<"],
     ["s>", ">"],
     ["icontains", "contains"],
 ]
+
+logger = logging.getLogger("decp.info")
+logging.basicConfig(
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    level=logging.INFO,
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 def split_filter_part(filter_part):
@@ -69,3 +84,24 @@ def numbers_to_strings(lf: pl.LazyFrame) -> pl.LazyFrame:
 def format_number(number) -> str:
     number = "{:,}".format(number).replace(",", " ")
     return number
+
+
+def get_decp_data() -> pl.DataFrame:
+    # Chargement du fichier parquet
+    # Le fichier est chargé en mémoire, ce qui est plus rapide qu'une base de données pour le moment.
+    # On utilise polars pour la rapidité et la facilité de manipulation des données.
+
+    try:
+        logger.info(
+            f"Lecture du fichier parquet ({os.getenv('DATA_FILE_PARQUET_PATH')})..."
+        )
+        ddf: pl.DataFrame = pl.read_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
+    except ComputeError:
+        # Le fichier est probablement en cours de mise à jour
+        logger.info("Échec, nouvelle tentative dans 10s...")
+        sleep(10)
+        ddf: pl.DataFrame = pl.read_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
+    return ddf
+
+
+df = get_decp_data()

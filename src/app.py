@@ -1,7 +1,16 @@
+import logging
+
 import dash_bootstrap_components as dbc
 from dash import Dash, dcc, html, page_container, page_registry
 
 app = Dash(external_stylesheets=[dbc.themes.UNITED], title="decp.info", use_pages=True)
+
+logger = logging.getLogger("decp.info")
+logging.basicConfig(
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    level=logging.INFO,
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 app.index_string = """
 <!DOCTYPE html>
