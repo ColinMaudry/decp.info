@@ -1,5 +1,6 @@
 import logging
 import os
+from datetime import datetime
 from time import sleep
 
 import polars as pl
@@ -39,6 +40,7 @@ except ComputeError:
     df: pl.DataFrame = pl.read_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
 
 schema = df.schema
+df_filtered = pl.DataFrame()
 lf: pl.LazyFrame = df.lazy()
 
 # Suppression des colonnes inutiles
@@ -81,9 +83,9 @@ datatable = dash_table.DataTable(
     selected_rows=[],
     # sort_action="native",
     # sort_mode="multi",
-    export_format="xlsx",
-    export_columns="visible",
-    export_headers="ids",
+    # export_format="xlsx",
+    # export_columns="visible",
+    # export_headers="ids",
     style_cell_conditional=[
         {
             "if": {"column_id": "objet"},
@@ -137,7 +139,11 @@ layout = [
         overlay_style={"visibility": "visible", "filter": "blur(2px)"},
         id="loading-1",
         type="default",
-        children=datatable,
+        children=[
+            html.Button("Téléchargement", id="btn-download-data"),
+            dcc.Download(id="download-data"),
+            datatable,
+        ],
     ),
 ]
 
@@ -152,6 +158,8 @@ layout = [
 )
 def update_table(page_current, page_size, filter_query, data_timestamp):
     print(" + + + + + + + + + + + + + + + + + + ")
+    global df_filtered
+
     # 1. Apply Filters
     lff: pl.LazyFrame = lf  # start from the original data
     if filter_query:
@@ -194,8 +202,28 @@ def update_table(page_current, page_size, filter_query, data_timestamp):
     # Remplacement des valeurs numériques par des chaînes de caractères
     lff = numbers_to_strings(lff)
 
-    dff = lff.slice(start_row, page_size).collect()
+    dff = lff.collect()
+
+    df_filtered = dff.clone()
+
+    dff = dff.slice(start_row, page_size)
     # print("dff_sliced:", lff.select("titulaire.typeId"))
     dff = dff.to_dicts()
 
-    return dff, data_timestamp + 1  # update data, update timestamp
+    return (
+        dff,
+        data_timestamp + 1,
+    )  # update data, update timestamp
+
+
+@callback(
+    Output("download-data", "data"),
+    Input("btn-download-data", "n_clicks"),
+    prevent_initial_call=True,
+)
+def download_data(n_clicks):
+    def to_bytes(buffer):
+        df_filtered.write_excel(buffer, worksheet="DECP")
+
+    date = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    return dcc.send_bytes(to_bytes, filename=f"decp_{date}.xlsx")

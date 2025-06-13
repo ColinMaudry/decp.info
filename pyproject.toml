@@ -12,6 +12,7 @@ dependencies = [
     "gunicorn",
     "dash-bootstrap-components",
     "python-dotenv",
+    "xlsxwriter"
 ]
 
 [project.optional-dependencies]
