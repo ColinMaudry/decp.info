@@ -1,10 +1,12 @@
-/* Change le texte du bout d'export  */
-button.export {
-  font-size: 0;
+/* Change la marge bout d'export  */
+.table-menu {
+  font-size: 16px;
+  margin: 12px;
 }
-button.export:before {
-  content: "Télécharger au format Excel";
-  font-size: 14px;
+
+.table-menu > * {
+  margin: 8px;
+  float: left;
 }
 
 /* Masquer le bouton de configuration de la casse dans les filtres */

@@ -11,6 +11,7 @@ from polars.exceptions import ComputeError
 from src.utils import (
     add_annuaire_link,
     booleans_to_strings,
+    format_number,
     numbers_to_strings,
     split_filter_part,
 )
@@ -140,8 +141,14 @@ layout = [
         id="loading-1",
         type="default",
         children=[
-            html.Button("Téléchargement", id="btn-download-data"),
-            dcc.Download(id="download-data"),
+            html.Div(
+                [
+                    html.P("lignes", id="nb_rows"),
+                    html.Button("Télécharger au format Excel", id="btn-download-data"),
+                    dcc.Download(id="download-data"),
+                ],
+                className="table-menu",
+            ),
             datatable,
         ],
     ),
@@ -151,6 +158,7 @@ layout = [
 @callback(
     Output("table", "data"),
     Output("table", "data_timestamp"),
+    Output("nb_rows", "children"),
     Input("table", "page_current"),
     Input("table", "page_size"),
     Input("table", "filter_query"),
@@ -160,7 +168,7 @@ def update_table(page_current, page_size, filter_query, data_timestamp):
     print(" + + + + + + + + + + + + + + + + + + ")
     global df_filtered
 
-    # 1. Apply Filters
+    # Application des filtres
     lff: pl.LazyFrame = lf  # start from the original data
     if filter_query:
         filtering_expressions = filter_query.split(" && ")
@@ -195,25 +203,23 @@ def update_table(page_current, page_size, filter_query, data_timestamp):
             # elif operator == 'datestartswith':
             # lff = lff.filter(pl.col(col_name).str.startswith(filter_value)")
 
-    # 2. Paginate Data
+    # Pagination des données
     start_row = page_current * page_size
     # end_row = (page_current + 1) * page_size
 
     # Remplacement des valeurs numériques par des chaînes de caractères
     lff = numbers_to_strings(lff)
 
-    dff = lff.collect()
+    dff: pl.DataFrame = lff.collect()
 
     df_filtered = dff.clone()
 
+    nb_rows = f"{format_number(dff.height)} lignes"
     dff = dff.slice(start_row, page_size)
     # print("dff_sliced:", lff.select("titulaire.typeId"))
-    dff = dff.to_dicts()
+    dicts = dff.to_dicts()
 
-    return (
-        dff,
-        data_timestamp + 1,
-    )  # update data, update timestamp
+    return dicts, data_timestamp + 1, nb_rows  # update data, update timestamp
 
 
 @callback(

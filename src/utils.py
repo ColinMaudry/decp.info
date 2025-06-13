@@ -64,3 +64,8 @@ def numbers_to_strings(lf: pl.LazyFrame) -> pl.LazyFrame:
     """
     lf = lf.with_columns(pl.col(pl.Float64, pl.Int16).cast(pl.String).fill_null(""))
     return lf
+
+
+def format_number(number) -> str:
+    number = "{:,}".format(number).replace(",", " ")
+    return number
