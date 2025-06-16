@@ -12,7 +12,7 @@ layout = [
         children=[
             html.H2(title),
             dcc.Markdown(
-                """Outil développé par Colin Maudry, sous licence GPL v3 (libre et gratuit).
+                """Outil d'exploration des [Données Essentielles de la Commande Publique](), développé par Colin Maudry, sous licence GPL v3 (libre et gratuit).
 
 - [wiki du projet](https://github.com/ColinMaudry/decp-processing/wiki)
 - [code source de decp.info](https://github.com/ColinMaudry/decp.info)

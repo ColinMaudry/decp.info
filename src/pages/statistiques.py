@@ -4,7 +4,7 @@ import plotly.express as px
 import polars as pl
 from dash import dcc, html, register_page
 
-from src.utils import df
+from src.utils import lf
 
 title = "Statistiques"
 
@@ -12,11 +12,11 @@ register_page(
     __name__, path="/statistiques", title=f"decp.info - {title}", name=title, order=3
 )
 
-df = df.with_columns(
+lf = lf.with_columns(
     pl.col("lieuExecution_code").str.head(2).str.zfill(2).alias("Département")
 )
-df = (
-    df.unique(subset="uid")
+lf = (
+    lf.unique(subset="uid")
     .select(["uid", "Département"])
     .unique(subset="uid")
     .group_by("Département")
@@ -29,6 +29,8 @@ with open("./data/departements-1000m.geojson") as f:
 # Ajout de feature.id
 for f in departements["features"]:
     f["id"] = f["properties"]["code"]
+
+df = lf.collect()
 
 fig = px.choropleth(
     df,
