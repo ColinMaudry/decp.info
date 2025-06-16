@@ -3,7 +3,7 @@ from dash import dcc, html, register_page
 title = "À propos"
 
 register_page(
-    __name__, path="/a-propos", title=f"decp.info - {title}", name=title, order=3
+    __name__, path="/a-propos", title=f"decp.info - {title}", name=title, order=5
 )
 
 layout = [
@@ -22,6 +22,7 @@ Contact :
 - [colin+decp@maudry.com](mailto:colin+decp@maudry.com)
 - BlueSky : [@col1m.bsky.social](https://bsky.app/profile/col1m.bsky.social)
 - Mastodon : [col1m@mamot.fr](https://mamot.fr/@col1m)
+- LinkedIn : [colinmaudry](https://www.linkedin.com/in/colinmaudry/)
 """
             ),
         ],

@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 
 import polars as pl
@@ -17,6 +18,8 @@ from src.utils import (
 load_dotenv()
 
 schema = df.schema
+update_date = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
+update_date = datetime.fromtimestamp(update_date).strftime("%d/%m/%Y")
 df_filtered = pl.DataFrame()
 lf: pl.LazyFrame = df.lazy()
 
@@ -122,6 +125,7 @@ layout = [
                     html.P("lignes", id="nb_rows"),
                     html.Button("Télécharger au format Excel", id="btn-download-data"),
                     dcc.Download(id="download-data"),
+                    html.P("Données mises à jour le " + str(update_date)),
                 ],
                 className="table-menu",
             ),
@@ -183,7 +187,7 @@ def update_table(page_current, page_size, filter_query, data_timestamp):
     lff = numbers_to_strings(lff)
 
     # Tri des marchés par date de notification
-    lff = lff.sort(by=["datePublicationDonnees"], descending=True)
+    lff = lff.sort(by=["datePublicationDonnees"], descending=True, nulls_last=True)
 
     dff: pl.DataFrame = lff.collect()
 
