@@ -179,18 +179,21 @@ def update_table(page_current, page_size, filter_query, data_timestamp):
             # elif operator == 'datestartswith':
             # lff = lff.filter(pl.col(col_name).str.startswith(filter_value)")
 
-    # Pagination des données
-    start_row = page_current * page_size
-    # end_row = (page_current + 1) * page_size
-
     # Remplacement des valeurs numériques par des chaînes de caractères
     lff = numbers_to_strings(lff)
+
+    # Tri des marchés par date de notification
+    lff = lff.sort(by=["datePublicationDonnees"], descending=True)
 
     dff: pl.DataFrame = lff.collect()
 
     df_filtered = dff.clone()
 
     nb_rows = f"{format_number(dff.height)} lignes"
+
+    # Pagination des données
+    start_row = page_current * page_size
+    # end_row = (page_current + 1) * page_size
     dff = dff.slice(start_row, page_size)
     # print("dff_sliced:", lff.select("titulaire.typeId"))
     dicts = dff.to_dicts()
