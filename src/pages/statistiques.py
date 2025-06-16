@@ -22,6 +22,8 @@ lf = (
     .group_by("Département")
     .len("uid")
 )
+# Suppression des infos pour les DOM/TOM pour l'instant
+lf = lf.remove(pl.col("Département").is_in(["97", "98"]))
 
 with open("./data/departements-1000m.geojson") as f:
     departements = json.load(f)
