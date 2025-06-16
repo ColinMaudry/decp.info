@@ -195,7 +195,6 @@ def update_table(page_current, page_size, filter_query, data_timestamp):
     start_row = page_current * page_size
     # end_row = (page_current + 1) * page_size
     dff = dff.slice(start_row, page_size)
-    # print("dff_sliced:", lff.select("titulaire.typeId"))
     dicts = dff.to_dicts()
 
     return dicts, data_timestamp + 1, nb_rows

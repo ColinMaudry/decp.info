@@ -59,7 +59,19 @@ layout = [
         className="container",
         children=[
             html.H2(title),
-            html.Div(children=[dcc.Graph(figure=fig)]),
+            dcc.Markdown("""
+            Si nous disposons de beaucoup de données pour certains départements, pour d'autres les sources de DECP doivent encore être identifiées et ajoutées.
+
+            Par exemple, les données des plateformes Atexo [ne sont pas encore présentes](https://github.com/ColinMaudry/decp-processing/issues/57).
+            """),
+            dcc.Loading(
+                overlay_style={"visibility": "visible", "filter": "blur(2px)"},
+                id="loading-1",
+                type="default",
+                children=[
+                    html.Div(children=[dcc.Graph(figure=fig)]),
+                ],
+            ),
         ],
     )
 ]
