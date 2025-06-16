@@ -86,7 +86,7 @@ def format_number(number) -> str:
     return number
 
 
-def get_decp_data() -> pl.DataFrame:
+def get_decp_data() -> pl.LazyFrame:
     # Chargement du fichier parquet
     # Le fichier est chargé en mémoire, ce qui est plus rapide qu'une base de données pour le moment.
     # On utilise polars pour la rapidité et la facilité de manipulation des données.
@@ -95,13 +95,21 @@ def get_decp_data() -> pl.DataFrame:
         logger.info(
             f"Lecture du fichier parquet ({os.getenv('DATA_FILE_PARQUET_PATH')})..."
         )
-        ddf: pl.DataFrame = pl.read_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
+        df: pl.DataFrame = pl.read_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
     except ComputeError:
         # Le fichier est probablement en cours de mise à jour
         logger.info("Échec, nouvelle tentative dans 10s...")
         sleep(10)
-        ddf: pl.DataFrame = pl.read_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
-    return ddf
+        df: pl.DataFrame = pl.read_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
+
+    lff: pl.LazyFrame = df.lazy()
+    # Remplacement des valeurs numériques par des chaînes de caractères
+    lff = numbers_to_strings(lff)
+
+    # Tri des marchés par date de notification
+    lff = lff.sort(by=["datePublicationDonnees"], descending=True, nulls_last=True)
+
+    return lff
 
 
-df = get_decp_data()
+lf = get_decp_data()

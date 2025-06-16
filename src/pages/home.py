@@ -8,20 +8,18 @@ from dotenv import load_dotenv
 from src.utils import (
     add_annuaire_link,
     booleans_to_strings,
-    df,
     format_number,
+    lf,
     logger,
-    numbers_to_strings,
     split_filter_part,
 )
 
 load_dotenv()
 
-schema = df.schema
+schema = lf.collect_schema()
 update_date = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
 update_date = datetime.fromtimestamp(update_date).strftime("%d/%m/%Y")
 df_filtered = pl.DataFrame()
-lf: pl.LazyFrame = df.lazy()
 
 # Suppression des colonnes inutiles
 lf = lf.drop(
@@ -182,12 +180,6 @@ def update_table(page_current, page_size, filter_query, data_timestamp):
 
             # elif operator == 'datestartswith':
             # lff = lff.filter(pl.col(col_name).str.startswith(filter_value)")
-
-    # Remplacement des valeurs numériques par des chaînes de caractères
-    lff = numbers_to_strings(lff)
-
-    # Tri des marchés par date de notification
-    lff = lff.sort(by=["datePublicationDonnees"], descending=True, nulls_last=True)
 
     dff: pl.DataFrame = lff.collect()
 
