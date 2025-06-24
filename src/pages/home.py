@@ -21,6 +21,10 @@ update_date = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
 update_date = datetime.fromtimestamp(update_date).strftime("%d/%m/%Y")
 df_filtered = pl.DataFrame()
 
+# Unique les données actuelles, pas les anciennes versions de marchés
+
+lf = lf.filter(pl.col("donneesActuelles"))
+
 # Suppression des colonnes inutiles
 lf = lf.drop(
     ["titulaire_siren", "acheteur_siren", "typeGroupementOperateurs", "sourceOpenData"]
