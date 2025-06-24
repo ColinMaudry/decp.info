@@ -167,6 +167,7 @@ def update_table(page_current, page_size, filter_query, data_timestamp):
             col_type = str(schema[col_name])
             print("filter_value:", filter_value)
             print("filter_value_type:", type(filter_value))
+            print("col_type:", col_type)
 
             if operator in ("<", "<=", ">", ">="):
                 filter_value = int(filter_value)
