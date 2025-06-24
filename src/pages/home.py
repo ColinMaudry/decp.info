@@ -27,7 +27,13 @@ lf = lf.filter(pl.col("donneesActuelles"))
 
 # Suppression des colonnes inutiles
 lf = lf.drop(
-    ["titulaire_siren", "acheteur_siren", "typeGroupementOperateurs", "sourceOpenData"]
+    [
+        "titulaire_siren",
+        "acheteur_siren",
+        "typeGroupementOperateurs",
+        "sourceOpenData",
+        "donneesActuelles",
+    ]
 )
 
 # Convertir les colonnes booléennes en chaînes de caractères
