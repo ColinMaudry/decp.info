@@ -2,6 +2,7 @@
 .table-menu {
   font-size: 16px;
   margin: 12px;
+  height: 36px;
 }
 
 .table-menu > * {
