@@ -16,7 +16,6 @@ from src.utils import (
 
 load_dotenv()
 
-schema = lf.collect_schema()
 update_date = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
 update_date = datetime.fromtimestamp(update_date).strftime("%d/%m/%Y")
 df_filtered = pl.DataFrame()
@@ -45,6 +44,9 @@ lf = lf.fill_null("")
 
 # Ajout des liens vers l'annuaire
 lf = add_annuaire_link(lf)
+
+schema = lf.collect_schema()
+
 
 title = "Tableau"
 register_page(__name__, path="/", title="decp.info", name=title, order=1)
