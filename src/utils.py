@@ -37,8 +37,8 @@ def split_filter_part(filter_part):
     return [None] * 3
 
 
-def add_annuaire_link(df: pl.LazyFrame):
-    df = df.with_columns(
+def add_annuaire_link(dff: pl.LazyFrame):
+    dff = dff.with_columns(
         pl.when(pl.col("titulaire_typeIdentifiant") == "SIRET")
         .then(
             pl.col("titulaire_id")
@@ -49,7 +49,7 @@ def add_annuaire_link(df: pl.LazyFrame):
         .otherwise(pl.col("titulaire_id"))
         .alias("titulaire_id")
     )
-    df = df.with_columns(
+    dff = dff.with_columns(
         (
             pl.col("acheteur_id")
             + ' <a href="https://annuaire-entreprises.data.gouv.fr/etablissement/'
@@ -57,28 +57,28 @@ def add_annuaire_link(df: pl.LazyFrame):
             + '" target="_blank">📑</a>'
         ).alias("acheteur_id")
     )
-    return df
+    return dff
 
 
-def booleans_to_strings(lf: pl.LazyFrame) -> pl.LazyFrame:
+def booleans_to_strings(lff: pl.LazyFrame) -> pl.LazyFrame:
     """
     Convert all boolean columns to string type.
     """
-    lf = lf.with_columns(
+    lff = lff.with_columns(
         pl.col(cs.Boolean)
         .cast(pl.String)
         .str.replace("true", "oui")
         .str.replace("false", "non")
     )
-    return lf
+    return lff
 
 
-def numbers_to_strings(lf: pl.LazyFrame) -> pl.LazyFrame:
+def numbers_to_strings(lff: pl.LazyFrame) -> pl.LazyFrame:
     """
     Convert all numeric columns to string type.
     """
-    lf = lf.with_columns(pl.col(pl.Float64, pl.Int16).cast(pl.String).fill_null(""))
-    return lf
+    lff = lff.with_columns(pl.col(pl.Float64, pl.Int16).cast(pl.String).fill_null(""))
+    return lff
 
 
 def format_number(number) -> str:
