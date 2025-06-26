@@ -20,7 +20,7 @@ j'aimerais beaucoup échanger avec vous pour comprendre vos cas d'usages et vos 
 En effet, le potentiel des données d'attribution de marchés et des données qui peuvent les enrichir est très loin d'être exploité par
 les fonctionnalités actuelles de decp.info. Il est ainsi possible de rajouter
 
-- de nombreuses visualisations de données (cartes, graphiques, tableaux) sur des thématiques variées (vivacité de la concurrence, secteurs d'activité, insertion par l'actité économique (IAE), distance acheteur-fournisseur...)
+- de nombreuses visualisations de données (cartes, graphiques, tableaux) sur des thématiques variées (vivacité de la concurrence, secteurs d'activité, insertion par l'activité économique (IAE), distance acheteur-fournisseur...)
 - la sauvegarde de filtre pour les retrouver plus tard et les partager
 - des alertes par email si des marchés correspondant à certains critères
 - le développement d'une API pour alimenter d'autres logiciels
