@@ -30,12 +30,13 @@ les fonctionnalités actuelles de decp.info. Il est ainsi possible de rajouter
 
 - [wiki du projet](https://github.com/ColinMaudry/decp-processing/wiki)
 - [code source de decp.info](https://github.com/ColinMaudry/decp.info)
-- [code source du traitement de données](https://github.com/ColinMaudry/decp-processing)
+- [code source du traitement des données](https://github.com/ColinMaudry/decp-processing)
 
 #### Contact
 
+- venez discuter de la transparence de la commande publique [sur le forum teamopendata.org](https://teamopendata.org/c/commande-publique/101)
 - [colin+decp@maudry.com](mailto:colin+decp@maudry.com)
-- BlueSky : [@col1m.bsky.social](https://bsky.app/profile/col1m.bsky.social)
+- Bluesky : [@col1m.bsky.social](https://bsky.app/profile/col1m.bsky.social)
 - Mastodon : [col1m@mamot.fr](https://mamot.fr/@col1m)
 - LinkedIn : [colinmaudry](https://www.linkedin.com/in/colinmaudry/)
 """
