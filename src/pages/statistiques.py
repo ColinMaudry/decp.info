@@ -27,15 +27,27 @@ layout = [
                 children=[
                     html.Div(
                         children=[
-                            dcc.Graph(figure=get_map_count_marches(lf)),
-                            dcc.Graph(
-                                figure=get_barchart_sources(lf, "dateNotification")
-                            ),
-                            dcc.Graph(
-                                figure=get_barchart_sources(
-                                    lf, "datePublicationDonnees"
-                                )
-                            ),
+                            dcc.Loading(
+                                overlay_style={
+                                    "visibility": "visible",
+                                    "filter": "blur(2px)",
+                                },
+                                id="loading-1",
+                                type="default",
+                                children=[
+                                    dcc.Graph(figure=get_map_count_marches(lf)),
+                                    dcc.Graph(
+                                        figure=get_barchart_sources(
+                                            lf, "dateNotification"
+                                        )
+                                    ),
+                                    dcc.Graph(
+                                        figure=get_barchart_sources(
+                                            lf, "datePublicationDonnees"
+                                        )
+                                    ),
+                                ],
+                            )
                         ]
                     ),
                 ],
