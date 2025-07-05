@@ -1,9 +1,6 @@
-import json
-
-import plotly.express as px
-import polars as pl
 from dash import dcc, html, register_page
 
+from src.figures import get_map_count_marches
 from src.utils import lf
 
 title = "Statistiques"
@@ -12,51 +9,6 @@ register_page(
     __name__, path="/statistiques", title=f"decp.info - {title}", name=title, order=3
 )
 
-lf = lf.with_columns(
-    pl.col("lieuExecution_code").str.head(2).str.zfill(2).alias("Département")
-)
-lf = (
-    lf.unique(subset="uid")
-    .select(["uid", "Département"])
-    .unique(subset="uid")
-    .group_by("Département")
-    .len("uid")
-)
-# Suppression des infos pour les DOM/TOM pour l'instant
-lf = lf.remove(pl.col("Département").is_in(["97", "98"]))
-
-with open("./data/departements-1000m.geojson") as f:
-    departements = json.load(f)
-
-# Ajout de feature.id
-for f in departements["features"]:
-    f["id"] = f["properties"]["code"]
-
-df = lf.collect()
-
-fig = px.choropleth(
-    df,
-    geojson=departements,
-    locations="Département",
-    color="uid",
-    color_continuous_scale="Reds",
-    title="Nombres de marchés attribués par département (lieu d'exécution)",
-    range_color=(df["uid"].min(), df["uid"].max()),
-    labels={"uid": "Marchés attribués"},
-    scope="europe",
-    width=1000,
-    height=800,
-)
-
-fig.update_geos(fitbounds="locations", visible=False)
-fig.update_layout(
-    mapbox={
-        "style": "carto-positron",
-        "center": {"lon": 10, "lat": 10},
-        "zoom": 1,
-        "domain": {"x": [0, 1], "y": [0, 1]},
-    }
-)
 
 layout = [
     html.Div(
@@ -73,7 +25,7 @@ layout = [
                 id="loading-1",
                 type="default",
                 children=[
-                    html.Div(children=[dcc.Graph(figure=fig)]),
+                    html.Div(children=[dcc.Graph(figure=get_map_count_marches(lf))]),
                 ],
             ),
         ],
