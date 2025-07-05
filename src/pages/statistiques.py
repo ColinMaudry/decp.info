@@ -32,7 +32,7 @@ layout = [
                                     "visibility": "visible",
                                     "filter": "blur(2px)",
                                 },
-                                id="loading-1",
+                                id="loading-stats",
                                 type="default",
                                 children=[
                                     dcc.Graph(figure=get_map_count_marches(lf)),

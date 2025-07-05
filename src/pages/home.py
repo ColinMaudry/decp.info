@@ -127,7 +127,7 @@ layout = [
     # )]),
     dcc.Loading(
         overlay_style={"visibility": "visible", "filter": "blur(2px)"},
-        id="loading-1",
+        id="loading-home",
         type="default",
         children=[
             html.Div(
