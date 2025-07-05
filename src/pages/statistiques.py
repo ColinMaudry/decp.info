@@ -1,6 +1,6 @@
 from dash import dcc, html, register_page
 
-from src.figures import get_map_count_marches
+from src.figures import get_barchart_sources_notification, get_map_count_marches
 from src.utils import lf
 
 title = "Statistiques"
@@ -25,7 +25,12 @@ layout = [
                 id="loading-1",
                 type="default",
                 children=[
-                    html.Div(children=[dcc.Graph(figure=get_map_count_marches(lf))]),
+                    html.Div(
+                        children=[
+                            dcc.Graph(figure=get_map_count_marches(lf)),
+                            dcc.Graph(figure=get_barchart_sources_notification(lf)),
+                        ]
+                    ),
                 ],
             ),
         ],
