@@ -16,9 +16,11 @@ layout = [
         children=[
             html.H2(title),
             dcc.Markdown("""
-            Si nous disposons de beaucoup de données pour certains départements, pour d'autres les sources de DECP doivent encore être identifiées et ajoutées.
+            À savoir, les données suivantes existent mais sont en cours d'intégration dans ce projet :
 
-            Par exemple, les données des plateformes Atexo [ne sont pas encore présentes](https://github.com/ColinMaudry/decp-processing/issues/57).
+            - les données publiées dans le [format DECP 2019 (période 2018-2022)](https://www.data.gouv.fr/fr/datasets/donnees-essentielles-de-la-commande-publique-fichiers-consolides/#/resources/16962018-5c31-4296-9454-5998585496d2)
+            - les données [collectées par l'AIFE](https://github.com/ColinMaudry/decp-processing/issues/68) (API DUME, notamment achatpublic.info)
+            - les données [des plateformes Atexo](https://github.com/ColinMaudry/decp-processing/issues/57)
             """),
             dcc.Loading(
                 overlay_style={"visibility": "visible", "filter": "blur(2px)"},
