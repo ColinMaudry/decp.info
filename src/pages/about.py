@@ -28,14 +28,16 @@ les fonctionnalités actuelles de decp.info. Il est ainsi possible de rajouter
 
 #### Pour aller plus loin
 
-- [wiki du projet](https://github.com/ColinMaudry/decp-processing/wiki)
-- [code source de decp.info](https://github.com/ColinMaudry/decp.info)
-- [code source du traitement des données](https://github.com/ColinMaudry/decp-processing)
+- ✉️  [inscription à la liste de diffusion](https://6254d9a3.sibforms.com/serve/MUIFAEonUVkoSVrdgey18CTgLyI16xw4yeu-M-YOUzhWE_AgfQfbgkyT7GvA_RYLro9MfuRqkzQxSvu7-uzbMSv2a2ZQPsliM7wtiiqIL8kR2zOvl6m11fb5qjcOxMAYsLiY_YBi3P7NY95CTJ8vRY4CpsDclF2iLooOElKkTgIgi5nePe7zAIrgiYM5v2EuALlGJZMEG9vBP-Cu) (annonces des mises à jour et évènements, maximum une fois par mois)
+- 📔  [wiki du projet](https://github.com/ColinMaudry/decp-processing/wiki)
+- 🚰  code source
+    - [de decp.info](https://github.com/ColinMaudry/decp.info)
+    - [du traitement des données](https://github.com/ColinMaudry/decp-processing)
 
 #### Contact
 
 - venez discuter de la transparence de la commande publique [sur le forum teamopendata.org](https://teamopendata.org/c/commande-publique/101)
-- [colin+decp@maudry.com](mailto:colin+decp@maudry.com)
+- Email : [colin+decp@maudry.com](mailto:colin+decp@maudry.com)
 - Bluesky : [@col1m.bsky.social](https://bsky.app/profile/col1m.bsky.social)
 - Mastodon : [col1m@mamot.fr](https://mamot.fr/@col1m)
 - LinkedIn : [colinmaudry](https://www.linkedin.com/in/colinmaudry/)
