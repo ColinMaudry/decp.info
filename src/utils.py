@@ -41,20 +41,22 @@ def add_annuaire_link(dff: pl.LazyFrame):
     dff = dff.with_columns(
         pl.when(pl.col("titulaire_typeIdentifiant") == "SIRET")
         .then(
-            pl.col("titulaire_id")
-            + ' <a href="https://annuaire-entreprises.data.gouv.fr/etablissement/'
+            '<a href = "https://annuaire-entreprises.data.gouv.fr/etablissement/'
             + pl.col("titulaire_id")
-            + '">📑</a>'
+            + '">'
+            + pl.col("titulaire_id")
+            + "</a>"
         )
         .otherwise(pl.col("titulaire_id"))
         .alias("titulaire_id")
     )
     dff = dff.with_columns(
         (
-            pl.col("acheteur_id")
-            + ' <a href="https://annuaire-entreprises.data.gouv.fr/etablissement/'
+            '<a href = "https://annuaire-entreprises.data.gouv.fr/etablissement/'
             + pl.col("acheteur_id")
-            + '" target="_blank">📑</a>'
+            + '">'
+            + pl.col("acheteur_id")
+            + "</a>"
         ).alias("acheteur_id")
     )
     return dff
