@@ -69,10 +69,9 @@ datatable = dash_table.DataTable(
         }
         for i in lf.collect_schema().names()
     ],
-    selected_columns=[],
-    selected_rows=[],
-    # sort_action="native",
-    # sort_mode="multi",
+    sort_action="custom",
+    sort_mode="multi",
+    sort_by=[],
     # export_format="xlsx",
     # export_columns="visible",
     # export_headers="ids",
@@ -152,9 +151,10 @@ layout = [
     Input("table", "page_current"),
     Input("table", "page_size"),
     Input("table", "filter_query"),
+    Input("table", "sort_by"),
     State("table", "data_timestamp"),
 )
-def update_table(page_current, page_size, filter_query, data_timestamp):
+def update_table(page_current, page_size, filter_query, sort_by, data_timestamp):
     print(" + + + + + + + + + + + + + + + + + + ")
     global df_filtered
 
@@ -193,6 +193,14 @@ def update_table(page_current, page_size, filter_query, data_timestamp):
 
             # elif operator == 'datestartswith':
             # lff = lff.filter(pl.col(col_name).str.startswith(filter_value)")
+
+    if len(sort_by) > 0:
+        lff = lff.sort(
+            [col["column_id"] for col in sort_by],
+            descending=[col["direction"] == "desc" for col in sort_by],
+            nulls_last=True,
+        )
+        print(sort_by)
 
     dff: pl.DataFrame = lff.collect()
 
