@@ -66,15 +66,14 @@ datatable = dash_table.DataTable(
             "presentation": "markdown",
             "type": "text",
             "format": {"nully": "N/A"},
+            "hideable": True,
         }
         for i in lf.collect_schema().names()
     ],
     sort_action="custom",
     sort_mode="multi",
     sort_by=[],
-    # export_format="xlsx",
-    # export_columns="visible",
-    # export_headers="ids",
+    row_deletable=False,
     style_cell_conditional=[
         {
             "if": {"column_id": "objet"},
@@ -220,11 +219,17 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
 @callback(
     Output("download-data", "data"),
     Input("btn-download-data", "n_clicks"),
+    State("table", "hidden_columns"),
     prevent_initial_call=True,
 )
-def download_data(n_clicks):
+def download_data(n_clicks, hidden_columns):
+    df_to_download = df_filtered.clone()
+
+    # Les colonnes masquées sont supprimées
+    df_to_download = df_to_download.drop(hidden_columns)
+
     def to_bytes(buffer):
-        df_filtered.write_excel(buffer, worksheet="DECP")
+        df_to_download.write_excel(buffer, worksheet="DECP")
 
     date = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     return dcc.send_bytes(to_bytes, filename=f"decp_{date}.xlsx")

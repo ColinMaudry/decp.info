@@ -10,17 +10,13 @@
   float: left;
 }
 
-/* Masquer le bouton de configuration de la casse dans les filtres */
-input.dash-filter--case {
-  display: none;
-}
-
 /* Réduire la taille du texte de la colonne Objet */
 
 td[data-dash-column="objet"] {
   font-size: 85%;
 }
 
+/* Couleur des en-têtes */
 .dash-table-container
   .dash-spreadsheet-container
   .dash-spreadsheet-inner
@@ -40,6 +36,29 @@ td[data-dash-column="objet"] {
   margin-bottom: 0;
 }
 
+/* Menu de masquage des colonnes */
+.column-header--hide svg {
+  display: none;
+}
+.show-hide {
+  position: relative;
+  width: 180px;
+  margin: 0 0 10px 10px;
+}
+
+.show-hide::before {
+  background: inherit;
+  content: "Colonnes affichées";
+  position: absolute;
+  left: 5px;
+  right: 5px;
+}
+
+.show-hide-menu-item > input {
+  margin-right: 10px;
+}
+
+/* Alternance des couleurs pour les lignes */
 #table tr:nth-child(even) td {
   background-color: #feeeee;
 }
@@ -48,6 +67,8 @@ td[data-dash-column="objet"] {
 .dash-spreadsheet-menu button.export {
   margin: 0 0 20px 20px;
 }
+
+/* Menu de navigation */
 
 .navbar {
   width: 100%;
