@@ -36,6 +36,10 @@ td[data-dash-column="objet"] {
   margin-bottom: 0;
 }
 
+.dash-filter--case {
+  display: none;
+}
+
 /* Menu de masquage des colonnes */
 .column-header--hide svg {
   display: none;
