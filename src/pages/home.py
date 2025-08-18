@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 from src.utils import (
     add_annuaire_link,
+    add_resource_link,
     booleans_to_strings,
     format_number,
     lf,
@@ -42,6 +43,9 @@ lf = lf.fill_null("")
 
 # Ajout des liens vers l'annuaire
 lf = add_annuaire_link(lf)
+
+# Ajout des liens open data
+lf = add_resource_link(lf)
 
 schema = lf.collect_schema()
 
@@ -220,11 +224,20 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     State("table", "hidden_columns"),
     prevent_initial_call=True,
 )
-def download_data(n_clicks, hidden_columns):
+def download_data(n_clicks, hidden_columns: list = None):
     df_to_download = df_filtered.clone()
 
+    print(df_to_download.columns)
+
+    # Rétablissement des colonnes source et sourceOpenData (voir add_resource_link)
+    df_to_download = df_to_download.with_columns(
+        pl.col("source").str.extract(r'href="(.*?)"').alias("sourceOpenData"),
+        pl.col("source").str.extract(r'">(.*?)<').alias("source"),
+    )
+
     # Les colonnes masquées sont supprimées
-    df_to_download = df_to_download.drop(hidden_columns)
+    if hidden_columns:
+        df_to_download = df_to_download.drop(hidden_columns)
 
     def to_bytes(buffer):
         df_to_download.write_excel(buffer, worksheet="DECP")
