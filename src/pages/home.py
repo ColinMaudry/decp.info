@@ -29,8 +29,6 @@ lf = lf.drop(
     [
         "titulaire_siren",
         "acheteur_siren",
-        "typeGroupementOperateurs",
-        "sourceOpenData",
         "donneesActuelles",
     ]
 )
