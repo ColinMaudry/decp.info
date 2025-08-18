@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 from src.utils import (
     add_annuaire_link,
+    add_resource_link,
     booleans_to_strings,
     format_number,
     lf,
@@ -29,8 +30,6 @@ lf = lf.drop(
     [
         "titulaire_siren",
         "acheteur_siren",
-        "typeGroupementOperateurs",
-        "sourceOpenData",
         "donneesActuelles",
     ]
 )
@@ -44,6 +43,9 @@ lf = lf.fill_null("")
 
 # Ajout des liens vers l'annuaire
 lf = add_annuaire_link(lf)
+
+# Ajout des liens open data
+lf = add_resource_link(lf)
 
 schema = lf.collect_schema()
 
@@ -101,13 +103,13 @@ layout = [
     Vous pouvez appliquer un filtre pour chaque colonne en entrant du texte sous le nom de la colonne, puis en tapant sur `Entrée`.
 
     - Champs textuels : la recherche est insensible à la casse (majuscules/minuscules).
-    - Champs numériques : possibilité d'ajouter < ou > devant le chiffre recherché pour chercher des valeurs inférieures ou supérieur.
+    - Champs numériques : vous pouvez soit taper un nombre pour trouver les valeurs égales, soit le précéder de > ou < pour filtrer les valeurs supérieures ou inférieures.
 
-    Vous pouvez filtrer plusieurs colonnes à la fois. Vos filtres sont perdus quand vous rafraîchissez la page.
+    Vous pouvez filtrer plusieurs colonnes à la fois. Vos filtres sont remis à zéro quand vous rafraîchissez la page.
 
     **Télécharger le résultat**
 
-    Vous pouvez télécharger le résultat de vos filtres en cliquant sur Télécharger au format Excel.
+    Vous pouvez télécharger le résultat de vos filtres et tris, pour les colonnes affichées, en cliquant sur Télécharger au format Excel.
 
     Si vous téléchargez un volume important de données, il se peut que vous attendiez quelques minutes avant le début du téléchargement.
     """
@@ -222,11 +224,20 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     State("table", "hidden_columns"),
     prevent_initial_call=True,
 )
-def download_data(n_clicks, hidden_columns):
+def download_data(n_clicks, hidden_columns: list = None):
     df_to_download = df_filtered.clone()
 
+    print(df_to_download.columns)
+
+    # Rétablissement des colonnes source et sourceOpenData (voir add_resource_link)
+    df_to_download = df_to_download.with_columns(
+        pl.col("source").str.extract(r'href="(.*?)"').alias("sourceOpenData"),
+        pl.col("source").str.extract(r'">(.*?)<').alias("source"),
+    )
+
     # Les colonnes masquées sont supprimées
-    df_to_download = df_to_download.drop(hidden_columns)
+    if hidden_columns:
+        df_to_download = df_to_download.drop(hidden_columns)
 
     def to_bytes(buffer):
         df_to_download.write_excel(buffer, worksheet="DECP")

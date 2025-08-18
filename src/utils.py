@@ -12,6 +12,8 @@ load_dotenv()
 operators = [
     ["s<", "<"],
     ["s>", ">"],
+    ["i<", "<"],
+    ["i>", ">"],
     ["icontains", "contains"],
 ]
 
@@ -31,14 +33,25 @@ def split_filter_part(filter_part):
             name_part = name_part.strip()
             value = value_part.strip()
             name = name_part[name_part.find("{") + 1 : name_part.rfind("}")]
+            print("=>", name, operator_group[1], value)
 
             return name, operator_group[1], value
 
     return [None] * 3
 
 
-def add_annuaire_link(dff: pl.LazyFrame):
-    dff = dff.with_columns(
+def add_resource_link(lff: pl.LazyFrame) -> pl.LazyFrame:
+    lff = lff.with_columns(
+        (
+            '<a href="' + pl.col("sourceOpenData") + '">' + pl.col("source") + "</a>"
+        ).alias("source")
+    )
+    lff = lff.drop("sourceOpenData")
+    return lff
+
+
+def add_annuaire_link(lff: pl.LazyFrame):
+    lff = lff.with_columns(
         pl.when(pl.col("titulaire_typeIdentifiant") == "SIRET")
         .then(
             '<a href = "https://annuaire-entreprises.data.gouv.fr/etablissement/'
@@ -50,7 +63,7 @@ def add_annuaire_link(dff: pl.LazyFrame):
         .otherwise(pl.col("titulaire_id"))
         .alias("titulaire_id")
     )
-    dff = dff.with_columns(
+    lff = lff.with_columns(
         (
             '<a href = "https://annuaire-entreprises.data.gouv.fr/etablissement/'
             + pl.col("acheteur_id")
@@ -59,7 +72,7 @@ def add_annuaire_link(dff: pl.LazyFrame):
             + "</a>"
         ).alias("acheteur_id")
     )
-    return dff
+    return lff
 
 
 def booleans_to_strings(lff: pl.LazyFrame) -> pl.LazyFrame:
@@ -105,8 +118,9 @@ def get_decp_data() -> pl.LazyFrame:
         df: pl.DataFrame = pl.read_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
 
     lff: pl.LazyFrame = df.lazy()
+
     # Remplacement des valeurs numériques par des chaînes de caractères
-    lff = numbers_to_strings(lff)
+    # lff = numbers_to_strings(lff)
 
     # Tri des marchés par date de notification
     lff = lff.sort(by=["datePublicationDonnees"], descending=True, nulls_last=True)
