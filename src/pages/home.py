@@ -99,13 +99,13 @@ layout = [
     Vous pouvez appliquer un filtre pour chaque colonne en entrant du texte sous le nom de la colonne, puis en tapant sur `Entrée`.
 
     - Champs textuels : la recherche est insensible à la casse (majuscules/minuscules).
-    - Champs numériques : possibilité d'ajouter < ou > devant le chiffre recherché pour chercher des valeurs inférieures ou supérieur.
+    - Champs numériques : vous pouvez soit taper un nombre pour trouver les valeurs égales, soit le précéder de > ou < pour filtrer les valeurs supérieures ou inférieures.
 
-    Vous pouvez filtrer plusieurs colonnes à la fois. Vos filtres sont perdus quand vous rafraîchissez la page.
+    Vous pouvez filtrer plusieurs colonnes à la fois. Vos filtres sont remis à zéro quand vous rafraîchissez la page.
 
     **Télécharger le résultat**
 
-    Vous pouvez télécharger le résultat de vos filtres en cliquant sur Télécharger au format Excel.
+    Vous pouvez télécharger le résultat de vos filtres et tris, pour les colonnes affichées, en cliquant sur Télécharger au format Excel.
 
     Si vous téléchargez un volume important de données, il se peut que vous attendiez quelques minutes avant le début du téléchargement.
     """
