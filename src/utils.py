@@ -5,6 +5,7 @@ from time import sleep
 import polars as pl
 import polars.selectors as cs
 from dotenv import load_dotenv
+from httpx import get
 from polars.exceptions import ComputeError
 
 load_dotenv()
@@ -101,6 +102,12 @@ def format_number(number) -> str:
     return number
 
 
+def get_acheteur_data(siret: str) -> dict:
+    url = f"https://recherche-entreprises.api.gouv.fr/search?q={siret}"
+    response = get(url)
+    return response.json()
+
+
 def get_decp_data() -> pl.LazyFrame:
     # Chargement du fichier parquet
     # Le fichier est chargé en mémoire, ce qui est plus rapide qu'une base de données pour le moment.
@@ -123,7 +130,10 @@ def get_decp_data() -> pl.LazyFrame:
     # lff = numbers_to_strings(lff)
 
     # Tri des marchés par date de notification
-    lff = lff.sort(by=["datePublicationDonnees"], descending=True, nulls_last=True)
+    lff = lff.sort(by=["dateNotification"], descending=True, nulls_last=True)
+
+    # Uniquement les données actuelles, pas les anciennes versions de marchés
+    lff = lff.filter(pl.col("donneesActuelles"))
 
     return lff
 
