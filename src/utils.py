@@ -110,14 +110,12 @@ def get_decp_data() -> pl.LazyFrame:
         logger.info(
             f"Lecture du fichier parquet ({os.getenv('DATA_FILE_PARQUET_PATH')})..."
         )
-        df: pl.DataFrame = pl.read_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
+        lff: pl.LazyFrame = pl.scan_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
     except ComputeError:
         # Le fichier est probablement en cours de mise à jour
         logger.info("Échec, nouvelle tentative dans 10s...")
         sleep(10)
-        df: pl.DataFrame = pl.read_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
-
-    lff: pl.LazyFrame = df.lazy()
+        lff: pl.LazyFrame = pl.scan_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
 
     # Remplacement des valeurs numériques par des chaînes de caractères
     # lff = numbers_to_strings(lff)
