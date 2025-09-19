@@ -28,8 +28,6 @@ lf = lf.filter(pl.col("donneesActuelles"))
 # Suppression des colonnes inutiles
 lf = lf.drop(
     [
-        "titulaire_siren",
-        "acheteur_siren",
         "donneesActuelles",
     ]
 )
@@ -231,8 +229,8 @@ def download_data(n_clicks, hidden_columns: list = None):
 
     # Rétablissement des colonnes source et sourceOpenData (voir add_resource_link)
     df_to_download = df_to_download.with_columns(
-        pl.col("source").str.extract(r'href="(.*?)"').alias("sourceOpenData"),
-        pl.col("source").str.extract(r'">(.*?)<').alias("source"),
+        pl.col("source").str.extract(r'href="(.*?)"').alias("sourceFile"),
+        pl.col("source").str.extract(r'">(.*?)<').alias("sourceDataset"),
     )
 
     # Les colonnes masquées sont supprimées

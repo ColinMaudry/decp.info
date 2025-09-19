@@ -43,10 +43,10 @@ def split_filter_part(filter_part):
 def add_resource_link(lff: pl.LazyFrame) -> pl.LazyFrame:
     lff = lff.with_columns(
         (
-            '<a href="' + pl.col("sourceOpenData") + '">' + pl.col("source") + "</a>"
+            '<a href="' + pl.col("sourceFile") + '">' + pl.col("sourceDataset") + "</a>"
         ).alias("source")
     )
-    lff = lff.drop("sourceOpenData")
+    lff = lff.drop(["sourceFile", "sourceDataset"])
     return lff
 
 
