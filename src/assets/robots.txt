@@ -2,8 +2,6 @@
 # Copié depuis https://next.ink/robots.txt
 # ---------------------------
 User-agent: *
-
-Sitemap: https://next.ink/sitemap_index.xml
 Allow: /
 
 # ---------------------------
