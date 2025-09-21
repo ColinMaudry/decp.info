@@ -1,10 +1,13 @@
 import os
 
 from dash import dcc, html, register_page
+from dotenv import load_dotenv
 
 from src.figures import get_sources_tables
 
 title = "À propos"
+
+load_dotenv()
 
 register_page(
     __name__, path="/a-propos", title=f"decp.info - {title}", name=title, order=5
