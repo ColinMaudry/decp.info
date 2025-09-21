@@ -1,4 +1,8 @@
+import os
+
 from dash import dcc, html, register_page
+
+from src.figures import get_sources_tables
 
 title = "À propos"
 
@@ -43,6 +47,16 @@ les fonctionnalités actuelles de decp.info. Il est ainsi possible de rajouter
 - LinkedIn : [colinmaudry](https://www.linkedin.com/in/colinmaudry/)
 """
             ),
+            html.H4("Sources de données", id="sources"),
+            get_sources_tables(os.getenv("SOURCE_STATS_CSV_PATH")),
+            html.H4("Mentions légales", id="mentions-legales"),
+            dcc.Markdown("""
+    Site Web développé et édité par [SAS Colmo](https://annuaire-entreprises.data.gouv.fr/entreprise/colmo-989393350), 989 393 350 RCS Rennes au capital de 3 000 euros.
+
+    Siège social : 1 carrefour Jouaust, 35000 Rennes
+
+    Hébergement : serveur situé en France et administré par Scaleway, 8 rue de la Ville l’Evêque, 75008 Paris
+    """),
         ],
     )
 ]
