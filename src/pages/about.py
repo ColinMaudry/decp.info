@@ -33,8 +33,10 @@ les fonctionnalités actuelles de decp.info. Il est ainsi possible de rajouter
 - le développement d'une API pour alimenter d'autres logiciels
 - ...et toutes les fonctionnalités auxquelles vous pourrez penser :)
 
-#### Pour contribuer
-
+   """
+            ),
+            html.H4("Pour contribuer", id="contribuer"),
+            dcc.Markdown("""
 - via l'achat d'un prestation de service (devis, prestation, facture), vous pouvez financer le développement de [fonctionnalités prévues](https://github.com/ColinMaudry/decp.info/issues), ou d'autres !
 - ma société accepte aussi les dons (pas de réduction d'impôt possible)
 - envoyez un mail et on discute !
@@ -46,8 +48,7 @@ les fonctionnalités actuelles de decp.info. Il est ainsi possible de rajouter
 - 🚰  code source
     - [de decp.info](https://github.com/ColinMaudry/decp.info)
     - [du traitement des données](https://github.com/ColinMaudry/decp-processing)
-    """
-            ),
+    """),
             html.H4("Contact", id="contact"),
             dcc.Markdown("""
 - Email : [colin+decp@maudry.com](mailto:colin+decp@maudry.com)
