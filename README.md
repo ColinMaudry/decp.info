@@ -33,7 +33,7 @@ python run.py
 
 #### 2.0.1 (23 septembre 2025)
 
-- Bloquage du bouton de téléchargement si trop de lignes (+ 65000) [#38](https//github.com/ColinMaudry/decp.info/issues/38)
+- Bloquage du bouton de téléchargement si trop de lignes (+ 65000) [#38](https://github.com/ColinMaudry/decp.info/issues/38)
 - Meilleures instructions d'installation et lancement
 - Coquilles 🐚
 

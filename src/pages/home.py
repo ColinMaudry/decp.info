@@ -235,7 +235,7 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     if height > 65000:
         download_disabled = True
         download_text = "Téléchargement désactivé au-delà de 65 000 lignes"
-        download_title = "Excel ne supporte pas d'avoir plus de 65 000 URLs dans une même feuille de calcul. Contactez-moi pour me présenter votre besoin en téléchargement afin je puisse adapter la solution."
+        download_title = "Excel ne supporte pas d'avoir plus de 65 000 URLs dans une même feuille de calcul. Contactez-moi pour me présenter votre besoin en téléchargement afin que je puisse adapter la solution."
     else:
         download_disabled = False
         download_text = "Télécharger au format Excel"
