@@ -28,11 +28,10 @@ En effet, le potentiel des données d'attribution de marchés et des données qu
 les fonctionnalités actuelles de decp.info. Il est ainsi possible de rajouter
 
 - de nombreuses visualisations de données (cartes, graphiques, tableaux) sur des thématiques variées (vivacité de la concurrence, secteurs d'activité, insertion par l'activité économique (IAE), distance acheteur-fournisseur...)
-- la sauvegarde de filtre pour les retrouver plus tard et les partager
+- la sauvegarde de filtres pour les retrouver plus tard et les partager
 - des alertes par email si des marchés correspondant à certains critères
 - le développement d'une API pour alimenter d'autres logiciels
-- ...et toutes les fonctionnalités auxquelles vous pourrez penser :)
-
+- ...et toutes les fonctionnalités auxquelles vous pourrez penser
    """
             ),
             html.H4("Pour contribuer", id="contribuer"),
@@ -44,6 +43,8 @@ les fonctionnalités actuelles de decp.info. Il est ainsi possible de rajouter
 #### Pour explorer le projet
 
 - ✉️  [inscription à la liste de diffusion](https://6254d9a3.sibforms.com/serve/MUIFAEonUVkoSVrdgey18CTgLyI16xw4yeu-M-YOUzhWE_AgfQfbgkyT7GvA_RYLro9MfuRqkzQxSvu7-uzbMSv2a2ZQPsliM7wtiiqIL8kR2zOvl6m11fb5qjcOxMAYsLiY_YBi3P7NY95CTJ8vRY4CpsDclF2iLooOElKkTgIgi5nePe7zAIrgiYM5v2EuALlGJZMEG9vBP-Cu) (annonces des mises à jour et évènements, maximum une fois par mois)
+- 💾  [données consolidées en Open Data](https://www.data.gouv.fr/datasets/donnees-essentielles-de-la-commande-publique-consolidees-format-tabulaire/)
+- 🗞️  [mon blog](https://colin.maudry.com), qui parle beaucoup de transparence des marchés publics
 - 📔  [wiki du projet](https://github.com/ColinMaudry/decp-processing/wiki)
 - 🚰  code source
     - [de decp.info](https://github.com/ColinMaudry/decp.info)
@@ -52,20 +53,20 @@ les fonctionnalités actuelles de decp.info. Il est ainsi possible de rajouter
             html.H4("Contact", id="contact"),
             dcc.Markdown("""
 - Email : [colin+decp@maudry.com](mailto:colin+decp@maudry.com)
-- venez discuter de la transparence de la commande publique [sur le forum teamopendata.org](https://teamopendata.org/c/commande-publique/101)
 - Bluesky : [@col1m.bsky.social](https://bsky.app/profile/col1m.bsky.social)
 - Mastodon : [col1m@mamot.fr](https://mamot.fr/@col1m)
 - LinkedIn : [colinmaudry](https://www.linkedin.com/in/colinmaudry/)
+- venez discuter de la transparence de la commande publique [sur le forum teamopendata.org](https://teamopendata.org/c/commande-publique/101)
 """),
             html.H4("Sources de données", id="sources"),
             get_sources_tables(os.getenv("SOURCE_STATS_CSV_PATH")),
             html.H4("Mentions légales", id="mentions-legales"),
             dcc.Markdown("""
-    Site Web développé et édité par [SAS Colmo](https://annuaire-entreprises.data.gouv.fr/entreprise/colmo-989393350), 989 393 350 RCS Rennes au capital de 3 000 euros.
+Site Web développé et édité par [SAS Colmo](https://annuaire-entreprises.data.gouv.fr/entreprise/colmo-989393350), 989 393 350 RCS Rennes au capital de 3 000 euros.
 
-    Siège social : 1 carrefour Jouaust, 35000 Rennes
+Siège social : 1 carrefour Jouaust, 35000 Rennes
 
-    Hébergement : serveur situé en France et administré par Scaleway, 8 rue de la Ville l’Evêque, 75008 Paris
+Hébergement : serveur situé en France et administré par Scaleway, 8 rue de la Ville l’Evêque, 75008 Paris
     """),
         ],
     )
