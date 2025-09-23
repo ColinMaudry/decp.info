@@ -141,7 +141,11 @@ layout = [
             html.Div(
                 [
                     html.P("lignes", id="nb_rows"),
-                    html.Button("Télécharger au format Excel", id="btn-download-data"),
+                    html.Button(
+                        "Téléchargement désactivé au-delà de 65 000 lignes",
+                        id="btn-download-data",
+                        disabled=True,
+                    ),
                     dcc.Download(id="download-data"),
                     html.P("Données mises à jour le " + str(update_date)),
                 ],
@@ -157,6 +161,9 @@ layout = [
     Output("table", "data"),
     Output("table", "data_timestamp"),
     Output("nb_rows", "children"),
+    Output("btn-download-data", "disabled"),
+    Output("btn-download-data", "children"),
+    Output("btn-download-data", "title"),
     Input("table", "page_current"),
     Input("table", "page_size"),
     Input("table", "filter_query"),
@@ -215,7 +222,9 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
 
     df_filtered = dff.clone()
 
-    nb_rows = f"{format_number(dff.height)} lignes"
+    height = dff.height
+
+    nb_rows = f"{format_number(height)} lignes"
 
     # Pagination des données
     start_row = page_current * page_size
@@ -223,7 +232,23 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     dff = dff.slice(start_row, page_size)
     dicts = dff.to_dicts()
 
-    return dicts, data_timestamp + 1, nb_rows
+    if height > 65000:
+        download_disabled = True
+        download_text = "Téléchargement désactivé au-delà de 65 000 lignes"
+        download_title = "Excel ne supporte pas d'avoir plus de 65 000 URLs dans une même feuille de calcul. Contactez-moi pour me présenter votre besoin en téléchargement afin je puisse adapter la solution."
+    else:
+        download_disabled = False
+        download_text = "Télécharger au format Excel"
+        download_title = ""
+
+    return (
+        dicts,
+        data_timestamp + 1,
+        nb_rows,
+        download_disabled,
+        download_text,
+        download_title,
+    )
 
 
 @callback(
