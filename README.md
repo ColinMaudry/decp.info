@@ -31,7 +31,11 @@ python run.py
 
 ## Notes de version
 
-### 2.0.1 (23 septembre 2025)
+#### 2.0.1 (23 septembre 2025)
+
+- Bloquage du bouton de téléchargement si trop de lignes (+ 65000) [#38](https://github.com/ColinMaudry/decp.info/issues/38)
+- Meilleures instructions d'installation et lancement
+- Coquilles 🐚
 
 ### 2.0.0 (23 septembre 2025)
 
@@ -39,7 +43,7 @@ python run.py
 - section "À propos" plus développée
 - correction de bugs dans les filtres de la data table
 
-### 2.0.0-alpha
+#### 2.0.0-alpha
 
 - Data table fonctionnelle
 
