@@ -62,12 +62,40 @@ les fonctionnalités actuelles de decp.info. Il est ainsi possible de rajouter
             get_sources_tables(os.getenv("SOURCE_STATS_CSV_PATH")),
             html.H4("Mentions légales", id="mentions-legales"),
             dcc.Markdown("""
+##### Publication
+
 Site Web développé et édité par [SAS Colmo](https://annuaire-entreprises.data.gouv.fr/entreprise/colmo-989393350), 989 393 350 RCS Rennes au capital de 3 000 euros.
 
 Siège social : 1 carrefour Jouaust, 35000 Rennes
 
 Hébergement : serveur situé en France et administré par Scaleway, 8 rue de la Ville l’Evêque, 75008 Paris
-    """),
+
+##### Suivi d'audience
+
+Ce site dépose un petit fichier texte (un « cookie ») sur votre ordinateur lorsque vous le consultez ([Wikipédia](https://fr.wikipedia.org/wiki/Cookie_(informatique))). Cela me permet de mesurer le nombre de visites, de distinguer les nouveaux visiteurs des utilisateurs réguliers et ainsi de communiquer sur l'impact de decp.info.
+
+**Ce site n’affiche pas de bannière de consentement aux cookies, pourquoi ?**
+
+C’est vrai, vous n’avez pas eu à cliquer sur un bloc qui recouvre la moitié de la page pour dire que vous êtes d’accord avec le dépôt de cookies.
+
+Rien d’exceptionnel, je respecte simplement la loi, qui dit que certains outils de suivi d’audience, correctement configurés pour respecter la vie privée, sont exemptés d’autorisation préalable.
+
+J’utilise pour cela [Matomo](https://matomo.org/), un outil [libre](https://matomo.org/free-software/), paramétré pour être en conformité avec [la recommandation « Cookies »](https://www.cnil.fr/fr/solutions-pour-les-cookies-de-mesure-daudience) de la CNIL. Cela signifie que votre adresse IP, par exemple, est anonymisée avant d’être enregistrée. Il m’est donc impossible d’associer vos visites sur ce site à votre personne.
+
+Matomo propose cependant ce formulaire si vous souhaitez totalement désactiver le suivi de vos sessions sur ce site :"""),
+            html.Div(
+                id="matomo-opt-out",
+                style={
+                    "border": "1pt solid lightgrey",
+                    "padding": "12px",
+                    "margin": "auto 0 auto 12px",
+                    "width": "80%",
+                },
+                children=["Vous utilisez un bloqueur de suivi de trafic."],
+            ),
+            html.Script(
+                src="https://analytics.maudry.com/index.php?module=CoreAdminHome&action=optOutJS&divId=matomo-opt-out&language=auto&showIntro=1"
+            ),
         ],
     )
 ]
