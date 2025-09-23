@@ -1,6 +1,6 @@
 # decp.info
 
-> v2.0
+> v2.0.1
 
 Outil d'exploration et de téléchargement des données essentielles de la commande publique.
 
@@ -12,6 +12,10 @@ Outil d'exploration et de téléchargement des données essentielles de la comma
 python -m venv .venv
 source .venv/bin/activate
 pip install .
+
+# Copie et personnalisation du .env
+cp template.env .env
+nano .env
 
 # Pour la production
 gunicorn app:server
@@ -26,6 +30,8 @@ python run.py
 - [colin.maudry.com](https://colin.maudry.com) (blog)
 
 ## Notes de version
+
+### 2.0.1 (23 septembre 2025)
 
 ### 2.0.0 (23 septembre 2025)
 
