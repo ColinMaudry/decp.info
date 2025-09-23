@@ -36,7 +36,7 @@ les fonctionnalités actuelles de decp.info. Il est ainsi possible de rajouter
             ),
             html.H4("Pour contribuer", id="contribuer"),
             dcc.Markdown("""
-- via l'achat d'un prestation de service (devis, prestation, facture), vous pouvez financer le développement de [fonctionnalités prévues](https://github.com/ColinMaudry/decp.info/issues), ou d'autres !
+- via l'achat d'une prestation de service (devis, prestation, facture), vous pouvez financer le développement de [fonctionnalités prévues](https://github.com/ColinMaudry/decp.info/issues), ou d'autres !
 - ma société accepte aussi les dons (pas de réduction d'impôt possible)
 - envoyez un mail et on discute !
 
