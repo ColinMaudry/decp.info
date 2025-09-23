@@ -8,6 +8,7 @@ authors = [
 ]
 dependencies = [
     "dash==3.2.0",
+    "dash[compress]",
     "polars",
     "gunicorn",
     "dash-bootstrap-components",

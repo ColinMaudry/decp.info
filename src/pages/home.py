@@ -83,6 +83,14 @@ datatable = dash_table.DataTable(
             "lineHeight": "14px",
             "whiteSpace": "normal",
         },
+        {
+            "if": {"column_id": "acheteur_nom"},
+            "minWidth": "250px",
+            "textAlign": "left",
+            "overflow": "hidden",
+            "lineHeight": "14px",
+            "whiteSpace": "normal",
+        },
     ],
     data_timestamp=0,
     markdown_options={"html": True},
@@ -92,7 +100,9 @@ layout = [
     html.Div(
         html.Details(
             children=[
-                html.Summary(html.H3("Mode d'emploi")),
+                html.Summary(
+                    html.H3("Mode d'emploi", style={"text-decoration": "underline"}),
+                ),
                 dcc.Markdown(
                     """
 

@@ -1,5 +1,7 @@
 # decp.info
 
+> v2.0
+
 Outil d'exploration et de téléchargement des données essentielles de la commande publique.
 
 => [decp.info](https://decp.info)
@@ -10,14 +12,26 @@ Outil d'exploration et de téléchargement des données essentielles de la comma
 python -m venv .venv
 source .venv/bin/activate
 pip install .
+
+# Pour la production
 gunicorn app:server
+
+# Pour avoir le debuggage et le hot reload
+python run.py
 ```
-## Dépôts de code connexes
+
+## Liens connexes
 
 - [decp-processing](https://github.com/ColinMaudry/decp-processing) (traitement et publication des données)
-- [decp-table-schema](https://github.com/ColinMaudry/decp-table-schema) (schéma de données tabulaire)
+- [colin.maudry.com](https://colin.maudry.com) (blog)
 
 ## Notes de version
+
+### 2.0.0 (23 septembre 2025)
+
+- détails des sources de données
+- section "À propos" plus développée
+- correction de bugs dans les filtres de la data table
 
 ### 2.0.0-alpha
 

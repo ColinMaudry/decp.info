@@ -2,12 +2,25 @@ import logging
 
 import dash_bootstrap_components as dbc
 from dash import Dash, dcc, html, page_container, page_registry
+from flask import send_from_directory
 
-app = Dash(external_stylesheets=[dbc.themes.SIMPLEX], title="decp.info", use_pages=True)
+app = Dash(
+    external_stylesheets=[dbc.themes.SIMPLEX],
+    title="decp.info",
+    use_pages=True,
+    compress=True,
+)
 # COSMO (belle font, blue),
 # UNITED (rouge, ubuntu font),
 # LUMEN (gros séparateur, blue clair),
 # SIMPLEX (rouge, séparateur)
+
+
+# robots.txt
+@app.server.route("/robots.txt")
+def robots():
+    return send_from_directory("./assets", "robots.txt", mimetype="text/plain")
+
 
 logger = logging.getLogger("decp.info")
 logging.basicConfig(
