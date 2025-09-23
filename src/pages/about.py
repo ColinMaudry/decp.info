@@ -19,7 +19,7 @@ layout = [
         children=[
             html.H2(title),
             dcc.Markdown(
-                """Outil d'exploration libre et gratuit des [Données Essentielles de la Commande Publique](), développé par Colin Maudry.
+                """Outil d'exploration libre et gratuit des données de marchés publics, développé par Colin Maudry.
 
 Ce projet vise à démocratiser l'accès aux données des marchés publics et à un outil performant et gratuit. Si vous le trouvez utile
 j'aimerais beaucoup échanger avec vous pour comprendre vos cas d'usages et vos besoins. Cet outil ne peut rester performant que si je comprends les problèmes qu'il peut aider à résoudre. Ce projet ne peut rester gratuit que grâce au financement du développement de nouvelles fonctionnalités.
