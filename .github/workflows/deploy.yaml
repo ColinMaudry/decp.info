@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
     steps:
-      - name: Checkout repositorypu
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Set up SSH key
@@ -40,4 +40,4 @@ jobs:
             key: ${{ secrets.ARTIFACT_SSH_KEY }}
             passphrase: ${{ secrets.SSH_PSWD }}
             command_timeout: 5m
-            script: ${{ secrets.APP_PATH }}/deploy.sh
+            script: ${{ secrets.APP_PATH }}/deploy.sh ${{ env.APP_NAME }}
