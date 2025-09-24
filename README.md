@@ -24,6 +24,11 @@ gunicorn app:server
 python run.py
 ```
 
+## Déploiement
+
+- **Production** (branche `main`, [decp.info](https://decp.info)) : déploiement manuel via un déclenchement de la Github Action [Déploiement](https://github.com/ColinMaudry/decp.info/actions/workflows/deploy.yaml).
+- **Test** (branche `dev`, [test.decp.info](https://test.decp.info)) : déploiement automatique à chaque push sur la branche `dev`, via la même Github Action.
+
 ## Liens connexes
 
 - [decp-processing](https://github.com/ColinMaudry/decp-processing) (traitement et publication des données)
@@ -34,6 +39,7 @@ python run.py
 #### 2.0.1 (23 septembre 2025)
 
 - Bloquage du bouton de téléchargement si trop de lignes (+ 65000) [#38](https://github.com/ColinMaudry/decp.info/issues/38)
+- Amélioration du script de déploiement (deploy.sh)
 - Meilleures instructions d'installation et lancement
 - Coquilles 🐚
 
