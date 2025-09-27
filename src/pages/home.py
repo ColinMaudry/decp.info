@@ -34,13 +34,6 @@ lf = booleans_to_strings(lf)
 # Remplacer les valeurs manquantes par des chaînes vides
 lf = lf.fill_null("")
 
-
-# Ajout des liens vers l'annuaire
-lf = add_annuaire_link(lf)
-
-# Ajout des liens open data
-lf = add_resource_link(lf)
-
 schema = lf.collect_schema()
 
 
@@ -57,17 +50,6 @@ datatable = html.Div(
         page_action="custom",
         filter_action="custom",
         filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
-        columns=[
-            {
-                "name": i,
-                "id": i,
-                "presentation": "markdown",
-                "type": "text",
-                "format": {"nully": "N/A"},
-                "hideable": True,
-            }
-            for i in lf.collect_schema().names()
-        ],
         sort_action="custom",
         sort_mode="multi",
         sort_by=[],
@@ -158,6 +140,7 @@ layout = [
 
 @callback(
     Output("table", "data"),
+    Output("table", "columns"),
     Output("table", "data_timestamp"),
     Output("nb_rows", "children"),
     Output("btn-download-data", "disabled"),
@@ -229,6 +212,26 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     start_row = page_current * page_size
     # end_row = (page_current + 1) * page_size
     dff = dff.slice(start_row, page_size)
+
+    # Ajout des liens vers l'annuaire des entreprises
+    dff = add_annuaire_link(dff)
+
+    # Ajout des liens vers les fichiers Open Data
+    dff = add_resource_link(dff)
+
+    # Liste finale de colonnes
+    columns = [
+        {
+            "name": column,
+            "id": column,
+            "presentation": "markdown",
+            "type": "text",
+            "format": {"nully": "N/A"},
+            "hideable": True,
+        }
+        for column in dff.columns
+    ]
+
     dicts = dff.to_dicts()
 
     if height > 65000:
@@ -242,6 +245,7 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
 
     return (
         dicts,
+        columns,
         data_timestamp + 1,
         nb_rows,
         download_disabled,
@@ -258,14 +262,6 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
 )
 def download_data(n_clicks, hidden_columns: list = None):
     df_to_download = df_filtered.clone()
-
-    print(df_to_download.columns)
-
-    # Rétablissement des colonnes source et sourceOpenData (voir add_resource_link)
-    df_to_download = df_to_download.with_columns(
-        pl.col("source").str.extract(r'href="(.*?)"').alias("sourceFile"),
-        pl.col("source").str.extract(r'">(.*?)<').alias("sourceDataset"),
-    )
 
     # Les colonnes masquées sont supprimées
     if hidden_columns:

@@ -42,18 +42,18 @@ def split_filter_part(filter_part):
     return [None] * 3
 
 
-def add_resource_link(lff: pl.LazyFrame) -> pl.LazyFrame:
-    lff = lff.with_columns(
+def add_resource_link(dff: pl.DataFrame) -> pl.DataFrame:
+    dff = dff.with_columns(
         (
             '<a href="' + pl.col("sourceFile") + '">' + pl.col("sourceDataset") + "</a>"
         ).alias("source")
     )
-    lff = lff.drop(["sourceFile", "sourceDataset"])
-    return lff
+    dff = dff.drop(["sourceFile", "sourceDataset"])
+    return dff
 
 
-def add_annuaire_link(lff: pl.LazyFrame):
-    lff = lff.with_columns(
+def add_annuaire_link(dff: pl.DataFrame):
+    dff = dff.with_columns(
         pl.when(pl.col("titulaire_typeIdentifiant") == "SIRET")
         .then(
             '<a href = "https://annuaire-entreprises.data.gouv.fr/etablissement/'
@@ -65,7 +65,7 @@ def add_annuaire_link(lff: pl.LazyFrame):
         .otherwise(pl.col("titulaire_id"))
         .alias("titulaire_id")
     )
-    lff = lff.with_columns(
+    dff = dff.with_columns(
         (
             '<a href = "https://annuaire-entreprises.data.gouv.fr/etablissement/'
             + pl.col("acheteur_id")
@@ -74,7 +74,7 @@ def add_annuaire_link(lff: pl.LazyFrame):
             + "</a>"
         ).alias("acheteur_id")
     )
-    return lff
+    return dff
 
 
 def booleans_to_strings(lff: pl.LazyFrame) -> pl.LazyFrame:
