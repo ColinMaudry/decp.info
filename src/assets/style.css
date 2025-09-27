@@ -10,6 +10,14 @@
   float: left;
 }
 
+#source_table p {
+  line-height: 1.5;
+}
+
+#source_table {
+  margin-bottom: 25px;
+}
+
 /* Réduire la taille du texte de la colonne Objet */
 
 td[data-dash-column="objet"] {

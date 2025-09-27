@@ -1,13 +1,14 @@
 [project]
 name = "decp.info"
 description = ""
-version = "2.0.0"
+version = "2.0.1"
 requires-python = ">= 3.10"
 authors = [
     { name = "Colin Maudry", email = "colin+decp@maudry.com" }
 ]
 dependencies = [
     "dash==3.2.0",
+    "dash[compress]",
     "polars",
     "gunicorn",
     "dash-bootstrap-components",

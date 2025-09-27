@@ -1,5 +1,7 @@
 # decp.info
 
+> v2.0.1
+
 Outil d'exploration et de téléchargement des données essentielles de la commande publique.
 
 => [decp.info](https://decp.info)
@@ -10,16 +12,44 @@ Outil d'exploration et de téléchargement des données essentielles de la comma
 python -m venv .venv
 source .venv/bin/activate
 pip install .
+
+# Copie et personnalisation du .env
+cp template.env .env
+nano .env
+
+# Pour la production
 gunicorn app:server
+
+# Pour avoir le debuggage et le hot reload
+python run.py
 ```
-## Dépôts de code connexes
+
+## Déploiement
+
+- **Production** (branche `main`, [decp.info](https://decp.info)) : déploiement manuel via un déclenchement de la Github Action [Déploiement](https://github.com/ColinMaudry/decp.info/actions/workflows/deploy.yaml).
+- **Test** (branche `dev`, [test.decp.info](https://test.decp.info)) : déploiement automatique à chaque push sur la branche `dev`, via la même Github Action.
+
+## Liens connexes
 
 - [decp-processing](https://github.com/ColinMaudry/decp-processing) (traitement et publication des données)
-- [decp-table-schema](https://github.com/ColinMaudry/decp-table-schema) (schéma de données tabulaire)
+- [colin.maudry.com](https://colin.maudry.com) (blog)
 
 ## Notes de version
 
-### 2.0.0-alpha
+#### 2.0.1 (23 septembre 2025)
+
+- Bloquage du bouton de téléchargement si trop de lignes (+ 65000) [#38](https://github.com/ColinMaudry/decp.info/issues/38)
+- Amélioration du script de déploiement (deploy.sh)
+- Meilleures instructions d'installation et lancement
+- Coquilles 🐚
+
+### 2.0.0 (23 septembre 2025)
+
+- détails des sources de données
+- section "À propos" plus développée
+- correction de bugs dans les filtres de la data table
+
+#### 2.0.0-alpha
 
 - Data table fonctionnelle
 
