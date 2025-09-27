@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 from src.utils import (
     add_org_links,
     add_resource_link,
-    booleans_to_strings,
     filter_table_data,
     format_number,
     lf,
@@ -19,19 +18,6 @@ load_dotenv()
 
 update_date = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
 update_date = datetime.fromtimestamp(update_date).strftime("%d/%m/%Y")
-
-# Suppression des colonnes inutiles
-lf = lf.drop(
-    [
-        "donneesActuelles",
-    ]
-)
-
-# Convertir les colonnes booléennes en chaînes de caractères
-lf = booleans_to_strings(lf)
-
-# Remplacer les valeurs manquantes par des chaînes vides
-lf = lf.fill_null("")
 
 schema = lf.collect_schema()
 
@@ -164,13 +150,11 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     if len(sort_by) > 0:
         lff = sort_table_data(lff, sort_by)
 
+    # Remplace les strings null par "", mais pas les numeric null
+    lff = lff.fill_null("")
+
     # Matérialisation des filtres
     dff: pl.DataFrame = lff.collect()
-
-    # if filter_query or sort_by:
-    #     filtered_data = dff.to_dicts()
-    # else:
-    #     filtered_data = {}
 
     height = dff.height
 

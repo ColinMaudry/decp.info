@@ -126,10 +126,17 @@ def get_decp_data() -> pl.LazyFrame:
         lff: pl.LazyFrame = pl.scan_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
 
     # Tri des marchés par date de notification
-    lff = lff.sort(by=["dateNotification"], descending=True, nulls_last=True)
+    lff = lff.sort(by=["dateNotification", "uid"], descending=True, nulls_last=True)
 
     # Uniquement les données actuelles, pas les anciennes versions de marchés
-    lff = lff.filter(pl.col("donneesActuelles"))
+    lff = lff.filter(pl.col("donneesActuelles")).drop("donneesActuelles")
+
+    # Convertir les colonnes booléennes en chaînes de caractères
+    lff = booleans_to_strings(lff)
+
+    # Bizarrement je ne peux pas faire lff = lff.fill_null("") ici
+    # ça génère une erreur dans la page acheteur (acheteur_data.table) :
+    # AttributeError: partially initialized module 'pandas' has no attribute 'NaT' (most likely due to a circular import)
 
     return lff
 

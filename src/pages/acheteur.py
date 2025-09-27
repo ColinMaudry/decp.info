@@ -140,7 +140,7 @@ def update_acheteur_stats(data):
     df = pl.DataFrame(data)
     if df.height == 0:
         df = pl.DataFrame(schema=lf.collect_schema())
-    df_marches = df.unique("uid")
+    df_marches = df.unique("id")
     nb_marches = format_number(df_marches.height)
     # somme_marches = format_number(int(df_marches.select(pl.sum("montant")).item()))
     marches_attribues = [html.Strong(nb_marches), " marchés et accord-cadres attribués"]
@@ -165,8 +165,9 @@ def update_acheteur_stats(data):
 def get_acheteur_marches_data(url, acheteur_year: str) -> pl.LazyFrame:
     acheteur_siret = url.split("/")[-1]
     lff = lf.filter(pl.col("acheteur_id") == acheteur_siret)
+    lff = lff.fill_null("")
     lff = lff.select(
-        "uid",
+        "id",
         "objet",
         "dateNotification",
         "titulaire_id",
@@ -179,7 +180,7 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> pl.LazyFrame:
         lff = lff.filter(
             pl.col("dateNotification").cast(pl.String).str.starts_with(acheteur_year)
         )
-    lff = lff.sort("dateNotification", descending=True, nulls_last=True)
+    lff = lff.sort(["dateNotification", "id"], descending=True, nulls_last=True)
 
     data = lff.collect(engine="streaming").to_dicts()
     return data
@@ -191,7 +192,7 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> pl.LazyFrame:
 )
 def get_last_marches_table(data) -> html.Div:
     columns = [
-        "uid",
+        "id",
         "objet",
         "dateNotification",
         "titulaire_nom",
