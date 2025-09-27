@@ -52,7 +52,7 @@ def add_resource_link(dff: pl.DataFrame) -> pl.DataFrame:
     return dff
 
 
-def add_annuaire_link(dff: pl.DataFrame):
+def add_org_links(dff: pl.DataFrame):
     dff = dff.with_columns(
         pl.when(pl.col("titulaire_typeIdentifiant") == "SIRET")
         .then(
@@ -67,9 +67,9 @@ def add_annuaire_link(dff: pl.DataFrame):
     )
     dff = dff.with_columns(
         (
-            '<a href = "https://annuaire-entreprises.data.gouv.fr/etablissement/'
+            '<a href = "/acheteur/'
             + pl.col("acheteur_id")
-            + '">'
+            + '" target="_blank">'
             + pl.col("acheteur_id")
             + "</a>"
         ).alias("acheteur_id")

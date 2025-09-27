@@ -74,6 +74,7 @@ app.layout = html.Div(
                             page["name"], href=page["relative_path"], className="nav"
                         )
                         for page in page_registry.values()
+                        if page["name"] not in ["Acheteur", "Fournisseur"]
                     ]
                 ),
             ],

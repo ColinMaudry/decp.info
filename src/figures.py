@@ -165,11 +165,7 @@ def point_on_map(lat, lon):
 
     # Create a scatter mapbox or choropleth map
     fig = px.scatter_map(
-        lat=[lat],
-        lon=[lon],
-        height=300,
-        width=400,
-        color=[1],
+        lat=[lat], lon=[lon], height=300, width=400, color=[1], size=[1]
     )
 
     fig.update_coloraxes(showscale=False)
