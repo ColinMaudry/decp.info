@@ -71,7 +71,10 @@ td[data-dash-column="objet"] {
 }
 
 /* Alternance des couleurs pour les lignes */
-#table tr:nth-child(even) td {
+.marches_table {
+  font-family: sans-serif;
+}
+.marches_table .cell-table tr:nth-child(even) td {
   background-color: #feeeee;
 }
 

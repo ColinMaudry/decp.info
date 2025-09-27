@@ -47,49 +47,52 @@ schema = lf.collect_schema()
 title = "Tableau"
 register_page(__name__, path="/", title="decp.info", name=title, order=1)
 
-datatable = dash_table.DataTable(
-    cell_selectable=False,
-    id="table",
-    page_size=20,
-    page_current=0,
-    page_action="custom",
-    filter_action="custom",
-    filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
-    columns=[
-        {
-            "name": i,
-            "id": i,
-            "presentation": "markdown",
-            "type": "text",
-            "format": {"nully": "N/A"},
-            "hideable": True,
-        }
-        for i in lf.collect_schema().names()
-    ],
-    sort_action="custom",
-    sort_mode="multi",
-    sort_by=[],
-    row_deletable=False,
-    style_cell_conditional=[
-        {
-            "if": {"column_id": "objet"},
-            "minWidth": "350px",
-            "textAlign": "left",
-            "overflow": "hidden",
-            "lineHeight": "14px",
-            "whiteSpace": "normal",
-        },
-        {
-            "if": {"column_id": "acheteur_nom"},
-            "minWidth": "250px",
-            "textAlign": "left",
-            "overflow": "hidden",
-            "lineHeight": "14px",
-            "whiteSpace": "normal",
-        },
-    ],
-    data_timestamp=0,
-    markdown_options={"html": True},
+datatable = html.Div(
+    className="marches_table",
+    children=dash_table.DataTable(
+        cell_selectable=False,
+        id="table",
+        page_size=20,
+        page_current=0,
+        page_action="custom",
+        filter_action="custom",
+        filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
+        columns=[
+            {
+                "name": i,
+                "id": i,
+                "presentation": "markdown",
+                "type": "text",
+                "format": {"nully": "N/A"},
+                "hideable": True,
+            }
+            for i in lf.collect_schema().names()
+        ],
+        sort_action="custom",
+        sort_mode="multi",
+        sort_by=[],
+        row_deletable=False,
+        style_cell_conditional=[
+            {
+                "if": {"column_id": "objet"},
+                "minWidth": "350px",
+                "textAlign": "left",
+                "overflow": "hidden",
+                "lineHeight": "14px",
+                "whiteSpace": "normal",
+            },
+            {
+                "if": {"column_id": "acheteur_nom"},
+                "minWidth": "250px",
+                "textAlign": "left",
+                "overflow": "hidden",
+                "lineHeight": "14px",
+                "whiteSpace": "normal",
+            },
+        ],
+        data_timestamp=0,
+        markdown_options={"html": True},
+    ),
 )
 
 layout = [
