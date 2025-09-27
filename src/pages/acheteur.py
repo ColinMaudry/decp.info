@@ -101,7 +101,9 @@ def get_last_marches_table(data) -> html.Div:
     table = html.Div(
         className="marches_table",
         children=dash_table.DataTable(
-            data=data[:20],
+            data=data,
+            page_action="native",
+            page_size=10,
             style_cell_conditional=[
                 {
                     "if": {"column_id": "objet"},
