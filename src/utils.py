@@ -102,10 +102,10 @@ def format_number(number) -> str:
     return number
 
 
-def get_acheteur_data(siret: str) -> dict:
+def get_annuaire_data(siret: str) -> dict:
     url = f"https://recherche-entreprises.api.gouv.fr/search?q={siret}"
     response = get(url)
-    return response.json()
+    return response.json()["results"][0]
 
 
 def get_decp_data() -> pl.LazyFrame:

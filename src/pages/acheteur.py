@@ -1,7 +1,8 @@
 import polars as pl
 from dash import Input, Output, callback, dash_table, dcc, html, register_page
 
-from src.utils import lf
+from src.figures import point_on_map
+from src.utils import get_annuaire_data, lf
 
 register_page(
     __name__,
@@ -19,7 +20,27 @@ layout = [
     html.Div(
         className="container",
         children=[
-            html.H2(id="acheteur_title", children=""),
+            html.H2(
+                children=[
+                    html.Span(id="acheteur_siret"),
+                    " - ",
+                    html.Span(id="acheteur_nom"),
+                ]
+            ),
+            html.Div(
+                className="wrapper",
+                children=[
+                    html.Div(
+                        className="org_infos",
+                        children=[html.P(["Commune : ", html.Span(id="commune")])],
+                    ),
+                    html.Div(className="org_map", id="acheteur_map"),
+                    # adresse
+                    # code commune
+                    # lat long
+                ],
+            ),
+            # récupérer les données de l'acheteur sur l'api annuaire
             html.H3("Derniers marchés publics notifiés"),
             html.Div(id="acheteur_last_marches", children=""),
         ],
@@ -28,15 +49,27 @@ layout = [
 
 
 @callback(
-    Output(component_id="acheteur_title", component_property="children"),
+    Output(component_id="acheteur_siret", component_property="children"),
+    Output(component_id="acheteur_nom", component_property="children"),
+    Output(component_id="commune", component_property="children"),
+    Output(component_id="acheteur_map", component_property="children"),
     Input(component_id="url", component_property="pathname"),
 )
 def update_acheteur(url):
     acheteur_siret = url.split("/")[-1]
     if len(acheteur_siret) != 14:
         return f"Le SIRET renseigné doit faire 14 caractères ({acheteur_siret})"
-
-    return acheteur_siret
+    data = get_annuaire_data(acheteur_siret)
+    data_etablissement = data["matching_etablissements"][0]
+    acheteur_map = point_on_map(
+        data_etablissement["latitude"], data_etablissement["longitude"]
+    )
+    return (
+        acheteur_siret,
+        data["nom_raison_sociale"],
+        data_etablissement["libelle_commune"],
+        acheteur_map,
+    )
 
 
 @callback(

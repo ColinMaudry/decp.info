@@ -111,3 +111,20 @@ h3 {
 #_pages_content {
   padding-top: 28px;
 }
+
+/* Vue acheteur/fournisseur */
+.wrapper {
+  display: grid;
+  grid-gap: 10px;
+  margin-bottom: 50px;
+}
+
+.org_infos {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.org_map {
+  grid-column: 2;
+  grid-row: 1;
+}
