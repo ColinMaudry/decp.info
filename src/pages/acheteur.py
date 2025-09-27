@@ -1,7 +1,7 @@
 import datetime
 
 import polars as pl
-from dash import Input, Output, callback, dash_table, dcc, html, register_page
+from dash import Input, Output, State, callback, dash_table, dcc, html, register_page
 
 from src.figures import point_on_map
 from src.utils import format_number, get_annuaire_data, get_departement_region, lf
@@ -50,6 +50,7 @@ layout = [
                     html.Div(
                         className="org_infos",
                         children=[
+                            # TODO: ajouter le type d'acheteur : commune, CD, CR, etc.
                             html.P(["Commune : ", html.Strong(id="acheteur_commune")]),
                             html.P(
                                 [
@@ -76,7 +77,6 @@ layout = [
                                 id="btn-download-acheteur-data",
                             ),
                             dcc.Download(id="download-acheteur-data"),
-                            dcc.Store(id="n_acheteur_downloads"),
                         ],
                     ),
                     html.Div(className="org_map", id="acheteur_map"),
@@ -244,22 +244,18 @@ def get_last_marches_table(data) -> html.Div:
 
 @callback(
     Output("download-acheteur-data", "data"),
-    Output("n_acheteur_downloads", "data"),
     Input("btn-download-acheteur-data", "n_clicks"),
-    Input(component_id="acheteur_data", component_property="data"),
-    Input(component_id="acheteur_nom", component_property="children"),
-    Input(component_id="acheteur_year", component_property="value"),
-    Input("n_acheteur_downloads", "data"),
+    State(component_id="acheteur_data", component_property="data"),
+    State(component_id="acheteur_nom", component_property="children"),
+    State(component_id="acheteur_year", component_property="value"),
     prevent_initial_call=True,
 )
 def download_acheteur_data(
-    n_clicks, data: [dict], acheteur_nom: str, annee: str, n_downloads: int
+    n_clicks,
+    data: [dict],
+    acheteur_nom: str,
+    annee: str,
 ):
-    if n_clicks is None:
-        return None, 0
-    if n_clicks == n_downloads:
-        return None, n_downloads
-
     df_to_download = pl.DataFrame(data)
 
     def to_bytes(buffer):
@@ -268,7 +264,4 @@ def download_acheteur_data(
         )
 
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-    n_downloads += 1
-    return dcc.send_bytes(
-        to_bytes, filename=f"decp_{acheteur_nom}_{date}.xlsx"
-    ), n_downloads
+    return dcc.send_bytes(to_bytes, filename=f"decp_{acheteur_nom}_{date}.xlsx")
