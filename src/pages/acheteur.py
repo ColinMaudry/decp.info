@@ -69,7 +69,7 @@ layout = [
                         className="org_stats",
                         children=[
                             html.P(id="acheteur_titre_stats"),
-                            html.P(id="acheteur_marches_notifies"),
+                            html.P(id="acheteur_marches_attribues"),
                             html.P(id="acheteur_fournisseurs_differents"),
                         ],
                     ),
@@ -77,7 +77,7 @@ layout = [
                 ],
             ),
             # récupérer les données de l'acheteur sur l'api annuaire
-            html.H3("Derniers marchés publics notifiés"),
+            html.H3("Derniers marchés publics attribués"),
             html.Div(id="acheteur_last_marches", children=""),
         ],
     ),
@@ -124,7 +124,7 @@ def update_acheteur_infos(url):
 
 
 @callback(
-    Output(component_id="acheteur_marches_notifies", component_property="children"),
+    Output(component_id="acheteur_marches_attribues", component_property="children"),
     Output(
         component_id="acheteur_fournisseurs_differents", component_property="children"
     ),
@@ -135,7 +135,7 @@ def update_acheteur_stats(data):
     df_marches = df.unique("uid")
     nb_marches = format_number(df_marches.height)
     # somme_marches = format_number(int(df_marches.select(pl.sum("montant")).item()))
-    marches_notifies = [html.Strong(nb_marches), " marchés et accord-cadres attribués"]
+    marches_attribues = [html.Strong(nb_marches), " marchés et accord-cadres attribués"]
     # + ", pour un total de ", html.Strong(somme_marches + " €")]
     del df_marches
 
@@ -146,7 +146,7 @@ def update_acheteur_stats(data):
     ]
     del df
 
-    return marches_notifies, nb_fournisseurs
+    return marches_attribues, nb_fournisseurs
 
 
 @callback(
