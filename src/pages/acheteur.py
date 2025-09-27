@@ -71,6 +71,12 @@ layout = [
                             html.P(id="acheteur_titre_stats"),
                             html.P(id="acheteur_marches_attribues"),
                             html.P(id="acheteur_fournisseurs_differents"),
+                            html.Button(
+                                "Téléchargement au format Excel",
+                                id="btn-download-acheteur-data",
+                            ),
+                            dcc.Download(id="download-acheteur-data"),
+                            dcc.Store(id="n_acheteur_downloads"),
                         ],
                     ),
                     html.Div(className="org_map", id="acheteur_map"),
@@ -132,6 +138,8 @@ def update_acheteur_infos(url):
 )
 def update_acheteur_stats(data):
     df = pl.DataFrame(data)
+    if df.height == 0:
+        df = pl.DataFrame(schema=lf.collect_schema())
     df_marches = df.unique("uid")
     nb_marches = format_number(df_marches.height)
     # somme_marches = format_number(int(df_marches.select(pl.sum("montant")).item()))
@@ -157,10 +165,6 @@ def update_acheteur_stats(data):
 def get_acheteur_marches_data(url, acheteur_year: str) -> pl.LazyFrame:
     acheteur_siret = url.split("/")[-1]
     lff = lf.filter(pl.col("acheteur_id") == acheteur_siret)
-    if acheteur_year and acheteur_year != "Toutes":
-        lff = lff.filter(
-            pl.col("dateNotification").cast(pl.String).str.starts_with(acheteur_year)
-        )
     lff = lff.select(
         "uid",
         "objet",
@@ -171,7 +175,12 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> pl.LazyFrame:
         "codeCPV",
         "dureeMois",
     )
+    if acheteur_year and acheteur_year != "Toutes":
+        lff = lff.filter(
+            pl.col("dateNotification").cast(pl.String).str.starts_with(acheteur_year)
+        )
     lff = lff.sort("dateNotification", descending=True, nulls_last=True)
+
     data = lff.collect(engine="streaming").to_dicts()
     return data
 
@@ -181,10 +190,19 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> pl.LazyFrame:
     Input(component_id="acheteur_data", component_property="data"),
 )
 def get_last_marches_table(data) -> html.Div:
-    columns = data[0].keys()
+    columns = [
+        "uid",
+        "objet",
+        "dateNotification",
+        "titulaire_nom",
+        "montant",
+        "codeCPV",
+        "dureeMois",
+    ]
 
     table = html.Div(
         className="marches_table",
+        id="marches_datatable",
         children=dash_table.DataTable(
             data=data,
             page_action="native",
@@ -222,3 +240,35 @@ def get_last_marches_table(data) -> html.Div:
         ),
     )
     return table
+
+
+@callback(
+    Output("download-acheteur-data", "data"),
+    Output("n_acheteur_downloads", "data"),
+    Input("btn-download-acheteur-data", "n_clicks"),
+    Input(component_id="acheteur_data", component_property="data"),
+    Input(component_id="acheteur_nom", component_property="children"),
+    Input(component_id="acheteur_year", component_property="value"),
+    Input("n_acheteur_downloads", "data"),
+    prevent_initial_call=True,
+)
+def download_acheteur_data(
+    n_clicks, data: [dict], acheteur_nom: str, annee: str, n_downloads: int
+):
+    if n_clicks is None:
+        return None, 0
+    if n_clicks == n_downloads:
+        return None, n_downloads
+
+    df_to_download = pl.DataFrame(data)
+
+    def to_bytes(buffer):
+        df_to_download.write_excel(
+            buffer, worksheet="DECP" if annee in ["Toutes", None] else annee
+        )
+
+    date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    n_downloads += 1
+    return dcc.send_bytes(
+        to_bytes, filename=f"decp_{acheteur_nom}_{date}.xlsx"
+    ), n_downloads
