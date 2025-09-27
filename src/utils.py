@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from time import sleep
@@ -124,9 +125,6 @@ def get_decp_data() -> pl.LazyFrame:
         sleep(10)
         lff: pl.LazyFrame = pl.scan_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
 
-    # Remplacement des valeurs numériques par des chaînes de caractères
-    # lff = numbers_to_strings(lff)
-
     # Tri des marchés par date de notification
     lff = lff.sort(by=["dateNotification"], descending=True, nulls_last=True)
 
@@ -136,4 +134,21 @@ def get_decp_data() -> pl.LazyFrame:
     return lff
 
 
+def get_departements() -> dict:
+    with open("data/departements.json", "rb") as f:
+        data = json.load(f)
+        return data
+
+
+def get_departement_region(code_postal):
+    if code_postal > "97000":
+        code_departement = code_postal[:3]
+    else:
+        code_departement = code_postal[:2]
+    nom_departement = departements[code_departement]["departement"]
+    nom_region = departements[code_departement]["region"]
+    return code_departement, nom_departement, nom_region
+
+
 lf = get_decp_data()
+departements = get_departements()
