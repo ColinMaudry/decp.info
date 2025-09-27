@@ -6,44 +6,18 @@ from dash import Input, Output, State, callback, dash_table, dcc, html, register
 from dotenv import load_dotenv
 
 from src.utils import (
-    add_annuaire_link,
+    add_org_links,
     add_resource_link,
-    booleans_to_strings,
+    filter_table_data,
     format_number,
     lf,
-    logger,
-    split_filter_part,
+    sort_table_data,
 )
 
 load_dotenv()
 
 update_date = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
 update_date = datetime.fromtimestamp(update_date).strftime("%d/%m/%Y")
-df_filtered = pl.DataFrame()
-
-# Unique les données actuelles, pas les anciennes versions de marchés
-
-lf = lf.filter(pl.col("donneesActuelles"))
-
-# Suppression des colonnes inutiles
-lf = lf.drop(
-    [
-        "donneesActuelles",
-    ]
-)
-
-# Convertir les colonnes booléennes en chaînes de caractères
-lf = booleans_to_strings(lf)
-
-# Remplacer les valeurs manquantes par des chaînes vides
-lf = lf.fill_null("")
-
-
-# Ajout des liens vers l'annuaire
-lf = add_annuaire_link(lf)
-
-# Ajout des liens open data
-lf = add_resource_link(lf)
 
 schema = lf.collect_schema()
 
@@ -51,49 +25,41 @@ schema = lf.collect_schema()
 title = "Tableau"
 register_page(__name__, path="/", title="decp.info", name=title, order=1)
 
-datatable = dash_table.DataTable(
-    cell_selectable=False,
-    id="table",
-    page_size=20,
-    page_current=0,
-    page_action="custom",
-    filter_action="custom",
-    filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
-    columns=[
-        {
-            "name": i,
-            "id": i,
-            "presentation": "markdown",
-            "type": "text",
-            "format": {"nully": "N/A"},
-            "hideable": True,
-        }
-        for i in lf.collect_schema().names()
-    ],
-    sort_action="custom",
-    sort_mode="multi",
-    sort_by=[],
-    row_deletable=False,
-    style_cell_conditional=[
-        {
-            "if": {"column_id": "objet"},
-            "minWidth": "350px",
-            "textAlign": "left",
-            "overflow": "hidden",
-            "lineHeight": "14px",
-            "whiteSpace": "normal",
-        },
-        {
-            "if": {"column_id": "acheteur_nom"},
-            "minWidth": "250px",
-            "textAlign": "left",
-            "overflow": "hidden",
-            "lineHeight": "14px",
-            "whiteSpace": "normal",
-        },
-    ],
-    data_timestamp=0,
-    markdown_options={"html": True},
+datatable = html.Div(
+    className="marches_table",
+    children=dash_table.DataTable(
+        cell_selectable=False,
+        id="table",
+        page_size=20,
+        page_current=0,
+        page_action="custom",
+        filter_action="custom",
+        filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
+        sort_action="custom",
+        sort_mode="multi",
+        sort_by=[],
+        row_deletable=False,
+        style_cell_conditional=[
+            {
+                "if": {"column_id": "objet"},
+                "minWidth": "350px",
+                "textAlign": "left",
+                "overflow": "hidden",
+                "lineHeight": "14px",
+                "whiteSpace": "normal",
+            },
+            {
+                "if": {"column_id": "acheteur_nom"},
+                "minWidth": "250px",
+                "textAlign": "left",
+                "overflow": "hidden",
+                "lineHeight": "14px",
+                "whiteSpace": "normal",
+            },
+        ],
+        data_timestamp=0,
+        markdown_options={"html": True},
+    ),
 )
 
 layout = [
@@ -147,6 +113,7 @@ layout = [
                         disabled=True,
                     ),
                     dcc.Download(id="download-data"),
+                    dcc.Store(id="filtered_data", storage_type="memory"),
                     html.P("Données mises à jour le " + str(update_date)),
                 ],
                 className="table-menu",
@@ -159,6 +126,8 @@ layout = [
 
 @callback(
     Output("table", "data"),
+    Output("table", "columns"),
+    # Output("filtered_data", "data"),
     Output("table", "data_timestamp"),
     Output("nb_rows", "children"),
     Output("btn-download-data", "disabled"),
@@ -172,55 +141,20 @@ layout = [
 )
 def update_table(page_current, page_size, filter_query, sort_by, data_timestamp):
     print(" + + + + + + + + + + + + + + + + + + ")
-    global df_filtered
 
     # Application des filtres
     lff: pl.LazyFrame = lf  # start from the original data
     if filter_query:
-        filtering_expressions = filter_query.split(" && ")
-        for filter_part in filtering_expressions:
-            col_name, operator, filter_value = split_filter_part(filter_part)
-            col_type = str(schema[col_name])
-            print("filter_value:", filter_value)
-            print("filter_value_type:", type(filter_value))
-            print("col_type:", col_type)
-
-            if operator in ("<", "<=", ">", ">="):
-                filter_value = int(filter_value)
-                if operator == "<":
-                    lff = lff.filter(pl.col(col_name) < filter_value)
-                elif operator == ">":
-                    lff = lff.filter(pl.col(col_name) > filter_value)
-                elif operator == ">=":
-                    lff = lff.filter(pl.col(col_name) >= filter_value)
-                elif operator == "<=":
-                    lff = lff.filter(pl.col(col_name) <= filter_value)
-
-            elif col_type.startswith("Int") or col_type.startswith("Float"):
-                try:
-                    filter_value = int(filter_value)
-                except ValueError:
-                    logger.error(f"Invalid numeric filter value: {filter_value}")
-                    continue
-                lff = lff.filter(pl.col(col_name) == filter_value)
-
-            elif operator == "contains" and col_type == "String":
-                lff = lff.filter(pl.col(col_name).str.contains("(?i)" + filter_value))
-
-            # elif operator == 'datestartswith':
-            # lff = lff.filter(pl.col(col_name).str.startswith(filter_value)")
+        lff = filter_table_data(lff, filter_query)
 
     if len(sort_by) > 0:
-        lff = lff.sort(
-            [col["column_id"] for col in sort_by],
-            descending=[col["direction"] == "desc" for col in sort_by],
-            nulls_last=True,
-        )
-        print(sort_by)
+        lff = sort_table_data(lff, sort_by)
 
+    # Remplace les strings null par "", mais pas les numeric null
+    lff = lff.fill_null("")
+
+    # Matérialisation des filtres
     dff: pl.DataFrame = lff.collect()
-
-    df_filtered = dff.clone()
 
     height = dff.height
 
@@ -230,6 +164,26 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     start_row = page_current * page_size
     # end_row = (page_current + 1) * page_size
     dff = dff.slice(start_row, page_size)
+
+    # Ajout des liens vers l'annuaire des entreprises
+    dff = add_org_links(dff)
+
+    # Ajout des liens vers les fichiers Open Data
+    dff = add_resource_link(dff)
+
+    # Liste finale de colonnes
+    columns = [
+        {
+            "name": column,
+            "id": column,
+            "presentation": "markdown",
+            "type": "text",
+            "format": {"nully": "N/A"},
+            "hideable": True,
+        }
+        for column in dff.columns
+    ]
+
     dicts = dff.to_dicts()
 
     if height > 65000:
@@ -243,6 +197,7 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
 
     return (
         dicts,
+        columns,
         data_timestamp + 1,
         nb_rows,
         download_disabled,
@@ -254,26 +209,26 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
 @callback(
     Output("download-data", "data"),
     Input("btn-download-data", "n_clicks"),
+    State("table", "filter_query"),
+    State("table", "sort_by"),
     State("table", "hidden_columns"),
     prevent_initial_call=True,
 )
-def download_data(n_clicks, hidden_columns: list = None):
-    df_to_download = df_filtered.clone()
-
-    print(df_to_download.columns)
-
-    # Rétablissement des colonnes source et sourceOpenData (voir add_resource_link)
-    df_to_download = df_to_download.with_columns(
-        pl.col("source").str.extract(r'href="(.*?)"').alias("sourceFile"),
-        pl.col("source").str.extract(r'">(.*?)<').alias("sourceDataset"),
-    )
+def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
+    lff: pl.LazyFrame = lf  # start from the original data
 
     # Les colonnes masquées sont supprimées
     if hidden_columns:
-        df_to_download = df_to_download.drop(hidden_columns)
+        lff = lff.drop(hidden_columns)
+
+    if filter_query:
+        lff = filter_table_data(lff, filter_query)
+
+    if len(sort_by) > 0:
+        lff = sort_table_data(lff, sort_by)
 
     def to_bytes(buffer):
-        df_to_download.write_excel(buffer, worksheet="DECP")
+        lff.collect(engine="streaming").write_excel(buffer, worksheet="DECP")
 
     date = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     return dcc.send_bytes(to_bytes, filename=f"decp_{date}.xlsx")

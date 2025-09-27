@@ -71,8 +71,12 @@ td[data-dash-column="objet"] {
 }
 
 /* Alternance des couleurs pour les lignes */
-#table tr:nth-child(even) td {
+.marches_table {
+  font-family: sans-serif;
+}
+.marches_table .cell-table tr:nth-child(even) td {
   background-color: #feeeee;
+  font-family: sans-serif;
 }
 
 #header > *,
@@ -102,9 +106,51 @@ a.nav {
 }
 
 h3 {
+  margin: 36px 0 24px 0;
+}
+
+summary > h3 {
+  margin: 0;
   display: inline;
 }
 
 #_pages_content {
   padding-top: 28px;
+}
+
+/* Vue acheteur/fournisseur */
+.wrapper {
+  display: grid;
+  grid-gap: 10px;
+  margin-bottom: 50px;
+  justify-content: space-between;
+}
+
+.org_title {
+  grid-column: 1 / 3;
+  grid-row: 1;
+}
+
+.org_year {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.org_infos {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.org_infos > p {
+  margin: 8px 0;
+}
+
+.org_stats {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.org_map {
+  grid-column: 3;
+  grid-row: 2;
 }

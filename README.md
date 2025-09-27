@@ -36,7 +36,12 @@ python run.py
 
 ## Notes de version
 
-#### 2.0.1 (23 septembre 2025)
+#### 2.1.0
+
+- Ajout de la vue acheteur
+- Variables globales uniquement en lecture
+
+##### 2.0.1 (23 septembre 2025)
 
 - Bloquage du bouton de téléchargement si trop de lignes (+ 65000) [#38](https://github.com/ColinMaudry/decp.info/issues/38)
 - Amélioration du script de déploiement (deploy.sh)

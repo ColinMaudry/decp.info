@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from time import sleep
@@ -5,6 +6,7 @@ from time import sleep
 import polars as pl
 import polars.selectors as cs
 from dotenv import load_dotenv
+from httpx import get
 from polars.exceptions import ComputeError
 
 load_dotenv()
@@ -40,18 +42,18 @@ def split_filter_part(filter_part):
     return [None] * 3
 
 
-def add_resource_link(lff: pl.LazyFrame) -> pl.LazyFrame:
-    lff = lff.with_columns(
+def add_resource_link(dff: pl.DataFrame) -> pl.DataFrame:
+    dff = dff.with_columns(
         (
             '<a href="' + pl.col("sourceFile") + '">' + pl.col("sourceDataset") + "</a>"
         ).alias("source")
     )
-    lff = lff.drop(["sourceFile", "sourceDataset"])
-    return lff
+    dff = dff.drop(["sourceFile", "sourceDataset"])
+    return dff
 
 
-def add_annuaire_link(lff: pl.LazyFrame):
-    lff = lff.with_columns(
+def add_org_links(dff: pl.DataFrame):
+    dff = dff.with_columns(
         pl.when(pl.col("titulaire_typeIdentifiant") == "SIRET")
         .then(
             '<a href = "https://annuaire-entreprises.data.gouv.fr/etablissement/'
@@ -63,16 +65,16 @@ def add_annuaire_link(lff: pl.LazyFrame):
         .otherwise(pl.col("titulaire_id"))
         .alias("titulaire_id")
     )
-    lff = lff.with_columns(
+    dff = dff.with_columns(
         (
-            '<a href = "https://annuaire-entreprises.data.gouv.fr/etablissement/'
+            '<a href = "/acheteur/'
             + pl.col("acheteur_id")
-            + '">'
+            + '" target="_blank">'
             + pl.col("acheteur_id")
             + "</a>"
         ).alias("acheteur_id")
     )
-    return lff
+    return dff
 
 
 def booleans_to_strings(lff: pl.LazyFrame) -> pl.LazyFrame:
@@ -101,6 +103,12 @@ def format_number(number) -> str:
     return number
 
 
+def get_annuaire_data(siret: str) -> dict:
+    url = f"https://recherche-entreprises.api.gouv.fr/search?q={siret}"
+    response = get(url)
+    return response.json()["results"][0]
+
+
 def get_decp_data() -> pl.LazyFrame:
     # Chargement du fichier parquet
     # Le fichier est chargé en mémoire, ce qui est plus rapide qu'une base de données pour le moment.
@@ -117,13 +125,85 @@ def get_decp_data() -> pl.LazyFrame:
         sleep(10)
         lff: pl.LazyFrame = pl.scan_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
 
-    # Remplacement des valeurs numériques par des chaînes de caractères
-    # lff = numbers_to_strings(lff)
-
     # Tri des marchés par date de notification
-    lff = lff.sort(by=["datePublicationDonnees"], descending=True, nulls_last=True)
+    lff = lff.sort(by=["dateNotification", "uid"], descending=True, nulls_last=True)
+
+    # Uniquement les données actuelles, pas les anciennes versions de marchés
+    lff = lff.filter(pl.col("donneesActuelles")).drop("donneesActuelles")
+
+    # Convertir les colonnes booléennes en chaînes de caractères
+    lff = booleans_to_strings(lff)
+
+    # Bizarrement je ne peux pas faire lff = lff.fill_null("") ici
+    # ça génère une erreur dans la page acheteur (acheteur_data.table) :
+    # AttributeError: partially initialized module 'pandas' has no attribute 'NaT' (most likely due to a circular import)
 
     return lff
 
 
+def get_departements() -> dict:
+    with open("data/departements.json", "rb") as f:
+        data = json.load(f)
+        return data
+
+
+def get_departement_region(code_postal):
+    if code_postal > "97000":
+        code_departement = code_postal[:3]
+    else:
+        code_departement = code_postal[:2]
+    nom_departement = departements[code_departement]["departement"]
+    nom_region = departements[code_departement]["region"]
+    return code_departement, nom_departement, nom_region
+
+
+def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
+    schema = lff.collect_schema()
+    filtering_expressions = filter_query.split(" && ")
+    for filter_part in filtering_expressions:
+        col_name, operator, filter_value = split_filter_part(filter_part)
+        col_type = str(schema[col_name])
+        print("filter_value:", filter_value)
+        print("filter_value_type:", type(filter_value))
+        print("col_type:", col_type)
+
+        if operator in ("<", "<=", ">", ">="):
+            filter_value = int(filter_value)
+            if operator == "<":
+                lff = lff.filter(pl.col(col_name) < filter_value)
+            elif operator == ">":
+                lff = lff.filter(pl.col(col_name) > filter_value)
+            elif operator == ">=":
+                lff = lff.filter(pl.col(col_name) >= filter_value)
+            elif operator == "<=":
+                lff = lff.filter(pl.col(col_name) <= filter_value)
+
+        elif col_type.startswith("Int") or col_type.startswith("Float"):
+            try:
+                filter_value = int(filter_value)
+            except ValueError:
+                logger.error(f"Invalid numeric filter value: {filter_value}")
+                continue
+            lff = lff.filter(pl.col(col_name) == filter_value)
+
+        elif operator == "contains" and col_type == "String":
+            lff = lff.filter(pl.col(col_name).str.contains("(?i)" + filter_value))
+
+        # elif operator == 'datestartswith':
+        # lff = lff.filter(pl.col(col_name).str.startswith(filter_value)")
+
+    return lff
+
+
+def sort_table_data(lff: pl.LazyFrame, sort_by: list) -> pl.LazyFrame:
+    lff = lff.sort(
+        [col["column_id"] for col in sort_by],
+        descending=[col["direction"] == "desc" for col in sort_by],
+        nulls_last=True,
+    )
+    print(sort_by)
+    return lff
+
+
 lf = get_decp_data()
+departements = get_departements()

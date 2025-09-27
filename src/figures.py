@@ -2,7 +2,7 @@ import json
 
 import plotly.express as px
 import polars as pl
-from dash import dash_table, html
+from dash import dash_table, dcc, html
 
 
 def get_map_count_marches(lf: pl.LazyFrame):
@@ -157,3 +157,36 @@ def get_sources_tables(source_path) -> html.Div:
     datatable.data = df.to_dicts()
 
     return html.Div(children=datatable)
+
+
+def point_on_map(lat, lon):
+    lat = float(lat)
+    lon = float(lon)
+
+    # Create a scatter mapbox or choropleth map
+    fig = px.scatter_map(
+        lat=[lat], lon=[lon], height=300, width=400, color=[1], size=[1]
+    )
+
+    fig.update_coloraxes(showscale=False)
+
+    # Set map style (you can use 'open-street-map', 'carto-positron', etc.)
+    fig.update_layout(
+        mapbox_style="light",  # Light, clean background
+        margin={"r": 0, "t": 0, "l": 0, "b": 0},
+    )
+
+    # Optionally, center the map on France
+    fig.update_geos(
+        center=dict(lat=46.603354, lon=1.888334),  # Center of France
+        lataxis_range=[41, 51.5],  # Latitude range for France
+        lonaxis_range=[-5, 10],  # Longitude range for France
+    )
+
+    # But scatter_mapbox doesn't use geos, so better to control via zoom/center manually
+    # Let's reset and use proper centering in scatter_mapbox instead:
+
+    fig.update_layout(map_center={"lat": 46.6, "lon": 1.89}, map_zoom=4)
+
+    graph = dcc.Graph(id="map", figure=fig)
+    return graph
