@@ -150,5 +150,53 @@ def get_departement_region(code_postal):
     return code_departement, nom_departement, nom_region
 
 
+def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
+    schema = lff.collect_schema()
+    filtering_expressions = filter_query.split(" && ")
+    for filter_part in filtering_expressions:
+        col_name, operator, filter_value = split_filter_part(filter_part)
+        col_type = str(schema[col_name])
+        print("filter_value:", filter_value)
+        print("filter_value_type:", type(filter_value))
+        print("col_type:", col_type)
+
+        if operator in ("<", "<=", ">", ">="):
+            filter_value = int(filter_value)
+            if operator == "<":
+                lff = lff.filter(pl.col(col_name) < filter_value)
+            elif operator == ">":
+                lff = lff.filter(pl.col(col_name) > filter_value)
+            elif operator == ">=":
+                lff = lff.filter(pl.col(col_name) >= filter_value)
+            elif operator == "<=":
+                lff = lff.filter(pl.col(col_name) <= filter_value)
+
+        elif col_type.startswith("Int") or col_type.startswith("Float"):
+            try:
+                filter_value = int(filter_value)
+            except ValueError:
+                logger.error(f"Invalid numeric filter value: {filter_value}")
+                continue
+            lff = lff.filter(pl.col(col_name) == filter_value)
+
+        elif operator == "contains" and col_type == "String":
+            lff = lff.filter(pl.col(col_name).str.contains("(?i)" + filter_value))
+
+        # elif operator == 'datestartswith':
+        # lff = lff.filter(pl.col(col_name).str.startswith(filter_value)")
+
+    return lff
+
+
+def sort_table_data(lff: pl.LazyFrame, sort_by: list) -> pl.LazyFrame:
+    lff = lff.sort(
+        [col["column_id"] for col in sort_by],
+        descending=[col["direction"] == "desc" for col in sort_by],
+        nulls_last=True,
+    )
+    print(sort_by)
+    return lff
+
+
 lf = get_decp_data()
 departements = get_departements()

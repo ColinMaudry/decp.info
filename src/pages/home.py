@@ -9,17 +9,16 @@ from src.utils import (
     add_org_links,
     add_resource_link,
     booleans_to_strings,
+    filter_table_data,
     format_number,
     lf,
-    logger,
-    split_filter_part,
+    sort_table_data,
 )
 
 load_dotenv()
 
 update_date = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
 update_date = datetime.fromtimestamp(update_date).strftime("%d/%m/%Y")
-df_filtered = pl.DataFrame()
 
 # Suppression des colonnes inutiles
 lf = lf.drop(
@@ -128,6 +127,7 @@ layout = [
                         disabled=True,
                     ),
                     dcc.Download(id="download-data"),
+                    dcc.Store(id="filtered_data", storage_type="memory"),
                     html.P("Données mises à jour le " + str(update_date)),
                 ],
                 className="table-menu",
@@ -141,6 +141,7 @@ layout = [
 @callback(
     Output("table", "data"),
     Output("table", "columns"),
+    # Output("filtered_data", "data"),
     Output("table", "data_timestamp"),
     Output("nb_rows", "children"),
     Output("btn-download-data", "disabled"),
@@ -154,55 +155,22 @@ layout = [
 )
 def update_table(page_current, page_size, filter_query, sort_by, data_timestamp):
     print(" + + + + + + + + + + + + + + + + + + ")
-    global df_filtered
 
     # Application des filtres
     lff: pl.LazyFrame = lf  # start from the original data
     if filter_query:
-        filtering_expressions = filter_query.split(" && ")
-        for filter_part in filtering_expressions:
-            col_name, operator, filter_value = split_filter_part(filter_part)
-            col_type = str(schema[col_name])
-            print("filter_value:", filter_value)
-            print("filter_value_type:", type(filter_value))
-            print("col_type:", col_type)
-
-            if operator in ("<", "<=", ">", ">="):
-                filter_value = int(filter_value)
-                if operator == "<":
-                    lff = lff.filter(pl.col(col_name) < filter_value)
-                elif operator == ">":
-                    lff = lff.filter(pl.col(col_name) > filter_value)
-                elif operator == ">=":
-                    lff = lff.filter(pl.col(col_name) >= filter_value)
-                elif operator == "<=":
-                    lff = lff.filter(pl.col(col_name) <= filter_value)
-
-            elif col_type.startswith("Int") or col_type.startswith("Float"):
-                try:
-                    filter_value = int(filter_value)
-                except ValueError:
-                    logger.error(f"Invalid numeric filter value: {filter_value}")
-                    continue
-                lff = lff.filter(pl.col(col_name) == filter_value)
-
-            elif operator == "contains" and col_type == "String":
-                lff = lff.filter(pl.col(col_name).str.contains("(?i)" + filter_value))
-
-            # elif operator == 'datestartswith':
-            # lff = lff.filter(pl.col(col_name).str.startswith(filter_value)")
+        lff = filter_table_data(lff, filter_query)
 
     if len(sort_by) > 0:
-        lff = lff.sort(
-            [col["column_id"] for col in sort_by],
-            descending=[col["direction"] == "desc" for col in sort_by],
-            nulls_last=True,
-        )
-        print(sort_by)
+        lff = sort_table_data(lff, sort_by)
 
+    # Matérialisation des filtres
     dff: pl.DataFrame = lff.collect()
 
-    df_filtered = dff.clone()
+    # if filter_query or sort_by:
+    #     filtered_data = dff.to_dicts()
+    # else:
+    #     filtered_data = {}
 
     height = dff.height
 
@@ -257,18 +225,26 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
 @callback(
     Output("download-data", "data"),
     Input("btn-download-data", "n_clicks"),
+    State("table", "filter_query"),
+    State("table", "sort_by"),
     State("table", "hidden_columns"),
     prevent_initial_call=True,
 )
-def download_data(n_clicks, hidden_columns: list = None):
-    df_to_download = df_filtered.clone()
+def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
+    lff: pl.LazyFrame = lf  # start from the original data
 
     # Les colonnes masquées sont supprimées
     if hidden_columns:
-        df_to_download = df_to_download.drop(hidden_columns)
+        lff = lff.drop(hidden_columns)
+
+    if filter_query:
+        lff = filter_table_data(lff, filter_query)
+
+    if len(sort_by) > 0:
+        lff = sort_table_data(lff, sort_by)
 
     def to_bytes(buffer):
-        df_to_download.write_excel(buffer, worksheet="DECP")
+        lff.collect(engine="streaming").write_excel(buffer, worksheet="DECP")
 
     date = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     return dcc.send_bytes(to_bytes, filename=f"decp_{date}.xlsx")
