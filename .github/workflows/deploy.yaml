@@ -40,4 +40,12 @@ jobs:
             key: ${{ secrets.ARTIFACT_SSH_KEY }}
             passphrase: ${{ secrets.SSH_PSWD }}
             command_timeout: 5m
-            script: ${{ secrets.APP_PATH }}/deploy.sh ${{ env.APP_NAME }}
+            script: |
+              systemctl stop ${{ vars.APP_NAME }}
+              cd /var/www/${{ vars.APP_NAME }}
+              git pull
+              source .venv/bin/activate
+              pip install .
+              deactivate
+              chown -R ${{ vars.APP_NAME }}:www-data *
+              systemctl start ${{ vars.APP_NAME }}
