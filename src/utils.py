@@ -74,6 +74,17 @@ def add_org_links(dff: pl.DataFrame):
     return dff
 
 
+def add_org_links_in_dict(data: list, org_type: str) -> list:
+    new_data = []
+    for marche in data:
+        org_id = marche[org_type + "_id"]
+        marche[org_type + "_nom"] = (
+            f'<a href="/{org_type}s/{org_id}">{marche[org_type + "_nom"]}</a>'
+        )
+        new_data.append(marche)
+    return new_data
+
+
 def booleans_to_strings(lff: pl.LazyFrame) -> pl.LazyFrame:
     """
     Convert all boolean columns to string type.

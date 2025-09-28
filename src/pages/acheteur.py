@@ -4,7 +4,13 @@ import polars as pl
 from dash import Input, Output, State, callback, dash_table, dcc, html, register_page
 
 from src.figures import point_on_map
-from src.utils import format_number, get_annuaire_data, get_departement_region, lf
+from src.utils import (
+    add_org_links_in_dict,
+    format_number,
+    get_annuaire_data,
+    get_departement_region,
+    lf,
+)
 
 register_page(
     __name__,
@@ -71,7 +77,7 @@ layout = [
                         children=[
                             html.P(id="acheteur_titre_stats"),
                             html.P(id="acheteur_marches_attribues"),
-                            html.P(id="acheteur_fournisseurs_differents"),
+                            html.P(id="acheteur_titulaires_differents"),
                             html.Button(
                                 "Téléchargement au format Excel",
                                 id="btn-download-acheteur-data",
@@ -132,7 +138,7 @@ def update_acheteur_infos(url):
 @callback(
     Output(component_id="acheteur_marches_attribues", component_property="children"),
     Output(
-        component_id="acheteur_fournisseurs_differents", component_property="children"
+        component_id="acheteur_titulaires_differents", component_property="children"
     ),
     Input(component_id="acheteur_data", component_property="data"),
 )
@@ -147,14 +153,14 @@ def update_acheteur_stats(data):
     # + ", pour un total de ", html.Strong(somme_marches + " €")]
     del df_marches
 
-    nb_fournisseurs = df.unique("titulaire_id").height
-    nb_fournisseurs = [
-        html.Strong(format_number(nb_fournisseurs)),
-        " fournisseurs (SIRET) différents",
+    nb_titulaires = df.unique("titulaire_id").height
+    nb_titulaires = [
+        html.Strong(format_number(nb_titulaires)),
+        " titulaires (SIRET) différents",
     ]
     del df
 
-    return marches_attribues, nb_fournisseurs
+    return marches_attribues, nb_titulaires
 
 
 @callback(
@@ -201,11 +207,14 @@ def get_last_marches_table(data) -> html.Div:
         "dureeMois",
     ]
 
+    data = add_org_links_in_dict(data, "titulaire")
+
     table = html.Div(
         className="marches_table",
         id="marches_datatable",
         children=dash_table.DataTable(
             data=data,
+            markdown_options={"html": True},
             page_action="native",
             columns=[
                 {
@@ -234,7 +243,7 @@ def get_last_marches_table(data) -> html.Div:
                     "minWidth": "200px",
                     "textAlign": "left",
                     "overflow": "hidden",
-                    "lineHeight": "14px",
+                    "lineHeight": "18px",
                     "whiteSpace": "normal",
                 },
             ],

@@ -4,12 +4,18 @@ import polars as pl
 from dash import Input, Output, State, callback, dash_table, dcc, html, register_page
 
 from src.figures import point_on_map
-from src.utils import format_number, get_annuaire_data, get_departement_region, lf
+from src.utils import (
+    add_org_links_in_dict,
+    format_number,
+    get_annuaire_data,
+    get_departement_region,
+    lf,
+)
 
 register_page(
     __name__,
-    path_template="/fournisseurs/<fournisseur_id>",
-    title="decp.info - fournisseur",
+    path_template="/titulaires/<titulaire_id>",
+    title="decp.info - titulaire",
     name="Fournisseur",
     order=5,
 )
@@ -17,7 +23,7 @@ register_page(
 # 21690123100011
 
 layout = [
-    dcc.Store(id="fournisseur_data", storage_type="memory"),
+    dcc.Store(id="titulaire_data", storage_type="memory"),
     dcc.Location(id="url", refresh="callback-nav"),
     html.Div(
         className="container",
@@ -28,15 +34,15 @@ layout = [
                     html.H2(
                         className="org_title",
                         children=[
-                            html.Span(id="fournisseur_siret"),
+                            html.Span(id="titulaire_siret"),
                             " - ",
-                            html.Span(id="fournisseur_nom"),
+                            html.Span(id="titulaire_nom"),
                         ],
                     ),
                     html.Div(
                         className="org_year",
                         children=dcc.Dropdown(
-                            id="fournisseur_year",
+                            id="titulaire_year",
                             options=["Toutes"]
                             + [
                                 str(year)
@@ -51,18 +57,16 @@ layout = [
                         className="org_infos",
                         children=[
                             # TODO: ajouter le type d'acheteur : commune, CD, CR, etc.
-                            html.P(
-                                ["Commune : ", html.Strong(id="fournisseur_commune")]
-                            ),
+                            html.P(["Commune : ", html.Strong(id="titulaire_commune")]),
                             html.P(
                                 [
                                     "Département : ",
-                                    html.Strong(id="fournisseur_departement"),
+                                    html.Strong(id="titulaire_departement"),
                                 ]
                             ),
-                            html.P(["Région : ", html.Strong(id="fournisseur_region")]),
+                            html.P(["Région : ", html.Strong(id="titulaire_region")]),
                             html.A(
-                                id="fournisseur_lien_annuaire",
+                                id="titulaire_lien_annuaire",
                                 children="Plus de détails sur l'Annuaire des entreprises",
                                 target="_blank",
                             ),
@@ -71,46 +75,46 @@ layout = [
                     html.Div(
                         className="org_stats",
                         children=[
-                            html.P(id="fournisseur_titre_stats"),
-                            html.P(id="fournisseur_marches_remportes"),
-                            html.P(id="fournisseur_acheteurs_differents"),
+                            html.P(id="titulaire_titre_stats"),
+                            html.P(id="titulaire_marches_remportes"),
+                            html.P(id="titulaire_acheteurs_differents"),
                             html.Button(
                                 "Téléchargement au format Excel",
-                                id="btn-download-fournisseur-data",
+                                id="btn-download-titulaire-data",
                             ),
-                            dcc.Download(id="download-fournisseur-data"),
+                            dcc.Download(id="download-titulaire-data"),
                         ],
                     ),
-                    html.Div(className="org_map", id="fournisseur_map"),
+                    html.Div(className="org_map", id="titulaire_map"),
                 ],
             ),
             # récupérer les données de l'acheteur sur l'api annuaire
             html.H3("Derniers marchés publics remportés"),
-            html.Div(id="fournisseur_last_marches", children=""),
+            html.Div(id="titulaire_last_marches", children=""),
         ],
     ),
 ]
 
 
 @callback(
-    Output(component_id="fournisseur_siret", component_property="children"),
-    Output(component_id="fournisseur_nom", component_property="children"),
-    Output(component_id="fournisseur_commune", component_property="children"),
-    Output(component_id="fournisseur_map", component_property="children"),
-    Output(component_id="fournisseur_departement", component_property="children"),
-    Output(component_id="fournisseur_region", component_property="children"),
-    Output(component_id="fournisseur_lien_annuaire", component_property="href"),
+    Output(component_id="titulaire_siret", component_property="children"),
+    Output(component_id="titulaire_nom", component_property="children"),
+    Output(component_id="titulaire_commune", component_property="children"),
+    Output(component_id="titulaire_map", component_property="children"),
+    Output(component_id="titulaire_departement", component_property="children"),
+    Output(component_id="titulaire_region", component_property="children"),
+    Output(component_id="titulaire_lien_annuaire", component_property="href"),
     Input(component_id="url", component_property="pathname"),
 )
-def update_fournisseur_infos(url):
-    fournisseur_siret = url.split("/")[-1]
-    if len(fournisseur_siret) != 14:
-        fournisseur_siret = (
-            f"Le SIRET renseigné doit faire 14 caractères ({fournisseur_siret})"
+def update_titulaire_infos(url):
+    titulaire_siret = url.split("/")[-1]
+    if len(titulaire_siret) != 14:
+        titulaire_siret = (
+            f"Le SIRET renseigné doit faire 14 caractères ({titulaire_siret})"
         )
-    data = get_annuaire_data(fournisseur_siret)
+    data = get_annuaire_data(titulaire_siret)
     data_etablissement = data["matching_etablissements"][0]
-    fournisseur_map = point_on_map(
+    titulaire_map = point_on_map(
         data_etablissement["latitude"], data_etablissement["longitude"]
     )
     code_departement, nom_departement, nom_region = get_departement_region(
@@ -118,13 +122,13 @@ def update_fournisseur_infos(url):
     )
     departement = f"{nom_departement} ({code_departement})"
     lien_annuaire = (
-        f"https://annuaire-entreprises.data.gouv.fr/etablissement/{fournisseur_siret}"
+        f"https://annuaire-entreprises.data.gouv.fr/etablissement/{titulaire_siret}"
     )
     return (
-        fournisseur_siret,
+        titulaire_siret,
         data["nom_raison_sociale"],
         data_etablissement["libelle_commune"],
-        fournisseur_map,
+        titulaire_map,
         departement,
         nom_region,
         lien_annuaire,
@@ -132,13 +136,13 @@ def update_fournisseur_infos(url):
 
 
 @callback(
-    Output(component_id="fournisseur_marches_remportes", component_property="children"),
+    Output(component_id="titulaire_marches_remportes", component_property="children"),
     Output(
-        component_id="fournisseur_acheteurs_differents", component_property="children"
+        component_id="titulaire_acheteurs_differents", component_property="children"
     ),
-    Input(component_id="fournisseur_data", component_property="data"),
+    Input(component_id="titulaire_data", component_property="data"),
 )
-def update_fournisseur_stats(data):
+def update_titulaire_stats(data):
     df = pl.DataFrame(data)
     if df.height == 0:
         df = pl.DataFrame(schema=lf.collect_schema())
@@ -152,7 +156,7 @@ def update_fournisseur_stats(data):
     nb_acheteurs = df.unique("acheteur_id").height
     nb_acheteurs = [
         html.Strong(format_number(nb_acheteurs)),
-        " fournisseurs (SIRET) différents",
+        " titulaires (SIRET) différents",
     ]
     del df
 
@@ -160,14 +164,14 @@ def update_fournisseur_stats(data):
 
 
 @callback(
-    Output(component_id="fournisseur_data", component_property="data"),
+    Output(component_id="titulaire_data", component_property="data"),
     Input(component_id="url", component_property="pathname"),
-    Input(component_id="fournisseur_year", component_property="value"),
+    Input(component_id="titulaire_year", component_property="value"),
 )
-def get_fournisseur_marches_data(url, fournisseur_year: str) -> pl.LazyFrame:
-    fournisseur_siret = url.split("/")[-1]
+def get_titulaire_marches_data(url, titulaire_year: str) -> pl.LazyFrame:
+    titulaire_siret = url.split("/")[-1]
     lff = lf.filter(
-        (pl.col("titulaire_id") == fournisseur_siret)
+        (pl.col("titulaire_id") == titulaire_siret)
         & (pl.col("titulaire_typeIdentifiant") == "SIRET")
     )
     lff = lff.fill_null("")
@@ -181,9 +185,9 @@ def get_fournisseur_marches_data(url, fournisseur_year: str) -> pl.LazyFrame:
         "codeCPV",
         "dureeMois",
     )
-    if fournisseur_year and fournisseur_year != "Toutes":
+    if titulaire_year and titulaire_year != "Toutes":
         lff = lff.filter(
-            pl.col("dateNotification").cast(pl.String).str.starts_with(fournisseur_year)
+            pl.col("dateNotification").cast(pl.String).str.starts_with(titulaire_year)
         )
     lff = lff.sort(["dateNotification", "uid"], descending=True, nulls_last=True)
 
@@ -192,8 +196,8 @@ def get_fournisseur_marches_data(url, fournisseur_year: str) -> pl.LazyFrame:
 
 
 @callback(
-    Output(component_id="fournisseur_last_marches", component_property="children"),
-    Input(component_id="fournisseur_data", component_property="data"),
+    Output(component_id="titulaire_last_marches", component_property="children"),
+    Input(component_id="titulaire_data", component_property="data"),
 )
 def get_last_marches_table(data) -> html.Div:
     columns = [
@@ -206,11 +210,15 @@ def get_last_marches_table(data) -> html.Div:
         "dureeMois",
     ]
 
+    # Ajout des liens vers les acheteurs
+    data = add_org_links_in_dict(data, "acheteur")
+
     table = html.Div(
         className="marches_table",
         id="marches_datatable",
         children=dash_table.DataTable(
             data=data,
+            markdown_options={"html": True},
             page_action="native",
             columns=[
                 {
@@ -239,7 +247,7 @@ def get_last_marches_table(data) -> html.Div:
                     "minWidth": "200px",
                     "textAlign": "left",
                     "overflow": "hidden",
-                    "lineHeight": "14px",
+                    "lineHeight": "18px",
                     "whiteSpace": "normal",
                 },
             ],
@@ -249,17 +257,17 @@ def get_last_marches_table(data) -> html.Div:
 
 
 @callback(
-    Output("download-fournisseur-data", "data"),
-    Input("btn-download-fournisseur-data", "n_clicks"),
-    State(component_id="fournisseur_data", component_property="data"),
-    State(component_id="fournisseur_nom", component_property="children"),
-    State(component_id="fournisseur_year", component_property="value"),
+    Output("download-titulaire-data", "data"),
+    Input("btn-download-titulaire-data", "n_clicks"),
+    State(component_id="titulaire_data", component_property="data"),
+    State(component_id="titulaire_nom", component_property="children"),
+    State(component_id="titulaire_year", component_property="value"),
     prevent_initial_call=True,
 )
-def download_fournisseur_data(
+def download_titulaire_data(
     n_clicks,
     data: [dict],
-    fournisseur_nom: str,
+    titulaire_nom: str,
     annee: str,
 ):
     df_to_download = pl.DataFrame(data)
@@ -270,4 +278,4 @@ def download_fournisseur_data(
         )
 
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-    return dcc.send_bytes(to_bytes, filename=f"decp_{fournisseur_nom}_{date}.xlsx")
+    return dcc.send_bytes(to_bytes, filename=f"decp_{titulaire_nom}_{date}.xlsx")
