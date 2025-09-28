@@ -217,6 +217,7 @@ def get_last_marches_table(data) -> html.Div:
             markdown_options={"html": True},
             page_action="native",
             filter_action="native",
+            filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
             columns=[
                 {
                     "name": i,
