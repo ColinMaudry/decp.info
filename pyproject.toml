@@ -15,6 +15,7 @@ dependencies = [
     "python-dotenv",
     "xlsxwriter",
     "plotly[express]",
+    "httpx"
 ]
 
 [project.optional-dependencies]
