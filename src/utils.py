@@ -119,6 +119,34 @@ def format_number(number) -> str:
     return number
 
 
+def format_montant(dff: pl.DataFrame) -> pl.DataFrame:
+    def format_function(expr, scale=None):
+        # https://stackoverflow.com/a/78636786
+        expr = expr.cast(pl.String).str.splitn(".", 2)
+
+        num = expr.struct[0]
+        frac = expr.struct[1]
+
+        # Ajout des espaces
+        num = (
+            num.str.reverse()
+            .str.replace_all(r"\d{3}", "$0 ")
+            .str.reverse()
+            .str.replace(r"^ ", "")
+        )
+
+        frac: pl.Expr = (
+            pl.when(frac.is_not_null() & ~frac.is_in(["0"]))
+            .then("," + frac)
+            .otherwise(pl.lit(""))
+        )
+
+        return num + frac + pl.lit(" €")
+
+    dff = dff.with_columns(pl.col("montant").pipe(format_function).alias("montant"))
+    return dff
+
+
 def get_annuaire_data(siret: str) -> dict:
     url = f"https://recherche-entreprises.api.gouv.fr/search?q={siret}"
     response = get(url)

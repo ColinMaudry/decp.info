@@ -6,6 +6,7 @@ from dash import Input, Output, State, callback, dash_table, dcc, html, register
 from src.figures import point_on_map
 from src.utils import (
     add_org_links_in_dict,
+    format_montant,
     format_number,
     get_annuaire_data,
     get_departement_region,
@@ -180,6 +181,7 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> pl.LazyFrame:
         "objet",
         "dateNotification",
         "titulaire_id",
+        "titulaire_typeIdentifiant",
         "titulaire_nom",
         "montant",
         "codeCPV",
@@ -210,6 +212,9 @@ def get_last_marches_table(data) -> html.Div:
         "dureeMois",
     ]
 
+    dff = pl.DataFrame(data)
+    dff = format_montant(dff)
+    data = dff.to_dicts()
     data = add_org_links_in_dict(data, "titulaire")
 
     table = html.Div(
@@ -231,7 +236,7 @@ def get_last_marches_table(data) -> html.Div:
                     "hideable": False,
                 }
                 for i in columns
-                if i not in ["titulaire_id"]
+                if i not in ["titulaire_id", "titulaire_typeIdentifiant"]
             ],
             page_size=10,
             style_cell_conditional=[

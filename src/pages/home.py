@@ -8,6 +8,7 @@ from src.utils import (
     add_org_links,
     add_resource_link,
     filter_table_data,
+    format_montant,
     format_number,
     lf,
     meta_content,
@@ -183,6 +184,9 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
 
     # Ajout des liens vers les fichiers Open Data
     dff = add_resource_link(dff)
+
+    # Formatage des montants
+    dff = format_montant(dff)
 
     # Liste finale de colonnes
     columns = [

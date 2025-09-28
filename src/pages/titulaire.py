@@ -6,6 +6,7 @@ from dash import Input, Output, State, callback, dash_table, dcc, html, register
 from src.figures import point_on_map
 from src.utils import (
     add_org_links_in_dict,
+    format_montant,
     format_number,
     get_annuaire_data,
     get_departement_region,
@@ -213,7 +214,11 @@ def get_last_marches_table(data) -> html.Div:
         "dureeMois",
     ]
 
-    # Ajout des liens vers les acheteurs
+    dff = pl.DataFrame(data)
+    dff = format_montant(dff)
+    data = dff.to_dicts()
+    # Idéalement on utiliserait add_org_links(), mais le résultat attendu
+    # est différent de home.py (Tableau)
     data = add_org_links_in_dict(data, "acheteur")
 
     table = html.Div(
