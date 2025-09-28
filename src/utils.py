@@ -98,6 +98,14 @@ def numbers_to_strings(lff: pl.LazyFrame) -> pl.LazyFrame:
     return lff
 
 
+def dates_to_strings(lff: pl.LazyFrame, column: str) -> pl.LazyFrame:
+    """
+    Convert a date column to string type.
+    """
+    lff = lff.with_columns(pl.col(column).cast(pl.String).fill_null(""))
+    return lff
+
+
 def format_number(number) -> str:
     number = "{:,}".format(number).replace(",", " ")
     return number
@@ -167,6 +175,10 @@ def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
         print("filter_value_type:", type(filter_value))
         print("col_type:", col_type)
 
+        if col_type == "Date":
+            # Convertir la colonne en chaînes de caractères
+            lff = dates_to_strings(lff, col_name)
+
         if operator in ("<", "<=", ">", ">="):
             filter_value = int(filter_value)
             if operator == "<":
@@ -186,7 +198,7 @@ def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
                 continue
             lff = lff.filter(pl.col(col_name) == filter_value)
 
-        elif operator == "contains" and col_type == "String":
+        elif operator == "contains" and col_type in ["String", "Date"]:
             lff = lff.filter(pl.col(col_name).str.contains("(?i)" + filter_value))
 
         # elif operator == 'datestartswith':
