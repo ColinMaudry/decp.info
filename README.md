@@ -38,7 +38,8 @@ python run.py
 
 #### 2.1.0
 
-- Ajout de la vue acheteur
+- Ajout des vues [acheteur](https://decp.info/acheteurs/24350013900189) et [fournisseur](https://decp.info/fournisseurs/51903758414786) ([#28](https://github.com/ColinMaudry/decp.info/issues/28) et [#35](https://github.com/ColinMaudry/decp.info/issues/35))
+- Ajout des balises HTML meta Open Graph et Twitter ([#39](https://github.com/ColinMaudry/decp.info/issues/39)) pour de beaux aperçus de liens
 - Variables globales uniquement en lecture
 
 ##### 2.0.1 (23 septembre 2025)
