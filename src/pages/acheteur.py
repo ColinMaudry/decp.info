@@ -8,7 +8,7 @@ from src.utils import format_number, get_annuaire_data, get_departement_region, 
 
 register_page(
     __name__,
-    path_template="/acheteur/<acheteur_id>",
+    path_template="/acheteurs/<acheteur_id>",
     title="decp.info - acheteur",
     name="Acheteur",
     order=5,
