@@ -10,13 +10,16 @@ from src.utils import (
     get_annuaire_data,
     get_departement_region,
     lf,
+    meta_content,
 )
 
 register_page(
     __name__,
     path_template="/acheteurs/<acheteur_id>",
-    title="decp.info - acheteur",
+    title=meta_content["title"],
     name="Acheteur",
+    description=meta_content["description"],
+    image_url=meta_content["image_url"],
     order=5,
 )
 

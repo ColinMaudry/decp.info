@@ -3,18 +3,25 @@ import os
 from dash import dcc, html, register_page
 
 from src.figures import get_sources_tables
+from src.utils import meta_content
 
-title = "À propos"
+name = "À propos"
 
 register_page(
-    __name__, path="/a-propos", title=f"decp.info - {title}", name=title, order=5
+    __name__,
+    path="/a-propos",
+    title=meta_content["title"],
+    name=name,
+    description=meta_content["description"],
+    image_url=meta_content["image_url"],
+    order=5,
 )
 
 layout = [
     html.Div(
         className="container",
         children=[
-            html.H2(title),
+            html.H2(name),
             dcc.Markdown(
                 """Outil d'exploration libre et gratuit des données de marchés publics, développé par Colin Maudry.
 

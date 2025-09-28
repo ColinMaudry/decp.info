@@ -227,3 +227,14 @@ def sort_table_data(lff: pl.LazyFrame, sort_by: list) -> pl.LazyFrame:
 
 lf = get_decp_data()
 departements = get_departements()
+domain_name = (
+    "test.decp.info" if os.getenv("DEVELOPMENT").lower() == "true" else "decp.info"
+)
+meta_content = {
+    "image_url": f"https://{domain_name}/assets/decp.info.png",
+    "title": "decp.info - exploration des marchés publics français",
+    "description": (
+        "Explorez et analysez les données des marchés publics français avec cet outil libre et gratuit. "
+        "Pour une commande publique accessible à toutes et tous."
+    ),
+}

@@ -10,13 +10,16 @@ from src.utils import (
     get_annuaire_data,
     get_departement_region,
     lf,
+    meta_content,
 )
 
 register_page(
     __name__,
     path_template="/titulaires/<titulaire_id>",
-    title="decp.info - titulaire",
-    name="Fournisseur",
+    title=meta_content["title"],
+    name="Titulaire",
+    description=meta_content["description"],
+    image_url=meta_content["image_url"],
     order=5,
 )
 
@@ -245,7 +248,7 @@ def get_last_marches_table(data) -> html.Div:
                     "whiteSpace": "normal",
                 },
                 {
-                    "if": {"column_id": "acheteur_nom"},
+                    "if": {"column_id": "   acheteur_nom"},
                     "minWidth": "200px",
                     "textAlign": "left",
                     "overflow": "hidden",

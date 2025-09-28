@@ -10,6 +10,7 @@ from src.utils import (
     filter_table_data,
     format_number,
     lf,
+    meta_content,
     sort_table_data,
 )
 
@@ -18,9 +19,16 @@ update_date = datetime.fromtimestamp(update_date).strftime("%d/%m/%Y")
 
 schema = lf.collect_schema()
 
-
-title = "Tableau"
-register_page(__name__, path="/", title="decp.info", name=title, order=1)
+name = "Tableau"
+register_page(
+    __name__,
+    path="/",
+    title=meta_content["title"],
+    name=name,
+    description=meta_content["description"],
+    image_url=meta_content["image_url"],
+    order=1,
+)
 
 datatable = html.Div(
     className="marches_table",
