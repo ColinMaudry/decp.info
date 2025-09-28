@@ -118,7 +118,7 @@ summary > h3 {
   padding-top: 28px;
 }
 
-/* Vue acheteur/fournisseur */
+/* Vue acheteur/titulaire    */
 .wrapper {
   display: grid;
   grid-gap: 10px;

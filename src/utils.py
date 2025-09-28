@@ -53,7 +53,7 @@ def add_org_links(dff: pl.DataFrame):
     dff = dff.with_columns(
         pl.when(pl.col("titulaire_typeIdentifiant") == "SIRET")
         .then(
-            '<a href = "/fournisseurs/'
+            '<a href = "/titulaires/'
             + pl.col("titulaire_id")
             + '">'
             + pl.col("titulaire_id")
