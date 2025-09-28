@@ -3,7 +3,6 @@ from datetime import datetime
 
 import polars as pl
 from dash import Input, Output, State, callback, dash_table, dcc, html, register_page
-from dotenv import load_dotenv
 
 from src.utils import (
     add_org_links,
@@ -13,8 +12,6 @@ from src.utils import (
     lf,
     sort_table_data,
 )
-
-load_dotenv()
 
 update_date = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
 update_date = datetime.fromtimestamp(update_date).strftime("%d/%m/%Y")
@@ -50,6 +47,14 @@ datatable = html.Div(
             },
             {
                 "if": {"column_id": "acheteur_nom"},
+                "minWidth": "250px",
+                "textAlign": "left",
+                "overflow": "hidden",
+                "lineHeight": "14px",
+                "whiteSpace": "normal",
+            },
+            {
+                "if": {"column_id": "titulaire_nom"},
                 "minWidth": "250px",
                 "textAlign": "left",
                 "overflow": "hidden",

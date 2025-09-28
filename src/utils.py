@@ -5,11 +5,8 @@ from time import sleep
 
 import polars as pl
 import polars.selectors as cs
-from dotenv import load_dotenv
 from httpx import get
 from polars.exceptions import ComputeError
-
-load_dotenv()
 
 operators = [
     ["s<", "<"],

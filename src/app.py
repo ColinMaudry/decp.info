@@ -1,14 +1,54 @@
 import logging
+import os
 
 import dash_bootstrap_components as dbc
 from dash import Dash, dcc, html, page_container, page_registry
+from dotenv import load_dotenv
 from flask import send_from_directory
+
+load_dotenv()
+
+domain_name = (
+    "test.decp.info" if os.getenv("DEVELOPMENT").lower() == "true" else "decp.info"
+)
+image_url = f"https://{domain_name}/assets/decp.info.png"
+title = "decp.info - exploration des marchés publics français"
+description = (
+    "Explorez et analysez les données des marchés publics français avec cet outil libre et gratuit. "
+    "Pour une commande publique accessible à toutes et tous."
+)
 
 app = Dash(
     external_stylesheets=[dbc.themes.SIMPLEX],
     title="decp.info",
     use_pages=True,
     compress=True,
+    meta_tags=[
+        {
+            "property": "og:image",
+            "content": image_url,
+        },
+        {
+            "name": "twitter:image",
+            "content": image_url,
+        },
+        {
+            "property": "og:title",
+            "content": title,
+        },
+        {
+            "name": "twitter:title",
+            "content": title,
+        },
+        {
+            "property": "og:description",
+            "content": description,
+        },
+        {
+            "name": "twitter:description",
+            "content": description,
+        },
+    ],
 )
 # COSMO (belle font, blue),
 # UNITED (rouge, ubuntu font),
