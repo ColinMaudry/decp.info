@@ -216,7 +216,9 @@ def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
             lff = dates_to_strings(lff, col_name)
 
         if operator in ("<", "<=", ">", ">="):
-            filter_value = int(filter_value)
+            lff = lff.filter(
+                pl.col(col_name).is_not_null() & (pl.col(col_name) != pl.lit(""))
+            )
             if operator == "<":
                 lff = lff.filter(pl.col(col_name) < filter_value)
             elif operator == ">":
