@@ -18,6 +18,14 @@
   margin-bottom: 25px;
 }
 
+#instructions {
+  max-width: 1000px;
+}
+
+details > div {
+  padding-top: 24px;
+}
+
 /* Réduire la taille du texte de la colonne Objet */
 
 td[data-dash-column="objet"] {
@@ -31,6 +39,7 @@ td[data-dash-column="objet"] {
   th.dash-header {
   background-color: #b33821;
   color: white;
+  font-family: sans-serif;
 }
 
 .dash-table-container
@@ -48,10 +57,33 @@ td[data-dash-column="objet"] {
   display: none;
 }
 
+.dash-tooltip,
+.dash-table-tooltip {
+  color: #333;
+  width: 400px !important;
+  max-width: 400px !important;
+  height: 100px !important;
+  max-height: 100px !important;
+  overflow: hidden;
+}
+
+.dash-tooltip pre,
+.dash-tooltip code {
+  overflow: hidden;
+  height: 150px;
+  text-wrap: wrap;
+  font-family: sans-serif;
+}
+
 /* Menu de masquage des colonnes */
-.column-header--hide svg {
+.column-actions {
+  margin-right: 8px;
+}
+
+.column-header--hide {
   display: none;
 }
+
 .show-hide {
   position: relative;
   width: 180px;
