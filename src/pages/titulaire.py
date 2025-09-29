@@ -12,6 +12,7 @@ from src.utils import (
     get_departement_region,
     lf,
     meta_content,
+    setup_table_columns,
 )
 
 register_page(
@@ -216,6 +217,7 @@ def get_last_marches_table(data) -> html.Div:
 
     dff = pl.DataFrame(data)
     dff = format_montant(dff)
+    columns, tooltip = setup_table_columns(dff, hideable=False, exclude=["acheteur_id"])
     data = dff.to_dicts()
     # Idéalement on utiliserait add_org_links(), mais le résultat attendu
     # est différent de home.py (Tableau)
@@ -223,25 +225,18 @@ def get_last_marches_table(data) -> html.Div:
 
     table = html.Div(
         className="marches_table",
-        id="marches_datatable",
+        id="titulaire_datatable",
         children=dash_table.DataTable(
             data=data,
             markdown_options={"html": True},
             page_action="native",
             filter_action="native",
             filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
-            columns=[
-                {
-                    "name": i,
-                    "id": i,
-                    "presentation": "markdown",
-                    "type": "text",
-                    "format": {"nully": "N/A"},
-                    "hideable": False,
-                }
-                for i in columns
-                if i not in ["titulaire_id"]
-            ],
+            columns=columns,
+            tooltip_header=tooltip,
+            tooltip_duration=8000,
+            tooltip_delay=350,
+            cell_selectable=False,
             page_size=10,
             style_cell_conditional=[
                 {

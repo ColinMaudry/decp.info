@@ -7,12 +7,12 @@ from dash import Input, Output, State, callback, dash_table, dcc, html, register
 from src.utils import (
     add_org_links,
     add_resource_link,
-    data_schema,
     filter_table_data,
     format_montant,
     format_number,
     lf,
     meta_content,
+    setup_table_columns,
     sort_table_data,
 )
 
@@ -205,34 +205,7 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     # Formatage des montants
     dff = format_montant(dff)
 
-    # Liste finale de colonnes
-    columns = []
-    tooltip = {}
-    for column_id in dff.columns:
-        column_object = data_schema.get(column_id)
-        if column_object:
-            column_name = column_object.get("friendly_name", column_id)
-        else:
-            column_name = column_id
-
-        column = {
-            "name": column_name,
-            "id": column_id,
-            "presentation": "markdown",
-            "type": "text",
-            "format": {"nully": "N/A"},
-            "hideable": True,
-        }
-        columns.append(column)
-
-        if column_object:
-            tooltip[column_id] = {
-                "value": f"""**{column_object.get("friendly_name", column_id)}**
-
-    """
-                + column_object["description"],
-                "type": "markdown",
-            }
+    columns, tooltip = setup_table_columns(dff)
 
     dicts = dff.to_dicts()
 

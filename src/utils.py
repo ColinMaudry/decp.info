@@ -255,6 +255,40 @@ def sort_table_data(lff: pl.LazyFrame, sort_by: list) -> pl.LazyFrame:
     return lff
 
 
+def setup_table_columns(dff, hideable: bool = True, exclude: list = None) -> tuple:
+    # Liste finale de colonnes
+    columns = []
+    tooltip = {}
+    for column_id in dff.columns:
+        if exclude and column_id in exclude:
+            continue
+        column_object = data_schema.get(column_id)
+        if column_object:
+            column_name = column_object.get("friendly_name", column_id)
+        else:
+            column_name = column_id
+
+        column = {
+            "name": column_name,
+            "id": column_id,
+            "presentation": "markdown",
+            "type": "text",
+            "format": {"nully": "N/A"},
+            "hideable": hideable,
+        }
+        columns.append(column)
+
+        if column_object:
+            tooltip[column_id] = {
+                "value": f"""**{column_object.get("friendly_name", column_id)}**
+
+    """
+                + column_object["description"],
+                "type": "markdown",
+            }
+    return columns, tooltip
+
+
 lf = get_decp_data()
 departements = get_departements()
 domain_name = (
