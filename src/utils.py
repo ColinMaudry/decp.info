@@ -268,3 +268,6 @@ meta_content = {
         "Pour une commande publique accessible à toutes et tous."
     ),
 }
+
+# Récupération du schéma des données tabulaires
+data_schema: dict = get(os.getenv("DATA_SCHEMA_PATH"), follow_redirects=True).json()
