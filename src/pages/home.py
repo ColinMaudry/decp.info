@@ -7,6 +7,7 @@ from dash import Input, Output, State, callback, dash_table, dcc, html, register
 from src.utils import (
     add_org_links,
     add_resource_link,
+    data_schema,
     filter_table_data,
     format_montant,
     format_number,
@@ -73,6 +74,8 @@ datatable = html.Div(
         ],
         data_timestamp=0,
         markdown_options={"html": True},
+        tooltip_duration=8000,
+        tooltip_delay=350,
     ),
 )
 
@@ -85,21 +88,35 @@ layout = [
                 ),
                 dcc.Markdown(
                     """
+    ##### Définition des colonnes
 
-    **Filtres**
+    Pour voir la définition d'une colonne, passez votre souris sur son en-tête.
+
+    ##### Filtres
 
     Vous pouvez appliquer un filtre pour chaque colonne en entrant du texte sous le nom de la colonne, puis en tapant sur `Entrée`.
 
-    - Champs textuels : la recherche est insensible à la casse (majuscules/minuscules).
-    - Champs numériques : vous pouvez soit taper un nombre pour trouver les valeurs égales, soit le précéder de > ou < pour filtrer les valeurs supérieures ou inférieures.
+    - Champs textuels : la recherche est insensible à la casse (majuscules/minuscules) et retourne les valeurs qui contiennent
+    le texte recherché. Exemple : `rennes` retourne "RENNES METROPOLE".
+    - Champs numériques : vous pouvez soit taper un nombre pour trouver les valeurs égales, soit le précéder de **>** ou **<** pour filtrer les valeurs supérieures ou inférieures. Exemple pour les offres reçues : `> 4` retourne les marchés ayant reçu plus de 4 offres.
+    - Champs date : vous pouvez également utiliser **>** ou **<**. Exemples : `< 2024-01-31` pour "avant le 31 janvier 2024",
+    `2024` pour "en 2024", `> 2022` pour "à partir de 2022"
 
     Vous pouvez filtrer plusieurs colonnes à la fois. Vos filtres sont remis à zéro quand vous rafraîchissez la page.
 
-    **Télécharger le résultat**
+    ##### Tri
 
-    Vous pouvez télécharger le résultat de vos filtres et tris, pour les colonnes affichées, en cliquant sur Télécharger au format Excel.
+    Pour trier une colonne, utilisez les flèches grises à côté des noms de colonnes. Chaque clic change le tri dans cet ordre : tri ascendant, tri descendant, pas de tri.
 
-    Si vous téléchargez un volume important de données, il se peut que vous attendiez quelques minutes avant le début du téléchargement.
+    ##### Télécharger le résultat
+
+    Vous pouvez télécharger le résultat de vos filtres et tris, pour les colonnes affichées, en cliquant sur **Télécharger au format Excel**.
+
+    ##### Liens
+
+    Les liens dans les colonnes Acheteur et Titulaire vous permettent de consulter une vue qui leur est dédiée
+    (informations, marchés attribués/remportés, etc.)
+
     """
                 ),
             ],
@@ -141,7 +158,7 @@ layout = [
 @callback(
     Output("table", "data"),
     Output("table", "columns"),
-    # Output("filtered_data", "data"),
+    Output("table", "tooltip_header"),
     Output("table", "data_timestamp"),
     Output("nb_rows", "children"),
     Output("btn-download-data", "disabled"),
@@ -189,17 +206,33 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     dff = format_montant(dff)
 
     # Liste finale de colonnes
-    columns = [
-        {
-            "name": column,
-            "id": column,
+    columns = []
+    tooltip = {}
+    for column_id in dff.columns:
+        column_object = data_schema.get(column_id)
+        if column_object:
+            column_name = column_object.get("friendly_name", column_id)
+        else:
+            column_name = column_id
+
+        column = {
+            "name": column_name,
+            "id": column_id,
             "presentation": "markdown",
             "type": "text",
             "format": {"nully": "N/A"},
             "hideable": True,
         }
-        for column in dff.columns
-    ]
+        columns.append(column)
+
+        if column_object:
+            tooltip[column_id] = {
+                "value": f"""**{column_object.get("friendly_name", column_id)}**
+
+    """
+                + column_object["description"],
+                "type": "markdown",
+            }
 
     dicts = dff.to_dicts()
 
@@ -215,6 +248,7 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     return (
         dicts,
         columns,
+        tooltip,
         data_timestamp + 1,
         nb_rows,
         download_disabled,
