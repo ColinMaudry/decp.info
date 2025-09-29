@@ -42,7 +42,7 @@ les fonctionnalités actuelles de decp.info. Il est ainsi possible de rajouter
             dcc.Markdown("""
 - via l'achat d'une prestation de service (devis, prestation, facture), vous pouvez financer le développement de [fonctionnalités prévues](https://github.com/ColinMaudry/decp.info/issues), ou d'autres !
 - ma société accepte aussi les dons (pas de réduction d'impôt possible)
-- envoyez un mail et on discute !
+- [écrivez-moi](/contact) et on discute !
 
 #### Pour explorer le projet
 
@@ -54,14 +54,6 @@ les fonctionnalités actuelles de decp.info. Il est ainsi possible de rajouter
     - [de decp.info](https://github.com/ColinMaudry/decp.info)
     - [du traitement des données](https://github.com/ColinMaudry/decp-processing)
     """),
-            html.H4("Contact", id="contact"),
-            dcc.Markdown("""
-- Email : [colin+decp@maudry.com](mailto:colin+decp@maudry.com)
-- Bluesky : [@col1m.bsky.social](https://bsky.app/profile/col1m.bsky.social)
-- Mastodon : [col1m@mamot.fr](https://mamot.fr/@col1m)
-- LinkedIn : [colinmaudry](https://www.linkedin.com/in/colinmaudry/)
-- venez discuter de la transparence de la commande publique [sur le forum teamopendata.org](https://teamopendata.org/c/commande-publique/101)
-"""),
             html.H4("Sources de données", id="sources"),
             get_sources_tables(os.getenv("SOURCE_STATS_CSV_PATH")),
             html.H4("Mentions légales", id="mentions-legales"),

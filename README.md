@@ -38,9 +38,13 @@ python run.py
 
 #### 2.1.0
 
-- Ajout des vues [acheteur](https://decp.info/acheteurs/24350013900189) et [titulaire](https://decp.info/titulaires/51903758414786) ([#28](https://github.com/ColinMaudry/decp.info/issues/28) et [#35](https://github.com/ColinMaudry/decp.info/issues/35))
-- Ajout des balises HTML meta Open Graph et Twitter ([#39](https://github.com/ColinMaudry/decp.info/issues/39)) pour de beaux aperçus de liens
-- Variables globales uniquement en lecture
+- Ajout des vues [acheteur](https://decp.info/acheteurs/24350013900189) et [titulaire](https://decp.info/titulaires/51903758414786) ([#28](https://github.com/ColinMaudry/decp.info/issues/28) et [#35](https://github.com/ColinMaudry/decp.info/issues/35)) 🔎
+- Ajout des balises HTML meta Open Graph et Twitter ([#39](https://github.com/ColinMaudry/decp.info/issues/39)) pour de beaux aperçus de liens 🖼️
+- Formulaire de contact ([#48](https://github.com/ColinMaudry/decp.info/issues/48)) 📨
+- Nom de colonnes plus_agréables ([#33](https://github.com/ColinMaudry/decp.info/issues/33)) 💅
+- Définition des colonnes quand vous passez votre souris sur les en-têtes ([#33](https://github.com/ColinMaudry/decp.info/issues/33)) 📖
+- Affichage du numéro de version près du logo et lien vers ici 🤓
+- Variables globales uniquement en lecture (😁)
 
 ##### 2.0.1 (23 septembre 2025)
 

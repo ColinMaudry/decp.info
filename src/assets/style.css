@@ -26,6 +26,31 @@ details > div {
   padding-top: 24px;
 }
 
+/* Logo et version */
+
+div.logo {
+  width: 230px;
+}
+
+p.version {
+  float: left;
+  margin-top: 21px;
+  margin-left: 12px;
+}
+
+p.version > a {
+  text-decoration: none;
+}
+
+div.logo h1 {
+  float: left;
+}
+
+div.logo > a {
+  text-decoration: none;
+  color: black;
+}
+
 /* Réduire la taille du texte de la colonne Objet */
 
 td[data-dash-column="objet"] {
@@ -131,11 +156,6 @@ a.nav {
   float: left;
   margin-right: 40px;
   font-size: 120%;
-}
-
-.navbar.h1 {
-  float: left;
-  width: 50%;
 }
 
 h3 {
