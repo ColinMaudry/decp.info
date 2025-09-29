@@ -1,6 +1,7 @@
 import logging
 
 import dash_bootstrap_components as dbc
+import tomllib
 from dash import Dash, dcc, html, page_container, page_registry
 from dotenv import load_dotenv
 from flask import send_from_directory
@@ -31,6 +32,11 @@ logging.basicConfig(
     level=logging.INFO,
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+
+with open("./pyproject.toml", "rb") as f:
+    pyproject = tomllib.load(f)
+    version = "v" + pyproject["project"]["version"]
+
 
 app.index_string = """
 <!DOCTYPE html>
@@ -70,7 +76,20 @@ app.layout = html.Div(
     [
         html.Div(
             [
-                html.H1("decp.info"),
+                html.Div(
+                    [
+                        html.A(children=html.H1("decp.info"), href="/"),
+                        html.P(
+                            children=html.A(
+                                version,
+                                href="https://github.com/ColinMaudry/decp.info?tab=readme-ov-file#notes-de-version",
+                                target="_blank",
+                            ),
+                            className="version",
+                        ),
+                    ],
+                    className="logo",
+                ),
                 html.Div(
                     [
                         dcc.Link(

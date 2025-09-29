@@ -43,6 +43,7 @@ python run.py
 - Formulaire de contact ([#48](https://github.com/ColinMaudry/decp.info/issues/48)) 📨
 - Nom de colonnes plus_agréables ([#33](https://github.com/ColinMaudry/decp.info/issues/33)) 💅
 - Définition des colonnes quand vous passez votre souris sur les en-têtes ([#33](https://github.com/ColinMaudry/decp.info/issues/33)) 📖
+- Affichage du numéro de version près du logo et lien vers ici 🤓
 - Variables globales uniquement en lecture (😁)
 
 ##### 2.0.1 (23 septembre 2025)
