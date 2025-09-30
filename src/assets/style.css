@@ -88,8 +88,8 @@ td[data-dash-column="objet"] {
   color: #333;
   width: 400px !important;
   max-width: 400px !important;
-  height: 100px !important;
-  max-height: 100px !important;
+  height: 150px !important;
+  max-height: 150px !important;
   overflow: hidden;
 }
 
@@ -179,6 +179,9 @@ summary > h3 {
   justify-content: space-between;
 }
 
+.wrapper > div {
+}
+
 .org_title {
   grid-column: 1 / 3;
   grid-row: 1;
@@ -205,5 +208,33 @@ summary > h3 {
 
 .org_map {
   grid-column: 3;
+  grid-row: 2;
+}
+
+/* Vue marché */
+
+.marche_infos p {
+  margin-top: 6px;
+  margin-bottom: 6px;
+}
+
+.marche_title {
+  grid-column: 1/3;
+  grid-row: 1;
+}
+
+.marche_map {
+  grid-column: 3;
+  grid-row: 2;
+  width: 400px;
+}
+
+.marche_infos_1 {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.marche_infos_2 {
+  grid-column: 2;
   grid-row: 2;
 }

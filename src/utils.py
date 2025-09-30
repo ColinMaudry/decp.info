@@ -49,7 +49,7 @@ def add_resource_link(dff: pl.DataFrame) -> pl.DataFrame:
     return dff
 
 
-def add_org_links(dff: pl.DataFrame):
+def add_links(dff: pl.DataFrame):
     dff = dff.with_columns(
         pl.when(pl.col("titulaire_typeIdentifiant") == "SIRET")
         .then(
@@ -62,25 +62,29 @@ def add_org_links(dff: pl.DataFrame):
         .otherwise(pl.col("titulaire_id"))
         .alias("titulaire_id")
     )
-    dff = dff.with_columns(
-        (
-            '<a href = "/acheteurs/'
-            + pl.col("acheteur_id")
-            + '" target="_blank">'
-            + pl.col("acheteur_id")
-            + "</a>"
-        ).alias("acheteur_id")
-    )
+
+    for column, path in [("acheteur_id", "acheteurs"), ("uid", "marches")]:
+        dff = dff.with_columns(
+            (
+                f'<a href = "/{path}/'
+                + pl.col(column)
+                + '" target="_blank">'
+                + pl.col(column)
+                + "</a>"
+            ).alias(column)
+        )
     return dff
 
 
-def add_org_links_in_dict(data: list, org_type: str) -> list:
+def add_links_in_dict(data: list, org_type: str) -> list:
     new_data = []
     for marche in data:
         org_id = marche[org_type + "_id"]
         marche[org_type + "_nom"] = (
             f'<a href="/{org_type}s/{org_id}">{marche[org_type + "_nom"]}</a>'
         )
+        marche["id"] = f'<a href="/marches/{marche["uid"]}">{marche["id"]}</a>'
+        marche["uid"] = f'<a href="/marches/{marche["uid"]}">{marche["uid"]}</a>'
         new_data.append(marche)
     return new_data
 
@@ -280,7 +284,7 @@ def setup_table_columns(dff, hideable: bool = True, exclude: list = None) -> tup
 
         if column_object:
             tooltip[column_id] = {
-                "value": f"""**{column_object.get("friendly_name", column_id)}**
+                "value": f"""**{column_object.get("friendly_name")}** ({column_id})
 
     """
                 + column_object["description"],
@@ -305,3 +309,7 @@ meta_content = {
 
 # Récupération du schéma des données tabulaires
 data_schema: dict = get(os.getenv("DATA_SCHEMA_PATH"), follow_redirects=True).json()
+data_schema["source"] = {
+    "description": "Code de la source des données, avec un lien vers le fichier Open Data dont proviennent les données de ce marché public.",
+    "friendly_name": "Source des données",
+}

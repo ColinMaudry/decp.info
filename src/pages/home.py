@@ -5,7 +5,7 @@ import polars as pl
 from dash import Input, Output, State, callback, dash_table, dcc, html, register_page
 
 from src.utils import (
-    add_org_links,
+    add_links,
     add_resource_link,
     filter_table_data,
     format_montant,
@@ -197,7 +197,7 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     dff = dff.slice(start_row, page_size)
 
     # Ajout des liens vers l'annuaire des entreprises
-    dff = add_org_links(dff)
+    dff = add_links(dff)
 
     # Ajout des liens vers les fichiers Open Data
     dff = add_resource_link(dff)

@@ -5,7 +5,7 @@ from dash import Input, Output, State, callback, dash_table, dcc, html, register
 
 from src.figures import point_on_map
 from src.utils import (
-    add_org_links_in_dict,
+    add_links_in_dict,
     format_montant,
     format_number,
     get_annuaire_data,
@@ -181,6 +181,7 @@ def get_titulaire_marches_data(url, titulaire_year: str) -> pl.LazyFrame:
     )
     lff = lff.fill_null("")
     lff = lff.select(
+        "id",
         "uid",
         "objet",
         "dateNotification",
@@ -217,11 +218,13 @@ def get_last_marches_table(data) -> html.Div:
 
     dff = pl.DataFrame(data)
     dff = format_montant(dff)
-    columns, tooltip = setup_table_columns(dff, hideable=False, exclude=["acheteur_id"])
+    columns, tooltip = setup_table_columns(
+        dff, hideable=False, exclude=["acheteur_id", "id"]
+    )
     data = dff.to_dicts()
     # Idéalement on utiliserait add_org_links(), mais le résultat attendu
     # est différent de home.py (Tableau)
-    data = add_org_links_in_dict(data, "acheteur")
+    data = add_links_in_dict(data, "acheteur")
 
     table = html.Div(
         className="marches_table",
@@ -248,8 +251,8 @@ def get_last_marches_table(data) -> html.Div:
                     "whiteSpace": "normal",
                 },
                 {
-                    "if": {"column_id": "   acheteur_nom"},
-                    "minWidth": "200px",
+                    "if": {"column_id": "acheteur_nom"},
+                    "maxWidth": "400px",
                     "textAlign": "left",
                     "overflow": "hidden",
                     "lineHeight": "18px",
