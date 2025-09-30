@@ -1,8 +1,12 @@
 import logging
 
 import dash_bootstrap_components as dbc
+import tomllib
 from dash import Dash, dcc, html, page_container, page_registry
+from dotenv import load_dotenv
 from flask import send_from_directory
+
+load_dotenv()
 
 app = Dash(
     external_stylesheets=[dbc.themes.SIMPLEX],
@@ -29,9 +33,14 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+with open("./pyproject.toml", "rb") as f:
+    pyproject = tomllib.load(f)
+    version = "v" + pyproject["project"]["version"]
+
+
 app.index_string = """
 <!DOCTYPE html>
-<html>
+<html lang="fr">
     <head>
         {%metas%}
         <title>{%title%}</title>
@@ -67,13 +76,27 @@ app.layout = html.Div(
     [
         html.Div(
             [
-                html.H1("decp.info"),
+                html.Div(
+                    [
+                        html.A(children=html.H1("decp.info"), href="/"),
+                        html.P(
+                            children=html.A(
+                                version,
+                                href="https://github.com/ColinMaudry/decp.info?tab=readme-ov-file#notes-de-version",
+                                target="_blank",
+                            ),
+                            className="version",
+                        ),
+                    ],
+                    className="logo",
+                ),
                 html.Div(
                     [
                         dcc.Link(
                             page["name"], href=page["relative_path"], className="nav"
                         )
                         for page in page_registry.values()
+                        if page["name"] not in ["Acheteur", "Titulaire", "Marché"]
                     ]
                 ),
             ],
@@ -82,15 +105,6 @@ app.layout = html.Div(
         page_container,
     ]
 )
-# @callback(
-#     Output(component_id="table", component_property="data", allow_duplicate=True),
-#     Input(component_id="search", component_property="value"),
-#     prevent_initial_call=True,
-# )
-# def global_search(text):
-#     new_df = df
-#     new_df = new_df.filter(pl.col("objet").str.contains("(?i)" + text))
-#     return new_df.to_dicts()
 
 if __name__ == "__main__":
     app.run(debug=True)

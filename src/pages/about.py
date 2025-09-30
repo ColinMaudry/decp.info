@@ -1,23 +1,27 @@
 import os
 
 from dash import dcc, html, register_page
-from dotenv import load_dotenv
 
 from src.figures import get_sources_tables
+from src.utils import meta_content
 
-title = "À propos"
-
-load_dotenv()
+name = "À propos"
 
 register_page(
-    __name__, path="/a-propos", title=f"decp.info - {title}", name=title, order=5
+    __name__,
+    path="/a-propos",
+    title=meta_content["title"],
+    name=name,
+    description=meta_content["description"],
+    image_url=meta_content["image_url"],
+    order=5,
 )
 
 layout = [
     html.Div(
         className="container",
         children=[
-            html.H2(title),
+            html.H2(name),
             dcc.Markdown(
                 """Outil d'exploration libre et gratuit des données de marchés publics, développé par Colin Maudry.
 
@@ -27,7 +31,7 @@ j'aimerais beaucoup échanger avec vous pour comprendre vos cas d'usages et vos 
 En effet, le potentiel des données d'attribution de marchés et des données qui peuvent les enrichir est très loin d'être exploité par
 les fonctionnalités actuelles de decp.info. Il est ainsi possible de rajouter
 
-- de nombreuses visualisations de données (cartes, graphiques, tableaux) sur des thématiques variées (vivacité de la concurrence, secteurs d'activité, insertion par l'activité économique (IAE), distance acheteur-fournisseur...)
+- de nombreuses visualisations de données (cartes, graphiques, tableaux) sur des thématiques variées (vivacité de la concurrence, secteurs d'activité, insertion par l'activité économique (IAE), distance acheteur-titulaire...)
 - la sauvegarde de filtres pour les retrouver plus tard et les partager
 - des alertes par email si des marchés correspondant à certains critères
 - le développement d'une API pour alimenter d'autres logiciels
@@ -38,26 +42,18 @@ les fonctionnalités actuelles de decp.info. Il est ainsi possible de rajouter
             dcc.Markdown("""
 - via l'achat d'une prestation de service (devis, prestation, facture), vous pouvez financer le développement de [fonctionnalités prévues](https://github.com/ColinMaudry/decp.info/issues), ou d'autres !
 - ma société accepte aussi les dons (pas de réduction d'impôt possible)
-- envoyez un mail et on discute !
+- [écrivez-moi](/contact) et on discute !
 
 #### Pour explorer le projet
 
 - ✉️  [inscription à la liste de diffusion](https://6254d9a3.sibforms.com/serve/MUIFAEonUVkoSVrdgey18CTgLyI16xw4yeu-M-YOUzhWE_AgfQfbgkyT7GvA_RYLro9MfuRqkzQxSvu7-uzbMSv2a2ZQPsliM7wtiiqIL8kR2zOvl6m11fb5qjcOxMAYsLiY_YBi3P7NY95CTJ8vRY4CpsDclF2iLooOElKkTgIgi5nePe7zAIrgiYM5v2EuALlGJZMEG9vBP-Cu) (annonces des mises à jour et évènements, maximum une fois par mois)
 - 💾  [données consolidées en Open Data](https://www.data.gouv.fr/datasets/donnees-essentielles-de-la-commande-publique-consolidees-format-tabulaire/)
-- 🗞️  [mon blog](https://colin.maudry.com), qui parle beaucoup de transparence des marchés publics
+- 🗞️  [mon blog](https://colin.maudry.com)
 - 📔  [wiki du projet](https://github.com/ColinMaudry/decp-processing/wiki)
 - 🚰  code source
     - [de decp.info](https://github.com/ColinMaudry/decp.info)
     - [du traitement des données](https://github.com/ColinMaudry/decp-processing)
     """),
-            html.H4("Contact", id="contact"),
-            dcc.Markdown("""
-- Email : [colin+decp@maudry.com](mailto:colin+decp@maudry.com)
-- Bluesky : [@col1m.bsky.social](https://bsky.app/profile/col1m.bsky.social)
-- Mastodon : [col1m@mamot.fr](https://mamot.fr/@col1m)
-- LinkedIn : [colinmaudry](https://www.linkedin.com/in/colinmaudry/)
-- venez discuter de la transparence de la commande publique [sur le forum teamopendata.org](https://teamopendata.org/c/commande-publique/101)
-"""),
             html.H4("Sources de données", id="sources"),
             get_sources_tables(os.getenv("SOURCE_STATS_CSV_PATH")),
             html.H4("Mentions légales", id="mentions-legales"),

@@ -1,12 +1,18 @@
 from dash import dcc, html, register_page
 
 from src.figures import get_barchart_sources, get_map_count_marches
-from src.utils import lf
+from src.utils import lf, meta_content
 
-title = "Statistiques"
+name = "Statistiques"
 
 register_page(
-    __name__, path="/statistiques", title=f"decp.info - {title}", name=title, order=3
+    __name__,
+    path="/statistiques",
+    title=meta_content["title"],
+    name=name,
+    description=meta_content["description"],
+    image_url=meta_content["image_url"],
+    order=3,
 )
 
 
@@ -14,7 +20,7 @@ layout = [
     html.Div(
         className="container",
         children=[
-            html.H2(title),
+            html.H2(name),
             dcc.Loading(
                 overlay_style={"visibility": "visible", "filter": "blur(2px)"},
                 id="loading-statistques",

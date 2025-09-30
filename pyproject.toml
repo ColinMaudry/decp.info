@@ -1,7 +1,7 @@
 [project]
 name = "decp.info"
-description = ""
-version = "2.0.1"
+description = "Interface d'exploration et d'analyse des marchés publics français."
+version = "2.1.0"
 requires-python = ">= 3.10"
 authors = [
     { name = "Colin Maudry", email = "colin+decp@maudry.com" }
@@ -15,6 +15,8 @@ dependencies = [
     "python-dotenv",
     "xlsxwriter",
     "plotly[express]",
+    "httpx",
+    "pandas" # utilisé pour la création de certains graphiques
 ]
 
 [project.optional-dependencies]

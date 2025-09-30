@@ -1,6 +1,6 @@
 # decp.info
 
-> v2.0.1
+> v2.1.0
 
 Outil d'exploration et de téléchargement des données essentielles de la commande publique.
 
@@ -36,7 +36,17 @@ python run.py
 
 ## Notes de version
 
-#### 2.0.1 (23 septembre 2025)
+#### 2.1.0
+
+- Ajout des vues [acheteur](https://decp.info/acheteurs/24350013900189) ([#28](https://github.com/ColinMaudry/decp.info/issues/28)), [titulaire](https://decp.info/titulaires/51903758414786) ([#35](https://github.com/ColinMaudry/decp.info/issues/35)) et [marché](https://decp.info/marches/532239472000482025S00004) ([#40](https://github.com/ColinMaudry/decp.info/issues/40)) 🔎
+- Ajout des balises HTML meta Open Graph et Twitter ([#39](https://github.com/ColinMaudry/decp.info/issues/39)) pour de beaux aperçus de liens 🖼️
+- Formulaire de contact ([#48](https://github.com/ColinMaudry/decp.info/issues/48)) 📨
+- Nom de colonnes plus_agréables ([#33](https://github.com/ColinMaudry/decp.info/issues/33)) 💅
+- Définition des colonnes quand vous passez votre souris sur les en-têtes ([#33](https://github.com/ColinMaudry/decp.info/issues/33)) 📖
+- Affichage du numéro de version près du logo et lien vers ici 🤓
+- Variables globales uniquement en lecture (😁)
+
+##### 2.0.1 (23 septembre 2025)
 
 - Bloquage du bouton de téléchargement si trop de lignes (+ 65000) [#38](https://github.com/ColinMaudry/decp.info/issues/38)
 - Amélioration du script de déploiement (deploy.sh)
