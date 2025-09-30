@@ -114,7 +114,7 @@ layout = [
 
     ##### Liens
 
-    Les liens dans les colonnes Acheteur et Titulaire vous permettent de consulter une vue qui leur est dédiée
+    Les liens dans les colonnes Identifiant unique, Acheteur et Titulaire vous permettent de consulter une vue qui leur est dédiée
     (informations, marchés attribués/remportés, etc.)
 
     """
