@@ -5,7 +5,7 @@ from dash import Input, Output, State, callback, dash_table, dcc, html, register
 
 from src.figures import point_on_map
 from src.utils import (
-    add_org_links_in_dict,
+    add_links_in_dict,
     format_montant,
     format_number,
     get_annuaire_data,
@@ -177,6 +177,7 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> pl.LazyFrame:
     lff = lff.fill_null("")
     lff = lff.select(
         "id",
+        "uid",
         "objet",
         "dateNotification",
         "titulaire_id",
@@ -201,23 +202,15 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> pl.LazyFrame:
     Input(component_id="acheteur_data", component_property="data"),
 )
 def get_last_marches_table(data) -> html.Div:
-    columns = [
-        "id",
-        "objet",
-        "dateNotification",
-        "titulaire_nom",
-        "montant",
-        "codeCPV",
-        "dureeMois",
-    ]
-
     dff = pl.DataFrame(data)
     dff = format_montant(dff)
     columns, tooltip = setup_table_columns(
-        dff, hideable=False, exclude=["titulaire_id", "titulaire_typeIdentifiant"]
+        dff,
+        hideable=False,
+        exclude=["titulaire_id", "titulaire_typeIdentifiant", "uid"],
     )
     data = dff.to_dicts()
-    data = add_org_links_in_dict(data, "titulaire")
+    data = add_links_in_dict(data, "titulaire")
 
     table = html.Div(
         className="marches_table",
