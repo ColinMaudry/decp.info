@@ -1,6 +1,6 @@
 [project]
 name = "decp.info"
-description = ""
+description = "Interface d'exploration et d'analyse des marchés publics français."
 version = "2.1.0"
 requires-python = ">= 3.10"
 authors = [
