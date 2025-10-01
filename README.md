@@ -38,6 +38,11 @@ Ne pas oublier de mettre à jour les fichier .env.
 
 ## Notes de version
 
+##### 2.1.1
+
+- ajout d'une section dans À propos sur la qualité et l'exhaustivité des données ([#43](https://github.com/ColinMaudry/decp.info/issues/43))
+- ajout du nombre de marchés en plus du nombre de lignes dans la vue Tableau
+
 #### 2.1.0
 
 - Ajout des vues [acheteur](https://decp.info/acheteurs/24350013900189) ([#28](https://github.com/ColinMaudry/decp.info/issues/28)), [titulaire](https://decp.info/titulaires/51903758414786) ([#35](https://github.com/ColinMaudry/decp.info/issues/35)) et [marché](https://decp.info/marches/532239472000482025S00004) ([#40](https://github.com/ColinMaudry/decp.info/issues/40)) 🔎
