@@ -38,8 +38,8 @@ def get_map_count_marches(lf: pl.LazyFrame):
         range_color=(df["uid"].min(), df["uid"].max()),
         labels={"uid": "Marchés attribués"},
         scope="europe",
-        width=1000,
-        height=800,
+        width=900,
+        height=700,
     )
 
     fig.update_geos(fitbounds="locations", visible=False)
