@@ -188,8 +188,7 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     dff: pl.DataFrame = lff.collect()
 
     height = dff.height
-
-    nb_rows = f"{format_number(height)} lignes"
+    nb_rows = f"{format_number(height)} lignes ({format_number(dff.select('uid').unique().height)} marchés)"
 
     # Pagination des données
     start_row = page_current * page_size

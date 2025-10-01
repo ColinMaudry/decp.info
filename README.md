@@ -1,6 +1,6 @@
 # decp.info
 
-> v2.1.0
+> v2.1.1
 
 Outil d'exploration et de téléchargement des données essentielles de la commande publique.
 
@@ -26,8 +26,10 @@ python run.py
 
 ## Déploiement
 
-- **Production** (branche `main`, [decp.info](https://decp.info)) : déploiement manuel via un déclenchement de la Github Action [Déploiement](https://github.com/ColinMaudry/decp.info/actions/workflows/deploy.yaml).
+- **Production** (branche `main`, [decp.info](https://decp.info)) : déploiement manuel via un déclenchement de la Github Action [Déploiement](https://github.com/ColinMaudry/decp.info/actions/workflows/deploy.yaml)
 - **Test** (branche `dev`, [test.decp.info](https://test.decp.info)) : déploiement automatique à chaque push sur la branche `dev`, via la même Github Action.
+
+Ne pas oublier de mettre à jour les fichier .env.
 
 ## Liens connexes
 
@@ -35,6 +37,11 @@ python run.py
 - [colin.maudry.com](https://colin.maudry.com) (blog)
 
 ## Notes de version
+
+##### 2.1.1
+
+- ajout d'une section dans À propos sur la qualité et l'exhaustivité des données ([#43](https://github.com/ColinMaudry/decp.info/issues/43))
+- ajout du nombre de marchés en plus du nombre de lignes dans la vue Tableau
 
 #### 2.1.0
 
