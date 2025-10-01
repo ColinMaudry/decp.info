@@ -54,7 +54,20 @@ les fonctionnalités actuelles de decp.info. Il est ainsi possible de rajouter
     - [de decp.info](https://github.com/ColinMaudry/decp.info)
     - [du traitement des données](https://github.com/ColinMaudry/decp-processing)
     """),
-            html.H4("Sources de données", id="sources"),
+            html.H4("Qualité et exhaustivité des données", id="qualite-exhausitivite"),
+            dcc.Markdown("""Les données visibles sur ce site proviennent exclusivement de la publication de données ouvertes par les acheteurs publics ou en leur nom, régie par [l'arrêté du 22 décembre 2022](https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000046850496). Leur qualité est donc principalement liée à la qualité de leur saisie par les agents publics, parfois peu aidé·es par la qualité des outils à leur disposition. Je pense que l'analyse de marchés individuels et le comptage de marchés sur des critères autres que financiers sont plutôt fiables. En revanche, certains montants de marché estimés à des valeurs farfelues ([1 euro](https://decp.info/marches/432766947000192025S01301), [1 milliard](https://decp.info/marches/2459004280001320210000000271) faussent les calculs par aggrégation (sommes, moyennes, médianes) et donc la production de statistiques financières fiables. Acheteurs, acheteuses : s'il vous plaît, essayez d'estimer les montants des marchés publics attribués de manière plus précise.
+
+Quant à l'exhaustivité, je consolide toutes les sources de données exploitables que j'ai pu identifier (voir [statistiques](/statistiques)). Certains profils d'acheteurs ne publient pas leurs données malgré l'obligation réglementaire :
+
+- marches-securises.fr
+- klekoon.fr (ils y travaillent)
+
+**marches-publics.gouv.fr** (PLACE, [AIFE](https://aife.economie.gouv.fr)), la plateforme des marchés de l'État, ne publie plus de données depuis le 1er janvier 2024 et l'entrée en vigueur de l'arrêté. Nous n'avons donc plus de données sur les marchés publics passés par les ministères, ainsi que sur ceux passés par les acheteurs clients d'[achatpublic.com](https://www.achatpublic.com), qui s'appuie sur les moyens de publication de l'AIFE.
+
+**marches-publics.info** (AWS) publie ses données de manière assez sporadique depuis début 2023. Compte tenu de son poids dans le secteur, c'est assez dommageable pour la transparence des marchés publics.
+
+Au milieu de ces mauvaises nouvelles, je tiens à souligner la belle continuité de la publication par la DGFiP des données des marchés publics remontées via le [protocole PES](https://www.collectivites-locales.gouv.fr/finances-locales/le-protocole-dechange-standard-pes). Merci à leurs équipes."""),
+            html.H4("Sources de données ", id="qualite-exhausitivite"),
             get_sources_tables(os.getenv("SOURCE_STATS_CSV_PATH")),
             html.H4("Mentions légales", id="mentions-legales"),
             dcc.Markdown("""
