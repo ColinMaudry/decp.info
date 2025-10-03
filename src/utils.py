@@ -157,7 +157,7 @@ def get_annuaire_data(siret: str) -> dict:
     return response.json()["results"][0]
 
 
-def get_decp_data() -> pl.LazyFrame:
+def get_decp_data() -> pl.DataFrame:
     # Chargement du fichier parquet
     # Le fichier est chargé en mémoire, ce qui est plus rapide qu'une base de données pour le moment.
     # On utilise polars pour la rapidité et la facilité de manipulation des données.
@@ -186,7 +186,7 @@ def get_decp_data() -> pl.LazyFrame:
     # ça génère une erreur dans la page acheteur (acheteur_data.table) :
     # AttributeError: partially initialized module 'pandas' has no attribute 'NaT' (most likely due to a circular import)
 
-    return lff
+    return lff.collect()
 
 
 def get_departements() -> dict:
@@ -206,14 +206,16 @@ def get_departement_region(code_postal):
 
 
 def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
+    debug = os.getenv("DEVELOPMENT", "False").lower() == "true"
     schema = lff.collect_schema()
     filtering_expressions = filter_query.split(" && ")
     for filter_part in filtering_expressions:
         col_name, operator, filter_value = split_filter_part(filter_part)
         col_type = str(schema[col_name])
-        print("filter_value:", filter_value)
-        print("filter_value_type:", type(filter_value))
-        print("col_type:", col_type)
+        if debug:
+            print("filter_value:", filter_value)
+            print("filter_value_type:", type(filter_value))
+            print("col_type:", col_type)
 
         if col_type == "Date":
             # Convertir la colonne en chaînes de caractères
@@ -293,7 +295,7 @@ def setup_table_columns(dff, hideable: bool = True, exclude: list = None) -> tup
     return columns, tooltip
 
 
-lf = get_decp_data()
+df: pl.DataFrame = get_decp_data()
 departements = get_departements()
 domain_name = (
     "test.decp.info" if os.getenv("DEVELOPMENT").lower() == "true" else "decp.info"
