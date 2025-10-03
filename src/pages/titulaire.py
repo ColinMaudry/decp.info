@@ -6,11 +6,11 @@ from dash import Input, Output, State, callback, dash_table, dcc, html, register
 from src.figures import point_on_map
 from src.utils import (
     add_links_in_dict,
+    df,
     format_montant,
     format_number,
     get_annuaire_data,
     get_departement_region,
-    lf,
     meta_content,
     setup_table_columns,
 )
@@ -148,22 +148,22 @@ def update_titulaire_infos(url):
     Input(component_id="titulaire_data", component_property="data"),
 )
 def update_titulaire_stats(data):
-    df = pl.DataFrame(data)
-    if df.height == 0:
-        df = pl.DataFrame(schema=lf.collect_schema())
-    df_marches = df.unique("uid")
+    dff = pl.DataFrame(data)
+    if dff.height == 0:
+        dff = pl.DataFrame(schema=dff.collect_schema())
+    df_marches = dff.unique("uid")
     nb_marches = format_number(df_marches.height)
     # somme_marches = format_number(int(df_marches.select(pl.sum("montant")).item()))
     marches_remportes = [html.Strong(nb_marches), " marchés et accord-cadres remportés"]
     # + ", pour un total de ", html.Strong(somme_marches + " €")]
     del df_marches
 
-    nb_acheteurs = df.unique("acheteur_id").height
+    nb_acheteurs = dff.unique("acheteur_id").height
     nb_acheteurs = [
         html.Strong(format_number(nb_acheteurs)),
         " titulaires (SIRET) différents",
     ]
-    del df
+    del dff
 
     return marches_remportes, nb_acheteurs
 
@@ -173,9 +173,10 @@ def update_titulaire_stats(data):
     Input(component_id="url", component_property="pathname"),
     Input(component_id="titulaire_year", component_property="value"),
 )
-def get_titulaire_marches_data(url, titulaire_year: str) -> pl.LazyFrame:
+def get_titulaire_marches_data(url, titulaire_year: str) -> list[dict]:
     titulaire_siret = url.split("/")[-1]
-    lff = lf.filter(
+    lff = df.lazy()
+    lff = lff.filter(
         (pl.col("titulaire_id") == titulaire_siret)
         & (pl.col("titulaire_typeIdentifiant") == "SIRET")
     )

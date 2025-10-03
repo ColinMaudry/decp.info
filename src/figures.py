@@ -5,7 +5,8 @@ import polars as pl
 from dash import dash_table, dcc, html
 
 
-def get_map_count_marches(lf: pl.LazyFrame):
+def get_map_count_marches(df: pl.DataFrame):
+    lf = df.lazy()
     lf = lf.with_columns(
         pl.col("lieuExecution_code").str.head(2).str.zfill(2).alias("Département")
     )
@@ -26,7 +27,7 @@ def get_map_count_marches(lf: pl.LazyFrame):
     for f in departements["features"]:
         f["id"] = f["properties"]["code"]
 
-    df = lf.collect()
+    df = lf.collect(engine="streaming")
 
     fig = px.choropleth(
         df,
@@ -54,7 +55,8 @@ def get_map_count_marches(lf: pl.LazyFrame):
     return fig
 
 
-def get_barchart_sources(lf: pl.LazyFrame, type_date: str):
+def get_barchart_sources(df: pl.DataFrame, type_date: str):
+    lf = df.lazy()
     labels = {
         "dateNotification": "notification",
         "datePublicationDonnees": "publication des données",
@@ -97,7 +99,7 @@ def get_barchart_sources(lf: pl.LazyFrame, type_date: str):
     #     )
 
     lf = lf.sort(by=["sourceDataset"], descending=False)
-    df: pl.DataFrame = lf.collect()
+    df: pl.DataFrame = lf.collect(engine="streaming")
 
     fig = px.bar(
         df,

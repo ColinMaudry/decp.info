@@ -1,7 +1,7 @@
 from dash import dcc, html, register_page
 
 from src.figures import get_barchart_sources, get_map_count_marches
-from src.utils import lf, meta_content
+from src.utils import df, meta_content
 
 name = "Statistiques"
 
@@ -37,13 +37,13 @@ layout = [
                             L'ajout de nouvelles plateformes [est en cours](https://github.com/ColinMaudry/decp-processing/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22source%20de%20donn%C3%A9es%22),
                             toutes les [contributions](/a-propos#contribuer) sont les bienvenues pour atteindre l'exhaustivité.
                             """),
-                            dcc.Graph(figure=get_map_count_marches(lf)),
+                            dcc.Graph(figure=get_map_count_marches(df)),
                             dcc.Graph(
-                                figure=get_barchart_sources(lf, "dateNotification")
+                                figure=get_barchart_sources(df, "dateNotification")
                             ),
                             dcc.Graph(
                                 figure=get_barchart_sources(
-                                    lf, "datePublicationDonnees"
+                                    df, "datePublicationDonnees"
                                 )
                             ),
                         ],

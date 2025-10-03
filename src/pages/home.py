@@ -7,10 +7,10 @@ from dash import Input, Output, State, callback, dash_table, dcc, html, register
 from src.utils import (
     add_links,
     add_resource_link,
+    df,
     filter_table_data,
     format_montant,
     format_number,
-    lf,
     meta_content,
     setup_table_columns,
     sort_table_data,
@@ -19,7 +19,7 @@ from src.utils import (
 update_date = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
 update_date = datetime.fromtimestamp(update_date).strftime("%d/%m/%Y")
 
-schema = lf.collect_schema()
+schema = df.collect_schema()
 
 name = "Tableau"
 register_page(
@@ -171,10 +171,11 @@ layout = [
     State("table", "data_timestamp"),
 )
 def update_table(page_current, page_size, filter_query, sort_by, data_timestamp):
-    print(" + + + + + + + + + + + + + + + + + + ")
+    if os.getenv("DEVELOPMENT").lower() == "true":
+        print(" + + + + + + + + + + + + + + + + + + ")
 
     # Application des filtres
-    lff: pl.LazyFrame = lf  # start from the original data
+    lff: pl.LazyFrame = df.lazy()  # start from the original data
     if filter_query:
         lff = filter_table_data(lff, filter_query)
 
@@ -238,7 +239,7 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     prevent_initial_call=True,
 )
 def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
-    lff: pl.LazyFrame = lf  # start from the original data
+    lff: pl.LazyFrame = df  # start from the original data
 
     # Les colonnes masquées sont supprimées
     if hidden_columns:
