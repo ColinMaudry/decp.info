@@ -93,7 +93,8 @@ def get_marche_data(url) -> tuple[dict, list]:
 def update_marche_info(marche, titulaires):
     def make_parameter(col):
         column_object = data_schema.get(col)
-        column_name = column_object.get("friendly_name") if column_object else col
+        print(column_object)
+        column_name = column_object.get("title") if column_object else col
 
         if marche[col]:
             if col == "acheteur_nom":

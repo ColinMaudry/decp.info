@@ -270,7 +270,7 @@ def setup_table_columns(dff, hideable: bool = True, exclude: list = None) -> tup
             continue
         column_object = data_schema.get(column_id)
         if column_object:
-            column_name = column_object.get("friendly_name", column_id)
+            column_name = column_object.get("title", column_id)
         else:
             column_name = column_id
 
@@ -286,13 +286,39 @@ def setup_table_columns(dff, hideable: bool = True, exclude: list = None) -> tup
 
         if column_object:
             tooltip[column_id] = {
-                "value": f"""**{column_object.get("friendly_name")}** ({column_id})
+                "value": f"""**{column_object.get("title")}** ({column_id})
 
     """
                 + column_object["description"],
                 "type": "markdown",
             }
     return columns, tooltip
+
+
+def get_data_schema() -> dict:
+    # Récupération du schéma des données tabulaires
+    path = os.getenv("DATA_SCHEMA_PATH")
+    if path.startswith("http"):
+        original_schema: dict = get(
+            os.getenv("DATA_SCHEMA_PATH"), follow_redirects=True
+        ).json()
+    elif os.path.exists(path):
+        with open(path) as f:
+            original_schema: dict = json.load(f)
+    else:
+        raise Exception(f"Chemin vers le schéma invalide: {path}")
+
+    new_schema = {}
+
+    for col in original_schema["fields"]:
+        new_schema[col["name"]] = col
+
+    new_schema["source"] = {
+        "description": "Code de la source des données, avec un lien vers le fichier Open Data dont proviennent les données de ce marché public.",
+        "title": "Source des données",
+        "short_name": "Source",
+    }
+    return new_schema
 
 
 df: pl.DataFrame = get_decp_data()
@@ -308,10 +334,4 @@ meta_content = {
         "Pour une commande publique accessible à toutes et tous."
     ),
 }
-
-# Récupération du schéma des données tabulaires
-data_schema: dict = get(os.getenv("DATA_SCHEMA_PATH"), follow_redirects=True).json()
-data_schema["source"] = {
-    "description": "Code de la source des données, avec un lien vers le fichier Open Data dont proviennent les données de ce marché public.",
-    "friendly_name": "Source des données",
-}
+data_schema = get_data_schema()
