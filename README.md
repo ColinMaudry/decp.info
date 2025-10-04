@@ -1,6 +1,6 @@
 # decp.info
 
-> v2.1.2
+> v2.1.3
 
 Outil d'exploration et de téléchargement des données essentielles de la commande publique.
 
@@ -37,6 +37,11 @@ Ne pas oublier de mettre à jour les fichier .env.
 - [colin.maudry.com](https://colin.maudry.com) (blog)
 
 ## Notes de version
+
+##### 2.1.3 (4 octobre 2025)
+
+- tentative d'auto-release à chaque création de tag git
+- adaptation au format TableSchema
 
 ##### 2.1.2 (3 octobre 2025)
 
