@@ -1,6 +1,6 @@
 # decp.info
 
-> v2.1.3
+> v2.1.4
 
 Outil d'exploration et de téléchargement des données essentielles de la commande publique.
 
@@ -37,6 +37,11 @@ Ne pas oublier de mettre à jour les fichier .env.
 - [colin.maudry.com](https://colin.maudry.com) (blog)
 
 ## Notes de version
+
+##### 2.1.4 (8 octobre 2025)
+
+- possibilité de filtrer sur le champ "Source"
+- création automatique d'une release Github quand je push un tag
 
 ##### 2.1.3 (4 octobre 2025)
 
