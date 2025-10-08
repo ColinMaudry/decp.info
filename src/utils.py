@@ -43,9 +43,9 @@ def add_resource_link(dff: pl.DataFrame) -> pl.DataFrame:
     dff = dff.with_columns(
         (
             '<a href="' + pl.col("sourceFile") + '">' + pl.col("sourceDataset") + "</a>"
-        ).alias("source")
+        ).alias("sourceDataset")
     )
-    dff = dff.drop(["sourceFile", "sourceDataset"])
+    dff = dff.drop(["sourceFile"])
     return dff
 
 
@@ -157,7 +157,7 @@ def get_annuaire_data(siret: str) -> dict:
     return response.json()["results"][0]
 
 
-def get_decp_data() -> pl.LazyFrame:
+def get_decp_data() -> pl.DataFrame:
     # Chargement du fichier parquet
     # Le fichier est chargé en mémoire, ce qui est plus rapide qu'une base de données pour le moment.
     # On utilise polars pour la rapidité et la facilité de manipulation des données.
@@ -186,7 +186,7 @@ def get_decp_data() -> pl.LazyFrame:
     # ça génère une erreur dans la page acheteur (acheteur_data.table) :
     # AttributeError: partially initialized module 'pandas' has no attribute 'NaT' (most likely due to a circular import)
 
-    return lff
+    return lff.collect()
 
 
 def get_departements() -> dict:
@@ -206,14 +206,17 @@ def get_departement_region(code_postal):
 
 
 def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
+    debug = os.getenv("DEVELOPMENT", "False").lower() == "true"
     schema = lff.collect_schema()
     filtering_expressions = filter_query.split(" && ")
     for filter_part in filtering_expressions:
         col_name, operator, filter_value = split_filter_part(filter_part)
+
         col_type = str(schema[col_name])
-        print("filter_value:", filter_value)
-        print("filter_value_type:", type(filter_value))
-        print("col_type:", col_type)
+        if debug:
+            print("filter_value:", filter_value)
+            print("filter_value_type:", type(filter_value))
+            print("col_type:", col_type)
 
         if col_type == "Date":
             # Convertir la colonne en chaînes de caractères
@@ -268,7 +271,7 @@ def setup_table_columns(dff, hideable: bool = True, exclude: list = None) -> tup
             continue
         column_object = data_schema.get(column_id)
         if column_object:
-            column_name = column_object.get("friendly_name", column_id)
+            column_name = column_object.get("title", column_id)
         else:
             column_name = column_id
 
@@ -284,7 +287,7 @@ def setup_table_columns(dff, hideable: bool = True, exclude: list = None) -> tup
 
         if column_object:
             tooltip[column_id] = {
-                "value": f"""**{column_object.get("friendly_name")}** ({column_id})
+                "value": f"""**{column_object.get("title")}** ({column_id})
 
     """
                 + column_object["description"],
@@ -293,7 +296,33 @@ def setup_table_columns(dff, hideable: bool = True, exclude: list = None) -> tup
     return columns, tooltip
 
 
-lf = get_decp_data()
+def get_data_schema() -> dict:
+    # Récupération du schéma des données tabulaires
+    path = os.getenv("DATA_SCHEMA_PATH")
+    if path.startswith("http"):
+        original_schema: dict = get(
+            os.getenv("DATA_SCHEMA_PATH"), follow_redirects=True
+        ).json()
+    elif os.path.exists(path):
+        with open(path) as f:
+            original_schema: dict = json.load(f)
+    else:
+        raise Exception(f"Chemin vers le schéma invalide: {path}")
+
+    new_schema = {}
+
+    for col in original_schema["fields"]:
+        new_schema[col["name"]] = col
+
+    new_schema["sourceDataset"] = {
+        "description": "Code de la source des données, avec un lien vers le fichier Open Data dont proviennent les données de ce marché public.",
+        "title": "Source des données",
+        "short_name": "Source",
+    }
+    return new_schema
+
+
+df: pl.DataFrame = get_decp_data()
 departements = get_departements()
 domain_name = (
     "test.decp.info" if os.getenv("DEVELOPMENT").lower() == "true" else "decp.info"
@@ -306,10 +335,4 @@ meta_content = {
         "Pour une commande publique accessible à toutes et tous."
     ),
 }
-
-# Récupération du schéma des données tabulaires
-data_schema: dict = get(os.getenv("DATA_SCHEMA_PATH"), follow_redirects=True).json()
-data_schema["source"] = {
-    "description": "Code de la source des données, avec un lien vers le fichier Open Data dont proviennent les données de ce marché public.",
-    "friendly_name": "Source des données",
-}
+data_schema = get_data_schema()

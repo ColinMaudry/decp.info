@@ -6,11 +6,11 @@ from dash import Input, Output, State, callback, dash_table, dcc, html, register
 from src.figures import point_on_map
 from src.utils import (
     add_links_in_dict,
+    df,
     format_montant,
     format_number,
     get_annuaire_data,
     get_departement_region,
-    lf,
     meta_content,
     setup_table_columns,
 )
@@ -148,7 +148,7 @@ def update_acheteur_infos(url):
 def update_acheteur_stats(data):
     df = pl.DataFrame(data)
     if df.height == 0:
-        df = pl.DataFrame(schema=lf.collect_schema())
+        df = pl.DataFrame(schema=df.collect_schema())
     df_marches = df.unique("id")
     nb_marches = format_number(df_marches.height)
     # somme_marches = format_number(int(df_marches.select(pl.sum("montant")).item()))
@@ -171,9 +171,10 @@ def update_acheteur_stats(data):
     Input(component_id="url", component_property="pathname"),
     Input(component_id="acheteur_year", component_property="value"),
 )
-def get_acheteur_marches_data(url, acheteur_year: str) -> pl.LazyFrame:
+def get_acheteur_marches_data(url, acheteur_year: str) -> list[dict]:
     acheteur_siret = url.split("/")[-1]
-    lff = lf.filter(pl.col("acheteur_id") == acheteur_siret)
+    lff = df.lazy()
+    lff = lff.filter(pl.col("acheteur_id") == acheteur_siret)
     lff = lff.fill_null("")
     lff = lff.select(
         "id",

@@ -4,7 +4,7 @@ import polars as pl
 from dash import Input, Output, callback, dcc, html, register_page
 from polars import selectors as cs
 
-from src.utils import data_schema, format_montant, lf, meta_content
+from src.utils import data_schema, df, format_montant, meta_content
 
 register_page(
     __name__,
@@ -62,11 +62,12 @@ layout = [
     Output("titulaires_data", "data"),
     Input(component_id="url", component_property="pathname"),
 )
-def get_marche_data(url):
+def get_marche_data(url) -> tuple[dict, list]:
     marche_uid = url.split("/")[-1]
 
-    # Récupération des données du marché à partir du lf global
-    lff = lf.filter(pl.col("uid") == pl.lit(marche_uid))
+    # Récupération des données du marché à partir du df global
+    lff = df.lazy()
+    lff = lff.filter(pl.col("uid") == pl.lit(marche_uid))
 
     # Données des titulaires du marché
     dff_titulaires = lff.select(cs.starts_with("titulaire")).collect(engine="streaming")
@@ -92,7 +93,8 @@ def get_marche_data(url):
 def update_marche_info(marche, titulaires):
     def make_parameter(col):
         column_object = data_schema.get(col)
-        column_name = column_object.get("friendly_name") if column_object else col
+        print(column_object)
+        column_name = column_object.get("title") if column_object else col
 
         if marche[col]:
             if col == "acheteur_nom":

@@ -1,6 +1,6 @@
 # decp.info
 
-> v2.1.1
+> v2.1.4
 
 Outil d'exploration et de téléchargement des données essentielles de la commande publique.
 
@@ -38,12 +38,26 @@ Ne pas oublier de mettre à jour les fichier .env.
 
 ## Notes de version
 
-##### 2.1.1
+##### 2.1.4 (8 octobre 2025)
+
+- possibilité de filtrer sur le champ "Source"
+- création automatique d'une release Github quand je push un tag
+
+##### 2.1.3 (4 octobre 2025)
+
+- tentative d'auto-release à chaque création de tag git
+- adaptation au format TableSchema
+
+##### 2.1.2 (3 octobre 2025)
+
+- dataframe global plutôt que lazyframe, pour plus de résilience et charger toutes les données en mémoire
+
+##### 2.1.1 (1er octobre 2025)
 
 - ajout d'une section dans À propos sur la qualité et l'exhaustivité des données ([#43](https://github.com/ColinMaudry/decp.info/issues/43))
 - ajout du nombre de marchés en plus du nombre de lignes dans la vue Tableau
 
-#### 2.1.0
+#### 2.1.0 (30 septembre 2025)
 
 - Ajout des vues [acheteur](https://decp.info/acheteurs/24350013900189) ([#28](https://github.com/ColinMaudry/decp.info/issues/28)), [titulaire](https://decp.info/titulaires/51903758414786) ([#35](https://github.com/ColinMaudry/decp.info/issues/35)) et [marché](https://decp.info/marches/532239472000482025S00004) ([#40](https://github.com/ColinMaudry/decp.info/issues/40)) 🔎
 - Ajout des balises HTML meta Open Graph et Twitter ([#39](https://github.com/ColinMaudry/decp.info/issues/39)) pour de beaux aperçus de liens 🖼️
