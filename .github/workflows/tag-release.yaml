@@ -8,25 +8,22 @@ name: Create Release
 
 jobs:
   build:
-    name: Create Release
+    name: Auto-release d'un tag
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@master
       - name: Get tag message
-        run: |
-          tag_message=`git show "$TAG" | grep "^\- "`
-          echo "tag_message=$tag_message" >> "$GITHUB_ENV"
-        env:
-          TAG: ${{ github.ref }}
+        run: echo "TAG_MESSAGE=`git show ${{ github.ref_name }} | grep '^\- '`" >> "$GITHUB_ENV"
       - name: Create Release
         id: create_release
         uses: actions/create-release@latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+          TAG_MESSAGE: ${{ env.TAG_MESSAGE }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          body: ${{ env.tag_message }}
+          release_name: ${{ github.ref_name }}
+          body: ${{ env.TAG_MESSAGE }}
           draft: false
           prerelease: false

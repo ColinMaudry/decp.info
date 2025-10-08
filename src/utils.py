@@ -43,9 +43,9 @@ def add_resource_link(dff: pl.DataFrame) -> pl.DataFrame:
     dff = dff.with_columns(
         (
             '<a href="' + pl.col("sourceFile") + '">' + pl.col("sourceDataset") + "</a>"
-        ).alias("source")
+        ).alias("sourceDataset")
     )
-    dff = dff.drop(["sourceFile", "sourceDataset"])
+    dff = dff.drop(["sourceFile"])
     return dff
 
 
@@ -211,6 +211,7 @@ def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
     filtering_expressions = filter_query.split(" && ")
     for filter_part in filtering_expressions:
         col_name, operator, filter_value = split_filter_part(filter_part)
+
         col_type = str(schema[col_name])
         if debug:
             print("filter_value:", filter_value)
@@ -313,7 +314,7 @@ def get_data_schema() -> dict:
     for col in original_schema["fields"]:
         new_schema[col["name"]] = col
 
-    new_schema["source"] = {
+    new_schema["sourceDataset"] = {
         "description": "Code de la source des données, avec un lien vers le fichier Open Data dont proviennent les données de ce marché public.",
         "title": "Source des données",
         "short_name": "Source",
