@@ -145,7 +145,13 @@ def format_montant(dff: pl.DataFrame) -> pl.DataFrame:
             .otherwise(pl.lit(""))
         )
 
-        return num + frac + pl.lit(" €")
+        montant: pl.Expr = (
+            pl.when((num + frac) == pl.lit(""))
+            .then(pl.lit(""))
+            .otherwise(num + frac + pl.lit(" €"))
+        )
+
+        return montant
 
     dff = dff.with_columns(pl.col("montant").pipe(format_function).alias("montant"))
     return dff
