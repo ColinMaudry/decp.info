@@ -182,9 +182,6 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     if len(sort_by) > 0:
         lff = sort_table_data(lff, sort_by)
 
-    # Remplace les strings null par "", mais pas les numeric null
-    lff = lff.fill_null("")
-
     # Matérialisation des filtres
     dff: pl.DataFrame = lff.collect()
 
@@ -195,6 +192,12 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     start_row = page_current * page_size
     # end_row = (page_current + 1) * page_size
     dff = dff.slice(start_row, page_size)
+
+    # Tout devient string
+    dff = dff.cast(pl.String)
+
+    # Remplace les strings null par "", mais pas les numeric null
+    dff = dff.fill_null("")
 
     # Ajout des liens vers l'annuaire des entreprises
     dff = add_links(dff)
