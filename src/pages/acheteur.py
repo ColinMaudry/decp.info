@@ -175,7 +175,6 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> list[dict]:
     acheteur_siret = url.split("/")[-1]
     lff = df.lazy()
     lff = lff.filter(pl.col("acheteur_id") == acheteur_siret)
-    lff = lff.fill_null("")
     lff = lff.select(
         "id",
         "uid",
@@ -204,6 +203,8 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> list[dict]:
 )
 def get_last_marches_table(data) -> html.Div:
     dff = pl.DataFrame(data)
+    dff = dff.cast(pl.String)
+    dff = dff.fill_null("")
     dff = format_montant(dff)
     columns, tooltip = setup_table_columns(
         dff,

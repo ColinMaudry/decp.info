@@ -180,7 +180,6 @@ def get_titulaire_marches_data(url, titulaire_year: str) -> list[dict]:
         (pl.col("titulaire_id") == titulaire_siret)
         & (pl.col("titulaire_typeIdentifiant") == "SIRET")
     )
-    lff = lff.fill_null("")
     lff = lff.select(
         "id",
         "uid",
@@ -218,6 +217,8 @@ def get_last_marches_table(data) -> html.Div:
     ]
 
     dff = pl.DataFrame(data)
+    dff = dff.cast(pl.String)
+    dff = dff.fill_null("")
     dff = format_montant(dff)
     columns, tooltip = setup_table_columns(
         dff, hideable=False, exclude=["acheteur_id", "id"]

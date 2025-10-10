@@ -38,6 +38,11 @@ Ne pas oublier de mettre à jour les fichier .env.
 
 ## Notes de version
 
+##### 2.1.5 (10 octobre 2025)
+
+- réparation des filtres (notamment < > sur les montants)
+- remplacement des valeurs "null" dans les tableaux par des cellules vides
+
 ##### 2.1.4 (8 octobre 2025)
 
 - possibilité de filtrer sur le champ "Source"

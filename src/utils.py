@@ -126,7 +126,7 @@ def format_number(number) -> str:
 def format_montant(dff: pl.DataFrame) -> pl.DataFrame:
     def format_function(expr, scale=None):
         # https://stackoverflow.com/a/78636786
-        expr = expr.cast(pl.String).str.splitn(".", 2)
+        expr = expr.str.splitn(".", 2)
 
         num = expr.struct[0]
         frac = expr.struct[1]
@@ -211,21 +211,30 @@ def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
     filtering_expressions = filter_query.split(" && ")
     for filter_part in filtering_expressions:
         col_name, operator, filter_value = split_filter_part(filter_part)
-
         col_type = str(schema[col_name])
         if debug:
             print("filter_value:", filter_value)
             print("filter_value_type:", type(filter_value))
+            print("operator:", operator)
             print("col_type:", col_type)
 
-        if col_type == "Date":
-            # Convertir la colonne en chaînes de caractères
-            lff = dates_to_strings(lff, col_name)
+        lff = lff.filter(pl.col(col_name).is_not_null())
 
-        if operator in ("<", "<=", ">", ">="):
-            lff = lff.filter(
-                pl.col(col_name).is_not_null() & (pl.col(col_name) != pl.lit(""))
-            )
+        if col_type == "Date":
+            # Convertir la colonne date en chaînes de caractères
+            lff = dates_to_strings(lff, col_name)
+            col_type = "String"
+        if col_type == "String":
+            lff = lff.filter(pl.col(col_name) != pl.lit(""))
+
+        elif col_type.startswith("Int") or col_type.startswith("Float"):
+            try:
+                filter_value = int(filter_value)
+            except ValueError:
+                logger.error(f"Invalid numeric filter value: {filter_value}")
+                continue
+
+        if operator in ("contains", "<", "<=", ">", ">="):
             if operator == "<":
                 lff = lff.filter(pl.col(col_name) < filter_value)
             elif operator == ">":
@@ -234,17 +243,17 @@ def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
                 lff = lff.filter(pl.col(col_name) >= filter_value)
             elif operator == "<=":
                 lff = lff.filter(pl.col(col_name) <= filter_value)
-
-        elif col_type.startswith("Int") or col_type.startswith("Float"):
-            try:
-                filter_value = int(filter_value)
-            except ValueError:
-                logger.error(f"Invalid numeric filter value: {filter_value}")
-                continue
-            lff = lff.filter(pl.col(col_name) == filter_value)
-
-        elif operator == "contains" and col_type in ["String", "Date"]:
-            lff = lff.filter(pl.col(col_name).str.contains("(?i)" + filter_value))
+            elif operator == "contains":
+                if col_type in ["String", "Date"]:
+                    lff = lff.filter(
+                        pl.col(col_name).str.contains("(?i)" + filter_value)
+                    )
+                elif col_type.startswith("Int") or col_type.startswith("Float"):
+                    lff = lff.filter(pl.col(col_name) == filter_value)
+                else:
+                    logger.error(f"Invalid column type: {col_type}")
+        else:
+            logger.error(f"Invalid operator: {operator}")
 
         # elif operator == 'datestartswith':
         # lff = lff.filter(pl.col(col_name).str.startswith(filter_value)")
