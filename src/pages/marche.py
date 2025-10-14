@@ -110,8 +110,6 @@ def update_marche_info(marche, titulaires):
 
             # Dates
             elif col in ["dateNotification", "datePublicationDonnees"]:
-                print(marche[col])
-
                 value = datetime.fromisoformat(marche[col]).strftime("%d/%m/%Y")
 
             # Listes
