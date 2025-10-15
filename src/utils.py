@@ -126,6 +126,7 @@ def format_number(number) -> str:
 def format_montant(dff: pl.DataFrame) -> pl.DataFrame:
     def format_function(expr, scale=None):
         # https://stackoverflow.com/a/78636786
+        expr = expr.cast(pl.String)
         expr = expr.str.splitn(".", 2)
 
         num = expr.struct[0]

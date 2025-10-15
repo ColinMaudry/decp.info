@@ -66,6 +66,7 @@ def get_marche_data(url) -> tuple[dict, list]:
     marche_uid = url.split("/")[-1]
 
     # Récupération des données du marché à partir du df global
+
     lff = df.lazy()
     lff = lff.filter(pl.col("uid") == pl.lit(marche_uid))
 
@@ -73,12 +74,8 @@ def get_marche_data(url) -> tuple[dict, list]:
     dff_titulaires = lff.select(cs.starts_with("titulaire")).collect(engine="streaming")
 
     # Données du marché
-    dff_marche = (
-        lff.select(~cs.starts_with("titulaires")).unique().collect(engine="streaming")
-    )
+    dff_marche = lff.unique("uid").collect(engine="streaming")
     dff_marche = format_montant(dff_marche)
-
-    assert dff_marche.height == 1
 
     return dff_marche.to_dicts()[0], dff_titulaires.to_dicts()
 
@@ -93,7 +90,6 @@ def get_marche_data(url) -> tuple[dict, list]:
 def update_marche_info(marche, titulaires):
     def make_parameter(col):
         column_object = data_schema.get(col)
-        print(column_object)
         column_name = column_object.get("title") if column_object else col
 
         if marche[col]:
@@ -110,8 +106,6 @@ def update_marche_info(marche, titulaires):
 
             # Dates
             elif col in ["dateNotification", "datePublicationDonnees"]:
-                print(marche[col])
-
                 value = datetime.fromisoformat(marche[col]).strftime("%d/%m/%Y")
 
             # Listes
