@@ -6,6 +6,7 @@ from time import sleep
 import polars as pl
 import polars.selectors as cs
 from httpx import get
+from polars import Schema
 from polars.exceptions import ComputeError
 
 operators = [
@@ -310,6 +311,20 @@ def setup_table_columns(dff, hideable: bool = True, exclude: list = None) -> tup
                 "type": "markdown",
             }
     return columns, tooltip
+
+
+def get_default_hidden_columns(schema: Schema):
+    displayed_columns = os.getenv("DISPLAYED_COLUMNS")
+    hidden_columns = []
+    if displayed_columns:
+        displayed_columns = displayed_columns.replace(" ", "").split(",")
+        for col in schema.names():
+            if col in displayed_columns:
+                continue
+            else:
+                hidden_columns.append(col)
+        return hidden_columns
+    raise ValueError("DISPLAYED_COLUMNS n'est pas configuré")
 
 
 def get_data_schema() -> dict:

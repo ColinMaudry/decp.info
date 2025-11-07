@@ -11,6 +11,7 @@ from src.utils import (
     filter_table_data,
     format_montant,
     format_number,
+    get_default_hidden_columns,
     meta_content,
     setup_table_columns,
     sort_table_data,
@@ -76,6 +77,7 @@ datatable = html.Div(
         markdown_options={"html": True},
         tooltip_duration=8000,
         tooltip_delay=350,
+        hidden_columns=get_default_hidden_columns(schema),
     ),
 )
 
