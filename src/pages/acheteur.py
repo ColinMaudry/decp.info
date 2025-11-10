@@ -191,6 +191,7 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> list[dict]:
         "titulaire_id",
         "titulaire_typeIdentifiant",
         "titulaire_nom",
+        "distance",
         "montant",
         "codeCPV",
         "dureeMois",

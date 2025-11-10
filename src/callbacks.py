@@ -9,8 +9,10 @@ def get_top_org_table(data, org_type: str):
     if dff.height == 0:
         return html.Div()
 
-    dff = dff.select(["uid", f"{org_type}_id", f"{org_type}_nom", "montant"])
-    dff_nb = dff.group_by(f"{org_type}_id", f"{org_type}_nom").agg(
+    dff = dff.select(
+        ["uid", f"{org_type}_id", f"{org_type}_nom", "distance", "montant"]
+    )
+    dff_nb = dff.group_by(f"{org_type}_id", f"{org_type}_nom", "distance").agg(
         pl.len().alias("Attributions"), pl.sum("montant").alias("montant")
     )
     dff_nb = dff_nb.sort(by="montant", descending=True)
@@ -23,14 +25,13 @@ def get_top_org_table(data, org_type: str):
     data = dff_nb.to_dicts()
     data = add_links_in_dict(data, f"{org_type}")
 
-    print(dff_nb)
-
     return dash_table.DataTable(
         data=data,
         markdown_options={"html": True},
         page_action="native",
         page_size=10,
         columns=columns,
+        cell_selectable=False,
         tooltip_header=tooltip,
         style_cell_conditional=[
             {
