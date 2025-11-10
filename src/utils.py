@@ -144,7 +144,7 @@ def format_montant(dff: pl.DataFrame, column: str = "montant") -> pl.DataFrame:
 
         frac: pl.Expr = (
             pl.when(frac.is_not_null() & ~frac.is_in(["0"]))
-            .then("," + frac)
+            .then("," + frac.str.head(2))
             .otherwise(pl.lit(""))
         )
 
