@@ -1,7 +1,7 @@
 import polars as pl
 from dash import dash_table, html
 
-from utils import add_links_in_dict, format_montant, setup_table_columns
+from utils import add_links_in_dict, format_values, setup_table_columns
 
 
 def get_top_org_table(data, org_type: str):
@@ -16,7 +16,7 @@ def get_top_org_table(data, org_type: str):
     dff_nb = dff_nb.sort(by="montant", descending=True)
     dff_nb = dff_nb.cast(pl.String)
     dff_nb = dff_nb.fill_null("")
-    dff_nb = format_montant(dff_nb, column="montant")
+    dff_nb = format_values(dff_nb)
     columns, tooltip = setup_table_columns(
         dff_nb, hideable=False, exclude=[f"{org_type}_id"]
     )

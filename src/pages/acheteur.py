@@ -8,8 +8,8 @@ from src.figures import point_on_map
 from src.utils import (
     add_links_in_dict,
     df,
-    format_montant,
     format_number,
+    format_values,
     get_annuaire_data,
     get_departement_region,
     meta_content,
@@ -215,8 +215,7 @@ def get_last_marches_table(data) -> html.Div:
         return html.Div(html.P("Aucun marché trouvé."))
     dff = dff.cast(pl.String)
     dff = dff.fill_null("")
-    print("1", dff.columns)
-    dff = format_montant(dff)
+    dff = format_values(dff)
     columns, tooltip = setup_table_columns(
         dff,
         hideable=False,

@@ -9,8 +9,8 @@ from src.utils import (
     add_resource_link,
     df,
     filter_table_data,
-    format_montant,
     format_number,
+    format_values,
     get_default_hidden_columns,
     meta_content,
     setup_table_columns,
@@ -208,7 +208,7 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     dff = add_resource_link(dff)
 
     # Formatage des montants
-    dff = format_montant(dff)
+    dff = format_values(dff)
 
     columns, tooltip = setup_table_columns(dff)
 

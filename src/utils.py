@@ -125,8 +125,8 @@ def format_number(number) -> str:
     return number
 
 
-def format_montant(dff: pl.DataFrame, column: str = "montant") -> pl.DataFrame:
-    def format_function(expr, scale=None):
+def format_values(dff: pl.DataFrame) -> pl.DataFrame:
+    def format_montant(expr, scale=None):
         # https://stackoverflow.com/a/78636786
         expr = expr.cast(pl.String)
         expr = expr.str.splitn(".", 2)
@@ -156,8 +156,17 @@ def format_montant(dff: pl.DataFrame, column: str = "montant") -> pl.DataFrame:
 
         return montant
 
-    print("3", dff.columns)
-    dff = dff.with_columns(pl.col(column).pipe(format_function).alias(column))
+    def format_distance(expr):
+        expr = expr.cast(pl.String)
+        return pl.concat_str(expr, pl.lit(" km"))
+
+    if "montant" in dff.columns:
+        dff = dff.with_columns(pl.col("montant").pipe(format_montant).alias("montant"))
+    if "distance" in dff.columns:
+        dff = dff.with_columns(
+            pl.col("distance").pipe(format_distance).alias("distance")
+        )
+
     return dff
 
 
