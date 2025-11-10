@@ -38,7 +38,7 @@ Ne pas oublier de mettre à jour les fichier .env.
 
 ## Notes de version
 
-### 2.2.0 ()
+#### 2.2.0 ()
 
 - Moins de colonnes affichées par défaut ([#54](https://github.com/ColinMaudry/decp.info/issues/54))
 
