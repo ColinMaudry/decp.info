@@ -38,8 +38,9 @@ Ne pas oublier de mettre à jour les fichier .env.
 
 ## Notes de version
 
-### 2.2.0 ()
+#### 2.2.0 ()
 
+- Top acheteurs / titulaires par montant attribué/remporté (([#55](https://github.com/ColinMaudry/decp.info/issues/55)))
 - Moins de colonnes affichées par défaut ([#54](https://github.com/ColinMaudry/decp.info/issues/54))
 
 ##### 2.1.6 (15 octobre 2025)

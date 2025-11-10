@@ -77,15 +77,16 @@ def add_links(dff: pl.DataFrame):
     return dff
 
 
-def add_links_in_dict(data: list, org_type: str) -> list:
+def add_links_in_dict(data: list[dict], org_type: str) -> list:
     new_data = []
     for marche in data:
         org_id = marche[org_type + "_id"]
         marche[org_type + "_nom"] = (
             f'<a href="/{org_type}s/{org_id}">{marche[org_type + "_nom"]}</a>'
         )
-        marche["id"] = f'<a href="/marches/{marche["uid"]}">{marche["id"]}</a>'
-        marche["uid"] = f'<a href="/marches/{marche["uid"]}">{marche["uid"]}</a>'
+        if marche.get("uid"):
+            marche["id"] = f'<a href="/marches/{marche["uid"]}">{marche["id"]}</a>'
+            marche["uid"] = f'<a href="/marches/{marche["uid"]}">{marche["uid"]}</a>'
         new_data.append(marche)
     return new_data
 
@@ -124,7 +125,7 @@ def format_number(number) -> str:
     return number
 
 
-def format_montant(dff: pl.DataFrame) -> pl.DataFrame:
+def format_montant(dff: pl.DataFrame, column: str = "montant") -> pl.DataFrame:
     def format_function(expr, scale=None):
         # https://stackoverflow.com/a/78636786
         expr = expr.cast(pl.String)
@@ -143,7 +144,7 @@ def format_montant(dff: pl.DataFrame) -> pl.DataFrame:
 
         frac: pl.Expr = (
             pl.when(frac.is_not_null() & ~frac.is_in(["0"]))
-            .then("," + frac)
+            .then("," + frac.str.head(2))
             .otherwise(pl.lit(""))
         )
 
@@ -155,7 +156,8 @@ def format_montant(dff: pl.DataFrame) -> pl.DataFrame:
 
         return montant
 
-    dff = dff.with_columns(pl.col("montant").pipe(format_function).alias("montant"))
+    print("3", dff.columns)
+    dff = dff.with_columns(pl.col(column).pipe(format_function).alias(column))
     return dff
 
 

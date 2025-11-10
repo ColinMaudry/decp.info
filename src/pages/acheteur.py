@@ -3,6 +3,7 @@ import datetime
 import polars as pl
 from dash import Input, Output, State, callback, dash_table, dcc, html, register_page
 
+from src.callbacks import get_top_org_table
 from src.figures import point_on_map
 from src.utils import (
     add_links_in_dict,
@@ -89,6 +90,13 @@ layout = [
                         ],
                     ),
                     html.Div(className="org_map", id="acheteur_map"),
+                    html.Div(
+                        className="org_top",
+                        children=[
+                            html.H3("Top titulaires"),
+                            html.Div(className="marches_table", id="top10_titulaires"),
+                        ],
+                    ),
                 ],
             ),
             # récupérer les données de l'acheteur sur l'api annuaire
@@ -146,22 +154,22 @@ def update_acheteur_infos(url):
     Input(component_id="acheteur_data", component_property="data"),
 )
 def update_acheteur_stats(data):
-    df = pl.DataFrame(data)
-    if df.height == 0:
-        df = pl.DataFrame(schema=df.collect_schema())
-    df_marches = df.unique("id")
+    dff = pl.DataFrame(data)
+    if dff.height == 0:
+        dff = pl.DataFrame(schema=df.collect_schema())
+    df_marches = dff.unique("id")
     nb_marches = format_number(df_marches.height)
     # somme_marches = format_number(int(df_marches.select(pl.sum("montant")).item()))
     marches_attribues = [html.Strong(nb_marches), " marchés et accord-cadres attribués"]
     # + ", pour un total de ", html.Strong(somme_marches + " €")]
     del df_marches
 
-    nb_titulaires = df.unique("titulaire_id").height
+    nb_titulaires = dff.unique("titulaire_id").height
     nb_titulaires = [
         html.Strong(format_number(nb_titulaires)),
         " titulaires (SIRET) différents",
     ]
-    del df
+    del dff
 
     return marches_attribues, nb_titulaires
 
@@ -203,8 +211,11 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> list[dict]:
 )
 def get_last_marches_table(data) -> html.Div:
     dff = pl.DataFrame(data)
+    if dff.height == 0:
+        return html.Div(html.P("Aucun marché trouvé."))
     dff = dff.cast(pl.String)
     dff = dff.fill_null("")
+    print("1", dff.columns)
     dff = format_montant(dff)
     columns, tooltip = setup_table_columns(
         dff,
@@ -250,6 +261,14 @@ def get_last_marches_table(data) -> html.Div:
         ),
     )
     return table
+
+
+@callback(
+    Output(component_id="top10_titulaires", component_property="children"),
+    Input(component_id="acheteur_data", component_property="data"),
+)
+def get_top_titulaires(data):
+    return get_top_org_table(data, "titulaire")
 
 
 @callback(

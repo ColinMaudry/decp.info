@@ -53,9 +53,10 @@ div.logo > a {
 
 /* Réduire la taille du texte de la colonne Objet */
 
-td[data-dash-column="objet"] {
+/*
+td[data-dash-column="objet"],td[data-dash-column="titulaire_nom"],td[data-dash-column="acheteur_nom"],  {
   font-size: 85%;
-}
+}*/
 
 /* Couleur des en-têtes */
 .dash-table-container
@@ -209,6 +210,11 @@ summary > h3 {
 .org_map {
   grid-column: 3;
   grid-row: 2;
+}
+
+.org_top {
+  grid-column: 1/3;
+  grid-row: 3;
 }
 
 /* Vue marché */

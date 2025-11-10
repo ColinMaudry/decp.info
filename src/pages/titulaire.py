@@ -3,6 +3,7 @@ import datetime
 import polars as pl
 from dash import Input, Output, State, callback, dash_table, dcc, html, register_page
 
+from src.callbacks import get_top_org_table
 from src.figures import point_on_map
 from src.utils import (
     add_links_in_dict,
@@ -91,6 +92,13 @@ layout = [
                         ],
                     ),
                     html.Div(className="org_map", id="titulaire_map"),
+                    html.Div(
+                        className="org_top",
+                        children=[
+                            html.H3("Top acheteurs"),
+                            html.Div(className="marches_table", id="top10_acheteurs"),
+                        ],
+                    ),
                 ],
             ),
             # récupérer les données de l'acheteur sur l'api annuaire
@@ -161,7 +169,7 @@ def update_titulaire_stats(data):
     nb_acheteurs = dff.unique("acheteur_id").height
     nb_acheteurs = [
         html.Strong(format_number(nb_acheteurs)),
-        " titulaires (SIRET) différents",
+        " acheteurs (SIRET) différents",
     ]
     del dff
 
@@ -264,6 +272,14 @@ def get_last_marches_table(data) -> html.Div:
         ),
     )
     return table
+
+
+@callback(
+    Output(component_id="top10_acheteurs", component_property="children"),
+    Input(component_id="titulaire_data", component_property="data"),
+)
+def get_top_acheteurs(data):
+    return get_top_org_table(data, "acheteur")
 
 
 @callback(
