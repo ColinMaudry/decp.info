@@ -26,12 +26,12 @@ layout = html.Div(
         dcc.Input(
             id="search",
             type="text",
-            placeholder="Nom d'acheteur, d'entreprise, mot de clé de marché...",
+            placeholder="Nom d'acheteur, d'entreprise, SIREN...",
         ),
-        html.Div(
-            className="search_options",
-            children=[dcc.RadioItems(options=["Acheteur(s)"])],
-        ),
+        # html.Div(
+        #     className="search_options",
+        #     children=[dcc.RadioItems(options=["Acheteur(s)"])],
+        # ),
         html.Div(id="search_results"),
     ],
 )
@@ -77,4 +77,4 @@ def update_search_results(query):
 
         return content
     else:
-        return html.P("Tapez au moins 1 caractère")
+        return html.P("")
