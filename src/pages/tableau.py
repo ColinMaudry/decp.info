@@ -25,7 +25,7 @@ schema = df.collect_schema()
 name = "Tableau"
 register_page(
     __name__,
-    path="/",
+    path="/tableau",
     title=meta_content["title"],
     name=name,
     description=meta_content["description"],

@@ -143,6 +143,25 @@ td[data-dash-column="objet"],td[data-dash-column="titulaire_nom"],td[data-dash-c
   margin: 0 0 20px 20px;
 }
 
+/* Page de recherche */
+
+#search {
+  margin: auto;
+  width: 450px;
+  font-size: 18px;
+  height: 30px;
+  display: block;
+}
+
+.search_options {
+  margin: 16px auto;
+  width: 450px;
+}
+
+.search_options input {
+  margin-right: 12px;
+}
+
 /* Menu de navigation */
 
 .navbar {

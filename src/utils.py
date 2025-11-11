@@ -208,6 +208,17 @@ def get_decp_data() -> pl.DataFrame:
     return lff.collect()
 
 
+def get_org_data(dff: pl.DataFrame, org_type: str) -> pl.DataFrame:
+    lff = dff.lazy()
+    lff = lff.select(
+        cs.starts_with(org_type).exclude(
+            f"{org_type}_latitude", f"{org_type}_longitude"
+        )
+    )
+    lff = lff.unique(f"{org_type}_id")
+    return lff.collect()
+
+
 def get_departements() -> dict:
     with open("data/departements.json", "rb") as f:
         data = json.load(f)
@@ -365,6 +376,8 @@ def get_data_schema() -> dict:
 
 
 df: pl.DataFrame = get_decp_data()
+df_acheteurs = get_org_data(df, "acheteur")
+df_titulaires = get_org_data(df, "titulaire")
 departements = get_departements()
 domain_name = (
     "test.decp.info" if os.getenv("DEVELOPMENT").lower() == "true" else "decp.info"
