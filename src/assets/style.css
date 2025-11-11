@@ -145,6 +145,8 @@ td[data-dash-column="objet"] {
 /* Annonces */
 #announcements {
   margin-top: 25px;
+  max-width: 30%;
+  font-size: 90%;
 }
 
 /* Menu de navigation */
