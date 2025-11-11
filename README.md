@@ -1,6 +1,6 @@
 # decp.info
 
-> v2.1.6
+> v2.1.7
 
 Outil d'exploration et de téléchargement des données essentielles de la commande publique.
 
@@ -37,6 +37,10 @@ Ne pas oublier de mettre à jour les fichier .env.
 - [colin.maudry.com](https://colin.maudry.com) (blog)
 
 ## Notes de version
+
+##### 2.1.7 (11 novembre 2025)
+
+- Remplacement du formulaire de contact par une adresse email
 
 ##### 2.1.6 (15 octobre 2025)
 
