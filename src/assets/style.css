@@ -143,6 +143,11 @@ td[data-dash-column="objet"],td[data-dash-column="titulaire_nom"],td[data-dash-c
   margin: 0 0 20px 20px;
 }
 
+/* Annonces */
+#announcements {
+  margin-top: 25px;
+}
+
 /* Menu de navigation */
 
 .navbar {

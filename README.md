@@ -1,6 +1,6 @@
 # decp.info
 
-> v2.1.6
+> v2.1.7
 
 Outil d'exploration et de téléchargement des données essentielles de la commande publique.
 
@@ -42,6 +42,10 @@ Ne pas oublier de mettre à jour les fichier .env.
 
 - Top acheteurs / titulaires par montant attribué/remporté (([#55](https://github.com/ColinMaudry/decp.info/issues/55)))
 - Moins de colonnes affichées par défaut ([#54](https://github.com/ColinMaudry/decp.info/issues/54))
+
+##### 2.1.7 (11 novembre 2025)
+
+- Remplacement du formulaire de contact par une adresse email
 
 ##### 2.1.6 (15 octobre 2025)
 

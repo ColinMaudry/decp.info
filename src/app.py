@@ -91,6 +91,12 @@ app.layout = html.Div(
                     className="logo",
                 ),
                 html.Div(
+                    id="announcements",
+                    children=html.P(
+                        "ℹ️  Le formulaire de contact a été remplacé par une adresse email"
+                    ),
+                ),
+                html.Div(
                     [
                         dcc.Link(
                             page["name"], href=page["relative_path"], className="nav"
