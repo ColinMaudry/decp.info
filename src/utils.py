@@ -8,6 +8,7 @@ import polars.selectors as cs
 from httpx import get
 from polars import Schema
 from polars.exceptions import ComputeError
+from unidecode import unidecode
 
 operators = [
     ["s<", "<"],
@@ -50,30 +51,47 @@ def add_resource_link(dff: pl.DataFrame) -> pl.DataFrame:
     return dff
 
 
-def add_links(dff: pl.DataFrame):
-    dff = dff.with_columns(
-        pl.when(pl.col("titulaire_typeIdentifiant") == "SIRET")
-        .then(
-            '<a href = "/titulaires/'
-            + pl.col("titulaire_id")
-            + '">'
-            + pl.col("titulaire_id")
-            + "</a>"
-        )
-        .otherwise(pl.col("titulaire_id"))
-        .alias("titulaire_id")
-    )
-
-    for column, path in [("acheteur_id", "acheteurs"), ("uid", "marches")]:
-        dff = dff.with_columns(
-            (
-                f'<a href = "/{path}/'
-                + pl.col(column)
-                + '" target="_blank">'
-                + pl.col(column)
-                + "</a>"
-            ).alias(column)
-        )
+def add_links(dff: pl.DataFrame, target: str = "_blank"):
+    for col in ["uid", "acheteur_nom", "titulaire_nom", "acheteur_id", "titulaire_id"]:
+        if col in dff.columns:
+            if col.startswith("titulaire_"):
+                dff = dff.with_columns(
+                    pl.when(
+                        pl.Expr.or_(
+                            pl.col("titulaire_typeIdentifiant").is_null(),
+                            pl.col("titulaire_typeIdentifiant") == "SIRET",
+                        )
+                    )
+                    .then(
+                        '<a href = "/titulaires/'
+                        + pl.col("titulaire_id")
+                        + f'" target="{target}">'
+                        + pl.col(col)
+                        + "</a>"
+                    )
+                    .otherwise(pl.col(col))
+                    .alias(col)
+                )
+            if col.startswith("acheteur_"):
+                dff = dff.with_columns(
+                    (
+                        '<a href = "/acheteurs/'
+                        + pl.col("acheteur_id")
+                        + f'" target="{target}">'
+                        + pl.col(col)
+                        + "</a>"
+                    ).alias(col)
+                )
+            if col == "uid":
+                dff = dff.with_columns(
+                    (
+                        '<a href = "/marches/'
+                        + pl.col("uid")
+                        + f'" target="{target}">'
+                        + pl.col("uid")
+                        + "</a>"
+                    ).alias("uid")
+                )
     return dff
 
 
@@ -211,11 +229,12 @@ def get_decp_data() -> pl.DataFrame:
 def get_org_data(dff: pl.DataFrame, org_type: str) -> pl.DataFrame:
     lff = dff.lazy()
     lff = lff.select(
+        "uid",
         cs.starts_with(org_type).exclude(
             f"{org_type}_latitude", f"{org_type}_longitude"
-        )
+        ),
     )
-    lff = lff.unique(f"{org_type}_id")
+    lff = lff.group_by(cs.starts_with(org_type)).len("len_uid")
     return lff.collect()
 
 
@@ -373,6 +392,80 @@ def get_data_schema() -> dict:
         "short_name": "Source",
     }
     return new_schema
+
+
+def search_org(dff: pl.DataFrame, query: str, org_type: str) -> pl.DataFrame:
+    """
+    Search in either 'acheteur' or 'titulaire' DataFrame.
+
+    :param dff: Polars DataFrame with acheteur or titulaire columns
+    :param query: User search string
+    :param org_type: 'acheteur' or 'titulaire'
+    :return: Filtered DataFrame with 'matches' column
+    """
+    if not query.strip():
+        return dff.select(pl.lit(False).alias("matches"))
+
+    # Normalize query
+    normalized_query = unidecode(query.strip()).upper()
+    tokens = [" " + t.strip() for t in normalized_query.split() if t.strip()]
+    print(tokens)
+
+    # Define columns based on entity type
+    cols = [
+        f"{org_type}_id",
+        f"{org_type}_nom",
+        f"{org_type}_departement_nom",
+        f"{org_type}_departement_code",
+        f"{org_type}_commune_nom",
+    ]
+
+    # Concatenate all fields into one string per row
+    org_str = pl.concat_str(pl.lit(" "), pl.col(cols), separator=" ")
+
+    # For each token, create a boolean column: True if token is found
+    token_matches = []
+    for token in tokens:
+        token_match = org_str.str.contains(token).alias(f"token_{token}")
+        token_matches.append(token_match)
+
+    # Count how many tokens match per row
+    match_score = pl.sum_horizontal(token_matches).alias("match_score")
+
+    # For each token, create a boolean column: True if token is found
+    token_matches = []
+    for token in tokens:
+        token_match = org_str.str.contains(token).alias(f"token_{token}")
+        token_matches.append(token_match)
+
+    # Sélection des colonnes
+    if org_type == "acheteur":
+        dff = dff.select(cols + ["len_uid"])
+    if org_type == "titulaire":
+        dff = dff.select(cols + ["len_uid", "titulaire_typeIdentifiant"])
+
+    # Apply and filter
+    dff = (
+        dff.with_columns(token_matches + [match_score])
+        .filter(pl.col("match_score") == len(tokens))
+        .sort("len_uid", descending=True)
+        .drop([f"token_{token}" for token in tokens])
+    )
+
+    # Format result
+    dff = add_links(dff, target="")
+    dff = dff.with_columns(
+        pl.concat_str(
+            pl.col(f"{org_type}_departement_nom"),
+            pl.lit(" ("),
+            pl.col(f"{org_type}_departement_code"),
+            pl.lit(")"),
+        ).alias("Département")
+    )
+
+    dff = dff.select(f"{org_type}_id", f"{org_type}_nom", "Département")
+
+    return dff
 
 
 df: pl.DataFrame = get_decp_data()

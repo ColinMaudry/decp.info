@@ -1,6 +1,12 @@
-from dash import Input, Output, callback, dcc, html, register_page
+from dash import Input, Output, callback, dash_table, dcc, html, register_page
 
-from src.utils import meta_content
+from src.utils import (
+    df_acheteurs,
+    df_titulaires,
+    meta_content,
+    search_org,
+    setup_table_columns,
+)
 
 name = "Recherche"
 
@@ -31,11 +37,44 @@ layout = html.Div(
 )
 
 
-@callback(Output("search_results", "children"), Input("search", "value"))
-def search_results(query):
-    if len(query) >= 3:
-        # results = []
-        # dff = dff.select("acheteur_id", "acheteur_nom")
-        return html.Div([])
+@callback(
+    Output("search_results", "children"),
+    Input("search", "value"),
+    prevent_initial_call=True,
+)
+def update_search_results(query):
+    if len(query) >= 1:
+        content = []
+
+        for org_type in ["acheteur", "titulaire"]:
+            if org_type == "acheteur":
+                dff = df_acheteurs
+            elif org_type == "titulaire":
+                dff = df_titulaires
+            else:
+                raise ValueError(f"{org_type} is not supported")
+
+            # Search acheteurs and titulaires using the same function
+            results = search_org(dff, query, org_type=org_type)
+            count = results.height
+
+            # Format output
+            columns, tooltip = setup_table_columns(results, hideable=False)
+
+            org_content = [
+                html.H3(f"{org_type.title()}s : {count}"),
+                dash_table.DataTable(
+                    columns=columns,
+                    data=results.to_dicts(),
+                    page_size=5,
+                    style_table={"overflowX": "auto"},
+                    markdown_options={"html": True},
+                )
+                if count > 0
+                else html.P(f"Aucun {org_type} trouvé."),
+            ]
+            content.extend(org_content)
+
+        return content
     else:
-        return html.P("Tapez au moins 3 caractères")
+        return html.P("Tapez au moins 1 caractère")
