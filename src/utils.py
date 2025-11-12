@@ -435,7 +435,7 @@ def search_org(dff: pl.DataFrame, query: str, org_type: str) -> pl.DataFrame:
     if not query.strip():
         return dff.select(pl.lit(False).alias("matches"))
 
-    sleep(0.2)
+    # Enregistrement des recherche dans Matomo
     track_search(query)
 
     # Normalize query
