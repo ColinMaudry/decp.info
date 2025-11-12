@@ -146,6 +146,8 @@ td[data-dash-column="objet"],td[data-dash-column="titulaire_nom"],td[data-dash-c
 /* Annonces */
 #announcements {
   margin-top: 25px;
+  max-width: 30%;
+  font-size: 90%;
 }
 
 /* Page de recherche */
