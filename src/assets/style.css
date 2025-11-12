@@ -146,7 +146,7 @@ td[data-dash-column="objet"],td[data-dash-column="titulaire_nom"],td[data-dash-c
 /* Page de recherche */
 
 #search {
-  margin: auto;
+  margin: 50px auto 0px auto;
   width: 450px;
   font-size: 18px;
   height: 30px;
@@ -160,6 +160,16 @@ td[data-dash-column="objet"],td[data-dash-column="titulaire_nom"],td[data-dash-c
 
 .search_options input {
   margin-right: 12px;
+}
+
+.results_acheteur {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.results_titulaire {
+  grid-column: 2;
+  grid-row: 1;
 }
 
 /* Menu de navigation */
@@ -191,15 +201,12 @@ summary > h3 {
   padding-top: 28px;
 }
 
-/* Vue acheteur/titulaire    */
+/* Vue acheteur/titulaire/recherche    */
 .wrapper {
   display: grid;
   grid-gap: 10px;
   margin-bottom: 50px;
   justify-content: space-between;
-}
-
-.wrapper > div {
 }
 
 .org_title {

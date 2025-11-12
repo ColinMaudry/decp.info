@@ -32,7 +32,7 @@ layout = html.Div(
         #     className="search_options",
         #     children=[dcc.RadioItems(options=["Acheteur(s)"])],
         # ),
-        html.Div(id="search_results"),
+        html.Div(id="search_results", className="wrapper"),
     ],
 )
 
@@ -62,13 +62,37 @@ def update_search_results(query):
             columns, tooltip = setup_table_columns(results, hideable=False)
 
             org_content = [
-                html.H3(f"{org_type.title()}s : {count}"),
-                dash_table.DataTable(
-                    columns=columns,
-                    data=results.to_dicts(),
-                    page_size=5,
-                    style_table={"overflowX": "auto"},
-                    markdown_options={"html": True},
+                html.Div(
+                    className=f"results_{org_type}",
+                    children=[
+                        html.H3(f"{org_type.title()}s : {count}"),
+                        dash_table.DataTable(
+                            columns=columns,
+                            data=results.to_dicts(),
+                            page_size=10,
+                            # style_table={"overflowX": "auto"},
+                            markdown_options={"html": True},
+                            cell_selectable=False,
+                            style_cell_conditional=[
+                                {
+                                    "if": {"column_id": "acheteur_nom"},
+                                    "maxWidth": "250px",
+                                    "textAlign": "left",
+                                    "overflow": "hidden",
+                                    "lineHeight": "18px",
+                                    "whiteSpace": "normal",
+                                },
+                                {
+                                    "if": {"column_id": "titulaire_nom"},
+                                    "maxWidth": "250px",
+                                    "textAlign": "left",
+                                    "overflow": "hidden",
+                                    "lineHeight": "18px",
+                                    "whiteSpace": "normal",
+                                },
+                            ],
+                        ),
+                    ],
                 )
                 if count > 0
                 else html.P(f"Aucun {org_type} trouvé."),

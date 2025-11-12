@@ -234,7 +234,7 @@ def get_org_data(dff: pl.DataFrame, org_type: str) -> pl.DataFrame:
             f"{org_type}_latitude", f"{org_type}_longitude"
         ),
     )
-    lff = lff.group_by(cs.starts_with(org_type)).len("len_uid")
+    lff = lff.group_by(cs.starts_with(org_type)).len("Marchés")
     return lff.collect()
 
 
@@ -406,10 +406,11 @@ def search_org(dff: pl.DataFrame, query: str, org_type: str) -> pl.DataFrame:
     if not query.strip():
         return dff.select(pl.lit(False).alias("matches"))
 
+    sleep(0.2)
+
     # Normalize query
     normalized_query = unidecode(query.strip()).upper()
     tokens = [" " + t.strip() for t in normalized_query.split() if t.strip()]
-    print(tokens)
 
     # Define columns based on entity type
     cols = [
@@ -440,15 +441,15 @@ def search_org(dff: pl.DataFrame, query: str, org_type: str) -> pl.DataFrame:
 
     # Sélection des colonnes
     if org_type == "acheteur":
-        dff = dff.select(cols + ["len_uid"])
+        dff = dff.select(cols + ["Marchés"])
     if org_type == "titulaire":
-        dff = dff.select(cols + ["len_uid", "titulaire_typeIdentifiant"])
+        dff = dff.select(cols + ["Marchés", "titulaire_typeIdentifiant"])
 
     # Apply and filter
     dff = (
         dff.with_columns(token_matches + [match_score])
         .filter(pl.col("match_score") == len(tokens))
-        .sort("len_uid", descending=True)
+        .sort("Marchés", descending=True)
         .drop([f"token_{token}" for token in tokens])
     )
 
@@ -463,7 +464,7 @@ def search_org(dff: pl.DataFrame, query: str, org_type: str) -> pl.DataFrame:
         ).alias("Département")
     )
 
-    dff = dff.select(f"{org_type}_id", f"{org_type}_nom", "Département")
+    dff = dff.select(f"{org_type}_id", f"{org_type}_nom", "Département", "Marchés")
 
     return dff
 
