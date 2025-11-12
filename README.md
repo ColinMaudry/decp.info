@@ -40,8 +40,9 @@ Ne pas oublier de mettre à jour les fichier .env.
 
 #### 2.2.0 ()
 
+- Moteur de recherche (acheteurs et titulaires) en page d'accueil ([#58](https://github.com/ColinMaudry/decp.info/issues/58))
 - Top acheteurs / titulaires par montant attribué/remporté (([#55](https://github.com/ColinMaudry/decp.info/issues/55)))
-- Moins de colonnes affichées par défaut ([#54](https://github.com/ColinMaudry/decp.info/issues/54))
+- Moins de colonnes affichées par défaut dans Tableau ([#54](https://github.com/ColinMaudry/decp.info/issues/54))
 
 ##### 2.1.7 (11 novembre 2025)
 

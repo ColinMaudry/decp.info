@@ -16,7 +16,8 @@ dependencies = [
     "xlsxwriter",
     "plotly[express]",
     "httpx",
-    "pandas" # utilisé pour la création de certains graphiques
+    "pandas", # utilisé pour la création de certains graphiques
+    "unidecode"
 ]
 
 [project.optional-dependencies]
