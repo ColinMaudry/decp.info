@@ -53,7 +53,7 @@ datatable = html.Div(
                 "minWidth": "350px",
                 "textAlign": "left",
                 "overflow": "hidden",
-                "lineHeight": "14px",
+                "lineHeight": "18px",
                 "whiteSpace": "normal",
             },
             {
@@ -61,7 +61,7 @@ datatable = html.Div(
                 "minWidth": "250px",
                 "textAlign": "left",
                 "overflow": "hidden",
-                "lineHeight": "14px",
+                "lineHeight": "18px",
                 "whiteSpace": "normal",
             },
             {
@@ -69,7 +69,7 @@ datatable = html.Div(
                 "minWidth": "250px",
                 "textAlign": "left",
                 "overflow": "hidden",
-                "lineHeight": "14px",
+                "lineHeight": "18px",
                 "whiteSpace": "normal",
             },
         ],
