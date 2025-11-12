@@ -27,6 +27,7 @@ layout = html.Div(
             id="search",
             type="text",
             placeholder="Nom d'acheteur, d'entreprise, SIREN...",
+            autoFocus=True,
         ),
         # html.Div(
         #     className="search_options",

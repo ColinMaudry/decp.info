@@ -1,11 +1,12 @@
 import json
 import logging
 import os
-from time import sleep
+import uuid
+from time import localtime, sleep
 
 import polars as pl
 import polars.selectors as cs
-from httpx import get
+from httpx import get, post
 from polars import Schema
 from polars.exceptions import ComputeError
 from unidecode import unidecode
@@ -394,6 +395,34 @@ def get_data_schema() -> dict:
     return new_schema
 
 
+def track_search(query):
+    if (
+        len(query) >= 4
+        and os.getenv("DEVELOPMENT").lower != "true"
+        and os.getenv("MATOMO_DOMAIN")
+    ):
+        if os.getenv("DEVELOPMENT").lower() == "true":
+            url = "https://test.decp.info"
+        else:
+            url = "https://decp.info"
+        params = {
+            "idsite": os.getenv("MATOMO_ID_SITE"),
+            "url": url,
+            "rec": "1",
+            "action_name": "front_page_search",
+            "rand": uuid.uuid4().hex,
+            "apiv": "1",
+            "h": localtime().tm_hour,
+            "m": localtime().tm_min,
+            "s": localtime().tm_sec,
+            "search": query,
+            "token_auth": os.getenv("MATOMO_TOKEN"),
+        }
+        post(
+            url=f"https://{os.getenv('MATOMO_DOMAIN')}/matomo.php", params=params
+        ).raise_for_status()
+
+
 def search_org(dff: pl.DataFrame, query: str, org_type: str) -> pl.DataFrame:
     """
     Search in either 'acheteur' or 'titulaire' DataFrame.
@@ -407,6 +436,7 @@ def search_org(dff: pl.DataFrame, query: str, org_type: str) -> pl.DataFrame:
         return dff.select(pl.lit(False).alias("matches"))
 
     sleep(0.2)
+    track_search(query)
 
     # Normalize query
     normalized_query = unidecode(query.strip()).upper()
