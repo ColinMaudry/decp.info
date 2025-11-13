@@ -38,7 +38,7 @@ Ne pas oublier de mettre à jour les fichier .env.
 
 ## Notes de version
 
-#### 2.2.0 ()
+#### 2.2.0 (13 novembre 2025)
 
 - Moteur de recherche (acheteurs et titulaires) en page d'accueil ([#58](https://github.com/ColinMaudry/decp.info/issues/58))
 - Top acheteurs / titulaires par montant attribué/remporté (([#55](https://github.com/ColinMaudry/decp.info/issues/55)))
