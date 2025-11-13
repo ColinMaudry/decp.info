@@ -4,7 +4,7 @@ import polars as pl
 from dash import Input, Output, callback, dcc, html, register_page
 from polars import selectors as cs
 
-from src.utils import data_schema, df, format_montant, meta_content
+from src.utils import data_schema, df, format_values, meta_content
 
 register_page(
     __name__,
@@ -75,7 +75,7 @@ def get_marche_data(url) -> tuple[dict, list]:
 
     # Données du marché
     dff_marche = lff.unique("uid").collect(engine="streaming")
-    dff_marche = format_montant(dff_marche)
+    dff_marche = format_values(dff_marche)
 
     return dff_marche.to_dicts()[0], dff_titulaires.to_dicts()
 

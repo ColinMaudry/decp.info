@@ -1,22 +1,19 @@
 import json
 import logging
 import os
-from time import sleep
+import uuid
+from time import localtime, sleep
 
 import polars as pl
 import polars.selectors as cs
-from httpx import get
+from httpx import get, post
+from polars import Schema
 from polars.exceptions import ComputeError
-
-operators = [
-    ["s<", "<"],
-    ["s>", ">"],
-    ["i<", "<"],
-    ["i>", ">"],
-    ["icontains", "contains"],
-]
+from unidecode import unidecode
 
 logger = logging.getLogger("decp.info")
+logging.getLogger("httpx").setLevel("WARNING")
+
 logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
     level=logging.INFO,
@@ -25,6 +22,13 @@ logging.basicConfig(
 
 
 def split_filter_part(filter_part):
+    operators = [
+        ["s<", "<"],
+        ["s>", ">"],
+        ["i<", "<"],
+        ["i>", ">"],
+        ["icontains", "contains"],
+    ]
     print("filter part", filter_part)
     for operator_group in operators:
         if operator_group[0] in filter_part:
@@ -49,42 +53,60 @@ def add_resource_link(dff: pl.DataFrame) -> pl.DataFrame:
     return dff
 
 
-def add_links(dff: pl.DataFrame):
-    dff = dff.with_columns(
-        pl.when(pl.col("titulaire_typeIdentifiant") == "SIRET")
-        .then(
-            '<a href = "/titulaires/'
-            + pl.col("titulaire_id")
-            + '">'
-            + pl.col("titulaire_id")
-            + "</a>"
-        )
-        .otherwise(pl.col("titulaire_id"))
-        .alias("titulaire_id")
-    )
-
-    for column, path in [("acheteur_id", "acheteurs"), ("uid", "marches")]:
-        dff = dff.with_columns(
-            (
-                f'<a href = "/{path}/'
-                + pl.col(column)
-                + '" target="_blank">'
-                + pl.col(column)
-                + "</a>"
-            ).alias(column)
-        )
+def add_links(dff: pl.DataFrame, target: str = "_blank"):
+    for col in ["uid", "acheteur_nom", "titulaire_nom", "acheteur_id", "titulaire_id"]:
+        if col in dff.columns:
+            if col.startswith("titulaire_"):
+                dff = dff.with_columns(
+                    pl.when(
+                        pl.Expr.or_(
+                            pl.col("titulaire_typeIdentifiant").is_null(),
+                            pl.col("titulaire_typeIdentifiant") == "SIRET",
+                        )
+                    )
+                    .then(
+                        '<a href = "/titulaires/'
+                        + pl.col("titulaire_id")
+                        + f'" target="{target}">'
+                        + pl.col(col)
+                        + "</a>"
+                    )
+                    .otherwise(pl.col(col))
+                    .alias(col)
+                )
+            if col.startswith("acheteur_"):
+                dff = dff.with_columns(
+                    (
+                        '<a href = "/acheteurs/'
+                        + pl.col("acheteur_id")
+                        + f'" target="{target}">'
+                        + pl.col(col)
+                        + "</a>"
+                    ).alias(col)
+                )
+            if col == "uid":
+                dff = dff.with_columns(
+                    (
+                        '<a href = "/marches/'
+                        + pl.col("uid")
+                        + f'" target="{target}">'
+                        + pl.col("uid")
+                        + "</a>"
+                    ).alias("uid")
+                )
     return dff
 
 
-def add_links_in_dict(data: list, org_type: str) -> list:
+def add_links_in_dict(data: list[dict], org_type: str) -> list:
     new_data = []
     for marche in data:
         org_id = marche[org_type + "_id"]
         marche[org_type + "_nom"] = (
             f'<a href="/{org_type}s/{org_id}">{marche[org_type + "_nom"]}</a>'
         )
-        marche["id"] = f'<a href="/marches/{marche["uid"]}">{marche["id"]}</a>'
-        marche["uid"] = f'<a href="/marches/{marche["uid"]}">{marche["uid"]}</a>'
+        if marche.get("uid"):
+            marche["id"] = f'<a href="/marches/{marche["uid"]}">{marche["id"]}</a>'
+            marche["uid"] = f'<a href="/marches/{marche["uid"]}">{marche["uid"]}</a>'
         new_data.append(marche)
     return new_data
 
@@ -123,8 +145,8 @@ def format_number(number) -> str:
     return number
 
 
-def format_montant(dff: pl.DataFrame) -> pl.DataFrame:
-    def format_function(expr, scale=None):
+def format_values(dff: pl.DataFrame) -> pl.DataFrame:
+    def format_montant(expr, scale=None):
         # https://stackoverflow.com/a/78636786
         expr = expr.cast(pl.String)
         expr = expr.str.splitn(".", 2)
@@ -142,7 +164,7 @@ def format_montant(dff: pl.DataFrame) -> pl.DataFrame:
 
         frac: pl.Expr = (
             pl.when(frac.is_not_null() & ~frac.is_in(["0"]))
-            .then("," + frac)
+            .then("," + frac.str.head(2))
             .otherwise(pl.lit(""))
         )
 
@@ -154,7 +176,17 @@ def format_montant(dff: pl.DataFrame) -> pl.DataFrame:
 
         return montant
 
-    dff = dff.with_columns(pl.col("montant").pipe(format_function).alias("montant"))
+    def format_distance(expr):
+        expr = expr.cast(pl.String)
+        return pl.concat_str(expr, pl.lit(" km"))
+
+    if "montant" in dff.columns:
+        dff = dff.with_columns(pl.col("montant").pipe(format_montant).alias("montant"))
+    if "distance" in dff.columns:
+        dff = dff.with_columns(
+            pl.col("distance").pipe(format_distance).alias("distance")
+        )
+
     return dff
 
 
@@ -193,6 +225,18 @@ def get_decp_data() -> pl.DataFrame:
     # ça génère une erreur dans la page acheteur (acheteur_data.table) :
     # AttributeError: partially initialized module 'pandas' has no attribute 'NaT' (most likely due to a circular import)
 
+    return lff.collect()
+
+
+def get_org_data(dff: pl.DataFrame, org_type: str) -> pl.DataFrame:
+    lff = dff.lazy()
+    lff = lff.select(
+        "uid",
+        cs.starts_with(org_type).exclude(
+            f"{org_type}_latitude", f"{org_type}_longitude"
+        ),
+    )
+    lff = lff.group_by(cs.starts_with(org_type)).len("Marchés")
     return lff.collect()
 
 
@@ -312,6 +356,20 @@ def setup_table_columns(dff, hideable: bool = True, exclude: list = None) -> tup
     return columns, tooltip
 
 
+def get_default_hidden_columns(schema: Schema):
+    displayed_columns = os.getenv("DISPLAYED_COLUMNS")
+    hidden_columns = []
+    if displayed_columns:
+        displayed_columns = displayed_columns.replace(" ", "").split(",")
+        for col in schema.names():
+            if col in displayed_columns:
+                continue
+            else:
+                hidden_columns.append(col)
+        return hidden_columns
+    raise ValueError("DISPLAYED_COLUMNS n'est pas configuré")
+
+
 def get_data_schema() -> dict:
     # Récupération du schéma des données tabulaires
     path = os.getenv("DATA_SCHEMA_PATH")
@@ -338,7 +396,114 @@ def get_data_schema() -> dict:
     return new_schema
 
 
+def track_search(query):
+    if (
+        len(query) >= 4
+        and os.getenv("DEVELOPMENT").lower != "true"
+        and os.getenv("MATOMO_DOMAIN")
+    ):
+        if os.getenv("DEVELOPMENT").lower() == "true":
+            url = "https://test.decp.info"
+        else:
+            url = "https://decp.info"
+        params = {
+            "idsite": os.getenv("MATOMO_ID_SITE"),
+            "url": url,
+            "rec": "1",
+            "action_name": "front_page_search",
+            "rand": uuid.uuid4().hex,
+            "apiv": "1",
+            "h": localtime().tm_hour,
+            "m": localtime().tm_min,
+            "s": localtime().tm_sec,
+            "search": query,
+            "token_auth": os.getenv("MATOMO_TOKEN"),
+        }
+        post(
+            url=f"https://{os.getenv('MATOMO_DOMAIN')}/matomo.php",
+            params=params,
+        ).raise_for_status()
+
+
+def search_org(dff: pl.DataFrame, query: str, org_type: str) -> pl.DataFrame:
+    """
+    Search in either 'acheteur' or 'titulaire' DataFrame.
+
+    :param dff: Polars DataFrame with acheteur or titulaire columns
+    :param query: User search string
+    :param org_type: 'acheteur' or 'titulaire'
+    :return: Filtered DataFrame with 'matches' column
+    """
+    if not query.strip():
+        return dff.select(pl.lit(False).alias("matches"))
+
+    # Enregistrement des recherche dans Matomo
+    track_search(query)
+
+    # Normalize query
+    normalized_query = unidecode(query.strip()).upper()
+    tokens = [" " + t.strip() for t in normalized_query.split() if t.strip()]
+
+    # Define columns based on entity type
+    cols = [
+        f"{org_type}_id",
+        f"{org_type}_nom",
+        f"{org_type}_departement_nom",
+        f"{org_type}_departement_code",
+        f"{org_type}_commune_nom",
+    ]
+
+    # Concatenate all fields into one string per row
+    org_str = pl.concat_str(pl.lit(" "), pl.col(cols), separator=" ")
+
+    # For each token, create a boolean column: True if token is found
+    token_matches = []
+    for token in tokens:
+        token_match = org_str.str.contains(token).alias(f"token_{token}")
+        token_matches.append(token_match)
+
+    # Count how many tokens match per row
+    match_score = pl.sum_horizontal(token_matches).alias("match_score")
+
+    # For each token, create a boolean column: True if token is found
+    token_matches = []
+    for token in tokens:
+        token_match = org_str.str.contains(token).alias(f"token_{token}")
+        token_matches.append(token_match)
+
+    # Sélection des colonnes
+    if org_type == "acheteur":
+        dff = dff.select(cols + ["Marchés"])
+    if org_type == "titulaire":
+        dff = dff.select(cols + ["Marchés", "titulaire_typeIdentifiant"])
+
+    # Apply and filter
+    dff = (
+        dff.with_columns(token_matches + [match_score])
+        .filter(pl.col("match_score") == len(tokens))
+        .sort("Marchés", descending=True)
+        .drop([f"token_{token}" for token in tokens])
+    )
+
+    # Format result
+    dff = add_links(dff, target="")
+    dff = dff.with_columns(
+        pl.concat_str(
+            pl.col(f"{org_type}_departement_nom"),
+            pl.lit(" ("),
+            pl.col(f"{org_type}_departement_code"),
+            pl.lit(")"),
+        ).alias("Département")
+    )
+
+    dff = dff.select(f"{org_type}_id", f"{org_type}_nom", "Département", "Marchés")
+
+    return dff
+
+
 df: pl.DataFrame = get_decp_data()
+df_acheteurs = get_org_data(df, "acheteur")
+df_titulaires = get_org_data(df, "titulaire")
 departements = get_departements()
 domain_name = (
     "test.decp.info" if os.getenv("DEVELOPMENT").lower() == "true" else "decp.info"

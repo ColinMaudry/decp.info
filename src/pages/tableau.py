@@ -9,8 +9,9 @@ from src.utils import (
     add_resource_link,
     df,
     filter_table_data,
-    format_montant,
     format_number,
+    format_values,
+    get_default_hidden_columns,
     meta_content,
     setup_table_columns,
     sort_table_data,
@@ -24,7 +25,7 @@ schema = df.collect_schema()
 name = "Tableau"
 register_page(
     __name__,
-    path="/",
+    path="/tableau",
     title=meta_content["title"],
     name=name,
     description=meta_content["description"],
@@ -52,7 +53,7 @@ datatable = html.Div(
                 "minWidth": "350px",
                 "textAlign": "left",
                 "overflow": "hidden",
-                "lineHeight": "14px",
+                "lineHeight": "18px",
                 "whiteSpace": "normal",
             },
             {
@@ -60,7 +61,7 @@ datatable = html.Div(
                 "minWidth": "250px",
                 "textAlign": "left",
                 "overflow": "hidden",
-                "lineHeight": "14px",
+                "lineHeight": "18px",
                 "whiteSpace": "normal",
             },
             {
@@ -68,7 +69,7 @@ datatable = html.Div(
                 "minWidth": "250px",
                 "textAlign": "left",
                 "overflow": "hidden",
-                "lineHeight": "14px",
+                "lineHeight": "18px",
                 "whiteSpace": "normal",
             },
         ],
@@ -76,6 +77,7 @@ datatable = html.Div(
         markdown_options={"html": True},
         tooltip_duration=8000,
         tooltip_delay=350,
+        hidden_columns=get_default_hidden_columns(schema),
     ),
 )
 
@@ -206,7 +208,7 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     dff = add_resource_link(dff)
 
     # Formatage des montants
-    dff = format_montant(dff)
+    dff = format_values(dff)
 
     columns, tooltip = setup_table_columns(dff)
 
