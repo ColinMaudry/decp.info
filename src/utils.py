@@ -454,7 +454,9 @@ def search_org(dff: pl.DataFrame, query: str, org_type: str) -> pl.DataFrame:
     ]
 
     # Concatenate all fields into one string per row
-    org_str = pl.concat_str(pl.lit(" "), pl.col(cols), separator=" ")
+    org_str = pl.concat_str(pl.lit(" "), pl.col(cols), separator=" ").str.replace(
+        "-", " "
+    )
 
     # For each token, create a boolean column: True if token is found
     token_matches = []
