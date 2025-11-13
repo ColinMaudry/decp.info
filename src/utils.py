@@ -11,15 +11,9 @@ from polars import Schema
 from polars.exceptions import ComputeError
 from unidecode import unidecode
 
-operators = [
-    ["s<", "<"],
-    ["s>", ">"],
-    ["i<", "<"],
-    ["i>", ">"],
-    ["icontains", "contains"],
-]
-
 logger = logging.getLogger("decp.info")
+logging.getLogger("httpx").setLevel("WARNING")
+
 logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
     level=logging.INFO,
@@ -28,6 +22,13 @@ logging.basicConfig(
 
 
 def split_filter_part(filter_part):
+    operators = [
+        ["s<", "<"],
+        ["s>", ">"],
+        ["i<", "<"],
+        ["i>", ">"],
+        ["icontains", "contains"],
+    ]
     print("filter part", filter_part)
     for operator_group in operators:
         if operator_group[0] in filter_part:
@@ -419,7 +420,8 @@ def track_search(query):
             "token_auth": os.getenv("MATOMO_TOKEN"),
         }
         post(
-            url=f"https://{os.getenv('MATOMO_DOMAIN')}/matomo.php", params=params
+            url=f"https://{os.getenv('MATOMO_DOMAIN')}/matomo.php",
+            params=params,
         ).raise_for_status()
 
 
