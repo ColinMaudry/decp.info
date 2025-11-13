@@ -246,7 +246,7 @@ def get_last_marches_table(data) -> html.Div:
                     "minWidth": "300px",
                     "textAlign": "left",
                     "overflow": "hidden",
-                    "lineHeight": "14px",
+                    "lineHeight": "18px",
                     "whiteSpace": "normal",
                 },
                 {
