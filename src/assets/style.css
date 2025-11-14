@@ -65,7 +65,7 @@ td[data-dash-column="objet"],td[data-dash-column="titulaire_nom"],td[data-dash-c
   th.dash-header {
   background-color: #b33821;
   color: white;
-  font-family: sans-serif;
+  font-family: "Open Sans", sans-serif;
   text-align: left;
 }
 
@@ -99,7 +99,7 @@ td[data-dash-column="objet"],td[data-dash-column="titulaire_nom"],td[data-dash-c
   overflow: hidden;
   height: 150px;
   text-wrap: wrap;
-  font-family: sans-serif;
+  font-family: "Open Sans", sans-serif;
 }
 
 /* Menu de masquage des colonnes */
@@ -131,11 +131,11 @@ td[data-dash-column="objet"],td[data-dash-column="titulaire_nom"],td[data-dash-c
 
 /* Alternance des couleurs pour les lignes */
 .marches_table {
-  font-family: sans-serif;
+  font-family: "Open Sans", sans-serif;
 }
 .marches_table .cell-table tr:nth-child(even) td {
   background-color: #feeeee;
-  font-family: sans-serif;
+  font-family: "Open Sans", sans-serif;
 }
 
 #header > *,
