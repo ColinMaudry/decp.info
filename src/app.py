@@ -92,9 +92,7 @@ app.layout = html.Div(
                 ),
                 html.Div(
                     id="announcements",
-                    children=dcc.Markdown(
-                        "ℹ️  Le formulaire de contact, défectueux, a été remplacé par [une adresse email](/contact)."
-                    ),
+                    children=dcc.Markdown(""),
                 ),
                 html.Div(
                     [
