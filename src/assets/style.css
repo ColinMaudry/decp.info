@@ -152,10 +152,17 @@ td[data-dash-column="objet"],td[data-dash-column="titulaire_nom"],td[data-dash-c
 
 /* Page de recherche */
 
+.tagline {
+  text-align: center;
+  font-size: 120%;
+  display: block;
+  margin-top: 50px;
+}
+
 #search {
-  margin: 50px auto 0px auto;
-  width: 450px;
-  font-size: 18px;
+  margin: 30px auto 0px auto;
+  width: 500px;
+  font-size: 16px;
   height: 30px;
   display: block;
 }
