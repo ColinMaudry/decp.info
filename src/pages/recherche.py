@@ -23,10 +23,16 @@ register_page(
 layout = html.Div(
     className="container",
     children=[
+        html.Div(
+            className="tagline",
+            children=html.P(
+                "Exploration et téléchargement des données des marchés publics"
+            ),
+        ),
         dcc.Input(
             id="search",
             type="text",
-            placeholder="Nom d'acheteur, d'entreprise, SIREN...",
+            placeholder="Nom d'acheteur/entreprise, SIREN/SIRET, code département",
             autoFocus=True,
         ),
         # html.Div(

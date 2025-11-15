@@ -38,6 +38,13 @@ Ne pas oublier de mettre à jour les fichier .env.
 
 ## Notes de version
 
+##### 2.2.1 (15 novembre 2025)
+
+- Le moteur de recherche ignore les tirets ("franche comté" trouve "Bourgogne-Franche-Comté)
+- Phrase "tagline" au-dessus du champ de recherche
+- Les infos de Contact rebasculent dans À propos
+- Police de caractère "Open Sans" généralisée
+
 #### 2.2.0 (13 novembre 2025)
 
 - Moteur de recherche (acheteurs et titulaires) en page d'accueil ([#58](https://github.com/ColinMaudry/decp.info/issues/58))
