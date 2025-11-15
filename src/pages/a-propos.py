@@ -36,13 +36,23 @@ les fonctionnalités actuelles de decp.info. Il est ainsi possible de rajouter
 - des alertes par email si des marchés correspondant à certains critères
 - le développement d'une API pour alimenter d'autres logiciels
 - ...et toutes les fonctionnalités auxquelles vous pourrez penser
+
    """
             ),
+            html.H4("Contact", id="contact"),
+            dcc.Markdown("""
+
+- Email : [colin+decp@maudry.com](mailto:colin+decp@maudry.com)
+- Bluesky : [@col1m.bsky.social](https://bsky.app/profile/col1m.bsky.social)
+- Mastodon : [col1m@mamot.fr](https://mamot.fr/@col1m)
+- LinkedIn : [colinmaudry](https://www.linkedin.com/in/colinmaudry/)
+
+   """),
             html.H4("Pour contribuer", id="contribuer"),
             dcc.Markdown("""
 - via l'achat d'une prestation de service (devis, prestation, facture), vous pouvez financer le développement de [fonctionnalités prévues](https://github.com/ColinMaudry/decp.info/issues), ou d'autres !
 - ma société accepte aussi les dons (pas de réduction d'impôt possible)
-- [écrivez-moi](/contact) et on discute !
+- écrivez-moi et on discute !
 
 #### Pour explorer le projet
 
