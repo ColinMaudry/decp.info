@@ -1,10 +1,10 @@
 import datetime
 
 import polars as pl
-from dash import Input, Output, State, callback, dash_table, dcc, html, register_page
+from dash import Input, Output, State, callback, dcc, html, register_page
 
 from src.callbacks import get_top_org_table
-from src.figures import point_on_map
+from src.figures import DataTable, point_on_map
 from src.utils import (
     add_links_in_dict,
     df,
@@ -227,37 +227,14 @@ def get_last_marches_table(data) -> html.Div:
 
     table = html.Div(
         className="marches_table",
-        id="acheteur_datatable",
-        children=dash_table.DataTable(
+        children=DataTable(
+            dtid="acheteur_datatable",
             data=data,
-            markdown_options={"html": True},
             page_action="native",
             filter_action="native",
-            filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
             columns=columns,
             tooltip_header=tooltip,
-            tooltip_duration=8000,
-            tooltip_delay=350,
-            cell_selectable=False,
             page_size=10,
-            style_cell_conditional=[
-                {
-                    "if": {"column_id": "objet"},
-                    "minWidth": "300px",
-                    "textAlign": "left",
-                    "overflow": "hidden",
-                    "lineHeight": "18px",
-                    "whiteSpace": "normal",
-                },
-                {
-                    "if": {"column_id": "titulaire_nom"},
-                    "minWidth": "200px",
-                    "textAlign": "left",
-                    "overflow": "hidden",
-                    "lineHeight": "18px",
-                    "whiteSpace": "normal",
-                },
-            ],
         ),
     )
     return table

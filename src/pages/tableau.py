@@ -2,8 +2,9 @@ import os
 from datetime import datetime
 
 import polars as pl
-from dash import Input, Output, State, callback, dash_table, dcc, html, register_page
+from dash import Input, Output, State, callback, dcc, html, register_page
 
+from src.figures import DataTable
 from src.utils import (
     add_links,
     add_resource_link,
@@ -35,48 +36,12 @@ register_page(
 
 datatable = html.Div(
     className="marches_table",
-    children=dash_table.DataTable(
-        cell_selectable=False,
-        id="table",
+    children=DataTable(
+        dtid="table",
         page_size=20,
-        page_current=0,
         page_action="custom",
         filter_action="custom",
-        filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
         sort_action="custom",
-        sort_mode="multi",
-        sort_by=[],
-        row_deletable=False,
-        style_cell_conditional=[
-            {
-                "if": {"column_id": "objet"},
-                "minWidth": "350px",
-                "textAlign": "left",
-                "overflow": "hidden",
-                "lineHeight": "18px",
-                "whiteSpace": "normal",
-            },
-            {
-                "if": {"column_id": "acheteur_nom"},
-                "minWidth": "250px",
-                "textAlign": "left",
-                "overflow": "hidden",
-                "lineHeight": "18px",
-                "whiteSpace": "normal",
-            },
-            {
-                "if": {"column_id": "titulaire_nom"},
-                "minWidth": "250px",
-                "textAlign": "left",
-                "overflow": "hidden",
-                "lineHeight": "18px",
-                "whiteSpace": "normal",
-            },
-        ],
-        data_timestamp=0,
-        markdown_options={"html": True},
-        tooltip_duration=8000,
-        tooltip_delay=350,
         hidden_columns=get_default_hidden_columns(schema),
     ),
 )
@@ -244,7 +209,7 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     prevent_initial_call=True,
 )
 def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
-    lff: pl.LazyFrame = df  # start from the original data
+    lff: pl.LazyFrame = df.lazy()  # start from the original data
 
     # Les colonnes masquées sont supprimées
     if hidden_columns:
