@@ -90,5 +90,4 @@ def update_search_results(query):
             content.extend(org_content)
 
         return content
-    else:
-        return html.P("")
+    return html.P("")

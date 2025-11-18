@@ -215,16 +215,6 @@ def get_titulaire_marches_data(url, titulaire_year: str) -> list[dict]:
     Input(component_id="titulaire_data", component_property="data"),
 )
 def get_last_marches_table(data) -> html.Div:
-    columns = [
-        "uid",
-        "objet",
-        "dateNotification",
-        "acheteur_nom",
-        "montant",
-        "codeCPV",
-        "dureeMois",
-    ]
-
     dff = pl.DataFrame(data)
     dff = dff.cast(pl.String)
     dff = dff.fill_null("")
