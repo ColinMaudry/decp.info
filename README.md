@@ -1,6 +1,6 @@
 # decp.info
 
-> v2.2.1
+> v2.2.2
 
 Outil d'exploration et de téléchargement des données essentielles de la commande publique.
 
@@ -37,6 +37,10 @@ Ne pas oublier de mettre à jour les fichier .env.
 - [colin.maudry.com](https://colin.maudry.com) (blog)
 
 ## Notes de version
+
+##### 2.2.2 (22 novembre 2025)
+
+- Correction d'un bug dans le téléchargement Excel
 
 ##### 2.2.1 (15 novembre 2025)
 

@@ -244,7 +244,7 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     prevent_initial_call=True,
 )
 def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
-    lff: pl.LazyFrame = df  # start from the original data
+    lff: pl.LazyFrame = df.lazy()  # start from the original data
 
     # Les colonnes masquées sont supprimées
     if hidden_columns:
