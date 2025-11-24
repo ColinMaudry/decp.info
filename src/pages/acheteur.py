@@ -7,12 +7,14 @@ from src.callbacks import get_top_org_table
 from src.figures import DataTable, point_on_map
 from src.utils import (
     df,
+    filter_table_data,
     format_number,
     get_annuaire_data,
     get_default_hidden_columns,
     get_departement_region,
     meta_content,
     prepare_table_data,
+    sort_table_data,
 )
 
 register_page(
@@ -97,6 +99,7 @@ layout = [
                                 id="btn-download-acheteur-data",
                             ),
                             dcc.Download(id="download-acheteur-data"),
+                            dcc.Download(id="download-acheteur-data-filtered"),
                         ],
                     ),
                     html.Div(className="org_map", id="acheteur_map"),
@@ -280,3 +283,39 @@ def download_acheteur_data(
 
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     return dcc.send_bytes(to_bytes, filename=f"decp_{acheteur_nom}_{date}.xlsx")
+
+
+@callback(
+    Output("download-acheteur-data-filtered", "data"),
+    State("acheteur_data", "data"),
+    Input("btn-download-data-acheteur", "n_clicks"),
+    State("acheteur_nom", "children"),
+    State("acheteur_datatable", "filter_query"),
+    State("acheteur_datatable", "sort_by"),
+    State("acheteur_datatable", "hidden_columns"),
+    prevent_initial_call=True,
+)
+def download_filtered_acheteur_data(
+    data, n_clicks, acheteur_nom, filter_query, sort_by, hidden_columns: list = None
+):
+    lff: pl.LazyFrame = pl.LazyFrame(
+        data
+    )  # start from the full acheteur data, not from paginated table data
+
+    # Les colonnes masquées sont supprimées
+    if hidden_columns:
+        lff = lff.drop(hidden_columns)
+
+    if filter_query:
+        lff = filter_table_data(lff, filter_query)
+
+    if len(sort_by) > 0:
+        lff = sort_table_data(lff, sort_by)
+
+    def to_bytes(buffer):
+        lff.collect(engine="streaming").write_excel(buffer, worksheet="DECP")
+
+    date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    return dcc.send_bytes(
+        to_bytes, filename=f"decp_filtrées_{acheteur_nom}_{date}.xlsx"
+    )
