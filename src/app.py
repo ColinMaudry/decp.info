@@ -92,7 +92,9 @@ app.layout = html.Div(
                 ),
                 html.Div(
                     id="announcements",
-                    children=dcc.Markdown(""),
+                    children=dcc.Markdown(
+                        "ℹ️  Le téléchargement de fichiers Excel est de nouveau fonctionnel."
+                    ),
                 ),
                 html.Div(
                     [
