@@ -10,6 +10,7 @@ from src.utils import (
     filter_table_data,
     format_number,
     get_annuaire_data,
+    get_button_properties,
     get_default_hidden_columns,
     get_departement_region,
     meta_content,
@@ -96,10 +97,9 @@ layout = [
                             html.P(id="acheteur_titulaires_differents"),
                             html.Button(
                                 "Téléchargement au format Excel",
-                                id="btn-download-acheteur-data",
+                                id="btn-download-data-acheteur",
                             ),
-                            dcc.Download(id="download-acheteur-data"),
-                            dcc.Download(id="download-acheteur-data-filtered"),
+                            dcc.Download(id="download-data-acheteur"),
                         ],
                     ),
                     html.Div(className="org_map", id="acheteur_map"),
@@ -124,13 +124,10 @@ layout = [
                             html.P("lignes", id="acheteur_nb_rows"),
                             html.Button(
                                 "Téléchargement désactivé au-delà de 65 000 lignes",
-                                id="btn-download-data-acheteur",
+                                id="btn-download-filtered-data-acheteur",
                                 disabled=True,
                             ),
-                            dcc.Download(id="acheteur-download-data"),
-                            dcc.Store(
-                                id="acheteur_filtered_data", storage_type="memory"
-                            ),
+                            dcc.Download(id="acheteur-download-filtered-data"),
                         ],
                         className="table-menu",
                     ),
@@ -211,21 +208,25 @@ def update_acheteur_stats(data):
 
 @callback(
     Output(component_id="acheteur_data", component_property="data"),
+    Output("btn-download-data-acheteur", "disabled"),
+    Output("btn-download-data-acheteur", "children"),
+    Output("btn-download-data-acheteur", "title"),
     Input(component_id="url", component_property="pathname"),
     Input(component_id="acheteur_year", component_property="value"),
 )
-def get_acheteur_marches_data(url, acheteur_year: str) -> list[dict]:
+def get_acheteur_marches_data(url, acheteur_year: str) -> tuple:
     acheteur_siret = url.split("/")[-1]
     lff = df.lazy()
     lff = lff.filter(pl.col("acheteur_id") == acheteur_siret)
     if acheteur_year and acheteur_year != "Toutes":
         acheteur_year = int(acheteur_year)
         lff = lff.filter(pl.col("dateNotification").dt.year() == acheteur_year)
-    lff = lff.sort(["dateNotification", "id"], descending=True, nulls_last=True)
-    lff = lff.fill_null("")
+    lff = lff.sort(["dateNotification", "uid"], descending=True, nulls_last=True)
+    dff: pl.DataFrame = lff.collect(engine="streaming")
+    download_disabled, download_text, download_title = get_button_properties(dff.height)
 
-    data = lff.collect(engine="streaming").to_dicts()
-    return data
+    data = dff.to_dicts()
+    return data, download_disabled, download_text, download_title
 
 
 @callback(
@@ -234,9 +235,9 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> list[dict]:
     Output("acheteur_datatable", "tooltip_header"),
     Output("acheteur_datatable", "data_timestamp"),
     Output("acheteur_nb_rows", "children"),
-    Output("btn-download-data-acheteur", "disabled"),
-    Output("btn-download-data-acheteur", "children"),
-    Output("btn-download-data-acheteur", "title"),
+    Output("btn-download-filtered-data-acheteur", "disabled"),
+    Output("btn-download-filtered-data-acheteur", "children"),
+    Output("btn-download-filtered-data-acheteur", "title"),
     Input("acheteur_data", "data"),
     Input("acheteur_datatable", "page_current"),
     Input("acheteur_datatable", "page_size"),
@@ -261,8 +262,8 @@ def get_top_titulaires(data):
 
 
 @callback(
-    Output("download-acheteur-data", "data"),
-    Input("btn-download-acheteur-data", "n_clicks"),
+    Output("download-data-acheteur", "data"),
+    Input("btn-download-data-acheteur", "n_clicks"),
     State(component_id="acheteur_data", component_property="data"),
     State(component_id="acheteur_nom", component_property="children"),
     State(component_id="acheteur_year", component_property="value"),
@@ -286,9 +287,9 @@ def download_acheteur_data(
 
 
 @callback(
-    Output("download-acheteur-data-filtered", "data"),
+    Output("acheteur-download-filtered-data", "data"),
     State("acheteur_data", "data"),
-    Input("btn-download-data-acheteur", "n_clicks"),
+    Input("btn-download-filtered-data-acheteur", "n_clicks"),
     State("acheteur_nom", "children"),
     State("acheteur_datatable", "filter_query"),
     State("acheteur_datatable", "sort_by"),

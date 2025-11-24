@@ -330,9 +330,10 @@ def setup_table_columns(dff, hideable: bool = True, exclude: list = None) -> tup
             continue
         column_object = data_schema.get(column_id)
         if column_object:
-            column_name = column_object.get("title", column_id)
+            column_name = column_object.get("title")
         else:
             column_name = column_id
+            print("Colonne inconnue dans le schéma !", column_id)
 
         column = {
             "name": column_name,
@@ -588,16 +589,15 @@ def prepare_table_data(
 
     # Formatage des montants
     dff = format_values(dff)
+
+    # Récupération des colonnes et tooltip
     columns, tooltip = setup_table_columns(dff)
+
     dicts = dff.to_dicts()
-    if height > 65000:
-        download_disabled = True
-        download_text = "Téléchargement désactivé au-delà de 65 000 lignes"
-        download_title = "Excel ne supporte pas d'avoir plus de 65 000 URLs dans une même feuille de calcul. Contactez-moi pour me présenter votre besoin en téléchargement afin que je puisse adapter la solution."
-    else:
-        download_disabled = False
-        download_text = "Télécharger au format Excel"
-        download_title = ""
+
+    # Propriétés du bouton de téléchargement
+    download_disabled, download_text, download_title = get_button_properties(height)
+
     return (
         dicts,
         columns,
@@ -608,6 +608,19 @@ def prepare_table_data(
         download_text,
         download_title,
     )
+
+
+def get_button_properties(height):
+    if height > 65000:
+        download_disabled = True
+        download_text = "Téléchargement désactivé au-delà de 65 000 lignes"
+        download_title = "Excel ne supporte pas d'avoir plus de 65 000 URLs dans une même feuille de calcul. Contactez-moi pour me présenter votre besoin en téléchargement afin que je puisse adapter la solution."
+    else:
+        print("moins de 65k")
+        download_disabled = False
+        download_text = "Télécharger au format Excel"
+        download_title = ""
+    return download_disabled, download_text, download_title
 
 
 df: pl.DataFrame = get_decp_data()
