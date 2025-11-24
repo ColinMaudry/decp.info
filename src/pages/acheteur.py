@@ -186,7 +186,7 @@ def update_acheteur_infos(url):
     Input(component_id="acheteur_data", component_property="data"),
 )
 def update_acheteur_stats(data):
-    dff = pl.DataFrame(data)
+    dff = pl.DataFrame(data, strict=False, infer_schema_length=5000)
     if dff.height == 0:
         dff = pl.DataFrame(schema=df.collect_schema())
     df_marches = dff.unique("id")

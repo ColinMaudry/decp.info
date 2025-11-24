@@ -186,7 +186,7 @@ def update_titulaire_infos(url):
     Input(component_id="titulaire_data", component_property="data"),
 )
 def update_titulaire_stats(data):
-    dff = pl.DataFrame(data)
+    dff = pl.DataFrame(data, strict=False, infer_schema_length=5000)
     if dff.height == 0:
         nb_marches = 0
         nb_acheteurs = 0

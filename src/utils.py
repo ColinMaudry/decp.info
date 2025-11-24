@@ -551,7 +551,7 @@ def prepare_table_data(
 
     # Récupération des données
     if isinstance(data, list):
-        lff: pl.LazyFrame = pl.LazyFrame(data)
+        lff: pl.LazyFrame = pl.LazyFrame(data, strict=False, infer_schema_length=5000)
     else:
         lff: pl.LazyFrame = df.lazy()  # start from the original data
 

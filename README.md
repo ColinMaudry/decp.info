@@ -37,6 +37,11 @@ Ne pas oublier de mettre à jour les fichier .env.
 
 ## Notes de version
 
+#### 2.3.0 (24 nomvembre 2025)
+
+- Possibilité de filtrer, trier etc. dans les vues acheteur et titulaire
+-
+
 ##### 2.2.2 (22 novembre 2025)
 
 - Correction d'un bug dans le téléchargement Excel

@@ -6,7 +6,7 @@ from utils import add_links_in_dict, format_values, setup_table_columns
 
 
 def get_top_org_table(data, org_type: str):
-    dff = pl.DataFrame(data)
+    dff = pl.DataFrame(data, strict=False, infer_schema_length=5000)
     if dff.height == 0:
         return html.Div()
 
