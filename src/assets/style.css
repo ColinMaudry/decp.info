@@ -133,6 +133,12 @@ td[data-dash-column="objet"],td[data-dash-column="titulaire_nom"],td[data-dash-c
 .marches_table {
   font-family: "Open Sans", sans-serif;
 }
+
+.marches_table.stuck {
+  position: relative;
+  right: 200px;
+}
+
 .marches_table .cell-table tr:nth-child(even) td {
   background-color: #feeeee;
   font-family: "Open Sans", sans-serif;
@@ -212,7 +218,7 @@ summary > h3 {
 }
 
 #_pages_content {
-  padding-top: 28px;
+  padding: 28px 24px 0 24px;
 }
 
 /* Vue acheteur/titulaire/recherche    */

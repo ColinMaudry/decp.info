@@ -7,7 +7,6 @@ from time import localtime, sleep
 import polars as pl
 import polars.selectors as cs
 from httpx import get, post
-from polars import Schema
 from polars.exceptions import ComputeError
 from unidecode import unidecode
 
@@ -356,18 +355,47 @@ def setup_table_columns(dff, hideable: bool = True, exclude: list = None) -> tup
     return columns, tooltip
 
 
-def get_default_hidden_columns(schema: Schema):
-    displayed_columns = os.getenv("DISPLAYED_COLUMNS")
+def get_default_hidden_columns(page):
+    if page == "acheteur":
+        displayed_columns = [
+            "uid",
+            "objet",
+            "dateNotification",
+            "titulaire_id",
+            "titulaire_typeIdentifiant",
+            "titulaire_nom",
+            "distance",
+            "montant",
+            "codeCPV",
+            "dureeRestanteMois",
+        ]
+    elif page == "titulaire":
+        displayed_columns = [
+            "uid",
+            "objet",
+            "dateNotification",
+            "acheteur_id",
+            "acheteur_nom",
+            "distance",
+            "montant",
+            "codeCPV",
+            "dureeRestanteMois",
+        ]
+    else:
+        displayed_columns = os.getenv("DISPLAYED_COLUMNS")
+        if displayed_columns is None:
+            raise ValueError("DISPLAYED_COLUMNS n'est pas configuré")
+        else:
+            displayed_columns = displayed_columns.replace(" ", "").split(",")
+
     hidden_columns = []
-    if displayed_columns:
-        displayed_columns = displayed_columns.replace(" ", "").split(",")
-        for col in schema.names():
-            if col in displayed_columns:
-                continue
-            else:
-                hidden_columns.append(col)
-        return hidden_columns
-    raise ValueError("DISPLAYED_COLUMNS n'est pas configuré")
+
+    for col in schema.names():
+        if col in displayed_columns:
+            continue
+        else:
+            hidden_columns.append(col)
+    return hidden_columns
 
 
 def get_data_schema() -> dict:
@@ -503,9 +531,91 @@ def search_org(dff: pl.DataFrame, query: str, org_type: str) -> pl.DataFrame:
     return dff
 
 
+def prepare_table_data(
+    data, data_timestamp, filter_query, page_current, page_size, sort_by
+):
+    """
+    Fonction de préparation des données pour les datatables, afin de permettre une gestion fine des logiques,
+    notamment pour les filtres et les tris.
+    :param data
+    :param data_timestamp:
+    :param filter_query:
+    :param page_current:
+    :param page_size:
+    :param sort_by:
+    :return:
+    """
+
+    if os.getenv("DEVELOPMENT").lower() == "true":
+        print(" + + + + + + + + + + + + + + + + + + ")
+
+    # Récupération des données
+    if data:
+        lff: pl.LazyFrame = pl.LazyFrame(data)
+    else:
+        lff: pl.LazyFrame = df.lazy()  # start from the original data
+
+    # Application des filtres
+    if filter_query:
+        lff = filter_table_data(lff, filter_query)
+
+    # Application des tris
+    if len(sort_by) > 0:
+        lff = sort_table_data(lff, sort_by)
+
+    # Matérialisation des filtres
+    dff: pl.DataFrame = lff.collect()
+    height = dff.height
+    nb_rows = f"{format_number(height)} lignes ({format_number(dff.select('uid').unique().height)} marchés)"
+
+    # Pagination des données
+    start_row = page_current * page_size
+    # end_row = (page_current + 1) * page_size
+    dff = dff.slice(start_row, page_size)
+
+    # Tout devient string
+    dff = dff.cast(pl.String)
+
+    # Remplace les strings null par "", mais pas les numeric null
+    dff = dff.fill_null("")
+
+    # Ajout des liens vers l'annuaire des entreprises
+    dff = add_links(dff)
+
+    # Ajout des liens vers les fichiers Open Data
+    if "sourceFile" in dff.columns:
+        dff = add_resource_link(dff)
+
+    # Formatage des montants
+    dff = format_values(dff)
+    columns, tooltip = setup_table_columns(dff)
+    dicts = dff.to_dicts()
+    if height > 65000:
+        download_disabled = True
+        download_text = "Téléchargement désactivé au-delà de 65 000 lignes"
+        download_title = "Excel ne supporte pas d'avoir plus de 65 000 URLs dans une même feuille de calcul. Contactez-moi pour me présenter votre besoin en téléchargement afin que je puisse adapter la solution."
+    else:
+        download_disabled = False
+        download_text = "Télécharger au format Excel"
+        download_title = ""
+    return (
+        dicts,
+        columns,
+        tooltip,
+        data_timestamp + 1,
+        nb_rows,
+        download_disabled,
+        download_text,
+        download_title,
+    )
+
+
 df: pl.DataFrame = get_decp_data()
+schema = df.collect_schema()
+
 df_acheteurs = get_org_data(df, "acheteur")
 df_titulaires = get_org_data(df, "titulaire")
+
 departements = get_departements()
 domain_name = (
     "test.decp.info" if os.getenv("DEVELOPMENT").lower() == "true" else "decp.info"

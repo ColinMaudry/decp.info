@@ -6,22 +6,17 @@ from dash import Input, Output, State, callback, dcc, html, register_page
 
 from src.figures import DataTable
 from src.utils import (
-    add_links,
-    add_resource_link,
     df,
     filter_table_data,
-    format_number,
-    format_values,
     get_default_hidden_columns,
     meta_content,
-    setup_table_columns,
     sort_table_data,
 )
+from utils import prepare_table_data
 
 update_date = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
 update_date = datetime.fromtimestamp(update_date).strftime("%d/%m/%Y")
 
-schema = df.collect_schema()
 
 name = "Tableau"
 register_page(
@@ -42,7 +37,7 @@ datatable = html.Div(
         page_action="custom",
         filter_action="custom",
         sort_action="custom",
-        hidden_columns=get_default_hidden_columns(schema),
+        hidden_columns=get_default_hidden_columns(None),
     ),
 )
 
@@ -138,65 +133,8 @@ layout = [
     State("table", "data_timestamp"),
 )
 def update_table(page_current, page_size, filter_query, sort_by, data_timestamp):
-    if os.getenv("DEVELOPMENT").lower() == "true":
-        print(" + + + + + + + + + + + + + + + + + + ")
-
-    # Application des filtres
-    lff: pl.LazyFrame = df.lazy()  # start from the original data
-    if filter_query:
-        lff = filter_table_data(lff, filter_query)
-
-    if len(sort_by) > 0:
-        lff = sort_table_data(lff, sort_by)
-
-    # Matérialisation des filtres
-    dff: pl.DataFrame = lff.collect()
-
-    height = dff.height
-    nb_rows = f"{format_number(height)} lignes ({format_number(dff.select('uid').unique().height)} marchés)"
-
-    # Pagination des données
-    start_row = page_current * page_size
-    # end_row = (page_current + 1) * page_size
-    dff = dff.slice(start_row, page_size)
-
-    # Tout devient string
-    dff = dff.cast(pl.String)
-
-    # Remplace les strings null par "", mais pas les numeric null
-    dff = dff.fill_null("")
-
-    # Ajout des liens vers l'annuaire des entreprises
-    dff = add_links(dff)
-
-    # Ajout des liens vers les fichiers Open Data
-    dff = add_resource_link(dff)
-
-    # Formatage des montants
-    dff = format_values(dff)
-
-    columns, tooltip = setup_table_columns(dff)
-
-    dicts = dff.to_dicts()
-
-    if height > 65000:
-        download_disabled = True
-        download_text = "Téléchargement désactivé au-delà de 65 000 lignes"
-        download_title = "Excel ne supporte pas d'avoir plus de 65 000 URLs dans une même feuille de calcul. Contactez-moi pour me présenter votre besoin en téléchargement afin que je puisse adapter la solution."
-    else:
-        download_disabled = False
-        download_text = "Télécharger au format Excel"
-        download_title = ""
-
-    return (
-        dicts,
-        columns,
-        tooltip,
-        data_timestamp + 1,
-        nb_rows,
-        download_disabled,
-        download_text,
-        download_title,
+    return prepare_table_data(
+        None, data_timestamp, filter_query, page_current, page_size, sort_by
     )
 
 
