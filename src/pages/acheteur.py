@@ -197,9 +197,8 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> list[dict]:
         "dureeMois",
     )
     if acheteur_year and acheteur_year != "Toutes":
-        lff = lff.filter(
-            pl.col("dateNotification").cast(pl.String).str.starts_with(acheteur_year)
-        )
+        acheteur_year = int(acheteur_year)
+        lff = lff.filter(pl.col("dateNotification").dt.year() == acheteur_year)
     lff = lff.sort(["dateNotification", "id"], descending=True, nulls_last=True)
 
     data = lff.collect(engine="streaming").to_dicts()
