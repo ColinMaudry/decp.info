@@ -8,6 +8,7 @@ from src.figures import DataTable, point_on_map
 from src.utils import (
     add_links_in_dict,
     df,
+    filter_table_data,
     format_number,
     format_values,
     get_annuaire_data,
@@ -24,6 +25,16 @@ register_page(
     description=meta_content["description"],
     image_url=meta_content["image_url"],
     order=5,
+)
+
+datatable = html.Div(
+    className="marches_table",
+    children=DataTable(
+        dtid="acheteur_datatable",
+        page_action="native",
+        filter_action="custom",
+        page_size=10,
+    ),
 )
 
 layout = [
@@ -101,7 +112,7 @@ layout = [
             ),
             # récupérer les données de l'acheteur sur l'api annuaire
             html.H3("Derniers marchés publics attribués"),
-            html.Div(id="acheteur_last_marches", children=""),
+            html.Div(id="acheteur_last_marches", children=datatable),
         ],
     ),
 ]
@@ -200,43 +211,37 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> list[dict]:
         acheteur_year = int(acheteur_year)
         lff = lff.filter(pl.col("dateNotification").dt.year() == acheteur_year)
     lff = lff.sort(["dateNotification", "id"], descending=True, nulls_last=True)
+    lff = lff.fill_null("")
 
     data = lff.collect(engine="streaming").to_dicts()
     return data
 
 
 @callback(
-    Output(component_id="acheteur_last_marches", component_property="children"),
+    Output(component_id="acheteur_datatable", component_property="data"),
+    Output(component_id="acheteur_datatable", component_property="columns"),
+    Output(component_id="acheteur_datatable", component_property="tooltip_header"),
     Input(component_id="acheteur_data", component_property="data"),
+    Input(component_id="acheteur_datatable", component_property="filter_query"),
 )
-def get_last_marches_table(data) -> html.Div:
-    dff = pl.DataFrame(data)
-    if dff.height == 0:
-        return html.Div(html.P("Aucun marché trouvé."))
-    dff = dff.cast(pl.String)
-    dff = dff.fill_null("")
-    dff = format_values(dff)
-    columns, tooltip = setup_table_columns(
+def get_last_marches_data(data, filter_query) -> tuple[list[dict], list, list]:
+    lff: pl.LazyFrame = pl.LazyFrame(data)
+    if filter_query:
+        lff = filter_table_data(lff, filter_query)
+
+    lff = lff.cast(pl.String)
+    dff: pl.DataFrame = format_values(lff.collect())
+    columns, tooltip_header = setup_table_columns(
         dff,
         hideable=False,
         exclude=["titulaire_id", "titulaire_typeIdentifiant", "uid"],
     )
+
     data = dff.to_dicts()
+
     data = add_links_in_dict(data, "titulaire")
 
-    table = html.Div(
-        className="marches_table",
-        children=DataTable(
-            dtid="acheteur_datatable",
-            data=data,
-            page_action="native",
-            filter_action="native",
-            columns=columns,
-            tooltip_header=tooltip,
-            page_size=10,
-        ),
-    )
-    return table
+    return data, columns, tooltip_header
 
 
 @callback(
