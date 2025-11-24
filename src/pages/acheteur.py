@@ -247,7 +247,7 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> tuple:
 )
 def get_last_marches_data(
     data, page_current, page_size, filter_query, sort_by, data_timestamp
-) -> list[dict]:
+) -> tuple:
     return prepare_table_data(
         data, data_timestamp, filter_query, page_current, page_size, sort_by
     )

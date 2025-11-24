@@ -333,7 +333,6 @@ def setup_table_columns(dff, hideable: bool = True, exclude: list = None) -> tup
             column_name = column_object.get("title")
         else:
             column_name = column_id
-            print("Colonne inconnue dans le schéma !", column_id)
 
         column = {
             "name": column_name,
@@ -551,7 +550,7 @@ def prepare_table_data(
         print(" + + + + + + + + + + + + + + + + + + ")
 
     # Récupération des données
-    if data:
+    if isinstance(data, list):
         lff: pl.LazyFrame = pl.LazyFrame(data)
     else:
         lff: pl.LazyFrame = df.lazy()  # start from the original data
@@ -567,7 +566,11 @@ def prepare_table_data(
     # Matérialisation des filtres
     dff: pl.DataFrame = lff.collect()
     height = dff.height
-    nb_rows = f"{format_number(height)} lignes ({format_number(dff.select('uid').unique().height)} marchés)"
+
+    if height > 0:
+        nb_rows = f"{format_number(height)} lignes ({format_number(dff.select('uid').unique().height)} marchés)"
+    else:
+        nb_rows = "0 lignes (0 marchés)"
 
     # Pagination des données
     start_row = page_current * page_size
@@ -588,7 +591,8 @@ def prepare_table_data(
         dff = add_resource_link(dff)
 
     # Formatage des montants
-    dff = format_values(dff)
+    if height > 0:
+        dff = format_values(dff)
 
     # Récupération des colonnes et tooltip
     columns, tooltip = setup_table_columns(dff)
@@ -615,8 +619,11 @@ def get_button_properties(height):
         download_disabled = True
         download_text = "Téléchargement désactivé au-delà de 65 000 lignes"
         download_title = "Excel ne supporte pas d'avoir plus de 65 000 URLs dans une même feuille de calcul. Contactez-moi pour me présenter votre besoin en téléchargement afin que je puisse adapter la solution."
+    elif height == 0:
+        download_disabled = True
+        download_text = "Pas de données à télécharger"
+        download_title = ""
     else:
-        print("moins de 65k")
         download_disabled = False
         download_text = "Télécharger au format Excel"
         download_title = ""

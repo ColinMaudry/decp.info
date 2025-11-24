@@ -188,22 +188,25 @@ def update_titulaire_infos(url):
 def update_titulaire_stats(data):
     dff = pl.DataFrame(data)
     if dff.height == 0:
-        dff = pl.DataFrame(schema=dff.collect_schema())
-    df_marches = dff.unique("uid")
-    nb_marches = format_number(df_marches.height)
-    # somme_marches = format_number(int(df_marches.select(pl.sum("montant")).item()))
-    marches_remportes = [html.Strong(nb_marches), " marchés et accord-cadres remportés"]
-    # + ", pour un total de ", html.Strong(somme_marches + " €")]
-    del df_marches
+        nb_marches = 0
+        nb_acheteurs = 0
+    else:
+        df_marches = dff.unique("uid")
+        nb_marches = format_number(df_marches.height)
+        nb_acheteurs = dff.unique("acheteur_id").height
 
-    nb_acheteurs = dff.unique("acheteur_id").height
-    nb_acheteurs = [
+    texte_marches_remportes = [
+        html.Strong(nb_marches),
+        " marchés et accord-cadres remportés",
+    ]
+    # + ", pour un total de ", html.Strong(somme_marches + " €")]
+
+    texte_nb_acheteurs = [
         html.Strong(format_number(nb_acheteurs)),
         " acheteurs (SIRET) différents",
     ]
-    del dff
 
-    return marches_remportes, nb_acheteurs
+    return texte_marches_remportes, texte_nb_acheteurs
 
 
 @callback(
