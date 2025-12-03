@@ -1,8 +1,10 @@
+import json
 import os
+import urllib.parse
 from datetime import datetime
 
 import polars as pl
-from dash import Input, Output, State, callback, dcc, html, register_page
+from dash import Input, Output, State, callback, dcc, html, no_update, register_page
 
 from src.figures import DataTable
 from src.utils import (
@@ -42,6 +44,7 @@ datatable = html.Div(
 )
 
 layout = [
+    dcc.Location(id="url", refresh=False),
     html.Div(
         html.Details(
             children=[
@@ -100,6 +103,8 @@ layout = [
             html.Div(
                 [
                     html.P("lignes", id="nb_rows"),
+                    html.Div(id="copy-container"),
+                    dcc.Input(id="share-url", readOnly=True, style={"display": "none"}),
                     html.Button(
                         "Téléchargement désactivé au-delà de 65 000 lignes",
                         id="btn-download-data",
@@ -133,6 +138,11 @@ layout = [
     State("table", "data_timestamp"),
 )
 def update_table(page_current, page_size, filter_query, sort_by, data_timestamp):
+    # if ctx.triggered_id != "url":
+    #     search_params = None
+    # else:
+    #     search_params = urllib.parse.parse_qs(search_params.lstrip("?"))
+
     return prepare_table_data(
         None, data_timestamp, filter_query, page_current, page_size, sort_by
     )
@@ -164,3 +174,96 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
 
     date = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     return dcc.send_bytes(to_bytes, filename=f"decp_{date}.xlsx")
+
+
+@callback(
+    Output("table", "filter_query"),
+    Output("table", "sort_by"),
+    Output("table", "hidden_columns"),
+    Input("url", "search"),
+)
+def restore_view_from_url(search):
+    if not search:
+        return no_update, no_update, no_update
+
+    params = urllib.parse.parse_qs(search.lstrip("?"))
+    print("params", params)
+
+    filter_query = no_update
+    sort_by = no_update
+    hidden_columns = no_update
+
+    if "filtres" in params:
+        filter_query = params["filtres"][0]
+
+    if "tris" in params:
+        try:
+            sort_by = json.loads(params["tris"][0])
+        except json.JSONDecodeError:
+            pass
+
+    if "colonnes" in params:
+        try:
+            hidden_columns = json.loads(params["colonnes"][0])
+        except json.JSONDecodeError:
+            pass
+
+    return filter_query, sort_by, hidden_columns
+
+
+@callback(
+    Output("share-url", "value"),
+    Output("copy-container", "children"),
+    Input("table", "filter_query"),
+    Input("table", "sort_by"),
+    Input("table", "hidden_columns"),
+    State("url", "href"),
+)
+def sync_url_and_reset_button(filter_query, sort_by, hidden_columns, href):
+    if not href:
+        return no_update, no_update
+
+    # Extract base URL (remove existing query params)
+    base_url = href.split("?")[0]
+
+    params = {}
+    if filter_query:
+        params["filtres"] = filter_query
+
+    if sort_by:
+        params["tris"] = json.dumps(sort_by)
+
+    if hidden_columns:
+        params["colonnes"] = json.dumps(hidden_columns)
+
+    query_string = urllib.parse.urlencode(params)
+    full_url = f"{base_url}?{query_string}" if query_string else base_url
+
+    copy_button = dcc.Clipboard(
+        id="btn-copy-url",
+        target_id="share-url",
+        title="Copier l'URL de cette vue",
+        style={
+            "display": "inline-block",
+            "fontSize": 20,
+            "verticalAlign": "top",
+            "cursor": "pointer",
+        },
+        className="fa fa-link",
+    )
+
+    return full_url, copy_button
+
+
+@callback(
+    Output("copy-container", "children", allow_duplicate=True),
+    Input("btn-copy-url", "n_clicks", allow_optional=True),
+    prevent_initial_call=True,
+)
+def show_confirmation(n_clicks):
+    if n_clicks:
+        return html.Span(
+            "URL copiée",
+            style={"color": "green", "fontWeight": "bold", "marginLeft": "10px"},
+        )
+    return no_update

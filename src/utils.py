@@ -543,6 +543,7 @@ def prepare_table_data(
     :param page_current:
     :param page_size:
     :param sort_by:
+    :param search_params:
     :return:
     """
 
@@ -554,6 +555,24 @@ def prepare_table_data(
         lff: pl.LazyFrame = pl.LazyFrame(data, strict=False, infer_schema_length=5000)
     else:
         lff: pl.LazyFrame = df.lazy()  # start from the original data
+
+    # if search_params:
+    #     if "filtres" in search_params:
+    #         filter_query = search_params["filtres"][0]
+    #
+    #     if "tris" in search_params:
+    #         try:
+    #             sort_by = json.loads(search_params["tris"][0])
+    #         except json.JSONDecodeError:
+    #             pass
+    #
+    #     if "colonnes" in search_params:
+    #         try:
+    #             hidden_columns = json.loads(search_params["colonnes"][0])
+    #             print(hidden_columns)
+    #             lff = lff.drop(hidden_columns)
+    #         except json.JSONDecodeError:
+    #             pass
 
     # Application des filtres
     if filter_query:
