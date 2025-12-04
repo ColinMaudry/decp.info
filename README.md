@@ -1,6 +1,6 @@
 # decp.info
 
-> v2.2.2
+> v2.2.3
 
 Outil d'exploration et de téléchargement des données essentielles de la commande publique.
 
@@ -37,6 +37,11 @@ Ne pas oublier de mettre à jour les fichier .env.
 - [colin.maudry.com](https://colin.maudry.com) (blog)
 
 ## Notes de version
+
+##### 2.2.3 (4 décembre 2025)
+
+- mise à jour de l'adresse email de contact (colmo.tech)
+- message sur l'indisponibilité des données MINEF
 
 ##### 2.2.2 (22 novembre 2025)
 
