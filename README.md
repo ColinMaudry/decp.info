@@ -37,10 +37,15 @@ Ne pas oublier de mettre à jour les fichier .env.
 
 ## Notes de version
 
-#### 2.3.0 (24 nomvembre 2025)
+#### 2.3.0 (24 novembre 2025)
 
 - Possibilité de filtrer, trier etc. dans les vues acheteur et titulaire
 -
+
+##### 2.2.3 (4 décembre 2025)
+
+- mise à jour de l'adresse email de contact (colmo.tech)
+- message sur l'indisponibilité des données MINEF
 
 ##### 2.2.2 (22 novembre 2025)
 

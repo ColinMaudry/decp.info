@@ -4,7 +4,7 @@ description = "Interface d'exploration et d'analyse des marchés publics frança
 version = "2.3.0"
 requires-python = ">= 3.10"
 authors = [
-    { name = "Colin Maudry", email = "colin+decp@maudry.com" }
+    { name = "Colin Maudry", email = "colin@colmo.tech" }
 ]
 dependencies = [
     "dash==3.3.0",

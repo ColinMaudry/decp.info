@@ -42,7 +42,7 @@ les fonctionnalités actuelles de decp.info. Il est ainsi possible de rajouter
             html.H4("Contact", id="contact"),
             dcc.Markdown("""
 
-- Email : [colin+decp@maudry.com](mailto:colin+decp@maudry.com)
+- Email : [colin@colmo.tech](mailto:colin@colmo.tech)
 - Bluesky : [@col1m.bsky.social](https://bsky.app/profile/col1m.bsky.social)
 - Mastodon : [col1m@mamot.fr](https://mamot.fr/@col1m)
 - LinkedIn : [colinmaudry](https://www.linkedin.com/in/colinmaudry/)
