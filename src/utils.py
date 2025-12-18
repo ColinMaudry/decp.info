@@ -27,6 +27,7 @@ def split_filter_part(filter_part):
         ["i<", "<"],
         ["i>", ">"],
         ["icontains", "contains"],
+        # [" ", "contains"]
     ]
     print("filter part", filter_part)
     for operator_group in operators:

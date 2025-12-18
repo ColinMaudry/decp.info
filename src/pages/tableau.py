@@ -40,6 +40,7 @@ datatable = html.Div(
         filter_action="custom",
         sort_action="custom",
         hidden_columns=get_default_hidden_columns(None),
+        columns=[{"id": col, "name": col} for col in df.columns],
     ),
 )
 
@@ -49,10 +50,11 @@ layout = [
         html.Details(
             children=[
                 html.Summary(
-                    html.H3("Mode d'emploi", style={"text-decoration": "underline"}),
+                    html.H3("Mode d'emploi", style={"textDecoration": "underline"}),
                 ),
                 dcc.Markdown(
-                    """
+                    dangerously_allow_html=True,
+                    children="""
     ##### Définition des colonnes
 
     Pour voir la définition d'une colonne, passez votre souris sur son en-tête.
@@ -62,16 +64,20 @@ layout = [
     Vous pouvez appliquer un filtre pour chaque colonne en entrant du texte sous le nom de la colonne, puis en tapant sur `Entrée`.
 
     - Champs textuels : la recherche est insensible à la casse (majuscules/minuscules) et retourne les valeurs qui contiennent
-    le texte recherché. Exemple : `rennes` retourne "RENNES METROPOLE".
+    le texte recherché. Exemple : `rennes` retourne "RENNES METROPOLE". Lorsque vous ouvrez une URL de vue, le format équivalent `icontains rennes` est utilisé.
     - Champs numériques : vous pouvez soit taper un nombre pour trouver les valeurs égales, soit le précéder de **>** ou **<** pour filtrer les valeurs supérieures ou inférieures. Exemple pour les offres reçues : `> 4` retourne les marchés ayant reçu plus de 4 offres.
     - Champs date : vous pouvez également utiliser **>** ou **<**. Exemples : `< 2024-01-31` pour "avant le 31 janvier 2024",
-    `2024` pour "en 2024", `> 2022` pour "à partir de 2022"
+    `2024` pour "en 2024", `> 2022` pour "à partir de 2022". Lorsque vous ouvrez une URL de vue, le format équivalent `i<` ou `i>` est utilisé.
 
     Vous pouvez filtrer plusieurs colonnes à la fois. Vos filtres sont remis à zéro quand vous rafraîchissez la page.
 
     ##### Tri
 
     Pour trier une colonne, utilisez les flèches grises à côté des noms de colonnes. Chaque clic change le tri dans cet ordre : tri ascendant, tri descendant, pas de tri.
+
+    ##### Partager une vue
+
+    Une vue est un ensemble de filtres, de tris et de choix de colonnes que vous avez appliqué. Vous pouvez copier une adresse Web qui reproduit la vue courante à l'identique en cliquant sur l'icône <img src="/assets/copy.svg" alt="drawing" width="20"/>. En la collant dans la barre d'adresse d'un navigateur, vous ouvrez la vue Tableau avec les mêmes paramètres.
 
     ##### Télécharger le résultat
 
@@ -82,7 +88,7 @@ layout = [
     Les liens dans les colonnes Identifiant unique, Acheteur et Titulaire vous permettent de consulter une vue qui leur est dédiée
     (informations, marchés attribués/remportés, etc.)
 
-    """
+    """,
                 ),
             ],
             id="instructions",
@@ -142,7 +148,6 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     #     search_params = None
     # else:
     #     search_params = urllib.parse.parse_qs(search_params.lstrip("?"))
-
     return prepare_table_data(
         None, data_timestamp, filter_query, page_current, page_size, sort_by
     )
@@ -180,11 +185,13 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
     Output("table", "filter_query"),
     Output("table", "sort_by"),
     Output("table", "hidden_columns"),
+    Output("url", "search", allow_duplicate=True),
     Input("url", "search"),
+    prevent_initial_call=True,
 )
 def restore_view_from_url(search):
     if not search:
-        return no_update, no_update, no_update
+        return no_update, no_update, no_update, no_update
 
     params = urllib.parse.parse_qs(search.lstrip("?"))
     print("params", params)
@@ -208,7 +215,7 @@ def restore_view_from_url(search):
         except json.JSONDecodeError:
             pass
 
-    return filter_query, sort_by, hidden_columns
+    return filter_query, sort_by, hidden_columns, ""
 
 
 @callback(
@@ -263,7 +270,7 @@ def sync_url_and_reset_button(filter_query, sort_by, hidden_columns, href):
 def show_confirmation(n_clicks):
     if n_clicks:
         return html.Span(
-            "URL copiée",
+            "Adresse de la vue copiée",
             style={"color": "green", "fontWeight": "bold", "marginLeft": "10px"},
         )
     return no_update
