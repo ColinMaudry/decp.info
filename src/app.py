@@ -1,4 +1,5 @@
 import logging
+import os
 
 import dash_bootstrap_components as dbc
 import tomllib
@@ -92,9 +93,7 @@ app.layout = html.Div(
                 ),
                 html.Div(
                     id="announcements",
-                    children=dcc.Markdown(
-                        "ℹ️  La publication des données consolidées par le MINEF est actuellement [cassée](https://www.data.gouv.fr/datasets/donnees-essentielles-de-la-commande-publique-fichiers-consolides/#/discussions/69306148a4871a110fd7a7d0), ce qui casse la mise à jour de decp.info. Je travaille donc en priorité à une [désolidarisation des données du MINEF](https://github.com/ColinMaudry/decp-processing/issues/151). Merci pour votre patience."
-                    ),
+                    children=dcc.Markdown(os.getenv("ANNOUNCEMENTS")),
                 ),
                 html.Div(
                     [
