@@ -11,6 +11,7 @@ from src.utils import (
     df,
     filter_table_data,
     get_default_hidden_columns,
+    invert_columns,
     meta_content,
     sort_table_data,
 )
@@ -213,7 +214,8 @@ def restore_view_from_url(search):
 
     if "colonnes" in params:
         try:
-            hidden_columns = json.loads(params["colonnes"][0])
+            columns = json.loads(params["colonnes"][0])
+            hidden_columns = invert_columns(columns)
         except json.JSONDecodeError:
             pass
 
@@ -243,7 +245,8 @@ def sync_url_and_reset_button(filter_query, sort_by, hidden_columns, href):
         params["tris"] = json.dumps(sort_by)
 
     if hidden_columns:
-        params["colonnes"] = json.dumps(hidden_columns)
+        columns = invert_columns(hidden_columns)
+        params["colonnes"] = json.dumps(columns)
 
     query_string = urllib.parse.urlencode(params)
     full_url = f"{base_url}?{query_string}" if query_string else base_url

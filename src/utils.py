@@ -296,6 +296,7 @@ def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
                 lff = lff.filter(pl.col(col_name) <= filter_value)
             elif operator == "contains":
                 if col_type in ["String", "Date"]:
+                    filter_value = filter_value.strip('"')
                     lff = lff.filter(
                         pl.col(col_name).str.contains("(?i)" + filter_value)
                     )
@@ -648,6 +649,20 @@ def get_button_properties(height):
         download_text = "Télécharger au format Excel"
         download_title = ""
     return download_disabled, download_text, download_title
+
+
+def invert_columns(columns):
+    """
+    Renvoie les colonnes du schéma non spécifiées en paramètre. Utile pour passer d'une colonnes masquées à une liste de colonnes affichées, et vice versa.
+
+    :param columns:
+    :return:
+    """
+    inverted_columns = []
+    for column in schema.names():
+        if column not in columns:
+            inverted_columns.append(column)
+    return inverted_columns
 
 
 df: pl.DataFrame = get_decp_data()
