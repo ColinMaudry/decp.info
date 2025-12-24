@@ -83,7 +83,7 @@ app.layout = html.Div(
                         html.P(
                             children=html.A(
                                 version,
-                                href="https://github.com/ColinMaudry/decp.info?tab=readme-ov-file#notes-de-version",
+                                href="https://github.com/ColinMaudry/decp.info/blob/main/CHANGELOG.md",
                                 target="_blank",
                             ),
                             className="version",
