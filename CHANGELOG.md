@@ -2,6 +2,7 @@
 
 - Possibilité de filtrer, trier etc. dans les vues acheteur et titulaire
 - Possibilité de partager les filtres, tris et choix de colonnes via une adresse Web
+- Possibilité de filtrer une colonne avec plusieurs mots
 
 ##### 2.2.3 (4 décembre 2025)
 

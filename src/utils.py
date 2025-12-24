@@ -296,6 +296,7 @@ def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
                 lff = lff.filter(pl.col(col_name) <= filter_value)
             elif operator == "contains":
                 if col_type in ["String", "Date"]:
+                    filter_value = filter_value.strip('"')
                     lff = lff.filter(
                         pl.col(col_name).str.contains("(?i)" + filter_value)
                     )
