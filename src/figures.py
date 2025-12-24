@@ -1,4 +1,5 @@
 import json
+from typing import Literal
 
 import plotly.express as px
 import polars as pl
@@ -192,3 +193,69 @@ def point_on_map(lat, lon):
 
     graph = dcc.Graph(id="map", figure=fig)
     return graph
+
+
+class DataTable(dash_table.DataTable):
+    def __init__(
+        self,
+        dtid: str,
+        hidden_columns: list = None,
+        data=None,
+        columns: list = None,
+        page_size: int = 20,
+        page_action: Literal["native", "custom", "none"] = "native",
+        sort_action: Literal["native", "custom", "none"] = "native",
+        filter_action: Literal["native", "custom", "none"] = "native",
+        **kwargs,
+    ):
+        # Styles de base
+        style_cell_conditional = [
+            {
+                "if": {"column_id": "objet"},
+                "minWidth": "350px",
+                "textAlign": "left",
+                "overflow": "hidden",
+                "lineHeight": "18px",
+                "whiteSpace": "normal",
+            },
+            {
+                "if": {"column_id": "acheteur_nom"},
+                "minWidth": "250px",
+                "textAlign": "left",
+                "overflow": "hidden",
+                "lineHeight": "18px",
+                "whiteSpace": "normal",
+            },
+            {
+                "if": {"column_id": "titulaire_nom"},
+                "minWidth": "250px",
+                "textAlign": "left",
+                "overflow": "hidden",
+                "lineHeight": "18px",
+                "whiteSpace": "normal",
+            },
+        ]
+
+        # Initialisation de la classe parente avec les arguments
+        super().__init__(
+            id=dtid,
+            data=data,
+            columns=columns,
+            cell_selectable=False,
+            page_size=page_size,
+            filter_action=filter_action,
+            page_action=page_action,
+            filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
+            sort_action=sort_action,
+            sort_mode="multi",
+            sort_by=[],
+            row_deletable=False,
+            page_current=0,
+            style_cell_conditional=style_cell_conditional,
+            data_timestamp=0,
+            markdown_options={"html": True},
+            tooltip_duration=8000,
+            tooltip_delay=350,
+            hidden_columns=hidden_columns,
+            **kwargs,  # Possibilité de remplacer des arguments
+        )

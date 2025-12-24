@@ -1,5 +1,6 @@
-from dash import Input, Output, callback, dash_table, dcc, html, register_page
+from dash import Input, Output, callback, dcc, html, register_page
 
+from src.figures import DataTable
 from src.utils import (
     df_acheteurs,
     df_titulaires,
@@ -73,31 +74,13 @@ def update_search_results(query):
                     className=f"results_{org_type}",
                     children=[
                         html.H3(f"{org_type.title()}s : {count}"),
-                        dash_table.DataTable(
+                        DataTable(
+                            dtid=f"results_{org_type}_datatable",
                             columns=columns,
                             data=results.to_dicts(),
                             page_size=10,
-                            # style_table={"overflowX": "auto"},
-                            markdown_options={"html": True},
-                            cell_selectable=False,
-                            style_cell_conditional=[
-                                {
-                                    "if": {"column_id": "acheteur_nom"},
-                                    "maxWidth": "250px",
-                                    "textAlign": "left",
-                                    "overflow": "hidden",
-                                    "lineHeight": "18px",
-                                    "whiteSpace": "normal",
-                                },
-                                {
-                                    "if": {"column_id": "titulaire_nom"},
-                                    "maxWidth": "250px",
-                                    "textAlign": "left",
-                                    "overflow": "hidden",
-                                    "lineHeight": "18px",
-                                    "whiteSpace": "normal",
-                                },
-                            ],
+                            sort_action="none",
+                            filter_action="none",
                         ),
                     ],
                 )
@@ -107,5 +90,4 @@ def update_search_results(query):
             content.extend(org_content)
 
         return content
-    else:
-        return html.P("")
+    return html.P("")

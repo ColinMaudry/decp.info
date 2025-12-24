@@ -1,19 +1,21 @@
 import datetime
 
 import polars as pl
-from dash import Input, Output, State, callback, dash_table, dcc, html, register_page
+from dash import Input, Output, State, callback, dcc, html, register_page
 
 from src.callbacks import get_top_org_table
-from src.figures import point_on_map
+from src.figures import DataTable, point_on_map
 from src.utils import (
-    add_links_in_dict,
     df,
+    filter_table_data,
     format_number,
-    format_values,
     get_annuaire_data,
+    get_button_properties,
+    get_default_hidden_columns,
     get_departement_region,
     meta_content,
-    setup_table_columns,
+    prepare_table_data,
+    sort_table_data,
 )
 
 register_page(
@@ -26,11 +28,22 @@ register_page(
     order=5,
 )
 
+datatable = html.Div(
+    className="marches_table",
+    children=DataTable(
+        dtid="acheteur_datatable",
+        page_action="custom",
+        filter_action="custom",
+        sort_action="custom",
+        page_size=10,
+        hidden_columns=get_default_hidden_columns(page="acheteur"),
+    ),
+)
+
 layout = [
     dcc.Store(id="acheteur_data", storage_type="memory"),
     dcc.Location(id="url", refresh="callback-nav"),
     html.Div(
-        className="container",
         children=[
             html.Div(
                 className="wrapper",
@@ -84,9 +97,9 @@ layout = [
                             html.P(id="acheteur_titulaires_differents"),
                             html.Button(
                                 "Téléchargement au format Excel",
-                                id="btn-download-acheteur-data",
+                                id="btn-download-data-acheteur",
                             ),
-                            dcc.Download(id="download-acheteur-data"),
+                            dcc.Download(id="download-data-acheteur"),
                         ],
                     ),
                     html.Div(className="org_map", id="acheteur_map"),
@@ -101,7 +114,26 @@ layout = [
             ),
             # récupérer les données de l'acheteur sur l'api annuaire
             html.H3("Derniers marchés publics attribués"),
-            html.Div(id="acheteur_last_marches", children=""),
+            dcc.Loading(
+                overlay_style={"visibility": "visible", "filter": "blur(2px)"},
+                id="loading-home",
+                type="default",
+                children=[
+                    html.Div(
+                        [
+                            html.P("lignes", id="acheteur_nb_rows"),
+                            html.Button(
+                                "Téléchargement désactivé au-delà de 65 000 lignes",
+                                id="btn-download-filtered-data-acheteur",
+                                disabled=True,
+                            ),
+                            dcc.Download(id="acheteur-download-filtered-data"),
+                        ],
+                        className="table-menu",
+                    ),
+                    datatable,
+                ],
+            ),
         ],
     ),
 ]
@@ -154,7 +186,7 @@ def update_acheteur_infos(url):
     Input(component_id="acheteur_data", component_property="data"),
 )
 def update_acheteur_stats(data):
-    dff = pl.DataFrame(data)
+    dff = pl.DataFrame(data, strict=False, infer_schema_length=5000)
     if dff.height == 0:
         dff = pl.DataFrame(schema=df.collect_schema())
     df_marches = dff.unique("id")
@@ -176,91 +208,49 @@ def update_acheteur_stats(data):
 
 @callback(
     Output(component_id="acheteur_data", component_property="data"),
+    Output("btn-download-data-acheteur", "disabled"),
+    Output("btn-download-data-acheteur", "children"),
+    Output("btn-download-data-acheteur", "title"),
     Input(component_id="url", component_property="pathname"),
     Input(component_id="acheteur_year", component_property="value"),
 )
-def get_acheteur_marches_data(url, acheteur_year: str) -> list[dict]:
+def get_acheteur_marches_data(url, acheteur_year: str) -> tuple:
     acheteur_siret = url.split("/")[-1]
     lff = df.lazy()
     lff = lff.filter(pl.col("acheteur_id") == acheteur_siret)
-    lff = lff.select(
-        "id",
-        "uid",
-        "objet",
-        "dateNotification",
-        "titulaire_id",
-        "titulaire_typeIdentifiant",
-        "titulaire_nom",
-        "distance",
-        "montant",
-        "codeCPV",
-        "dureeMois",
-    )
     if acheteur_year and acheteur_year != "Toutes":
-        lff = lff.filter(
-            pl.col("dateNotification").cast(pl.String).str.starts_with(acheteur_year)
-        )
-    lff = lff.sort(["dateNotification", "id"], descending=True, nulls_last=True)
+        acheteur_year = int(acheteur_year)
+        lff = lff.filter(pl.col("dateNotification").dt.year() == acheteur_year)
+    lff = lff.sort(["dateNotification", "uid"], descending=True, nulls_last=True)
+    dff: pl.DataFrame = lff.collect(engine="streaming")
+    download_disabled, download_text, download_title = get_button_properties(dff.height)
 
-    data = lff.collect(engine="streaming").to_dicts()
-    return data
+    data = dff.to_dicts()
+    return data, download_disabled, download_text, download_title
 
 
 @callback(
-    Output(component_id="acheteur_last_marches", component_property="children"),
-    Input(component_id="acheteur_data", component_property="data"),
+    Output("acheteur_datatable", "data"),
+    Output("acheteur_datatable", "columns"),
+    Output("acheteur_datatable", "tooltip_header"),
+    Output("acheteur_datatable", "data_timestamp"),
+    Output("acheteur_nb_rows", "children"),
+    Output("btn-download-filtered-data-acheteur", "disabled"),
+    Output("btn-download-filtered-data-acheteur", "children"),
+    Output("btn-download-filtered-data-acheteur", "title"),
+    Input("acheteur_data", "data"),
+    Input("acheteur_datatable", "page_current"),
+    Input("acheteur_datatable", "page_size"),
+    Input("acheteur_datatable", "filter_query"),
+    Input("acheteur_datatable", "sort_by"),
+    State("acheteur_datatable", "data_timestamp"),
 )
-def get_last_marches_table(data) -> html.Div:
-    dff = pl.DataFrame(data)
-    if dff.height == 0:
-        return html.Div(html.P("Aucun marché trouvé."))
-    dff = dff.cast(pl.String)
-    dff = dff.fill_null("")
-    dff = format_values(dff)
-    columns, tooltip = setup_table_columns(
-        dff,
-        hideable=False,
-        exclude=["titulaire_id", "titulaire_typeIdentifiant", "uid"],
+def get_last_marches_data(
+    data, page_current, page_size, filter_query, sort_by, data_timestamp
+) -> tuple:
+    return prepare_table_data(
+        data, data_timestamp, filter_query, page_current, page_size, sort_by
     )
-    data = dff.to_dicts()
-    data = add_links_in_dict(data, "titulaire")
-
-    table = html.Div(
-        className="marches_table",
-        id="acheteur_datatable",
-        children=dash_table.DataTable(
-            data=data,
-            markdown_options={"html": True},
-            page_action="native",
-            filter_action="native",
-            filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
-            columns=columns,
-            tooltip_header=tooltip,
-            tooltip_duration=8000,
-            tooltip_delay=350,
-            cell_selectable=False,
-            page_size=10,
-            style_cell_conditional=[
-                {
-                    "if": {"column_id": "objet"},
-                    "minWidth": "300px",
-                    "textAlign": "left",
-                    "overflow": "hidden",
-                    "lineHeight": "18px",
-                    "whiteSpace": "normal",
-                },
-                {
-                    "if": {"column_id": "titulaire_nom"},
-                    "minWidth": "200px",
-                    "textAlign": "left",
-                    "overflow": "hidden",
-                    "lineHeight": "18px",
-                    "whiteSpace": "normal",
-                },
-            ],
-        ),
-    )
-    return table
 
 
 @callback(
@@ -272,8 +262,8 @@ def get_top_titulaires(data):
 
 
 @callback(
-    Output("download-acheteur-data", "data"),
-    Input("btn-download-acheteur-data", "n_clicks"),
+    Output("download-data-acheteur", "data"),
+    Input("btn-download-data-acheteur", "n_clicks"),
     State(component_id="acheteur_data", component_property="data"),
     State(component_id="acheteur_nom", component_property="children"),
     State(component_id="acheteur_year", component_property="value"),
@@ -294,3 +284,39 @@ def download_acheteur_data(
 
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     return dcc.send_bytes(to_bytes, filename=f"decp_{acheteur_nom}_{date}.xlsx")
+
+
+@callback(
+    Output("acheteur-download-filtered-data", "data"),
+    State("acheteur_data", "data"),
+    Input("btn-download-filtered-data-acheteur", "n_clicks"),
+    State("acheteur_nom", "children"),
+    State("acheteur_datatable", "filter_query"),
+    State("acheteur_datatable", "sort_by"),
+    State("acheteur_datatable", "hidden_columns"),
+    prevent_initial_call=True,
+)
+def download_filtered_acheteur_data(
+    data, n_clicks, acheteur_nom, filter_query, sort_by, hidden_columns: list = None
+):
+    lff: pl.LazyFrame = pl.LazyFrame(
+        data
+    )  # start from the full acheteur data, not from paginated table data
+
+    # Les colonnes masquées sont supprimées
+    if hidden_columns:
+        lff = lff.drop(hidden_columns)
+
+    if filter_query:
+        lff = filter_table_data(lff, filter_query)
+
+    if len(sort_by) > 0:
+        lff = sort_table_data(lff, sort_by)
+
+    def to_bytes(buffer):
+        lff.collect(engine="streaming").write_excel(buffer, worksheet="DECP")
+
+    date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    return dcc.send_bytes(
+        to_bytes, filename=f"decp_filtrées_{acheteur_nom}_{date}.xlsx"
+    )
