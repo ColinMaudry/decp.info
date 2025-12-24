@@ -79,6 +79,8 @@ layout = [
 
     Une vue est un ensemble de filtres, de tris et de choix de colonnes que vous avez appliqué. Vous pouvez copier une adresse Web qui reproduit la vue courante à l'identique en cliquant sur l'icône <img src="/assets/copy.svg" alt="drawing" width="20"/>. En la collant dans la barre d'adresse d'un navigateur, vous ouvrez la vue Tableau avec les mêmes paramètres.
 
+    Pratique pour partager une vue avec un·e collègue, sur les réseaux sociaux, ou la sauvegarder pour plus tard.
+
     ##### Télécharger le résultat
 
     Vous pouvez télécharger le résultat de vos filtres et tris, pour les colonnes affichées, en cliquant sur **Télécharger au format Excel**.
