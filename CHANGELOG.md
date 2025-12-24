@@ -1,7 +1,7 @@
 #### 2.3.0 (24 décembre 2025)
 
 - Possibilité de filtrer, trier etc. dans les vues acheteur et titulaire
-- Possibilité de partager les filtres, tris et choix de colonnes via une adresse Web ([exemple](https://decp.info/tableau?filtres=%7Bobjet%7D+icontains+%22d%C3%A9corations+de+no%C3%ABl%22+%26%26+%7BdateNotification%7D+icontains+2025+%26%26+%7Bmontant%7D+i%3C+1000000&colonnes=%5B%22uid%22%2C+%22acheteur_id%22%2C+%22acheteur_nom%22%2C+%22titulaire_id%22%2C+%22titulaire_nom%22%2C+%22objet%22%2C+%22montant%22%2C+%22dureeMois%22%2C+%22dateNotification%22%2C+%22acheteur_departement_code%22%2C+%22sourceDataset%22%5D))
+- Possibilité de partager les filtres, tris et choix de colonnes via une adresse Web ([exemple](https://decp.info/tableau?filtres=%7Bacheteur_nom%7D+icontains+centre+%26%26+%7BdureeMois%7D+icontains+24&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2Cacheteur_departement_code%2CsourceDataset))
 - Possibilité de filtrer une colonne avec plusieurs mots
 
 ##### 2.2.3 (4 décembre 2025)
