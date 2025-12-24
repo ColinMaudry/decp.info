@@ -13,6 +13,7 @@ from src.utils import (
     get_default_hidden_columns,
     invert_columns,
     meta_content,
+    schema,
     sort_table_data,
 )
 from utils import prepare_table_data
@@ -213,11 +214,9 @@ def restore_view_from_url(search):
             pass
 
     if "colonnes" in params:
-        try:
-            columns = json.loads(params["colonnes"][0])
-            hidden_columns = invert_columns(columns)
-        except json.JSONDecodeError:
-            pass
+        columns = params["colonnes"][0].split(",")
+        verified_columns = [column for column in columns if column in schema.names()]
+        hidden_columns = invert_columns(verified_columns)
 
     return filter_query, sort_by, hidden_columns, ""
 
@@ -246,7 +245,8 @@ def sync_url_and_reset_button(filter_query, sort_by, hidden_columns, href):
 
     if hidden_columns:
         columns = invert_columns(hidden_columns)
-        params["colonnes"] = json.dumps(columns)
+        columns = ",".join(columns)
+        params["colonnes"] = columns
 
     query_string = urllib.parse.urlencode(params)
     full_url = f"{base_url}?{query_string}" if query_string else base_url
