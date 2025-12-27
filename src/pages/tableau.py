@@ -66,7 +66,7 @@ layout = [
     Vous pouvez appliquer un filtre pour chaque colonne en entrant du texte sous le nom de la colonne, puis en tapant sur `Entrée`.
 
     - Champs textuels : la recherche est insensible à la casse (majuscules/minuscules) et retourne les valeurs qui contiennent
-    le texte recherché. Exemple : `rennes` retourne "RENNES METROPOLE". Lorsque vous ouvrez une URL de vue, le format équivalent `icontains rennes` est utilisé.
+    le texte recherché. Exemple : `rennes` retourne "RENNES METROPOLE". Les guillemets simples (apostrophe du 4) doivent être prédédées d'une barre oblique (AltGr + 8). Exemple : `services d\\\'assurances`. Lorsque vous ouvrez une URL de vue, le format équivalent `icontains rennes` est utilisé.
     - Champs numériques : vous pouvez soit taper un nombre pour trouver les valeurs égales, soit le précéder de **>** ou **<** pour filtrer les valeurs supérieures ou inférieures. Exemple pour les offres reçues : `> 4` retourne les marchés ayant reçu plus de 4 offres.
     - Champs date : vous pouvez également utiliser **>** ou **<**. Exemples : `< 2024-01-31` pour "avant le 31 janvier 2024",
     `2024` pour "en 2024", `> 2022` pour "à partir de 2022". Lorsque vous ouvrez une URL de vue, le format équivalent `i<` ou `i>` est utilisé.

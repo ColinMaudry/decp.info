@@ -77,7 +77,7 @@ Quant à l'exhaustivité, je consolide toutes les sources de données exploitabl
 **marches-publics.info** (AWS) publie ses données de manière assez sporadique depuis début 2023. Compte tenu de son poids dans le secteur, c'est assez dommageable pour la transparence des marchés publics.
 
 Au milieu de ces mauvaises nouvelles, je tiens à souligner la belle continuité de la publication par la DGFiP des données des marchés publics remontées via le [protocole PES](https://www.collectivites-locales.gouv.fr/finances-locales/le-protocole-dechange-standard-pes). Merci à leurs équipes."""),
-            html.H4("Sources de données ", id="qualite-exhausitivite"),
+            html.H4("Sources de données ", id="sources"),
             get_sources_tables(os.getenv("SOURCE_STATS_CSV_PATH")),
             html.H4("Mentions légales", id="mentions-legales"),
             dcc.Markdown("""
