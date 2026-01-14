@@ -1,7 +1,13 @@
+from datetime import datetime
+
 from dash import dcc, html, register_page
 
-from src.figures import get_barchart_sources, get_map_count_marches
-from src.utils import df, meta_content
+from src.figures import (
+    get_barchart_sources,
+    get_map_count_marches,
+    get_yearly_statistics,
+)
+from src.utils import df, format_number, get_statistics, meta_content
 
 name = "Statistiques"
 
@@ -15,6 +21,8 @@ register_page(
     order=3,
 )
 
+statistics: dict = get_statistics()
+today_str = datetime.fromisoformat(statistics["datetime"]).strftime("%d/%m/%Y")
 
 layout = [
     html.Div(
@@ -38,6 +46,20 @@ layout = [
                             toutes les [contributions](/a-propos#contribuer) sont les bienvenues pour atteindre l'exhaustivité.
                             """),
                             dcc.Graph(figure=get_map_count_marches(df)),
+                            html.H2(
+                                f"Statistiques générales sur les marchés (au {today_str})",
+                                id="marches",
+                            ),
+                            html.P(
+                                "À noter qu'une fois un marché attribué ses données essentielles peuvent malheureusement mettre plusieurs mois à être publiées par l'acheteur."
+                            ),
+                            html.H4("Statistiques cumulées"),
+                            dcc.Markdown(f"""
+                            - Nombre de marchés publics et accords-cadres : {format_number(statistics["nb_marches"])}
+                            - Nombre d'acheteurs publics : {format_number(statistics["nb_acheteurs_uniques"])}
+                            - Nombre de titulaires uniques : {format_number(statistics["nb_titulaires_uniques"])}
+                                                        """),
+                            get_yearly_statistics(statistics, today_str),
                             dcc.Graph(
                                 figure=get_barchart_sources(df, "dateNotification")
                             ),

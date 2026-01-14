@@ -240,6 +240,17 @@ def get_org_data(dff: pl.DataFrame, org_type: str) -> pl.DataFrame:
     return lff.collect()
 
 
+def get_statistics() -> dict:
+    return (
+        get(
+            "https://www.data.gouv.fr/api/1/datasets/r/0ccf4a75-f3aa-4b46-8b6a-18aeb63e36df",
+            follow_redirects=True,
+        )
+        .raise_for_status()
+        .json()
+    )
+
+
 def get_departements() -> dict:
     with open("data/departements.json", "rb") as f:
         data = json.load(f)

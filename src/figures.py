@@ -5,6 +5,8 @@ import plotly.express as px
 import polars as pl
 from dash import dash_table, dcc, html
 
+from src.utils import format_number
+
 
 def get_map_count_marches(df: pl.DataFrame):
     lf = df.lazy()
@@ -54,6 +56,25 @@ def get_map_count_marches(df: pl.DataFrame):
         }
     )
     return fig
+
+
+def get_yearly_statistics(statistics, today_str) -> html.Div:
+    children = []
+
+    for year in reversed(range(2018, int(today_str.split("/")[-1]) + 1)):
+        year = str(year)
+        stat_year = statistics[year]
+        md = dcc.Markdown(f"""
+        #### {year}
+
+        - Nombre de marchés publics et accords-cadres : {format_number(stat_year["nb_notifications_marches"])}
+        - Nombre d'acheteurs publics : {format_number(stat_year["nb_acheteurs_uniques"])}
+        - Nombre de titulaires : {format_number(stat_year["nb_titulaires_uniques"])}
+
+        """)
+        children.append(md)
+
+    return html.Div(children=children)
 
 
 def get_barchart_sources(df: pl.DataFrame, type_date: str):
