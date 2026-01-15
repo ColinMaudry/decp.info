@@ -69,10 +69,8 @@ les fonctionnalités actuelles de decp.info. Il est ainsi possible de rajouter
 
 Quant à l'exhaustivité, je consolide toutes les sources de données exploitables que j'ai pu identifier (voir [statistiques](/statistiques)). Certains profils d'acheteurs ne publient pas leurs données malgré l'obligation réglementaire :
 
-- marches-securises.fr
 - klekoon.fr (ils y travaillent)
-
-**marches-publics.gouv.fr** (PLACE, [AIFE](https://aife.economie.gouv.fr)), la plateforme des marchés de l'État, ne publie plus de données depuis le 1er janvier 2024 et l'entrée en vigueur de l'arrêté. Nous n'avons donc plus de données sur les marchés publics passés par les ministères, ainsi que sur ceux passés par les acheteurs clients d'[achatpublic.com](https://www.achatpublic.com), qui s'appuie sur les moyens de publication de l'AIFE.
+- safetender.com (Omnikles)
 
 **marches-publics.info** (AWS) publie ses données de manière assez sporadique depuis début 2023. Compte tenu de son poids dans le secteur, c'est assez dommageable pour la transparence des marchés publics.
 
