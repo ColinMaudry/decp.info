@@ -345,7 +345,9 @@ def setup_table_columns(dff, hideable: bool = True, exclude: list = None) -> tup
         if column_object:
             column_name = column_object.get("title")
         else:
-            column_name = column_id
+            # Si le champ n'est pas dans le schéma, on le skip
+            print(f"Champ innatendu : {column_id}")
+            continue
 
         column = {
             "name": column_name,
