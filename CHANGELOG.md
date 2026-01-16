@@ -1,3 +1,7 @@
+##### 2.3.1 (16 janvier 2026)
+
+- Les champs absents du [schéma](https://www.data.gouv.fr/datasets/donnees-essentielles-de-la-commande-publique-consolidees-format-tabulaire?resource_id=9a4144c0-ee44-4dec-bee5-bbef38191d9a) sont ignorés pour éviter les erreurs
+
 #### 2.3.0 (24 décembre 2025)
 
 - Possibilité de filtrer, trier etc. dans les vues acheteur et titulaire
