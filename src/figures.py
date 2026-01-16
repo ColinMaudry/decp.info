@@ -314,14 +314,13 @@ def get_duplicate_matrix() -> html.Div:
     )
 
     description = dcc.Markdown("""
-    Ce graphique illustre les doublons de marchés publics entre sources. Il s'appuie sur les identifiants `uid` qui sont
-    pour chaque marché la concaténation du SIRET de l'acheteur et de l'identifiant interne du marché.
+    Ce graphique illustre les doublons de marchés publics entre sources, c'est-à-dire la proportion de marchés publiés par plus d'une source. Il s'appuie sur les identifiants `uid` qui sont pour chaque marché la concaténation du SIRET de l'acheteur et de l'identifiant interne du marché.
 
     **Comment lire ce graphique ?**
 
     On part des codes de sources de données en ordonnée. Ces jeux de données sont documentés dans [À propos](/a-propos#sources).
 
-    La première colonne "unique" représente le pourcentage de marchés fournis par cette source qui sont uniquement disponibles dans cette source. Plus le bleu est foncé, plus important est le pourcentage. Donc plus le bleu est clair dans la première colonne, plus la source en ordonnée a des marchés en commun avec d'autres sources, et donc plus on trouvera sur la même ligne d'autres cases plus ou moins foncées qui indiqueront avec quelles autres sources elle partage des marchés.
+    La première colonne (**unique**) représente le pourcentage de marchés fournis par cette source qui sont uniquement disponibles dans cette source. Plus le rouge est foncé, plus important est le pourcentage. Donc, à l'inverse, plus le rouge est clair dans la première colonne, plus la source en ordonnée a des marchés en commun avec d'autres sources, et donc plus on trouvera sur la même ligne d'autres cases plus ou moins foncées qui indiqueront avec quelles autres sources cette source partage des marchés.
 
     Passez votre souris sur une case pour avoir les pourcentages exacts. À noter que ces statistiques sont produites avant le dédoublonnement qui a lieu avant la publication en Open Data et sur ce site.""")
 
@@ -343,11 +342,16 @@ def get_duplicate_matrix() -> html.Div:
             z=z_data,
             x=x_labels,
             y=y_labels,
+            # colorscale=[
+            #     [0, "white"],  # 0% → white
+            #     [0.10, "lightblue"],  # 1% → light blue (soft start)
+            #     [0.50, "steelblue"],  # 50% → medium blue
+            #     [1, "darkblue"],  # 100% → dark blue
+            # ],
             colorscale=[
-                [0, "white"],  # 0% → white
-                [0.10, "lightblue"],  # 1% → light blue (soft start)
-                [0.50, "steelblue"],  # 50% → medium blue
-                [1, "darkblue"],  # 100% → dark blue
+                [0.0, "white"],  # 0% → white
+                [0.10, "lightsalmon"],  # 10% → light warm tone
+                [1.0, "darkred"],  # 100% → deep red
             ],
             zmin=0,
             zmax=1,
@@ -377,7 +381,7 @@ def get_duplicate_matrix() -> html.Div:
 
     return html.Div(
         children=[
-            html.H2("Doublons de marchés entre les sources"),
+            html.H3("Doublons de marchés entre les sources"),
             description,
             dcc.Graph(figure=fig),
         ]

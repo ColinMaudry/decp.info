@@ -1,9 +1,3 @@
-/* Titres */
-
-h2 {
-  margin-top: 40px;
-}
-
 /* Change la marge bout d'export  */
 .table-menu {
   font-size: 16px;
@@ -216,7 +210,7 @@ a.nav {
 }
 
 h3 {
-  margin: 36px 0 24px 0;
+  margin: 36px 0 20px 0;
 }
 
 summary > h3 {

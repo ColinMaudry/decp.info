@@ -37,7 +37,7 @@ layout = [
                 children=[
                     html.Div(
                         children=[
-                            dcc.Markdown("""
+                            dcc.Markdown(f"""
                             La publication de données essentielles de marchés publics (DECP) est souvent effectuée par
                             les plateformes de marchés publics (profils d'acheteurs). Cependant, certaines plateformes ne publient pas,
                             ou publient d'une manière qui rend la récupération des données compliquée. Les données présentées sur ce site
@@ -45,10 +45,12 @@ layout = [
 
                             L'ajout de nouvelles plateformes [est en cours](https://github.com/ColinMaudry/decp-processing/issues?q=is%3Aissue%20label%3A%22source%20de%20donn%C3%A9es%22),
                             toutes les [contributions](/a-propos#contribuer) sont les bienvenues pour atteindre l'exhaustivité.
+
+                            Les statistiques publiées sur cette page ont été produites automatiquement à partir des données les plus récentes ({today_str}).
                             """),
                             dcc.Graph(figure=get_map_count_marches(df)),
-                            html.H2(
-                                f"Statistiques générales sur les marchés (au {today_str})",
+                            html.H3(
+                                "Statistiques générales sur les marchés",
                                 id="marches",
                             ),
                             html.P(
@@ -65,6 +67,7 @@ layout = [
                             html.H4("Statistiques par année"),
                             get_yearly_statistics(statistics, today_str),
                             get_duplicate_matrix(),
+                            html.H3("Nombre de marchés par source dans le temps"),
                             dcc.Graph(
                                 figure=get_barchart_sources(df, "dateNotification")
                             ),
