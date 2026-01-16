@@ -1,3 +1,9 @@
+/* Titres */
+
+h2 {
+  margin-top: 40px;
+}
+
 /* Change la marge bout d'export  */
 .table-menu {
   font-size: 16px;
@@ -130,7 +136,8 @@ td[data-dash-column="objet"],td[data-dash-column="titulaire_nom"],td[data-dash-c
 }
 
 /* Alternance des couleurs pour les lignes */
-.marches_table {
+.marches_table table td,
+.marches_table table th {
   font-family: "Open Sans", sans-serif;
 }
 

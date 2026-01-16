@@ -56,10 +56,11 @@ layout = [
                             ),
                             html.H4("Statistiques cumulées"),
                             dcc.Markdown(f"""
-                            - Nombre de marchés publics et accords-cadres : {format_number(statistics["nb_marches"])}
-                            - Nombre d'acheteurs publics : {format_number(statistics["nb_acheteurs_uniques"])}
-                            - Nombre de titulaires uniques : {format_number(statistics["nb_titulaires_uniques"])}
+                            - Nombre de marchés publics et accord-cadres : {format_number(statistics["nb_marches"])}
+                            - Nombre d'acheteurs publics (SIRET) : {format_number(statistics["nb_acheteurs_uniques"])}
+                            - Nombre de titulaires (SIRET) : {format_number(statistics["nb_titulaires_uniques"])}
                                                         """),
+                            html.H4("Statistiques par année"),
                             get_yearly_statistics(statistics, today_str),
                             get_duplicate_matrix(),
                             dcc.Graph(
