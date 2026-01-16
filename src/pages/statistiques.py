@@ -43,7 +43,7 @@ layout = [
                             ou publient d'une manière qui rend la récupération des données compliquée. Les données présentées sur ce site
                             ne représentent donc pas tous les marchés attribués en France, seulement une partie significative.
 
-                            L'ajout de nouvelles plateformes [est en cours](https://github.com/ColinMaudry/decp-processing/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22source%20de%20donn%C3%A9es%22),
+                            L'ajout de nouvelles plateformes [est en cours](https://github.com/ColinMaudry/decp-processing/issues?q=is%3Aissue%20label%3A%22source%20de%20donn%C3%A9es%22),
                             toutes les [contributions](/a-propos#contribuer) sont les bienvenues pour atteindre l'exhaustivité.
                             """),
                             dcc.Graph(figure=get_map_count_marches(df)),
@@ -59,6 +59,8 @@ layout = [
                             - Nombre de marchés publics et accord-cadres : {format_number(statistics["nb_marches"])}
                             - Nombre d'acheteurs publics (SIRET) : {format_number(statistics["nb_acheteurs_uniques"])}
                             - Nombre de titulaires (SIRET) : {format_number(statistics["nb_titulaires_uniques"])}
+
+                            Je ne publie pas encore de statistiques sur les montants de marchés car je n'ai pas encore trouvé la bonne formule pour traiter les trop nombreux montants fantaisistes qui polluent les calculs.
                                                         """),
                             html.H4("Statistiques par année"),
                             get_yearly_statistics(statistics, today_str),

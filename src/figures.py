@@ -308,7 +308,11 @@ def get_duplicate_matrix() -> html.Div:
     """
     result_df = pl.read_parquet(
         "https://www.data.gouv.fr/api/1/datasets/r/a545bf6c-8b24-46ed-b49f-a32bf02eaffa"
+    ).sort("sourceDataset")
+    result_df = result_df.select(
+        ["sourceDataset", "unique"] + sorted(result_df.columns[2:])
     )
+
     description = dcc.Markdown("""
     Ce graphique illustre les doublons de marchés publics entre sources. Il s'appuie sur les identifiants `uid` qui sont
     pour chaque marché la concaténation du SIRET de l'acheteur et de l'identifiant interne du marché.
@@ -317,7 +321,7 @@ def get_duplicate_matrix() -> html.Div:
 
     On part des codes de sources de données en ordonnée. Ces jeux de données sont documentés dans [À propos](/a-propos#sources).
 
-    La première colonne représente le pourcentage de marchés fournis par cette source qui sont uniquement disponibles dans cette source. Plus le bleu est foncé, plus important est le pourcentage. Donc plus le bleu est clair dans la colonne "unique", plus la source en ordonnée a des marchés en commun (ou en doublons selon le point de vue) avec d'autres sources, et donc plus on trouvera sur la ligne d'autres cases plus ou moins foncées qui indiqueront avec quelles autres sources elle partage des marchés.
+    La première colonne "unique" représente le pourcentage de marchés fournis par cette source qui sont uniquement disponibles dans cette source. Plus le bleu est foncé, plus important est le pourcentage. Donc plus le bleu est clair dans la première colonne, plus la source en ordonnée a des marchés en commun avec d'autres sources, et donc plus on trouvera sur la même ligne d'autres cases plus ou moins foncées qui indiqueront avec quelles autres sources elle partage des marchés.
 
     Passez votre souris sur une case pour avoir les pourcentages exacts. À noter que ces statistiques sont produites avant le dédoublonnement qui a lieu avant la publication en Open Data et sur ce site.""")
 
@@ -352,7 +356,7 @@ def get_duplicate_matrix() -> html.Div:
             hoverongaps=False,
             showscale=True,
             hovertemplate=(
-                "%{z:.0%} des marchés de %{y} sont également présents dans %{x}"
+                "<b>%{z:.0%}</b> des marchés de <b>%{y}</b> sont également présents dans <b>%{x}</b>"
             ),
         )
     )
