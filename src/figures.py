@@ -2,6 +2,7 @@ import json
 from typing import Literal
 
 import plotly.express as px
+import plotly.graph_objects as go
 import polars as pl
 from dash import dash_table, dcc, html
 
@@ -59,22 +60,40 @@ def get_map_count_marches(df: pl.DataFrame):
 
 
 def get_yearly_statistics(statistics, today_str) -> html.Div:
-    children = []
+    # Build DataFrame from statistics
+    years = list(reversed(range(2018, int(today_str.split("/")[-1]) + 1)))
+    data = []
+    for year in years:
+        year_str = str(year)
+        stat = statistics[year_str]
+        data.append(
+            {
+                "Année": year_str,
+                "Marchés et accord-cadres": format_number(
+                    stat["nb_notifications_marches"]
+                ),
+                "Acheteurs": format_number(stat["nb_acheteurs_uniques"]),
+                "Titulaires": format_number(stat["nb_titulaires_uniques"]),
+            }
+        )
 
-    for year in reversed(range(2018, int(today_str.split("/")[-1]) + 1)):
-        year = str(year)
-        stat_year = statistics[year]
-        md = dcc.Markdown(f"""
-        #### {year}
+    df = pl.DataFrame(data)
 
-        - Nombre de marchés publics et accords-cadres : {format_number(stat_year["nb_notifications_marches"])}
-        - Nombre d'acheteurs publics : {format_number(stat_year["nb_acheteurs_uniques"])}
-        - Nombre de titulaires : {format_number(stat_year["nb_titulaires_uniques"])}
+    # Create Dash DataTable
+    table = dash_table.DataTable(
+        data=df.to_dicts(),
+        columns=[
+            {"name": "Année", "id": "Année"},
+            {"name": "Marchés et accord-cadres", "id": "Marchés et accord-cadres"},
+            {"name": "Acheteurs", "id": "Acheteurs"},
+            {"name": "Titulaires", "id": "Titulaires"},
+        ],
+        page_size=10,
+        sort_action="none",
+        filter_action="none",
+    )
 
-        """)
-        children.append(md)
-
-    return html.Div(children=children)
+    return html.Div(children=table, className="marches_table")
 
 
 def get_barchart_sources(df: pl.DataFrame, type_date: str):
@@ -280,3 +299,82 @@ class DataTable(dash_table.DataTable):
             hidden_columns=hidden_columns,
             **kwargs,  # Possibilité de remplacer des arguments
         )
+
+
+def get_duplicate_matrix() -> html.Div:
+    """
+    Fonction développée avec l'aide de la LLM Euria d'Infomaniak.
+    :return:
+    """
+    result_df = pl.read_parquet(
+        "https://www.data.gouv.fr/api/1/datasets/r/a545bf6c-8b24-46ed-b49f-a32bf02eaffa"
+    )
+    description = dcc.Markdown("""
+    Ce graphique illustre les doublons de marchés publics entre sources. Il s'appuie sur les identifiants `uid` qui sont
+    pour chaque marché la concaténation du SIRET de l'acheteur et de l'identifiant interne du marché.
+
+    **Comment lire ce graphique ?**
+
+    On part des codes de sources de données en ordonnée. Ces jeux de données sont documentés dans [À propos](/a-propos#sources).
+
+    La première colonne représente le pourcentage de marchés fournis par cette source qui sont uniquement disponibles dans cette source. Plus le bleu est foncé, plus important est le pourcentage. Donc plus le bleu est clair dans la colonne "unique", plus la source en ordonnée a des marchés en commun (ou en doublons selon le point de vue) avec d'autres sources, et donc plus on trouvera sur la ligne d'autres cases plus ou moins foncées qui indiqueront avec quelles autres sources elle partage des marchés.
+
+    Passez votre souris sur une case pour avoir les pourcentages exacts. À noter que ces statistiques sont produites avant le dédoublonnement qui a lieu avant la publication en Open Data et sur ce site.""")
+
+    # Assuming result_df is your DataFrame with structure:
+    # | sourceDataset | unique | dataset1 | dataset2 | dataset3 |
+    # |---------------|--------|----------|----------|----------|
+    # | dataset1      | 0.8    |          | 0.15     | 0.2      |
+    # | dataset2      | 0.75   | 0.15     |          | 0.12     |
+    # | dataset3      | 0.85   | 0.2      | 0.12     |          |
+
+    # Extract data
+    z_data = result_df.select(pl.all().exclude("sourceDataset")).fill_null(0).to_numpy()
+    x_labels = result_df.columns[1:]  # columns after "sourceDataset"
+    y_labels = result_df["sourceDataset"].to_list()
+
+    # Create heatmap
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=z_data,
+            x=x_labels,
+            y=y_labels,
+            colorscale=[
+                [0, "white"],  # 0% → white
+                [0.10, "lightblue"],  # 1% → light blue (soft start)
+                [0.50, "steelblue"],  # 50% → medium blue
+                [1, "darkblue"],  # 100% → dark blue
+            ],
+            zmin=0,
+            zmax=1,
+            # texttemplate="%{z:.0%}",  # Format as percentage
+            # textfont={"size": 10, "color": "black"},  # Smaller font
+            hoverongaps=False,
+            showscale=True,
+            hovertemplate=(
+                "%{z:.0%} des marchés de %{y} sont également présents dans %{x}"
+            ),
+        )
+    )
+
+    # Update layout: make it wider and taller
+    fig.update_layout(
+        title="",
+        xaxis_title="Sources de données",
+        yaxis_title="Sources de données",
+        yaxis=dict(autorange="reversed"),
+        xaxis=dict(tickangle=45, tickfont=dict(size=10)),  # Smaller x-tick labels
+        coloraxis_colorbar=dict(title="Percentage", tickfont=dict(size=10)),
+        width=1000,  # Wider
+        height=1000,  # Taller
+        font=dict(size=11),  # Overall font size
+        margin=dict(l=100, r=50, t=80, b=100),  # Add margin for labels
+    )
+
+    return html.Div(
+        children=[
+            html.H2("Doublons de marchés entre les sources"),
+            description,
+            dcc.Graph(figure=fig),
+        ]
+    )

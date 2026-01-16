@@ -4,6 +4,7 @@ from dash import dcc, html, register_page
 
 from src.figures import (
     get_barchart_sources,
+    get_duplicate_matrix,
     get_map_count_marches,
     get_yearly_statistics,
 )
@@ -60,6 +61,7 @@ layout = [
                             - Nombre de titulaires uniques : {format_number(statistics["nb_titulaires_uniques"])}
                                                         """),
                             get_yearly_statistics(statistics, today_str),
+                            get_duplicate_matrix(),
                             dcc.Graph(
                                 figure=get_barchart_sources(df, "dateNotification")
                             ),
