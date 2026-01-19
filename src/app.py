@@ -14,6 +14,9 @@ app = Dash(
     title="decp.info",
     use_pages=True,
     compress=True,
+    meta_tags=[
+        {"name": "viewport", "content": "width=device-width, initial-scale=1"},
+    ],
 )
 # COSMO (belle font, blue),
 # UNITED (rouge, ubuntu font),
