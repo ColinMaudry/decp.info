@@ -32,10 +32,15 @@ En effet, le potentiel des données d'attribution de marchés et des données qu
 les fonctionnalités actuelles de decp.info. Il est ainsi possible de rajouter
 
 - de nombreuses visualisations de données (cartes, graphiques, tableaux) sur des thématiques variées (vivacité de la concurrence, secteurs d'activité, insertion par l'activité économique (IAE), distance acheteur-titulaire...)
-- la sauvegarde de filtres pour les retrouver plus tard et les partager
 - des alertes par email si des marchés correspondant à certains critères
-- le développement d'une API pour alimenter d'autres logiciels
 - ...et toutes les fonctionnalités auxquelles vous pourrez penser
+
+#### Consommer les données brutes
+
+Vous pouvez consommer les données qui alimentent decp.info
+
+- en les téléchargeant [sur data.gouv.fr](https://www.data.gouv.fr/datasets/donnees-essentielles-de-la-commande-publique-consolidees-format-tabulaire) (Parquet, CSV), pensez à lire la description du jeu de données
+- en interrogeant l'[API REST ouverte](https://www.data.gouv.fr/datasets/donnees-essentielles-de-la-commande-publique-consolidees-format-tabulaire#user-content-api-rest)
 
    """
             ),
