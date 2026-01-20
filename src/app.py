@@ -3,7 +3,7 @@ import os
 
 import dash_bootstrap_components as dbc
 import tomllib
-from dash import Dash, dcc, html, page_container, page_registry
+from dash import Dash, Input, Output, State, dcc, html, page_container, page_registry
 from dotenv import load_dotenv
 from flask import send_from_directory
 
@@ -76,43 +76,80 @@ app.index_string = """
 </html>
 """
 
-app.layout = html.Div(
-    [
-        html.Div(
-            [
-                html.Div(
+navbar = dbc.Navbar(
+    dbc.Container(
+        [
+            dbc.NavbarBrand(
+                [
+                    html.H1("decp.info", className="d-inline-block align-top me-2"),
+                    html.Span(version, className="fs-6 text-muted align-bottom"),
+                ],
+                href="/",
+            ),
+            dbc.NavbarToggler(id="navbar-toggler"),
+            dbc.Collapse(
+                dbc.Nav(
                     [
-                        html.A(children=html.H1("decp.info"), href="/"),
-                        html.P(
-                            children=html.A(
-                                version,
-                                href="https://github.com/ColinMaudry/decp.info/blob/main/CHANGELOG.md",
-                                target="_blank",
-                            ),
-                            className="version",
-                        ),
-                    ],
-                    className="logo",
-                ),
-                html.Div(
-                    id="announcements",
-                    children=dcc.Markdown(os.getenv("ANNOUNCEMENTS")),
-                ),
-                html.Div(
-                    [
-                        dcc.Link(
-                            page["name"], href=page["relative_path"], className="nav"
+                        dbc.NavItem(
+                            dbc.NavLink(
+                                page["name"],
+                                href=page["relative_path"],
+                                active="exact",
+                            )
                         )
                         for page in page_registry.values()
                         if page["name"] not in ["Acheteur", "Titulaire", "Marché"]
-                    ]
+                    ],
+                    className="ms-auto",
+                    navbar=True,
                 ),
-            ],
-            className="navbar",
+                id="navbar-collapse",
+                navbar=True,
+            ),
+        ]
+    ),
+    color="light",
+    dark=False,
+    className="mb-4",
+)
+
+app.layout = html.Div(
+    [
+        dcc.Location(id="url-tracker"),
+        navbar,
+        html.Div(
+            id="announcements",
+            children=dbc.Container(dcc.Markdown(os.getenv("ANNOUNCEMENTS"))),
         ),
-        page_container,
+        dbc.Container(
+            page_container,
+            id="page-content-container",
+            className="mb-4",
+        ),
     ]
 )
+
+
+@app.callback(
+    Output("navbar-collapse", "is_open"),
+    [Input("navbar-toggler", "n_clicks")],
+    [State("navbar-collapse", "is_open")],
+)
+def toggle_navbar_collapse(n, is_open):
+    if n:
+        return not is_open
+    return is_open
+
+
+@app.callback(
+    Output("page-content-container", "fluid"),
+    Input("url-tracker", "pathname"),
+)
+def toggle_container_fluid(pathname):
+    if pathname == "/tableau":
+        return True
+    return False
+
 
 if __name__ == "__main__":
     app.run(debug=True)

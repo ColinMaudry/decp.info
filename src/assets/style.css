@@ -195,6 +195,7 @@ td[data-dash-column="objet"],td[data-dash-column="titulaire_nom"],td[data-dash-c
 
 /* Menu de navigation */
 
+/*
 .navbar {
   width: 100%;
   height: 100px;
@@ -208,6 +209,7 @@ a.nav {
   margin-right: 40px;
   font-size: 120%;
 }
+*/
 
 h3 {
   margin: 36px 0 20px 0;
