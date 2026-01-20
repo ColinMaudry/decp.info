@@ -337,6 +337,8 @@ def sort_table_data(lff: pl.LazyFrame, sort_by: list) -> pl.LazyFrame:
 def setup_table_columns(
     dff, hideable: bool = True, exclude: list = None, new_columns: list = None
 ) -> tuple:
+    new_columns = new_columns or []
+
     # Liste finale de colonnes
     columns = []
     tooltip = {}
@@ -351,7 +353,8 @@ def setup_table_columns(
                 # Si le champ n'est pas dans le schéma et pas annoncé, on le skip
                 print("Champ innatendu : ")
                 print(dff[column_id].head())
-            continue
+                continue
+            column_name = column_id
 
         column = {
             "name": column_name,
