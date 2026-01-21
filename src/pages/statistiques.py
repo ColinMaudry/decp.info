@@ -15,9 +15,9 @@ name = "Statistiques"
 register_page(
     __name__,
     path="/statistiques",
-    title=meta_content["title"],
+    title="Statistiques | decp.info",
     name=name,
-    description=meta_content["description"],
+    description="Visualisez l'état de la publication des données essentielles des marchés publics en France.",
     image_url=meta_content["image_url"],
     order=3,
 )

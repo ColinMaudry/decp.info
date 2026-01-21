@@ -10,9 +10,9 @@ name = "À propos"
 register_page(
     __name__,
     path="/a-propos",
-    title=meta_content["title"],
-    name=name,
-    description=meta_content["description"],
+    title="À propos | decp.info",
+    name="À propos",
+    description="En savoir plus sur decp.info, l'outil d'exploration des données essentielles de la commande publique.",
     image_url=meta_content["image_url"],
     order=5,
 )

@@ -26,9 +26,9 @@ name = "Tableau"
 register_page(
     __name__,
     path="/tableau",
-    title=meta_content["title"],
+    title="Tableau des marchés publics | decp.info",
     name=name,
-    description=meta_content["description"],
+    description="Consultez, filtrez et exportez les données essentielles de la commande publique sous forme de tableau.",
     image_url=meta_content["image_url"],
     order=1,
 )

@@ -14,9 +14,9 @@ name = "Recherche"
 register_page(
     __name__,
     path="/",
-    title=meta_content["title"],
+    title="Recherche de marchés publics | decp.info",
     name=name,
-    description=meta_content["description"],
+    description="Recherchez des des acheteurs et des titulaires parmi les données essentielles de la commande publique.",
     image_url=meta_content["image_url"],
     order=0,
 )

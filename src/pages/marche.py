@@ -7,12 +7,17 @@ from polars import selectors as cs
 
 from src.utils import data_schema, df, format_values, meta_content
 
+
+def get_title(uid: str = None) -> str:
+    return f"Marché {uid} | decp.info"
+
+
 register_page(
     __name__,
     path_template="/marches/<uid>",
-    title=meta_content["title"],
+    title=get_title,
     name="Marché",
-    description=meta_content["description"],
+    description="Consultez les détails de ce marché public : montant, acheteur, titulaires, modifications, etc.",
     image_url=meta_content["image_url"],
     order=7,
 )
