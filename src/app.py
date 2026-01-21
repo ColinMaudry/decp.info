@@ -95,12 +95,14 @@ navbar = dbc.Navbar(
                 ],
                 style={"min-width": "230px"},
             ),
-            dbc.NavItem(
-                [dcc.Markdown(os.getenv("ANNOUNCEMENTS"), id="announcements")],
+            dbc.Nav(
+                children=[dcc.Markdown(os.getenv("ANNOUNCEMENTS"), id="announcements")],
                 style={
                     "max-width": "1200px",
                     "display": "inline-block",
                 },
+                navbar=True,
+                id="announcements-nav",
             ),
             dbc.NavbarToggler(id="navbar-toggler"),
             dbc.Collapse(
@@ -127,7 +129,7 @@ navbar = dbc.Navbar(
     color="light",
     dark=False,
     className="mb-4",
-    expand="md",
+    expand="lg",
 )
 
 app.layout = html.Div(
