@@ -78,13 +78,29 @@ app.index_string = """
 
 navbar = dbc.Navbar(
     dbc.Container(
-        [
-            dbc.NavbarBrand(
-                [
-                    html.H1("decp.info", className="d-inline-block align-top me-2"),
-                    html.Span(version, className="fs-6 text-muted align-bottom"),
+        fluid=True,
+        children=[
+            dbc.NavItem(
+                children=[
+                    dcc.Link(html.H1("decp.info"), href="/", className="logo"),
+                    html.P(
+                        [
+                            html.A(
+                                version,
+                                href="https://github.com/ColinMaudry/decp.info/blob/main/CHANGELOG.md",
+                            )
+                        ],
+                        className="version",
+                    ),
                 ],
-                href="/",
+                style={"min-width": "230px"},
+            ),
+            dbc.NavItem(
+                [dcc.Markdown(os.getenv("ANNOUNCEMENTS"), id="announcements")],
+                style={
+                    "max-width": "1200px",
+                    "display": "inline-block",
+                },
             ),
             dbc.NavbarToggler(id="navbar-toggler"),
             dbc.Collapse(
@@ -92,7 +108,7 @@ navbar = dbc.Navbar(
                     [
                         dbc.NavItem(
                             dbc.NavLink(
-                                page["name"],
+                                page["name"].replace(" ", " "),
                                 href=page["relative_path"],
                                 active="exact",
                             )
@@ -106,21 +122,18 @@ navbar = dbc.Navbar(
                 id="navbar-collapse",
                 navbar=True,
             ),
-        ]
+        ],
     ),
     color="light",
     dark=False,
     className="mb-4",
+    expand="md",
 )
 
 app.layout = html.Div(
     [
         dcc.Location(id="url-tracker"),
         navbar,
-        html.Div(
-            id="announcements",
-            children=dbc.Container(dcc.Markdown(os.getenv("ANNOUNCEMENTS"))),
-        ),
         dbc.Container(
             page_container,
             id="page-content-container",
