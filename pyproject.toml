@@ -7,7 +7,7 @@ authors = [
     { name = "Colin Maudry", email = "colin@colmo.tech" }
 ]
 dependencies = [
-    "dash==3.3.0",
+    "dash==3.4.0",
     "dash[compress]",
     "polars",
     "gunicorn",

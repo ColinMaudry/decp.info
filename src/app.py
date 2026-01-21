@@ -93,12 +93,12 @@ navbar = dbc.Navbar(
                         className="version",
                     ),
                 ],
-                style={"min-width": "230px"},
+                style={"minWidth": "230px"},
             ),
             dbc.Nav(
                 children=[dcc.Markdown(os.getenv("ANNOUNCEMENTS"), id="announcements")],
                 style={
-                    "max-width": "1200px",
+                    "maxWidth": "1200px",
                     "display": "inline-block",
                 },
                 navbar=True,
@@ -134,10 +134,10 @@ navbar = dbc.Navbar(
 
 app.layout = html.Div(
     [
-        dcc.Location(id="url-tracker"),
         navbar,
         dbc.Container(
             page_container,
+            fluid=True,
             id="page-content-container",
             className="mb-4",
         ),
@@ -154,17 +154,3 @@ def toggle_navbar_collapse(n, is_open):
     if n:
         return not is_open
     return is_open
-
-
-@app.callback(
-    Output("page-content-container", "fluid"),
-    Input("url-tracker", "pathname"),
-)
-def toggle_container_fluid(pathname):
-    if pathname == "/tableau":
-        return True
-    return False
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
