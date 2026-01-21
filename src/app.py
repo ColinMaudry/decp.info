@@ -5,7 +5,7 @@ import dash_bootstrap_components as dbc
 import tomllib
 from dash import Dash, Input, Output, State, dcc, html, page_container, page_registry
 from dotenv import load_dotenv
-from flask import send_from_directory
+from flask import Response, send_from_directory
 
 load_dotenv()
 
@@ -28,6 +28,25 @@ app = Dash(
 @app.server.route("/robots.txt")
 def robots():
     return send_from_directory("./assets", "robots.txt", mimetype="text/plain")
+
+
+@app.server.route("/sitemap.xml")
+def sitemap():
+    base_url = "https://decp.info"
+    pages = [
+        "/",
+        "/statistiques",
+        "/tableau",
+        "/a-propos",
+    ]
+    xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    for page in pages:
+        xml += "  <url>\n"
+        xml += f"    <loc>{base_url}{page}</loc>\n"
+        xml += "  </url>\n"
+    xml += "</urlset>"
+    return Response(xml, mimetype="text/xml")
 
 
 logger = logging.getLogger("decp.info")
