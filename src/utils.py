@@ -308,9 +308,18 @@ def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
             elif operator == "contains":
                 if col_type in ["String", "Date"]:
                     filter_value = filter_value.strip('"')
-                    lff = lff.filter(
-                        pl.col(col_name).str.contains("(?i)" + filter_value)
-                    )
+                    if filter_value.endswith("*"):
+                        lff = lff.filter(
+                            pl.col(col_name).str.starts_with(filter_value[:-1])
+                        )
+                    elif filter_value.startswith("*"):
+                        lff = lff.filter(
+                            pl.col(col_name).str.ends_with(filter_value[1:])
+                        )
+                    else:
+                        lff = lff.filter(
+                            pl.col(col_name).str.contains("(?i)" + filter_value)
+                        )
                 elif col_type.startswith("Int") or col_type.startswith("Float"):
                     lff = lff.filter(pl.col(col_name) == filter_value)
                 else:

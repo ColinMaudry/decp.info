@@ -1,3 +1,9 @@
+#### 2.4.0
+
+- Site à peu près utilisable sur petit écran (smartphone) ([#63](https://github.com/ColinMaudry/decp.info/issues/63))
+- Amélioration du référencement Web (sitemap, titres, descriptions) ([#50](https://github.com/ColinMaudry/decp.info/issues/50))
+- Possibilité dans les champs non-numériques de filtrer le texte selon son début ou sa fin (`text*` et `*text`)
+
 ##### 2.3.1 (16 janvier 2026)
 
 - Les champs absents du [schéma](https://www.data.gouv.fr/datasets/donnees-essentielles-de-la-commande-publique-consolidees-format-tabulaire?resource_id=9a4144c0-ee44-4dec-bee5-bbef38191d9a) sont ignorés pour éviter les erreurs
