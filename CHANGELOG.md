@@ -1,4 +1,8 @@
-#### 2.4.0
+##### 2.4.1 (22 janvier 2026)
+
+- Meilleure gestion des colonnes absentes du schéma
+
+#### 2.4.0 (22 janvier 2026)
 
 - Site à peu près utilisable sur petit écran (smartphone) ([#63](https://github.com/ColinMaudry/decp.info/issues/63))
 - Ajout de nouvelles statistiques dans [/statistiques](https://decp.info/statistiques) (stats par année, doublons par source)
