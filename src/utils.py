@@ -376,13 +376,12 @@ def setup_table_columns(
             "hideable": hideable,
         }
         columns.append(column)
-
         if column_object:
             tooltip[column_id] = {
                 "value": f"""**{column_object.get("title")}** ({column_id})
 
     """
-                + column_object["description"],
+                + column_object.get("description", ""),
                 "type": "markdown",
             }
     return columns, tooltip
