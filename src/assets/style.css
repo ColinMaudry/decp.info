@@ -253,3 +253,84 @@ summary > h3 {
     display: none !important;
   }
 }
+
+/* CSS for the /a-propos page Layout and Table of Contents */
+
+.a-propos-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.a-propos-content {
+  flex: 1 1 70%;
+  max-width: 75%;
+  padding-right: 40px;
+}
+
+.a-propos-toc {
+  flex: 0 0 25%;
+  max-width: 25%;
+  /* Keeps it from growing too large */
+  position: sticky;
+  top: 40px;
+  /* Sticks 40px from the top of the viewport */
+  border-left: 2px solid #333;
+  /* Dark vertical line like hedgedoc */
+  padding-left: 15px;
+  margin-top: 40px;
+  background-color: #fff;
+  /* Aligns visually with the first header */
+}
+
+/* Hide TOC on smaller screens */
+@media (max-width: 992px) {
+  .a-propos-content {
+    max-width: 100%;
+    padding-right: 0;
+    flex: 1 1 100%;
+  }
+
+  .a-propos-toc {
+    display: none;
+  }
+}
+
+/* Styling for TOC links */
+.toc-link {
+  display: block;
+  color: #666;
+  text-decoration: none;
+  font-size: 0.9em;
+  padding: 2px 0;
+  transition: color 0.2s, font-weight 0.2s;
+  line-height: 1.4;
+}
+
+.toc-link:hover {
+  color: #000;
+  text-decoration: none;
+}
+
+.toc-active {
+  color: #000;
+  font-weight: bold;
+}
+
+/* Indentation for H5 levels (Level 2 in our simplified TOC) */
+/* Using specific classes if I generate them, or just generic hierarchy if nested */
+.toc-level-2 {
+  margin-left: 15px;
+  font-size: 0.85em;
+}
+
+/* Header title for TOC (optional) */
+.toc-header {
+  font-weight: bold;
+  margin-bottom: 10px;
+  display: block;
+  color: #333;
+}
