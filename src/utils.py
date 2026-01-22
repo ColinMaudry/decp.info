@@ -362,7 +362,8 @@ def setup_table_columns(
                 # Si le champ n'est pas dans le schéma et pas annoncé, on le skip
                 print("Champ innatendu : ")
                 print(dff[column_id].head())
-                continue
+                if column_id.endswith("_right") or column_id.endswith("_left"):
+                    continue
             column_name = column_id
 
         column = {
