@@ -365,6 +365,7 @@ def setup_table_columns(
                 if column_id.endswith("_right") or column_id.endswith("_left"):
                     continue
             column_name = column_id
+            column_object = {"title": column_name, "description": ""}
 
         column = {
             "name": column_name,

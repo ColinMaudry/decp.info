@@ -1,9 +1,15 @@
-#### 2.4.0
+##### 2.4.1 (22 janvier 2026)
+
+- Meilleure gestion des colonnes absentes du schéma
+
+#### 2.4.0 (22 janvier 2026)
 
 - Site à peu près utilisable sur petit écran (smartphone) ([#63](https://github.com/ColinMaudry/decp.info/issues/63))
+- Ajout de nouvelles statistiques dans [/statistiques](https://decp.info/statistiques) (stats par année, doublons par source)
 - Amélioration du référencement Web (sitemap, titres, descriptions) ([#50](https://github.com/ColinMaudry/decp.info/issues/50))
 - Possibilité dans les champs non-numériques de filtrer le texte selon son début ou sa fin (`text*` et `*text`)
 - Ajout d'une table des matières dans la page [À propos](https://decp.infi/a-propos) ([#36](https://github.com/ColinMaudry/decp.info/issues/36))
+- Désactivation du bloquage des robot d'agents de LLM (robots.txt)
 
 ##### 2.3.1 (16 janvier 2026)
 
