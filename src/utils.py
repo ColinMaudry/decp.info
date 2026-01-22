@@ -364,6 +364,7 @@ def setup_table_columns(
                 print(dff[column_id].head())
                 continue
             column_name = column_id
+            column_object = {"title": column_name, "description": ""}
 
         column = {
             "name": column_name,
