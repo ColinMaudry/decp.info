@@ -70,6 +70,7 @@ layout = [
     - Champs numériques : vous pouvez soit taper un nombre pour trouver les valeurs égales, soit le précéder de **>** ou **<** pour filtrer les valeurs supérieures ou inférieures. Exemple pour les offres reçues : `> 4` retourne les marchés ayant reçu plus de 4 offres.
     - Champs date : vous pouvez également utiliser **>** ou **<**. Exemples : `< 2024-01-31` pour "avant le 31 janvier 2024",
     `2024` pour "en 2024", `> 2022` pour "à partir de 2022". Lorsque vous ouvrez une URL de vue, le format équivalent `i<` ou `i>` est utilisé.
+    - Pour les champs textuels et dates : pour chercher du texte qui **commence par** votre texte, entez `texte*`, pour chercher du texte qui **finit par** votre texte, entez `*texte`. C'est par exemple utile pour filtrer des acheteurs ou titulaires par numéro SIREN (`123456789*`).
 
     Vous pouvez filtrer plusieurs colonnes à la fois. Vos filtres sont remis à zéro quand vous rafraîchissez la page.
 
