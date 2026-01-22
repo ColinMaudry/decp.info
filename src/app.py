@@ -3,9 +3,9 @@ import os
 
 import dash_bootstrap_components as dbc
 import tomllib
-from dash import Dash, dcc, html, page_container, page_registry
+from dash import Dash, Input, Output, State, dcc, html, page_container, page_registry
 from dotenv import load_dotenv
-from flask import send_from_directory
+from flask import Response, send_from_directory
 
 load_dotenv()
 
@@ -14,6 +14,9 @@ app = Dash(
     title="decp.info",
     use_pages=True,
     compress=True,
+    meta_tags=[
+        {"name": "viewport", "content": "width=device-width, initial-scale=1"},
+    ],
 )
 # COSMO (belle font, blue),
 # UNITED (rouge, ubuntu font),
@@ -25,6 +28,25 @@ app = Dash(
 @app.server.route("/robots.txt")
 def robots():
     return send_from_directory("./assets", "robots.txt", mimetype="text/plain")
+
+
+@app.server.route("/sitemap.xml")
+def sitemap():
+    base_url = "https://decp.info"
+    pages = [
+        "/",
+        "/statistiques",
+        "/tableau",
+        "/a-propos",
+    ]
+    xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    for page in pages:
+        xml += "  <url>\n"
+        xml += f"    <loc>{base_url}{page}</loc>\n"
+        xml += "  </url>\n"
+    xml += "</urlset>"
+    return Response(xml, mimetype="text/xml")
 
 
 logger = logging.getLogger("decp.info")
@@ -73,43 +95,81 @@ app.index_string = """
 </html>
 """
 
-app.layout = html.Div(
-    [
-        html.Div(
-            [
-                html.Div(
-                    [
-                        html.A(children=html.H1("decp.info"), href="/"),
-                        html.P(
-                            children=html.A(
+navbar = dbc.Navbar(
+    dbc.Container(
+        fluid=True,
+        children=[
+            dbc.NavItem(
+                children=[
+                    dcc.Link(html.H1("decp.info"), href="/", className="logo"),
+                    html.P(
+                        [
+                            html.A(
                                 version,
                                 href="https://github.com/ColinMaudry/decp.info/blob/main/CHANGELOG.md",
-                                target="_blank",
-                            ),
-                            className="version",
-                        ),
-                    ],
-                    className="logo",
-                ),
-                html.Div(
-                    id="announcements",
-                    children=dcc.Markdown(os.getenv("ANNOUNCEMENTS")),
-                ),
-                html.Div(
+                            )
+                        ],
+                        className="version",
+                    ),
+                ],
+                style={"minWidth": "230px"},
+            ),
+            dbc.Nav(
+                children=[dcc.Markdown(os.getenv("ANNOUNCEMENTS"), id="announcements")],
+                style={
+                    "maxWidth": "1200px",
+                    "display": "inline-block",
+                },
+                navbar=True,
+                id="announcements-nav",
+            ),
+            dbc.NavbarToggler(id="navbar-toggler"),
+            dbc.Collapse(
+                dbc.Nav(
                     [
-                        dcc.Link(
-                            page["name"], href=page["relative_path"], className="nav"
+                        dbc.NavItem(
+                            dbc.NavLink(
+                                page["name"].replace(" ", " "),
+                                href=page["relative_path"],
+                                active="exact",
+                            )
                         )
                         for page in page_registry.values()
                         if page["name"] not in ["Acheteur", "Titulaire", "Marché"]
-                    ]
+                    ],
+                    className="ms-auto",
+                    navbar=True,
                 ),
-            ],
-            className="navbar",
+                id="navbar-collapse",
+                navbar=True,
+            ),
+        ],
+    ),
+    color="light",
+    dark=False,
+    className="mb-4",
+    expand="lg",
+)
+
+app.layout = html.Div(
+    [
+        navbar,
+        dbc.Container(
+            page_container,
+            fluid=True,
+            id="page-content-container",
+            className="mb-4",
         ),
-        page_container,
     ]
 )
 
-if __name__ == "__main__":
-    app.run(debug=True)
+
+@app.callback(
+    Output("navbar-collapse", "is_open"),
+    [Input("navbar-toggler", "n_clicks")],
+    [State("navbar-collapse", "is_open")],
+)
+def toggle_navbar_collapse(n, is_open):
+    if n:
+        return not is_open
+    return is_open

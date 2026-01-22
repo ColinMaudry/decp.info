@@ -21,7 +21,7 @@ def get_top_org_table(data, org_type: str):
     dff_nb = dff_nb.fill_null("")
     dff_nb = format_values(dff_nb)
     columns, tooltip = setup_table_columns(
-        dff_nb, hideable=False, exclude=[f"{org_type}_id"]
+        dff_nb, hideable=False, exclude=[f"{org_type}_id"], new_columns=["Attributions"]
     )
     data = dff_nb.to_dicts()
     data = add_links_in_dict(data, f"{org_type}")

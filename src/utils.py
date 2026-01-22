@@ -240,6 +240,17 @@ def get_org_data(dff: pl.DataFrame, org_type: str) -> pl.DataFrame:
     return lff.collect()
 
 
+def get_statistics() -> dict:
+    return (
+        get(
+            "https://www.data.gouv.fr/api/1/datasets/r/0ccf4a75-f3aa-4b46-8b6a-18aeb63e36df",
+            follow_redirects=True,
+        )
+        .raise_for_status()
+        .json()
+    )
+
+
 def get_departements() -> dict:
     with open("data/departements.json", "rb") as f:
         data = json.load(f)
@@ -297,9 +308,18 @@ def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
             elif operator == "contains":
                 if col_type in ["String", "Date"]:
                     filter_value = filter_value.strip('"')
-                    lff = lff.filter(
-                        pl.col(col_name).str.contains("(?i)" + filter_value)
-                    )
+                    if filter_value.endswith("*"):
+                        lff = lff.filter(
+                            pl.col(col_name).str.starts_with(filter_value[:-1])
+                        )
+                    elif filter_value.startswith("*"):
+                        lff = lff.filter(
+                            pl.col(col_name).str.ends_with(filter_value[1:])
+                        )
+                    else:
+                        lff = lff.filter(
+                            pl.col(col_name).str.contains("(?i)" + filter_value)
+                        )
                 elif col_type.startswith("Int") or col_type.startswith("Float"):
                     lff = lff.filter(pl.col(col_name) == filter_value)
                 else:
@@ -323,7 +343,11 @@ def sort_table_data(lff: pl.LazyFrame, sort_by: list) -> pl.LazyFrame:
     return lff
 
 
-def setup_table_columns(dff, hideable: bool = True, exclude: list = None) -> tuple:
+def setup_table_columns(
+    dff, hideable: bool = True, exclude: list = None, new_columns: list = None
+) -> tuple:
+    new_columns = new_columns or []
+
     # Liste finale de colonnes
     columns = []
     tooltip = {}
@@ -334,9 +358,12 @@ def setup_table_columns(dff, hideable: bool = True, exclude: list = None) -> tup
         if column_object:
             column_name = column_object.get("title")
         else:
-            # Si le champ n'est pas dans le schéma, on le skip
-            print(f"Champ innatendu : {column_id}")
-            continue
+            if column_id not in new_columns:
+                # Si le champ n'est pas dans le schéma et pas annoncé, on le skip
+                print("Champ innatendu : ")
+                print(dff[column_id].head())
+                continue
+            column_name = column_id
 
         column = {
             "name": column_name,

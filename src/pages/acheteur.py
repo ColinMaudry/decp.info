@@ -18,12 +18,17 @@ from src.utils import (
     sort_table_data,
 )
 
+
+def get_title(acheteur_id: str = None) -> str:
+    return f"Acheteur {acheteur_id} | decp.info"
+
+
 register_page(
     __name__,
     path_template="/acheteurs/<acheteur_id>",
-    title=meta_content["title"],
+    title=get_title,
     name="Acheteur",
-    description=meta_content["description"],
+    description="Consultez les marchés publics attribués par cet acheteur.",
     image_url=meta_content["image_url"],
     order=5,
 )

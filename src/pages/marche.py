@@ -1,17 +1,23 @@
 from datetime import datetime
 
+import dash_bootstrap_components as dbc
 import polars as pl
 from dash import Input, Output, callback, dcc, html, register_page
 from polars import selectors as cs
 
 from src.utils import data_schema, df, format_values, meta_content
 
+
+def get_title(uid: str = None) -> str:
+    return f"Marché {uid} | decp.info"
+
+
 register_page(
     __name__,
     path_template="/marches/<uid>",
-    title=meta_content["title"],
+    title=get_title,
     name="Marché",
-    description=meta_content["description"],
+    description="Consultez les détails de ce marché public : montant, acheteur, titulaires, modifications, etc.",
     image_url=meta_content["image_url"],
     order=7,
 )
@@ -20,37 +26,44 @@ layout = [
     dcc.Store(id="marche_data"),
     dcc.Store(id="titulaires_data"),
     dcc.Location(id="url", refresh="callback-nav"),
-    html.Div(
-        className="container marche_infos",
+    dbc.Container(
+        className="marche_infos",
         children=[
-            html.P("Vous consultez un résumé des données de ce marché public"),
-            html.Ul(
+            dbc.Row(
+                dbc.Col(
+                    [
+                        html.P(
+                            "Vous consultez un résumé des données de ce marché public"
+                        ),
+                        html.Ul(
+                            [
+                                html.Li(
+                                    "après son attribution aux titulaires qui l'ont remporté à la suite d'un appel d'offres (ou sans appel d'offres via une attribution directe)"
+                                ),
+                                html.Li(
+                                    "après avoir appliqué les éventuelles modifications de montant, durée ou titulaires renseignées par l'acheteur"
+                                ),
+                            ]
+                        ),
+                        html.P(
+                            "Le montant total payé aux titulaires, la durée du marché et la liste des titulaires peuvent cependant encore évoluer jusqu'à la fin de l'exécution du marché."
+                        ),
+                    ]
+                )
+            ),
+            dbc.Row(
                 [
-                    html.Li(
-                        "après son attribution aux titulaires qui l'ont remporté à la suite d'un appel d'offres (ou sans appel d'offres via une attribution directe)"
-                    ),
-                    html.Li(
-                        "après avoir appliqué les éventuelles modifications de montant, durée ou titulaires renseignées par l'acheteur"
-                    ),
-                ]
-            ),
-            html.P(
-                "Le montant total payé aux titulaires, la durée du marché et la liste des titulaires peuvent cependant encore évoluer jusqu'à la fin de l'exécution du marché."
-            ),
-            html.Div(
-                className="wrapper",
-                children=[
-                    html.Div(
-                        className="marche_map",
-                        id="marche_map",
+                    dbc.Col(id="marche_infos_1", width=12, md=4),
+                    dbc.Col(id="marche_infos_2", width=12, md=4),
+                    dbc.Col(
+                        width=12,
+                        md=4,
                         children=[
                             html.H4("Titulaires"),
                             html.Ul(id="marche_infos_titulaires"),
                         ],
                     ),
-                    html.Div(className="marche_infos_1", id="marche_infos_1"),
-                    html.Div(className="marche_infos_2", id="marche_infos_2"),
-                ],
+                ]
             ),
         ],
     ),
