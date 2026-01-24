@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 import dash_bootstrap_components as dbc
@@ -5,7 +6,14 @@ import polars as pl
 from dash import Input, Output, callback, dcc, html, register_page
 from polars import selectors as cs
 
-from src.utils import data_schema, df, format_values, meta_content
+from src.utils import (
+    data_schema,
+    df,
+    format_values,
+    make_org_jsonld,
+    meta_content,
+    unformat_montant,
+)
 
 
 def get_title(uid: str = None) -> str:
@@ -26,6 +34,9 @@ layout = [
     dcc.Store(id="marche_data"),
     dcc.Store(id="titulaires_data"),
     dcc.Location(id="marche_url", refresh="callback-nav"),
+    html.Script(
+        type="application/ld+json", id="marche_jsonld", children=['{"test": "1"}']
+    ),
     dbc.Container(
         className="marche_infos",
         children=[
@@ -208,3 +219,51 @@ def update_marche_info(marche, titulaires):
         titulaires_lines.append(content)
 
     return marche_objet, marche_infos[:half], marche_infos[half:], titulaires_lines
+
+
+@callback(
+    Output(component_id="marche_jsonld", component_property="children"),
+    Input("marche_data", "data"),
+    Input("titulaires_data", "data"),
+)
+def get_marche_jsonld(marche, titulaires) -> str:
+    acheteur_id = marche.get("acheteur_id")
+    type_order = (
+        "Service" if marche.get("categorie") in ["Services", "Travaux"] else "Product"
+    )
+    result = []
+
+    for titulaire in titulaires:
+        jsonld = {
+            "@context": "https://schema.org",
+            "@type": "Order",
+            "@id": f"https://decp.info/marches/{marche.get('uid')}",
+            "name": f"{marche.get('nature')} conclu par {marche.get('acheteur_nom')} le {marche.get('dateNotification')}",
+            "description": marche.get("objet"),
+            "orderNumber": marche.get("uid"),
+            "orderDate": marche.get("dateNotification"),
+            "price": unformat_montant(marche.get("montant")),
+            "priceCurrency": "EUR",
+            "customer": make_org_jsonld(
+                acheteur_id, org_name=marche.get("acheteur_nom"), org_type="acheteur"
+            ),
+            "seller": make_org_jsonld(
+                titulaire.get("titulaire_id"),
+                org_name=titulaire.get("titulaire_nom"),
+                org_type="titulaire",
+                type_org_id=titulaire.get("titulaire_typeIdentifiant"),
+            ),
+            "orderedItem": {
+                "@type": type_order,
+                "name": marche.get("objet"),
+                "category": {
+                    "@type": "CategoryCode",
+                    "propertyID": "cpv",
+                    "codeValue": marche.get("codeCPV"),
+                    # "description": "Description du code CPV"
+                },
+                # "serviceType": "Description du code CPV"
+            },
+        }
+        result.append(jsonld)
+    return json.dumps(result, indent=2)

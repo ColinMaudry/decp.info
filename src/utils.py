@@ -145,6 +145,13 @@ def format_number(number) -> str:
     return number
 
 
+def unformat_montant(number: str) -> int:
+    number = number.replace(" €", "")
+    number = number.replace(" €", "").replace(" ", "")
+    number = number.strip()
+    return int(number)
+
+
 def format_values(dff: pl.DataFrame) -> pl.DataFrame:
     def format_montant(expr, scale=None):
         # https://stackoverflow.com/a/78636786
@@ -713,3 +720,42 @@ meta_content = {
     ),
 }
 data_schema = get_data_schema()
+
+
+def make_org_jsonld(org_id, org_type, org_name=None, type_org_id="SIRET") -> dict:
+    org_types = {"acheteur": "GovernmentOrganization", "titulaire": "Organization"}
+    address = None
+    if type_org_id.lower() == "siret" and len(org_id) == 14:
+        annuaire_data = get_annuaire_data(org_id)
+        annuaire_address = annuaire_data["matching_etablissements"][0]
+        code_postal = annuaire_address["code_postal"]
+        commune = annuaire_address["libelle_commune"]
+
+        address = (
+            {
+                "@type": "PostalAddress",
+                "streetAddress": annuaire_address.get("adresse", "")
+                .replace(code_postal, "")
+                .replace(commune, "")
+                .strip(),
+                "addressLocality": commune,
+                "postalCode": code_postal,
+                "addressCountry": "FR",
+            },
+        )
+
+    jsonld = {
+        "@type": org_types[org_type],
+        "name": org_name,
+        "url": f"https://decp.info/titulaires/{org_id}",
+        "identifier": {
+            "@type": "PropertyValue",
+            "propertyID": type_org_id.lower(),
+            "value": org_id,
+        },
+    }
+
+    if address:
+        jsonld["address"] = address
+
+    return jsonld
