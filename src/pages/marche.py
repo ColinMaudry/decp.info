@@ -32,6 +32,7 @@ layout = [
             dbc.Row(
                 dbc.Col(
                     [
+                        html.H1(id="marche_objet", style={"fontSize": "1.5em"}),
                         html.P(
                             "Vous consultez un résumé des données de ce marché public"
                         ),
@@ -94,6 +95,7 @@ def get_marche_data(url) -> tuple[dict, list]:
 
 
 @callback(
+    Output("marche_objet", "children"),
     Output("marche_infos_1", "children"),
     Output("marche_infos_2", "children"),
     Output("marche_infos_titulaires", "children"),
@@ -148,9 +150,10 @@ def update_marche_info(marche, titulaires):
         param_content = html.P([column_name, "  : ", html.Strong(value)])
         return param_content
 
+    marche_objet = make_parameter("objet")
+
     marche_infos = [
         make_parameter("id"),
-        make_parameter("objet"),
         make_parameter("dateNotification"),  # date
         make_parameter("nature"),
         make_parameter("acheteur_nom"),  # lien
@@ -159,6 +162,7 @@ def update_marche_info(marche, titulaires):
         make_parameter("procedure"),
         make_parameter("techniques"),  # list
         make_parameter("dureeMois"),
+        make_parameter("dureeRestanteMois"),
         make_parameter("offresRecues"),
         make_parameter("datePublicationDonnees"),  # date
         make_parameter("formePrix"),
@@ -184,17 +188,23 @@ def update_marche_info(marche, titulaires):
     titulaires_lines = []
     for titulaire in titulaires:
         if titulaire["titulaire_typeIdentifiant"] == "SIRET":
+            categorie = titulaire.get("titulaire_categorie", "")
+            if titulaire.get("titulaire_categorie"):
+                distance = str(titulaire.get("titulaire_categorie")) + " km"
+            else:
+                distance = ""
+
             content = html.Li(
                 [
                     html.A(
                         href=f"/titulaires/{titulaire['titulaire_id']}",
                         children=titulaire["titulaire_nom"],
                     ),
-                    f" ({titulaire['titulaire_categorie']}, {titulaire['titulaire_distance']} km)",
+                    f" ({categorie}, {distance})",
                 ]
             )
         else:
             content = html.Li(titulaire["titulaire_nom"])
         titulaires_lines.append(content)
 
-    return marche_infos[:half], marche_infos[half:], titulaires_lines
+    return marche_objet, marche_infos[:half], marche_infos[half:], titulaires_lines
