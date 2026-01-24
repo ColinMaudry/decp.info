@@ -182,9 +182,11 @@ def format_values(dff: pl.DataFrame) -> pl.DataFrame:
 
     if "montant" in dff.columns:
         dff = dff.with_columns(pl.col("montant").pipe(format_montant).alias("montant"))
-    if "distance" in dff.columns:
+    if "titulaire_distance" in dff.columns:
         dff = dff.with_columns(
-            pl.col("distance").pipe(format_distance).alias("distance")
+            pl.col("titulaire_distance")
+            .pipe(format_distance)
+            .alias("titulaire_distance")
         )
 
     return dff
@@ -396,7 +398,7 @@ def get_default_hidden_columns(page):
             "titulaire_id",
             "titulaire_typeIdentifiant",
             "titulaire_nom",
-            "distance",
+            "titulaire_distance",
             "montant",
             "codeCPV",
             "dureeRestanteMois",
@@ -408,7 +410,7 @@ def get_default_hidden_columns(page):
             "dateNotification",
             "acheteur_id",
             "acheteur_nom",
-            "distance",
+            "titulaire_distance",
             "montant",
             "codeCPV",
             "dureeRestanteMois",

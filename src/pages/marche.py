@@ -185,10 +185,13 @@ def update_marche_info(marche, titulaires):
     for titulaire in titulaires:
         if titulaire["titulaire_typeIdentifiant"] == "SIRET":
             content = html.Li(
-                html.A(
-                    href=f"/titulaires/{titulaire['titulaire_id']}",
-                    children=titulaire["titulaire_nom"],
-                )
+                [
+                    html.A(
+                        href=f"/titulaires/{titulaire['titulaire_id']}",
+                        children=titulaire["titulaire_nom"],
+                    ),
+                    f" ({titulaire['titulaire_categorie']}, {titulaire['titulaire_distance']} km)",
+                ]
             )
         else:
             content = html.Li(titulaire["titulaire_nom"])
