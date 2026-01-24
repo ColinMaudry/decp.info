@@ -47,7 +47,7 @@ datatable = html.Div(
 )
 
 layout = [
-    dcc.Location(id="url", refresh=False),
+    dcc.Location(id="tableau_url", refresh=False),
     html.Div(
         html.Details(
             children=[
@@ -190,8 +190,8 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
     Output("table", "filter_query"),
     Output("table", "sort_by"),
     Output("table", "hidden_columns"),
-    Output("url", "search", allow_duplicate=True),
-    Input("url", "search"),
+    Output("tableau_url", "search", allow_duplicate=True),
+    Input("tableau_url", "search"),
     prevent_initial_call=True,
 )
 def restore_view_from_url(search):
@@ -228,7 +228,8 @@ def restore_view_from_url(search):
     Input("table", "filter_query"),
     Input("table", "sort_by"),
     Input("table", "hidden_columns"),
-    State("url", "href"),
+    State("tableau_url", "href"),
+    prevent_initial_call=True,
 )
 def sync_url_and_reset_button(filter_query, sort_by, hidden_columns, href):
     if not href:

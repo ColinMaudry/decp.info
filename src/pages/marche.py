@@ -25,7 +25,7 @@ register_page(
 layout = [
     dcc.Store(id="marche_data"),
     dcc.Store(id="titulaires_data"),
-    dcc.Location(id="url", refresh="callback-nav"),
+    dcc.Location(id="marche_url", refresh="callback-nav"),
     dbc.Container(
         className="marche_infos",
         children=[
@@ -73,7 +73,7 @@ layout = [
 @callback(
     Output("marche_data", "data"),
     Output("titulaires_data", "data"),
-    Input(component_id="url", component_property="pathname"),
+    Input(component_id="marche_url", component_property="pathname"),
 )
 def get_marche_data(url) -> tuple[dict, list]:
     marche_uid = url.split("/")[-1]
