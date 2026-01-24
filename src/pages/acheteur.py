@@ -47,7 +47,7 @@ datatable = html.Div(
 
 layout = [
     dcc.Store(id="acheteur_data", storage_type="memory"),
-    dcc.Location(id="url", refresh="callback-nav"),
+    dcc.Location(id="acheteur_url", refresh="callback-nav"),
     html.Div(
         children=[
             html.Div(
@@ -152,7 +152,7 @@ layout = [
     Output(component_id="acheteur_departement", component_property="children"),
     Output(component_id="acheteur_region", component_property="children"),
     Output(component_id="acheteur_lien_annuaire", component_property="href"),
-    Input(component_id="url", component_property="pathname"),
+    Input(component_id="acheteur_url", component_property="pathname"),
 )
 def update_acheteur_infos(url):
     acheteur_siret = url.split("/")[-1]
@@ -216,7 +216,7 @@ def update_acheteur_stats(data):
     Output("btn-download-data-acheteur", "disabled"),
     Output("btn-download-data-acheteur", "children"),
     Output("btn-download-data-acheteur", "title"),
-    Input(component_id="url", component_property="pathname"),
+    Input(component_id="acheteur_url", component_property="pathname"),
     Input(component_id="acheteur_year", component_property="value"),
 )
 def get_acheteur_marches_data(url, acheteur_year: str) -> tuple:
