@@ -16,7 +16,7 @@ register_page(
     path="/",
     title="Recherche de marchés publics | decp.info",
     name=name,
-    description="Recherchez des des acheteurs et des titulaires parmi les données essentielles de la commande publique.",
+    description="Explorez et analysez les données des marchés publics français avec cet outil libre et gratuit. Pour une commande publique accessible à toutes et tous.",
     image_url=meta_content["image_url"],
     order=0,
 )
