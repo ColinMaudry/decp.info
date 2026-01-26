@@ -1,8 +1,2 @@
-# START YOAST BLOCK
-# Copié depuis https://next.ink/robots.txt
-# ---------------------------
 User-agent: *
 Allow: /
-
-# ---------------------------
-# END YOAST BLOCK

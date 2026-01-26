@@ -9,14 +9,21 @@ from flask import Response, send_from_directory
 
 load_dotenv()
 
+development = os.getenv("DEVELOPMENT").lower() == "true"
+
+meta_tags = [
+    {"name": "viewport", "content": "width=device-width, initial-scale=1"},
+]
+
+if development:
+    meta_tags.append({"name": "robots", "content": "noindex"})
+
 app = Dash(
     external_stylesheets=[dbc.themes.SIMPLEX],
     title="decp.info",
     use_pages=True,
     compress=True,
-    meta_tags=[
-        {"name": "viewport", "content": "width=device-width, initial-scale=1"},
-    ],
+    meta_tags=meta_tags,
 )
 # COSMO (belle font, blue),
 # UNITED (rouge, ubuntu font),
