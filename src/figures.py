@@ -169,14 +169,22 @@ def get_sources_tables(source_path) -> html.Div:
             + pl.lit("</a>")
         ).alias("nom")
     )
-    df = df.drop("url")
+    df = df.drop("url", "unique")
     df = df.sort(by=["nb_marchés"], descending=True)
+
+    columns = {
+        "nom": "Nom de la source",
+        "organisation": "Responsable de publication",
+        "nb_marchés": "Nb de marchés",
+        "nb_acheteurs": "Nb d'acheteurs",
+        "code": "Code",
+    }
 
     datatable = dash_table.DataTable(
         id="source_table",
         columns=[
             {
-                "name": i,
+                "name": columns[i],
                 "id": i,
                 "presentation": "markdown",
                 "type": "text",

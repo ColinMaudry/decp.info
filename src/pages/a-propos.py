@@ -122,6 +122,14 @@ Rien d’exceptionnel, je respecte simplement la loi, qui dit que certains outil
 
 J’utilise pour cela [Matomo](https://matomo.org/), un outil [libre](https://matomo.org/free-software/), paramétré pour être en conformité avec [la recommandation « Cookies »](https://www.cnil.fr/fr/solutions-pour-les-cookies-de-mesure-daudience) de la CNIL. Cela signifie que votre adresse IP, par exemple, est anonymisée avant d’être enregistrée. Il m’est donc impossible d’associer vos visites sur ce site à votre personne."""
                         ),
+                        html.H4(
+                            "Liste des marchés par département", id="liste_marches"
+                        ),
+                        dcc.Markdown(
+                            """
+                            - [Marchés par département](/departements)
+                            """
+                        ),
                     ],
                 ),
                 # Table of Contents Column

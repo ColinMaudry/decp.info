@@ -1,3 +1,7 @@
+#### 2.5.0 ()
+
+- Renforcement du SEO avec une arborescence permettant l'accès aux marchés et des snippets JSON-LD
+
 ##### 2.4.1 (22 janvier 2026)
 
 - Meilleure gestion des colonnes absentes du schéma

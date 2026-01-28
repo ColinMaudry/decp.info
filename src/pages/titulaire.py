@@ -7,6 +7,7 @@ from src.callbacks import get_top_org_table
 from src.figures import DataTable, point_on_map
 from src.utils import (
     df,
+    df_titulaires,
     filter_table_data,
     format_number,
     get_annuaire_data,
@@ -20,7 +21,12 @@ from src.utils import (
 
 
 def get_title(titulaire_id: str = None) -> str:
-    return f"Titulaire {titulaire_id} | decp.info"
+    titulaire_nom = (
+        df_titulaires.filter(pl.col("titulaire_id") == titulaire_id)
+        .select("titulaire_nom")
+        .item()
+    )
+    return f"Marchés publics remportés par {titulaire_nom} | decp.info"
 
 
 register_page(

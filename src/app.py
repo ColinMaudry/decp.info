@@ -13,6 +13,10 @@ development = os.getenv("DEVELOPMENT").lower() == "true"
 
 meta_tags = [
     {"name": "viewport", "content": "width=device-width, initial-scale=1"},
+    {
+        "name": "keywords",
+        "content": "commande publique, decp, marchés publics, données essentielles",
+    },
 ]
 
 if development:
@@ -25,6 +29,7 @@ app = Dash(
     compress=True,
     meta_tags=meta_tags,
 )
+
 # COSMO (belle font, blue),
 # UNITED (rouge, ubuntu font),
 # LUMEN (gros séparateur, blue clair),
@@ -142,7 +147,8 @@ navbar = dbc.Navbar(
                             )
                         )
                         for page in page_registry.values()
-                        if page["name"] not in ["Acheteur", "Titulaire", "Marché"]
+                        if page["name"]
+                        in ["Recherche", "À propos", "Tableau", "Statistiques"]
                     ],
                     className="ms-auto",
                     navbar=True,
