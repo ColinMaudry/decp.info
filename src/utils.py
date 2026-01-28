@@ -360,8 +360,6 @@ def sort_table_data(lff: pl.LazyFrame, sort_by: list) -> pl.LazyFrame:
 def setup_table_columns(
     dff, hideable: bool = True, exclude: list = None, new_columns: list = None
 ) -> tuple:
-    new_columns = new_columns or []
-
     # Liste finale de colonnes
     columns = []
     tooltip = {}
@@ -372,10 +370,10 @@ def setup_table_columns(
         if column_object:
             column_name = column_object.get("title")
         else:
-            if column_id not in new_columns:
-                # Si le champ n'est pas dans le schéma et pas annoncé, on le skip
-                print("Champ innatendu : ")
-                print(dff[column_id].head())
+            # Si le champ est un champ créé par erreur lors d'une jointure, on le skip
+            if column_id.endswith("_left") or column_id.endswith("_right"):
+                logger.warning(f"Champ innatendu : {column_id}")
+                continue
             column_name = column_id
             column_object = {"title": column_name, "description": ""}
 
@@ -460,11 +458,6 @@ def get_data_schema() -> dict:
     for col in original_schema["fields"]:
         new_schema[col["name"]] = col
 
-    new_schema["sourceDataset"] = {
-        "description": "Code de la source des données, avec un lien vers le fichier Open Data dont proviennent les données de ce marché public.",
-        "title": "Source des données",
-        "short_name": "Source",
-    }
     return new_schema
 
 
