@@ -1,12 +1,41 @@
+@import url(https://fonts.bunny.net/css?family=fira-code:400|inter:300,500|inter-tight:400);
+
+:root {
+  --bs-font-monospace: "Fira Code";
+}
+
+body {
+  font-family: "Inter";
+  font-weight: 300;
+  background-color: rgb(255 240 240 / 40%);
+}
+
+button {
+  font-weight: 300;
+  background-color: #fff;
+  border-radius: 3px;
+  appearance: auto;
+  border: solid rgb(179, 56, 33) 1px; /* couleur thème foncée */
+}
+
+button[disabled] {
+  border-color: #ccc;
+  color: #666;
+}
+
+button:hover:not([disabled]) {
+  background-color: #fee;
+}
+
 /* Change la marge bout d'export  */
 .table-menu {
   font-size: 16px;
-  margin: 12px;
+  margin: 12px 0 12px 0;
   height: 36px;
 }
 
 .table-menu > * {
-  margin: 8px;
+  margin: 8px 16px 8px 0;
   float: left;
 }
 
@@ -49,6 +78,10 @@ p.version > a {
   margin-right: 2px;
 }
 
+.navbar-nav .nav-link.active {
+  font-weight: 500;
+}
+
 /* Réduire la taille du texte de la colonne Objet */
 
 /*
@@ -68,19 +101,27 @@ td[data-dash-column="objet"],td[data-dash-column="titulaire_nom"],td[data-dash-c
   th.dash-header {
   background-color: #b33821;
   color: white;
-  font-family: "Open Sans", sans-serif;
+  font-family: "Inter", sans-serif;
   text-align: left;
+  font-weight: 500;
 }
 
 .dash-table-container
   .dash-spreadsheet-container
   .dash-spreadsheet-inner
-  th.dash-filter
-  input,
-dash-table-container .dash-spreadsheet-container *:focus {
-  outline-color: #ccc;
-  outline-style: auto;
-  outline-width: thin;
+  .dash-filter
+  input[type="text"] {
+  border-color: #ccc;
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 2px;
+  height: 28px;
+  font-family: "Fira Code";
+  caret-color: #000;
+
+  text-align: left !important;
+  padding: 1px 2px 0 2px;
+  vertical-align: center;
 }
 
 .dash-table-container .dash-spreadsheet-container *:focus {
@@ -92,6 +133,14 @@ dash-table-container .dash-spreadsheet-container *:focus {
 
 .dash-table-container p {
   margin-bottom: 0;
+}
+
+.dash-table-container
+  .dash-spreadsheet-container
+  .dash-spreadsheet-inner
+  td
+  div.dash-cell-value.cell-markdown {
+  font-family: "Inter Tight";
 }
 
 .dash-filter--case {
@@ -113,7 +162,7 @@ dash-table-container .dash-spreadsheet-container *:focus {
   overflow: hidden;
   height: 150px;
   text-wrap: wrap;
-  font-family: "Open Sans", sans-serif;
+  font-family: "Inter", sans-serif;
 }
 
 /* Menu de masquage des colonnes */
@@ -128,7 +177,7 @@ dash-table-container .dash-spreadsheet-container *:focus {
 .show-hide {
   position: relative;
   width: 180px;
-  margin: 0 0 10px 10px;
+  margin: 0 0 10px 0;
 }
 
 .show-hide::before {
@@ -146,7 +195,7 @@ dash-table-container .dash-spreadsheet-container *:focus {
 /* Alternance des couleurs pour les lignes */
 .marches_table table td,
 .marches_table table th {
-  font-family: "Open Sans", sans-serif;
+  font-family: "Inter", sans-serif;
 }
 
 .marches_table.stuck {
@@ -156,12 +205,11 @@ dash-table-container .dash-spreadsheet-container *:focus {
 
 .marches_table .cell-table tr:nth-child(even) td {
   background-color: #feeeee;
-  font-family: "Open Sans", sans-serif;
+  font-family: "Inter", sans-serif;
 }
 
-#header > *,
-.dash-spreadsheet-menu button.export {
-  margin: 0 0 20px 20px;
+#header > * {
+  margin: 0 0 20px 0px;
 }
 
 /* Annonces */
@@ -207,13 +255,11 @@ dash-table-container .dash-spreadsheet-container *:focus {
   grid-row: 1;
 }
 
-/* Menu de navigation */
-
 h3 {
   margin: 36px 0 20px 0;
 }
 
-summary > h3 {
+summary > h4 {
   margin: 0;
   display: inline;
 }

@@ -295,7 +295,7 @@ class DataTable(dash_table.DataTable):
             page_action=page_action,
             filter_options={
                 "case": "insensitive",
-                "placeholder_text": "Tapez le filtre ici...",
+                "placeholder_text": "",
             },
             sort_action=sort_action,
             sort_mode="multi",
