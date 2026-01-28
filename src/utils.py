@@ -10,14 +10,17 @@ from httpx import get, post
 from polars.exceptions import ComputeError
 from unidecode import unidecode
 
-logger = logging.getLogger("decp.info")
-logging.getLogger("httpx").setLevel("WARNING")
-
 logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
     level=logging.INFO,
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+logger = logging.getLogger("decp.info")
+development = os.getenv("DEVELOPMENT", "False").lower() == "true"
+if development:
+    logger.setLevel(logging.DEBUG)
+
+logging.getLogger("httpx").setLevel("WARNING")
 
 
 def split_filter_part(filter_part):
@@ -29,14 +32,14 @@ def split_filter_part(filter_part):
         ["icontains", "contains"],
         # [" ", "contains"]
     ]
-    print("filter part", filter_part)
+    logger.debug("filter part", filter_part)
     for operator_group in operators:
         if operator_group[0] in filter_part:
             name_part, value_part = filter_part.split(operator_group[0], 1)
             name_part = name_part.strip()
             value = value_part.strip()
             name = name_part[name_part.find("{") + 1 : name_part.rfind("}")]
-            print("=>", name, operator_group[1], value)
+            logger.debug("=>", name, operator_group[1], value)
 
             return name, operator_group[1], value
 
@@ -277,19 +280,19 @@ def get_departement_region(code_postal):
     return code_departement, nom_departement, nom_region
 
 
-def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
-    debug = os.getenv("DEVELOPMENT", "False").lower() == "true"
-    schema = lff.collect_schema()
-    track_search(filter_query)
+def filter_table_data(
+    lff: pl.LazyFrame, filter_query: str, filter_source: str
+) -> pl.LazyFrame:
+    _schema = lff.collect_schema()
+    track_search(f"{filter_source}: {filter_query}")
     filtering_expressions = filter_query.split(" && ")
     for filter_part in filtering_expressions:
         col_name, operator, filter_value = split_filter_part(filter_part)
-        col_type = str(schema[col_name])
-        if debug:
-            print("filter_value:", filter_value)
-            print("filter_value_type:", type(filter_value))
-            print("operator:", operator)
-            print("col_type:", col_type)
+        col_type = str(_schema[col_name])
+        logger.debug("filter_value:", filter_value)
+        logger.debug("filter_value_type:", type(filter_value))
+        logger.debug("operator:", operator)
+        logger.debug("col_type:", col_type)
 
         lff = lff.filter(pl.col(col_name).is_not_null())
 
@@ -350,7 +353,7 @@ def sort_table_data(lff: pl.LazyFrame, sort_by: list) -> pl.LazyFrame:
         descending=[col["direction"] == "desc" for col in sort_by],
         nulls_last=True,
     )
-    print(sort_by)
+    logger.debug(sort_by)
     return lff
 
 
@@ -588,31 +591,13 @@ def prepare_table_data(
     """
 
     if os.getenv("DEVELOPMENT").lower() == "true":
-        print(" + + + + + + + + + + + + + + + + + + ")
+        logger.debug(" + + + + + + + + + + + + + + + + + + ")
 
     # Récupération des données
     if isinstance(data, list):
         lff: pl.LazyFrame = pl.LazyFrame(data, strict=False, infer_schema_length=5000)
     else:
         lff: pl.LazyFrame = df.lazy()  # start from the original data
-
-    # if search_params:
-    #     if "filtres" in search_params:
-    #         filter_query = search_params["filtres"][0]
-    #
-    #     if "tris" in search_params:
-    #         try:
-    #             sort_by = json.loads(search_params["tris"][0])
-    #         except json.JSONDecodeError:
-    #             pass
-    #
-    #     if "colonnes" in search_params:
-    #         try:
-    #             hidden_columns = json.loads(search_params["colonnes"][0])
-    #             print(hidden_columns)
-    #             lff = lff.drop(hidden_columns)
-    #         except json.JSONDecodeError:
-    #             pass
 
     # Application des filtres
     if filter_query:

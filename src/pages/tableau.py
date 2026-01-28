@@ -12,6 +12,7 @@ from src.utils import (
     filter_table_data,
     get_default_hidden_columns,
     invert_columns,
+    logger,
     meta_content,
     schema,
     sort_table_data,
@@ -277,7 +278,7 @@ def restore_view_from_url(search):
         return no_update, no_update, no_update, no_update
 
     params = urllib.parse.parse_qs(search.lstrip("?"))
-    print("params", params)
+    logger.debug("params", params)
 
     filter_query = no_update
     sort_by = no_update
