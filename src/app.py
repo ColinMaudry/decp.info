@@ -135,7 +135,8 @@ navbar = dbc.Navbar(
                             )
                         )
                         for page in page_registry.values()
-                        if page["name"] not in ["Acheteur", "Titulaire", "Marché"]
+                        if page["name"]
+                        in ["Recherche", "À propos", "Tableau", "Statistiques"]
                     ],
                     className="ms-auto",
                     navbar=True,

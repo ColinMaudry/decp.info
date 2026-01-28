@@ -14,7 +14,12 @@ register_page(
 
 layout = html.Div(
     [
-        html.P(dcc.Link(d["departement"], href=f"/departements/{k}"))
-        for k, d in departements.items()
+        html.H3("Départements"),
+        html.Ul(
+            [
+                html.Li(dcc.Link(d["departement"], href=f"/departements/{k}"))
+                for k, d in departements.items()
+            ]
+        ),
     ]
 )

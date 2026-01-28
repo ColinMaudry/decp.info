@@ -1,7 +1,7 @@
 import polars as pl
 from dash import Input, Output, callback, dcc, html, register_page
 
-from src.utils import departements, df_acheteurs_departement
+from src.utils import departements, df_acheteurs_departement, df_titulaires_departement
 
 name = "Département"
 
@@ -37,25 +37,42 @@ layout = html.Div(
 )
 def departement_marches(url):
     departement = url.split("/")[-1]
-    acheteurs = []
-    df = df_acheteurs_departement.filter(
-        pl.col("acheteur_departement_code") == departement
-    )
-    for row in df.iter_rows(named=True):
-        p = html.P(
-            [
-                dcc.Link(
-                    row["acheteur_nom"],
-                    href=url + f"/{row['acheteur_id']}",
-                    title=f"Marchés publics de {row['acheteur_nom']}",
-                ),
-                " ",
-                dcc.Link(
-                    "(page dédiée)",
-                    href=f"/acheteurs/{row['acheteur_id']}",
-                    title=f"Page dédiée aux marchés publics de {row['acheteur_nom']}",
-                ),
-            ]
-        )
-        acheteurs.append(p)
-    return acheteurs
+
+    def make_link_list(org_type) -> list:
+        link_list = []
+        if org_type == "acheteur":
+            df = df_acheteurs_departement
+        elif org_type == "titulaire":
+            df = df_titulaires_departement
+        else:
+            raise ValueError
+
+        df = df.filter(pl.col(f"{org_type}_departement_code") == departement)
+
+        for row in df.iter_rows(named=True):
+            li = html.Li(
+                [
+                    dcc.Link(
+                        row[f"{org_type}_nom"],
+                        href=url + f"/{row[f'{org_type}_id']}",
+                        title=f"Marchés publics de {row[f'{org_type}_nom']}",
+                    ),
+                    " ",
+                    dcc.Link(
+                        "(page dédiée)",
+                        href=f"/{org_type}s/{row[f'{org_type}_id']}",
+                        title=f"Page dédiée aux marchés publics de {row[f'{org_type}_nom']}",
+                    ),
+                ]
+            )
+            link_list.append(li)
+        return link_list
+
+    content = [
+        html.H3("Acheteurs publics du département"),
+        html.Ul(make_link_list("acheteur")),
+        html.H3("Titulaires du département"),
+        html.Ul(make_link_list("titulaire")),
+    ]
+
+    return content
