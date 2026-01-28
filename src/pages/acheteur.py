@@ -1,4 +1,5 @@
 import datetime
+import json
 
 import polars as pl
 from dash import Input, Output, State, callback, dcc, html, register_page
@@ -14,6 +15,7 @@ from src.utils import (
     get_button_properties,
     get_default_hidden_columns,
     get_departement_region,
+    make_org_jsonld,
     meta_content,
     prepare_table_data,
     sort_table_data,
@@ -54,6 +56,7 @@ datatable = html.Div(
 layout = [
     dcc.Store(id="acheteur_data", storage_type="memory"),
     dcc.Location(id="acheteur_url", refresh="callback-nav"),
+    html.Script(type="application/ld+json", id="acheteur_jsonld"),
     html.Div(
         children=[
             html.Div(
@@ -331,3 +334,19 @@ def download_filtered_acheteur_data(
     return dcc.send_bytes(
         to_bytes, filename=f"decp_filtrées_{acheteur_nom}_{date}.xlsx"
     )
+
+
+@callback(
+    Output(component_id="acheteur_jsonld", component_property="children"),
+    Input("acheteur_data", "data"),
+)
+def get_acheteur_jsonld(acheteur) -> str:
+    acheteur = acheteur[0]
+    acheteur_id = acheteur.get("acheteur_id")
+
+    jsonld = make_org_jsonld(
+        acheteur_id, org_name=acheteur.get("acheteur_nom"), org_type="acheteur"
+    )
+    jsonld["@context"] = "http://schema.org/"
+
+    return json.dumps(jsonld, indent=2)
