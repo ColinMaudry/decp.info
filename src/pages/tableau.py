@@ -233,7 +233,7 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     # else:
     #     search_params = urllib.parse.parse_qs(search_params.lstrip("?"))
     return prepare_table_data(
-        None, data_timestamp, filter_query, page_current, page_size, sort_by
+        None, data_timestamp, filter_query, page_current, page_size, sort_by, "tableau"
     )
 
 
@@ -253,7 +253,7 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
         lff = lff.drop(hidden_columns)
 
     if filter_query:
-        lff = filter_table_data(lff, filter_query)
+        lff = filter_table_data(lff, filter_query, "tab download")
 
     if len(sort_by) > 0:
         lff = sort_table_data(lff, sort_by)

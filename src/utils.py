@@ -569,7 +569,7 @@ def search_org(dff: pl.DataFrame, query: str, org_type: str) -> pl.DataFrame:
 
 
 def prepare_table_data(
-    data, data_timestamp, filter_query, page_current, page_size, sort_by
+    data, data_timestamp, filter_query, page_current, page_size, sort_by, source_table
 ):
     """
     Fonction de préparation des données pour les datatables, afin de permettre une gestion fine des logiques,
@@ -580,6 +580,7 @@ def prepare_table_data(
     :param page_current:
     :param page_size:
     :param sort_by:
+    :param source_table:
     :return:
     """
 
@@ -594,7 +595,7 @@ def prepare_table_data(
 
     # Application des filtres
     if filter_query:
-        lff = filter_table_data(lff, filter_query)
+        lff = filter_table_data(lff, filter_query, source_table)
 
     # Application des tris
     if len(sort_by) > 0:

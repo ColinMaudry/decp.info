@@ -260,7 +260,7 @@ def get_last_marches_data(
     data, page_current, page_size, filter_query, sort_by, data_timestamp
 ) -> tuple:
     return prepare_table_data(
-        data, data_timestamp, filter_query, page_current, page_size, sort_by
+        data, data_timestamp, filter_query, page_current, page_size, sort_by, "acheteur"
     )
 
 
@@ -319,7 +319,7 @@ def download_filtered_acheteur_data(
         lff = lff.drop(hidden_columns)
 
     if filter_query:
-        lff = filter_table_data(lff, filter_query)
+        lff = filter_table_data(lff, filter_query, "ach download")
 
     if len(sort_by) > 0:
         lff = sort_table_data(lff, sort_by)
