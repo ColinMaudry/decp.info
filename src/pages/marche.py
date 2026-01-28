@@ -34,9 +34,7 @@ layout = [
     dcc.Store(id="marche_data"),
     dcc.Store(id="titulaires_data"),
     dcc.Location(id="marche_url", refresh="callback-nav"),
-    html.Script(
-        type="application/ld+json", id="marche_jsonld", children=['{"test": "1"}']
-    ),
+    html.Script(type="application/ld+json", id="marche_jsonld"),
     dbc.Container(
         className="marche_infos",
         children=[

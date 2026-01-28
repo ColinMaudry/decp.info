@@ -18,8 +18,9 @@ from src.utils import (
 )
 from utils import prepare_table_data
 
-update_date = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
-update_date = datetime.fromtimestamp(update_date).strftime("%d/%m/%Y")
+update_date_timestamp = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
+update_date = datetime.fromtimestamp(update_date_timestamp).strftime("%d/%m/%Y")
+update_date_iso = datetime.fromtimestamp(update_date_timestamp).isoformat()
 
 
 name = "Tableau"
@@ -48,6 +49,63 @@ datatable = html.Div(
 
 layout = [
     dcc.Location(id="tableau_url", refresh=False),
+    html.Script(
+        type="application/ld+json",
+        id="dataset_jsonld",
+        children=[
+            json.dumps(
+                {
+                    "@context": "https://schema.org/",
+                    "@type": "Dataset",
+                    "name": "Données essentielles des marchés publics français (DECP)",
+                    "description": "Données de marchés publics exhaustives décrivant les marchés publics attribués en France depuis 2018.",
+                    "url": "https://decp.info",
+                    "sameAs": "https://www.data.gouv.fr/datasets/608c055b35eb4e6ee20eb325",
+                    "keywords": [
+                        "marchés publics",
+                        "commande publique",
+                        "decp",
+                        "public procurement",
+                    ],
+                    "license": "https://www.etalab.gouv.fr/licence-ouverte-open-licence",
+                    "isAccessibleForFree": True,
+                    "creator": {
+                        "@type": "Organization",
+                        "url": "https://colmo.tech",
+                        "name": "Colmo",
+                        "sameAs": "https://annuaire-entreprises.data.gouv.fr/entreprise/colmo-989393350",
+                        "contactPoint": {
+                            "@type": "ContactPoint",
+                            "contactType": "Support et contact commercial",
+                            "email": "colin@colmo.tech",
+                        },
+                    },
+                    "includedInDataCatalog": {
+                        "@type": "DataCatalog",
+                        "name": "data.gouv.fr",
+                    },
+                    "distribution": [
+                        {
+                            "@type": "DataDownload",
+                            "encodingFormat": "CSV",
+                            "contentUrl": "https://www.data.gouv.fr/api/1/datasets/r/22847056-61df-452d-837d-8b8ceadbfc52",
+                        },
+                        {
+                            "@type": "DataDownload",
+                            "encodingFormat": "Parquet",
+                            "contentUrl": "https://www.data.gouv.fr/api/1/datasets/r/11cea8e8-df3e-4ed1-932b-781e2635e432",
+                        },
+                    ],
+                    "temporalCoverage": f"2018-01-01/{update_date_iso[:10]}",
+                    "spatialCoverage": {
+                        "@type": "Place",
+                        "address": {"countryCode": "FR"},
+                    },
+                },
+                indent=2,
+            )
+        ],
+    ),
     html.Div(
         html.Details(
             children=[

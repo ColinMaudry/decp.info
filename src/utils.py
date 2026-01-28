@@ -727,7 +727,8 @@ def make_org_jsonld(org_id, org_type, org_name=None, type_org_id="SIRET") -> dic
     jsonld = {
         "@type": org_types[org_type],
         "name": org_name,
-        "url": f"https://decp.info/titulaires/{org_id}",
+        "url": f"https://decp.info/{org_type}s/{org_id}",
+        "sameAs": f"https://annuaire-entreprises.data.gouv.fr/etablissement/{org_id}",
         "identifier": {
             "@type": "PropertyValue",
             "propertyID": type_org_id.lower(),
