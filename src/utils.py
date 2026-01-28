@@ -701,27 +701,6 @@ def invert_columns(columns):
     return inverted_columns
 
 
-df: pl.DataFrame = get_decp_data()
-schema = df.collect_schema()
-
-df_acheteurs = get_org_data(df, "acheteur")
-df_titulaires = get_org_data(df, "titulaire")
-
-departements = get_departements()
-domain_name = (
-    "test.decp.info" if os.getenv("DEVELOPMENT").lower() == "true" else "decp.info"
-)
-meta_content = {
-    "image_url": f"https://{domain_name}/assets/decp.info.png",
-    "title": "decp.info - exploration des marchés publics français",
-    "description": (
-        "Explorez et analysez les données des marchés publics français avec cet outil libre et gratuit. "
-        "Pour une commande publique accessible à toutes et tous."
-    ),
-}
-data_schema = get_data_schema()
-
-
 def make_org_jsonld(org_id, org_type, org_name=None, type_org_id="SIRET") -> dict:
     org_types = {"acheteur": "GovernmentOrganization", "titulaire": "Organization"}
     address = None
@@ -759,3 +738,42 @@ def make_org_jsonld(org_id, org_type, org_name=None, type_org_id="SIRET") -> dic
         jsonld["address"] = address
 
     return jsonld
+
+
+df: pl.DataFrame = get_decp_data()
+schema = df.collect_schema()
+
+df_acheteurs = get_org_data(df, "acheteur")
+df_titulaires = get_org_data(df, "titulaire")
+df_acheteurs_departement: pl.DataFrame = (
+    df_acheteurs.select(["acheteur_id", "acheteur_nom", "acheteur_departement_code"])
+    .unique()
+    .sort("acheteur_nom")
+)
+df_titulaires_departement: pl.DataFrame = (
+    df_titulaires.select(
+        ["titulaire_id", "titulaire_nom", "titulaire_departement_code"]
+    )
+    .unique()
+    .sort("titulaire_nom")
+)
+df_acheteurs_marches: pl.DataFrame = (
+    df.select("uid", "acheteur_id").unique().sort("acheteur_id")
+)
+df_titulaires_marches: pl.DataFrame = (
+    df.select("uid", "titulaire_id").unique().sort("titulaire_id")
+)
+
+departements = get_departements()
+domain_name = (
+    "test.decp.info" if os.getenv("DEVELOPMENT").lower() == "true" else "decp.info"
+)
+meta_content = {
+    "image_url": f"https://{domain_name}/assets/decp.info.png",
+    "title": "decp.info - exploration des marchés publics français",
+    "description": (
+        "Explorez et analysez les données des marchés publics français avec cet outil libre et gratuit. "
+        "Pour une commande publique accessible à toutes et tous."
+    ),
+}
+data_schema = get_data_schema()
