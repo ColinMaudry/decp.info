@@ -54,7 +54,7 @@ def departement_marches(url):
                 [
                     dcc.Link(
                         row[f"{org_type}_nom"],
-                        href=url + f"/{row[f'{org_type}_id']}",
+                        href=url + f"/{org_type}/{row[f'{org_type}_id']}",
                         title=f"Marchés publics de {row[f'{org_type}_nom']}",
                     ),
                     " ",
