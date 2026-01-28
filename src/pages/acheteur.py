@@ -7,6 +7,7 @@ from src.callbacks import get_top_org_table
 from src.figures import DataTable, point_on_map
 from src.utils import (
     df,
+    df_acheteurs,
     filter_table_data,
     format_number,
     get_annuaire_data,
@@ -20,7 +21,12 @@ from src.utils import (
 
 
 def get_title(acheteur_id: str = None) -> str:
-    return f"Acheteur {acheteur_id} | decp.info"
+    acheteur_nom = (
+        df_acheteurs.filter(pl.col("acheteur_id") == acheteur_id)
+        .select("acheteur_nom")
+        .item()
+    )
+    return f"Marchés publics attribués par {acheteur_nom} | decp.info"
 
 
 register_page(
