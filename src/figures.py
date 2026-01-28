@@ -293,7 +293,10 @@ class DataTable(dash_table.DataTable):
             page_size=page_size,
             filter_action=filter_action,
             page_action=page_action,
-            filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
+            filter_options={
+                "case": "insensitive",
+                "placeholder_text": "Tapez le filtre ici...",
+            },
             sort_action=sort_action,
             sort_mode="multi",
             sort_by=[],

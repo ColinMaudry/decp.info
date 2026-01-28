@@ -56,6 +56,11 @@ td[data-dash-column="objet"],td[data-dash-column="titulaire_nom"],td[data-dash-c
   font-size: 85%;
 }*/
 
+/* Couleur des liens */
+#_pages_content a {
+  color: #993333;
+}
+
 /* Couleur des en-têtes */
 .dash-table-container
   .dash-spreadsheet-container
@@ -70,8 +75,19 @@ td[data-dash-column="objet"],td[data-dash-column="titulaire_nom"],td[data-dash-c
 .dash-table-container
   .dash-spreadsheet-container
   .dash-spreadsheet-inner
-  th.dash-filter {
-  background-color: #f0afa3;
+  th.dash-filter
+  input,
+dash-table-container .dash-spreadsheet-container *:focus {
+  outline-color: #ccc;
+  outline-style: auto;
+  outline-width: thin;
+}
+
+.dash-table-container .dash-spreadsheet-container *:focus {
+}
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td {
+  padding-left: 8px;
 }
 
 .dash-table-container p {

@@ -106,6 +106,9 @@ layout = [
             )
         ],
     ),
+    dcc.Markdown(
+        f"Ce tableau vous permet d'appliquer un filtre sur une ou plusieurs colonnes, et ainsi produire la liste de marchés dont vous avez besoin ([exemple de filtre](https://decp.info/tableau?filtres=%7Bmontant%7D+i%3C+40000+%26%26+%7BdateNotification%7D+icontains+2025%2A+%26%26+%7Bacheteur_id%7D+24350013900189+%26%26+%7Bobjet%7D+icontains+voirie&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2Cacheteur_departement_code%2CsourceDataset)). Par défaut seules quelques colonnes sont affichées, mais vous pouvez en afficher jusqu'à {str(df.width)} en cliquant sur le bouton **Colonnes affichées**. Pour le reste, tout est dans le mode d'emploi."
+    ),
     html.Div(
         html.Details(
             children=[
@@ -114,31 +117,48 @@ layout = [
                 ),
                 dcc.Markdown(
                     dangerously_allow_html=True,
-                    children="""
+                    children=f"""
     ##### Définition des colonnes
 
     Pour voir la définition d'une colonne, passez votre souris sur son en-tête.
 
-    ##### Filtres
+    ##### Appliquer des filtres
 
     Vous pouvez appliquer un filtre pour chaque colonne en entrant du texte sous le nom de la colonne, puis en tapant sur `Entrée`.
 
-    - Champs textuels : la recherche est insensible à la casse (majuscules/minuscules) et retourne les valeurs qui contiennent
-    le texte recherché. Exemple : `rennes` retourne "RENNES METROPOLE". Les guillemets simples (apostrophe du 4) doivent être prédédées d'une barre oblique (AltGr + 8). Exemple : `services d\\\'assurances`. Lorsque vous ouvrez une URL de vue, le format équivalent `icontains rennes` est utilisé.
-    - Champs numériques : vous pouvez soit taper un nombre pour trouver les valeurs égales, soit le précéder de **>** ou **<** pour filtrer les valeurs supérieures ou inférieures. Exemple pour les offres reçues : `> 4` retourne les marchés ayant reçu plus de 4 offres.
-    - Champs date : vous pouvez également utiliser **>** ou **<**. Exemples : `< 2024-01-31` pour "avant le 31 janvier 2024",
-    `2024` pour "en 2024", `> 2022` pour "à partir de 2022". Lorsque vous ouvrez une URL de vue, le format équivalent `i<` ou `i>` est utilisé.
-    - Pour les champs textuels et dates : pour chercher du texte qui **commence par** votre texte, entez `texte*`, pour chercher du texte qui **finit par** votre texte, entez `*texte`. C'est par exemple utile pour filtrer des acheteurs ou titulaires par numéro SIREN (`123456789*`).
+    - Champs textuels : la recherche retourne les valeurs qui contiennent le texte recherché et n'est pas sensible à la casse (majuscules/minuscules).
+        - Exemple : `rennes` retourne "RENNES METROPOLE".
+        - Les guillemets simples (apostrophe du 4) doivent être prédédées d'une barre oblique (AltGr + 8). Exemple : `services d\\\'assurances`
+        - Lorsque vous ouvrez une URL de vue (voir "Partager une vue" plus bas), le format équivalent `icontains rennes` est utilisé. Mais dans vos filtres pas besoin de taper `icontains` !
+    - Champs numériques (Durée en mois, Montant, ...) : vous pouvez...
+        - soit taper un nombre pour trouver les valeurs strictement égales. Exemple : `12` ne retourne que des 12
+        - soit le précéder de **>** ou **<** pour filtrer les valeurs supérieures ou inférieures. Exemple pour les offres reçues : `> 4` retourne les marchés ayant reçu plus de 4 offres.
+        - lorsque vous ouvrez une URL de vue (voir "Partager une vue" plus bas), le format équivalent `i<` ou `i>` est utilisé, mais c'est un bug : vous n'avez pas besoin de taper le `i` pour appliquer ce filtre.
+    - Champs date (Date de notification, ...) : vous pouvez également utiliser **>** ou **<**. Exemples :
+        - `< 2024-01-31` pour "avant le 31 janvier 2024"
+        - `2024` pour "en 2024", `> 2022` pour "à partir de 2022".
+    - Pour les champs textuels et les champs dates :
+        - pour chercher du texte qui **commence par** votre texte, entrez `texte*`. C'est par exemple utile pour filtrer des acheteurs ou titulaires par numéro SIREN (`123456789*`) ou les marchés sur une année en particulier (`2024*`)
+        - pour chercher du texte qui **finit par** votre texte, entrez `*texte`
 
     Vous pouvez filtrer plusieurs colonnes à la fois. Vos filtres sont remis à zéro quand vous rafraîchissez la page.
 
-    ##### Tri
+    ##### Trier les données
 
-    Pour trier une colonne, utilisez les flèches grises à côté des noms de colonnes. Chaque clic change le tri dans cet ordre : tri ascendant, tri descendant, pas de tri.
+    Pour trier une colonne, utilisez les flèches grises à côté des noms de colonnes. Chaque clic change le tri dans cet ordre :
+        1. tri croissant
+        2. tri décroissant
+        3. pas de tri
+
+    ##### Afficher plus de colonnes
+
+    Par défaut, un nombre réduit de colonnes est affiché pour ne pas surcharger la page. Mais vous avez le choix parmi {str(df.width)} colonnes, ce serait dommage de vous limiter !
+
+    Pour afficher plus de colonnes, cliquez sur le bouton **Colonnes affichées** et cochez les colonnes pour les afficher.
 
     ##### Partager une vue
 
-    Une vue est un ensemble de filtres, de tris et de choix de colonnes que vous avez appliqué. Vous pouvez copier une adresse Web qui reproduit la vue courante à l'identique en cliquant sur l'icône <img src="/assets/copy.svg" alt="drawing" width="20"/>. En la collant dans la barre d'adresse d'un navigateur, vous ouvrez la vue Tableau avec les mêmes paramètres.
+    Une vue est un ensemble de filtres, de tris et de choix de colonnes que vous avez appliqué. Cliquez sur l'icône <img src="/assets/copy.svg" alt="drawing" width="20"/> pour copier une adresse Web qui reproduit la vue courante à l'identique : en la collant dans la barre d'adresse d'un navigateur, vous ouvrez la vue Tableau avec les mêmes paramètres.
 
     Pratique pour partager une vue avec un·e collègue, sur les réseaux sociaux, ou la sauvegarder pour plus tard.
 
