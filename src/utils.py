@@ -145,11 +145,12 @@ def format_number(number) -> str:
     return number
 
 
-def unformat_montant(number: str) -> int:
+def unformat_montant(number: str) -> float:
     number = number.replace(" €", "")
     number = number.replace(" €", "").replace(" ", "")
+    number = number.replace(",", ".")
     number = number.strip()
-    return int(number)
+    return float(number)
 
 
 def format_values(dff: pl.DataFrame) -> pl.DataFrame:
@@ -758,10 +759,10 @@ df_titulaires_departement: pl.DataFrame = (
     .sort("titulaire_nom")
 )
 df_acheteurs_marches: pl.DataFrame = (
-    df.select("uid", "acheteur_id").unique().sort("acheteur_id")
+    df.select("uid", "objet", "acheteur_id").unique().sort("acheteur_id")
 )
 df_titulaires_marches: pl.DataFrame = (
-    df.select("uid", "titulaire_id").unique().sort("titulaire_id")
+    df.select("uid", "objet", "titulaire_id").unique().sort("titulaire_id")
 )
 
 departements = get_departements()
