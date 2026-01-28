@@ -16,6 +16,10 @@ app = Dash(
     compress=True,
     meta_tags=[
         {"name": "viewport", "content": "width=device-width, initial-scale=1"},
+        {
+            "name": "keywords",
+            "content": "commande publique, decp, marchés publics, données essentielles",
+        },
     ],
 )
 # COSMO (belle font, blue),
