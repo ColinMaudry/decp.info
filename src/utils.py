@@ -280,6 +280,7 @@ def get_departement_region(code_postal):
 def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
     debug = os.getenv("DEVELOPMENT", "False").lower() == "true"
     schema = lff.collect_schema()
+    track_search(filter_query)
     filtering_expressions = filter_query.split(" && ")
     for filter_part in filtering_expressions:
         col_name, operator, filter_value = split_filter_part(filter_part)
