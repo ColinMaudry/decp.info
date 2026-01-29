@@ -195,6 +195,11 @@ table.cell-table tr {
   border-spacing: 0;
 }
 
+table.cell-table th {
+  border-collapse: separate !important;
+  border-spacing: 0;
+}
+
 .dash-table-container p {
   margin-bottom: 0;
 }
@@ -266,6 +271,14 @@ table.cell-table tr {
 }
 
 /* Custom Marches Table */
+.dash-table-container
+  .dash-spreadsheet-container
+  .dash-spreadsheet-inner
+  .cell-table
+  td {
+  padding-left: 5px;
+}
+
 .dash-table-container
   .dash-spreadsheet-container
   .dash-spreadsheet-inner

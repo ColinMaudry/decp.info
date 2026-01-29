@@ -213,10 +213,6 @@ def get_sources_tables(source_path) -> html.Div:
         ],
         sort_action="native",
         markdown_options={"html": True},
-        style_cell={
-            "border-left": "solid 1px #ccc",
-            "border-top": "solid 1px #ccc",
-        },
         style_header={
             "border": "solid 1px rgb(179, 56, 33)",
             "backgroundColor": "rgb(179, 56, 33)",
@@ -335,13 +331,6 @@ class DataTable(dash_table.DataTable):
             row_deletable=False,
             page_current=0,
             style_cell_conditional=style_cell_conditional,
-            style_header={
-                "backgroundColor": "rgb(179, 56, 33)",
-                "color": "white",
-            },
-            style_table={
-                "border": "solid 0 white",
-            },
             data_timestamp=0,
             markdown_options={"html": True},
             tooltip_duration=8000,
