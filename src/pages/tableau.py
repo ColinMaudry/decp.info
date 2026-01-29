@@ -1,10 +1,22 @@
 import json
 import os
 import urllib.parse
+import uuid
 from datetime import datetime
 
 import polars as pl
-from dash import Input, Output, State, callback, dcc, html, no_update, register_page
+from dash import (
+    ClientsideFunction,
+    Input,
+    Output,
+    State,
+    callback,
+    clientside_callback,
+    dcc,
+    html,
+    no_update,
+    register_page,
+)
 
 from src.figures import DataTable
 from src.utils import (
@@ -50,6 +62,7 @@ datatable = html.Div(
 
 layout = [
     dcc.Location(id="tableau_url", refresh=False),
+    dcc.Store(id="filter-cleanup-trigger"),
     html.Script(
         type="application/ld+json",
         id="dataset_jsonld",
@@ -272,12 +285,13 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
     Output("table", "sort_by"),
     Output("table", "hidden_columns"),
     Output("tableau_url", "search", allow_duplicate=True),
+    Output("filter-cleanup-trigger", "data"),
     Input("tableau_url", "search"),
     prevent_initial_call=True,
 )
 def restore_view_from_url(search):
     if not search:
-        return no_update, no_update, no_update, no_update
+        return no_update, no_update, no_update, no_update, no_update
 
     params = urllib.parse.parse_qs(search.lstrip("?"))
     logger.debug("params", params)
@@ -285,9 +299,11 @@ def restore_view_from_url(search):
     filter_query = no_update
     sort_by = no_update
     hidden_columns = no_update
+    trigger_cleanup = no_update
 
     if "filtres" in params:
         filter_query = params["filtres"][0]
+        trigger_cleanup = str(uuid.uuid4())
 
     if "tris" in params:
         try:
@@ -300,7 +316,18 @@ def restore_view_from_url(search):
         verified_columns = [column for column in columns if column in schema.names()]
         hidden_columns = invert_columns(verified_columns)
 
-    return filter_query, sort_by, hidden_columns, ""
+    return filter_query, sort_by, hidden_columns, "", trigger_cleanup
+
+
+clientside_callback(
+    ClientsideFunction(
+        namespace="clientside",
+        function_name="clean_filters",
+    ),
+    Output("filter-cleanup-trigger", "data", allow_duplicate=True),
+    Input("filter-cleanup-trigger", "data"),
+    prevent_initial_call=True,
+)
 
 
 @callback(
