@@ -199,8 +199,8 @@ def update_marche_info(marche, titulaires):
     for titulaire in titulaires:
         if titulaire["titulaire_typeIdentifiant"] == "SIRET":
             categorie = titulaire.get("titulaire_categorie", "")
-            if titulaire.get("titulaire_categorie"):
-                distance = str(titulaire.get("titulaire_categorie")) + " km"
+            if titulaire.get("titulaire_distance"):
+                distance = str(titulaire.get("titulaire_distance")) + " km"
             else:
                 distance = ""
 
