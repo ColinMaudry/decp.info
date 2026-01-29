@@ -172,6 +172,10 @@ p.version > a {
 }
 
 /* Dash Table Overrides */
+.column-header--sort {
+  margin-left: 3px;
+}
+
 dash-table-container dash-spreadsheet-menu table.cell-table {
   margin-right: 8px;
   margin-lef: 8px;
@@ -202,16 +206,6 @@ table.cell-table tr {
   padding-right: 12px;
   border: 1px solid rgb(179, 56, 33) !important;
   background-color: rgb(179, 56, 33);
-}
-
-/* High specificity to override Dash defaults and .dash-header class */
-.dash-table-container
-  .dash-spreadsheet-container
-  .dash-spreadsheet-inner
-  table.cell-table
-  tr:first-of-type
-  th.dash-header {
-  border-bottom: none !important;
 }
 
 .dash-table-container
@@ -265,11 +259,6 @@ table.cell-table tr {
 }
 
 /* Custom Marches Table */
-.marches_table table td,
-.marches_table table th {
-  font-family: "Inter", sans-serif;
-}
-
 .dash-table-container
   .dash-spreadsheet-container
   .dash-spreadsheet-inner
