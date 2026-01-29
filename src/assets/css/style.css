@@ -199,10 +199,11 @@ p.version > a {
   border-color: #ccc;
   border-style: solid;
   border-width: 1px;
-  border-radius: 2px;
+  border-radius: 3px;
   height: 28px;
   font-family: "Fira Code";
   caret-color: #000;
+  background-color: rgb(250 250 250);
   text-align: left !important;
   padding: 1px 2px 0 2px;
   vertical-align: center;
@@ -210,6 +211,14 @@ p.version > a {
 
 .dash-filter--case {
   display: none;
+}
+
+.dash-table-container
+  .dash-spreadsheet-container
+  .dash-spreadsheet-inner
+  .cell-table
+  th.dash-filter {
+  background-color: #ccc;
 }
 
 /* Custom Marches Table */

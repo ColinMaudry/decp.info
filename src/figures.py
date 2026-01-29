@@ -261,15 +261,19 @@ class DataTable(dash_table.DataTable):
             {
                 "if": {"column_id": "objet"},
                 "minWidth": "350px",
-                "textAlign": "left",
                 "overflow": "hidden",
                 "lineHeight": "18px",
                 "whiteSpace": "normal",
             },
             {
+                "if": {"column_id": "acheteur_id"},
+                "minWidth": "160px",
+                "overflow": "hidden",
+                "whiteSpace": "normal",
+            },
+            {
                 "if": {"column_id": "acheteur_nom"},
                 "minWidth": "250px",
-                "textAlign": "left",
                 "overflow": "hidden",
                 "lineHeight": "18px",
                 "whiteSpace": "normal",
@@ -277,7 +281,6 @@ class DataTable(dash_table.DataTable):
             {
                 "if": {"column_id": "titulaire_nom"},
                 "minWidth": "250px",
-                "textAlign": "left",
                 "overflow": "hidden",
                 "lineHeight": "18px",
                 "whiteSpace": "normal",
