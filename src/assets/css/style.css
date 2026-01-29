@@ -91,6 +91,8 @@ a.logo > h1 {
 
 p.version {
   margin: 0 0 0 12px;
+  font-family: "Fira Code";
+  font-size: 0.9rem;
 }
 
 p.version > a {
