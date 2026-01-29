@@ -551,7 +551,6 @@ def search_org(dff: pl.DataFrame, query: str, org_type: str) -> pl.DataFrame:
     dff = (
         dff.with_columns(token_matches + [match_score])
         .filter(pl.col("match_score") == len(tokens))
-        .sort("Marchés", descending=True)
         .drop([f"token_{token}" for token in tokens])
     )
 
@@ -567,6 +566,8 @@ def search_org(dff: pl.DataFrame, query: str, org_type: str) -> pl.DataFrame:
     )
 
     dff = dff.select(f"{org_type}_id", f"{org_type}_nom", "Département", "Marchés")
+    dff = dff.group_by(f"{org_type}_id", f"{org_type}_nom", "Département").sum()
+    dff = dff.sort("Marchés", descending=True)
 
     return dff
 
