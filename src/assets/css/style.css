@@ -277,6 +277,7 @@ table.cell-table th {
   .cell-table
   td {
   padding-left: 5px;
+  padding-right: 5px;
 }
 
 .dash-table-container
