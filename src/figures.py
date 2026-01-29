@@ -91,9 +91,6 @@ def get_yearly_statistics(statistics, today_str) -> html.Div:
         page_size=10,
         sort_action="none",
         filter_action="none",
-        style_cell={
-            "border": "solid 1px rgb(179, 56, 33)",
-        },
         style_header={
             "border": "solid 1px rgb(179, 56, 33)",
             "backgroundColor": "rgb(179, 56, 33)",

@@ -1,3 +1,7 @@
+##### 2.5.1 (29 janvier 2026)
+
+- Mise en production un peu hâtive ([#67](https://github.com/ColinMaudry/decp.info/issues/67), [#68](https://github.com/ColinMaudry/decp.info/issues/68))
+
 #### 2.5.0 (29 janvier 2026)
 
 - Refonte graphique et amélioration des textes d'aide
