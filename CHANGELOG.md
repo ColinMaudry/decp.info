@@ -1,4 +1,4 @@
-#### 2.5.0 ()
+#### 2.5.0 (29 janvier 2026)
 
 - Refonte graphique et amélioration des textes d'aide
 - Amélioration du filtrage du tableau à partir d'une URL
