@@ -1,4 +1,4 @@
-@import url(https://fonts.bunny.net/css?family=fira-code:400|inter:300,500|inter-tight:400);
+@import url(https://fonts.bunny.net/css?family=fira-code:400|inter:300,500);
 
 /* ==========================================================================
    Variables
@@ -181,13 +181,14 @@ p.version > a {
   .dash-spreadsheet-inner
   td
   div.dash-cell-value.cell-markdown {
-  font-family: "Inter Tight";
+  font-family: "Inter";
 }
 
 /* Dash Filters */
 .dash-table-container
   .dash-spreadsheet-container
   .dash-spreadsheet-inner
+  .cell-table
   .dash-filter
   input[type="text"] {
   border-color: #ccc;
@@ -212,13 +213,22 @@ p.version > a {
   font-family: "Inter", sans-serif;
 }
 
+.dash-table-container
+  .dash-spreadsheet-container
+  .dash-spreadsheet-inner
+  td
+  div.dash-cell-value.cell-markdown {
+  font-family: "Inter", sans-serif;
+  font-weight: 300;
+}
+
 .marches_table.stuck {
   position: relative;
   right: 200px;
 }
 
 .marches_table .cell-table tr:nth-child(even) td {
-  background-color: #feeeee;
+  background-color: rgb(255 240 240 / 40%);
   font-family: "Inter", sans-serif;
 }
 
