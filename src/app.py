@@ -5,7 +5,7 @@ import dash_bootstrap_components as dbc
 import tomllib
 from dash import Dash, Input, Output, State, dcc, html, page_container, page_registry
 from dotenv import load_dotenv
-from flask import Response, send_from_directory
+from flask import Response
 
 load_dotenv()
 
@@ -39,7 +39,10 @@ app = Dash(
 # robots.txt
 @app.server.route("/robots.txt")
 def robots():
-    return send_from_directory("./assets", "robots.txt", mimetype="text/plain")
+    text = """User-agent: *
+Allow: /
+    """
+    return Response(text, mimetype="text/plain")
 
 
 @app.server.route("/sitemap.xml")
