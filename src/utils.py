@@ -361,6 +361,7 @@ def setup_table_columns(
     dff, hideable: bool = True, exclude: list = None, new_columns: list = None
 ) -> tuple:
     # Liste finale de colonnes
+    markdown_exceptions = ["montant", "titulaire_distance", "distance", "dureeMois"]
     columns = []
     tooltip = {}
     for column_id in dff.columns:
@@ -377,10 +378,12 @@ def setup_table_columns(
             column_name = column_id
             column_object = {"title": column_name, "description": ""}
 
+        presentation = "input" if column_id in markdown_exceptions else "markdown"
+
         column = {
             "name": column_name,
             "id": column_id,
-            "presentation": "markdown",
+            "presentation": presentation,
             "type": "text",
             "format": {"nully": "N/A"},
             "hideable": hideable,
