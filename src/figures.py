@@ -323,7 +323,6 @@ class DataTable(dash_table.DataTable):
             page_current=0,
             style_cell_conditional=style_cell_conditional,
             style_header={
-                "border": "solid 1px rgb(179, 56, 33)",
                 "backgroundColor": "rgb(179, 56, 33)",
                 "color": "white",
             },
