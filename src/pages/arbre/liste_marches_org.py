@@ -22,7 +22,9 @@ def make_org_nom_verbe(org_type, org_id) -> tuple:
         raise ValueError
 
     org_nom = (
-        df.filter(pl.col(f"{org_type}_id") == org_id).select(f"{org_type}_nom").item()
+        df.filter(pl.col(f"{org_type}_id") == org_id)
+        .select(f"{org_type}_nom")
+        .item(0, 0)
     )
 
     return org_nom, verbe
