@@ -214,7 +214,8 @@ def get_sources_tables(source_path) -> html.Div:
         sort_action="native",
         markdown_options={"html": True},
         style_cell={
-            "border": "solid 1px rgb(179, 56, 33)",
+            "border-left": "solid 1px #ccc",
+            "border-top": "solid 1px #ccc",
         },
         style_header={
             "border": "solid 1px rgb(179, 56, 33)",
@@ -300,6 +301,18 @@ class DataTable(dash_table.DataTable):
                 "overflow": "hidden",
                 "lineHeight": "18px",
                 "whiteSpace": "normal",
+            },
+            {
+                "if": {"column_id": "montant"},
+                "textAlign": "right",
+            },
+            {
+                "if": {"column_id": "dureeMois"},
+                "textAlign": "right",
+            },
+            {
+                "if": {"column_id": "titulaire_distance"},
+                "textAlign": "right",
             },
         ]
 
