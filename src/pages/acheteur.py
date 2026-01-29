@@ -21,11 +21,11 @@ from src.utils import (
 
 
 def get_title(acheteur_id: str = None) -> str:
-    acheteur_nom = (
-        df_acheteurs.filter(pl.col("acheteur_id") == acheteur_id)
-        .select("acheteur_nom")
-        .item()
+    df_acheteur = df_acheteurs.filter(pl.col("acheteur_id") == acheteur_id).select(
+        "acheteur_nom"
     )
+    acheteur_nom = df_acheteur.item(0, 0)
+
     return f"Marchés publics attribués par {acheteur_nom} | decp.info"
 
 
