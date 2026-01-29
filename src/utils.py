@@ -289,10 +289,10 @@ def filter_table_data(
     for filter_part in filtering_expressions:
         col_name, operator, filter_value = split_filter_part(filter_part)
         col_type = str(_schema[col_name])
-        logger.debug("filter_value:", filter_value)
-        logger.debug("filter_value_type:", type(filter_value))
-        logger.debug("operator:", operator)
-        logger.debug("col_type:", col_type)
+        # logger.debug("filter_value:", filter_value)
+        # logger.debug("filter_value_type:", type(filter_value))
+        # logger.debug("operator:", operator)
+        # logger.debug("col_type:", col_type)
 
         lff = lff.filter(pl.col(col_name).is_not_null())
 
