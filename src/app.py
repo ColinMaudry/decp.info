@@ -115,16 +115,21 @@ navbar = dbc.Navbar(
         children=[
             dbc.NavItem(
                 children=[
-                    dcc.Link(html.H1("decp.info"), href="/", className="logo"),
-                    html.P(
+                    html.Div(
                         [
-                            html.A(
-                                version,
-                                href="https://github.com/ColinMaudry/decp.info/blob/main/CHANGELOG.md",
-                            )
+                            dcc.Link(html.H1("decp.info"), href="/", className="logo"),
+                            html.P(
+                                [
+                                    html.A(
+                                        version,
+                                        href="https://github.com/ColinMaudry/decp.info/blob/main/CHANGELOG.md",
+                                    )
+                                ],
+                                className="version",
+                            ),
                         ],
-                        className="version",
-                    ),
+                        className="logo-wrapper",
+                    )
                 ],
                 style={"minWidth": "230px"},
             ),
