@@ -1,4 +1,4 @@
-from dash import Input, Output, callback, dcc, html, register_page
+from dash import Input, Output, State, callback, dcc, html, register_page
 
 from src.figures import DataTable
 from src.utils import (
@@ -16,7 +16,7 @@ register_page(
     path="/",
     title="Recherche de marchés publics | decp.info",
     name=name,
-    description="Recherchez des des acheteurs et des titulaires parmi les données essentielles de la commande publique.",
+    description="Explorez et analysez les données des marchés publics français avec cet outil libre et gratuit. Pour une commande publique accessible à toutes et tous.",
     image_url=meta_content["image_url"],
     order=0,
 )
@@ -26,15 +26,52 @@ layout = html.Div(
     children=[
         html.Div(
             className="tagline",
-            children=html.P(
-                "Exploration et téléchargement des données des marchés publics"
-            ),
+            children=html.P("Recherchez un acheteur ou un titulaire de marché public"),
         ),
-        dcc.Input(
-            id="search",
-            type="text",
-            placeholder="Nom d'acheteur/entreprise, SIREN/SIRET, code département",
-            autoFocus=True,
+        html.Div(
+            style={
+                "display": "flex",
+                "justifyContent": "center",
+                "marginTop": "30px",
+                "marginBottom": "30px",
+            },
+            children=[
+                dcc.Input(
+                    id="search",
+                    type="text",
+                    placeholder="Nom d'acheteur/entreprise, SIREN/SIRET, code département",
+                    autoFocus=True,
+                    style={
+                        "margin": "0",
+                        "width": "500px",
+                        "border": "1px solid #ccc",
+                        "borderRight": "none",
+                        "borderRadius": "4px 0 0 4px",
+                        "padding": "5px 10px",
+                        "outline": "none",
+                    },
+                ),
+                html.Button(
+                    "🔍",
+                    id="search-button",
+                    style={
+                        "border": "1px solid #ccc",
+                        "borderRadius": "0 4px 4px 0",
+                        "marginLeft": "0",
+                        "backgroundColor": "#f0f0f0",
+                        "cursor": "pointer",
+                        "height": "auto",  # Ensure it matches input height if necessary, often relying on padding/line-height
+                    },
+                ),
+            ],
+        ),
+        html.P(
+            [
+                "...ou bien filtrez les marchés publics dans la vue ",
+                dcc.Link("Tableau", href="/tableau"),
+            ],
+            style={"textAlign": "center"},
+            id="mention_tableau",
         ),
         # html.Div(
         #     className="search_options",
@@ -47,11 +84,14 @@ layout = html.Div(
 
 @callback(
     Output("search_results", "children"),
-    Input("search", "value"),
+    Output("mention_tableau", "style"),
+    Input("search", "n_submit"),
+    Input("search-button", "n_clicks"),
+    State("search", "value"),
     prevent_initial_call=True,
 )
-def update_search_results(query):
-    if len(query) >= 1:
+def update_search_results(n_submit, n_clicks, query):
+    if query and len(query) >= 1:
         content = []
 
         for org_type in ["acheteur", "titulaire"]:
@@ -88,6 +128,7 @@ def update_search_results(query):
                 else html.P(f"Aucun {org_type} trouvé."),
             ]
             content.extend(org_content)
+            style = {"textAlign": "center", "display": "none"}
 
-        return content
-    return html.P("")
+        return content, style
+    return html.P(""), {"textAlign": "center"}

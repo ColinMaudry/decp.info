@@ -11,11 +11,11 @@ def get_top_org_table(data, org_type: str):
         return html.Div()
 
     dff = dff.select(
-        ["uid", f"{org_type}_id", f"{org_type}_nom", "distance", "montant"]
+        ["uid", f"{org_type}_id", f"{org_type}_nom", "titulaire_distance", "montant"]
     )
-    dff_nb = dff.group_by(f"{org_type}_id", f"{org_type}_nom", "distance").agg(
-        pl.len().alias("Attributions"), pl.sum("montant").alias("montant")
-    )
+    dff_nb = dff.group_by(
+        f"{org_type}_id", f"{org_type}_nom", "titulaire_distance"
+    ).agg(pl.len().alias("Attributions"), pl.sum("montant").alias("montant"))
     dff_nb = dff_nb.sort(by="montant", descending=True, nulls_last=True)
     dff_nb = dff_nb.cast(pl.String)
     dff_nb = dff_nb.fill_null("")

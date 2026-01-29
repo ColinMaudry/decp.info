@@ -5,19 +5,30 @@ import dash_bootstrap_components as dbc
 import tomllib
 from dash import Dash, Input, Output, State, dcc, html, page_container, page_registry
 from dotenv import load_dotenv
-from flask import Response, send_from_directory
+from flask import Response
 
 load_dotenv()
 
+development = os.getenv("DEVELOPMENT").lower() == "true"
+
+meta_tags = [
+    {"name": "viewport", "content": "width=device-width, initial-scale=1"},
+    {
+        "name": "keywords",
+        "content": "commande publique, decp, marchés publics, données essentielles",
+    },
+]
+
+if development:
+    meta_tags.append({"name": "robots", "content": "noindex"})
+
 app = Dash(
-    external_stylesheets=[dbc.themes.SIMPLEX],
     title="decp.info",
     use_pages=True,
     compress=True,
-    meta_tags=[
-        {"name": "viewport", "content": "width=device-width, initial-scale=1"},
-    ],
+    meta_tags=meta_tags,
 )
+
 # COSMO (belle font, blue),
 # UNITED (rouge, ubuntu font),
 # LUMEN (gros séparateur, blue clair),
@@ -27,7 +38,10 @@ app = Dash(
 # robots.txt
 @app.server.route("/robots.txt")
 def robots():
-    return send_from_directory("./assets", "robots.txt", mimetype="text/plain")
+    text = """User-agent: *
+Allow: /
+    """
+    return Response(text, mimetype="text/plain")
 
 
 @app.server.route("/sitemap.xml")
@@ -101,16 +115,21 @@ navbar = dbc.Navbar(
         children=[
             dbc.NavItem(
                 children=[
-                    dcc.Link(html.H1("decp.info"), href="/", className="logo"),
-                    html.P(
+                    html.Div(
                         [
-                            html.A(
-                                version,
-                                href="https://github.com/ColinMaudry/decp.info/blob/main/CHANGELOG.md",
-                            )
+                            dcc.Link(html.H1("decp.info"), href="/", className="logo"),
+                            html.P(
+                                [
+                                    html.A(
+                                        version,
+                                        href="https://github.com/ColinMaudry/decp.info/blob/main/CHANGELOG.md",
+                                    )
+                                ],
+                                className="version",
+                            ),
                         ],
-                        className="version",
-                    ),
+                        className="logo-wrapper",
+                    )
                 ],
                 style={"minWidth": "230px"},
             ),
@@ -135,7 +154,8 @@ navbar = dbc.Navbar(
                             )
                         )
                         for page in page_registry.values()
-                        if page["name"] not in ["Acheteur", "Titulaire", "Marché"]
+                        if page["name"]
+                        in ["Recherche", "À propos", "Tableau", "Statistiques"]
                     ],
                     className="ms-auto",
                     navbar=True,

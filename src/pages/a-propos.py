@@ -120,7 +120,28 @@ C’est vrai, vous n’avez pas eu à cliquer sur un bloc qui recouvre la moiti�
 
 Rien d’exceptionnel, je respecte simplement la loi, qui dit que certains outils de suivi d’audience, correctement configurés pour respecter la vie privée, sont exemptés d’autorisation préalable.
 
-J’utilise pour cela [Matomo](https://matomo.org/), un outil [libre](https://matomo.org/free-software/), paramétré pour être en conformité avec [la recommandation « Cookies »](https://www.cnil.fr/fr/solutions-pour-les-cookies-de-mesure-daudience) de la CNIL. Cela signifie que votre adresse IP, par exemple, est anonymisée avant d’être enregistrée. Il m’est donc impossible d’associer vos visites sur ce site à votre personne."""
+J’utilise pour cela [Matomo](https://matomo.org/), un outil [libre](https://matomo.org/free-software/), paramétré pour être en conformité avec [la recommandation « Cookies »](https://www.cnil.fr/fr/solutions-pour-les-cookies-de-mesure-daudience) de la CNIL. Cela signifie que votre adresse IP, par exemple, est anonymisée avant d’être enregistrée. Il m’est donc impossible d’associer vos visites sur ce site à votre personne.
+
+J'enregistre également les données suivantes, de manière anonyme, afin de mieux comprendre comment vous utilisez le site et l'améliorer :
+
+- recherches sur la page d'accueil
+- filtres appliqués aux données
+"""
+                        ),
+                        html.H5("Attributions", id="attributions"),
+                        dcc.Markdown("""
+                        Les polices de caractères sont distribuées par [Bunny fonts](https://fonts.bunny.net), une alternative européenne et qualitative à Google Fonts.
+
+                        - la police de caractère [Inter](https://fonts.bunny.net/family/inter), principale police de ce site, a été créée par The Inter Project Authors ([source](https://github.com/rsms/inter))
+                        - la police de caractère [Fira Code](https://fonts.bunny.net/family/fira-code), la police à largeure fixe, a été créée par The Fira Code Project Authors (https://github.com/tonsky/FiraCode)
+                        """),
+                        html.H4(
+                            "Liste des marchés par département", id="liste_marches"
+                        ),
+                        dcc.Markdown(
+                            """
+                            - [Marchés par département](/departements)
+                            """
                         ),
                     ],
                 ),
@@ -171,6 +192,11 @@ J’utilise pour cela [Matomo](https://matomo.org/), un outil [libre](https://ma
                                 html.A(
                                     "Suivi d'audience",
                                     href="#audience",
+                                    className="toc-link toc-level-2",
+                                ),
+                                html.A(
+                                    "Attributions",
+                                    href="#attributions",
                                     className="toc-link toc-level-2",
                                 ),
                             ]

@@ -10,14 +10,17 @@ from httpx import get, post
 from polars.exceptions import ComputeError
 from unidecode import unidecode
 
-logger = logging.getLogger("decp.info")
-logging.getLogger("httpx").setLevel("WARNING")
-
 logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
     level=logging.INFO,
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+logger = logging.getLogger("decp.info")
+development = os.getenv("DEVELOPMENT", "False").lower() == "true"
+if development:
+    logger.setLevel(logging.DEBUG)
+
+logging.getLogger("httpx").setLevel("WARNING")
 
 
 def split_filter_part(filter_part):
@@ -29,14 +32,14 @@ def split_filter_part(filter_part):
         ["icontains", "contains"],
         # [" ", "contains"]
     ]
-    print("filter part", filter_part)
+    logger.debug("filter part", filter_part)
     for operator_group in operators:
         if operator_group[0] in filter_part:
             name_part, value_part = filter_part.split(operator_group[0], 1)
             name_part = name_part.strip()
             value = value_part.strip()
             name = name_part[name_part.find("{") + 1 : name_part.rfind("}")]
-            print("=>", name, operator_group[1], value)
+            logger.debug("=>", name, operator_group[1], value)
 
             return name, operator_group[1], value
 
@@ -145,6 +148,14 @@ def format_number(number) -> str:
     return number
 
 
+def unformat_montant(number: str) -> float:
+    number = number.replace(" €", "")
+    number = number.replace(" €", "").replace(" ", "")
+    number = number.replace(",", ".")
+    number = number.strip()
+    return float(number)
+
+
 def format_values(dff: pl.DataFrame) -> pl.DataFrame:
     def format_montant(expr, scale=None):
         # https://stackoverflow.com/a/78636786
@@ -182,9 +193,11 @@ def format_values(dff: pl.DataFrame) -> pl.DataFrame:
 
     if "montant" in dff.columns:
         dff = dff.with_columns(pl.col("montant").pipe(format_montant).alias("montant"))
-    if "distance" in dff.columns:
+    if "titulaire_distance" in dff.columns:
         dff = dff.with_columns(
-            pl.col("distance").pipe(format_distance).alias("distance")
+            pl.col("titulaire_distance")
+            .pipe(format_distance)
+            .alias("titulaire_distance")
         )
 
     return dff
@@ -267,18 +280,19 @@ def get_departement_region(code_postal):
     return code_departement, nom_departement, nom_region
 
 
-def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
-    debug = os.getenv("DEVELOPMENT", "False").lower() == "true"
-    schema = lff.collect_schema()
+def filter_table_data(
+    lff: pl.LazyFrame, filter_query: str, filter_source: str
+) -> pl.LazyFrame:
+    _schema = lff.collect_schema()
+    track_search(f"{filter_source}: {filter_query}")
     filtering_expressions = filter_query.split(" && ")
     for filter_part in filtering_expressions:
         col_name, operator, filter_value = split_filter_part(filter_part)
-        col_type = str(schema[col_name])
-        if debug:
-            print("filter_value:", filter_value)
-            print("filter_value_type:", type(filter_value))
-            print("operator:", operator)
-            print("col_type:", col_type)
+        col_type = str(_schema[col_name])
+        # logger.debug("filter_value:", filter_value)
+        # logger.debug("filter_value_type:", type(filter_value))
+        # logger.debug("operator:", operator)
+        # logger.debug("col_type:", col_type)
 
         lff = lff.filter(pl.col(col_name).is_not_null())
 
@@ -339,16 +353,15 @@ def sort_table_data(lff: pl.LazyFrame, sort_by: list) -> pl.LazyFrame:
         descending=[col["direction"] == "desc" for col in sort_by],
         nulls_last=True,
     )
-    print(sort_by)
+    logger.debug(sort_by)
     return lff
 
 
 def setup_table_columns(
     dff, hideable: bool = True, exclude: list = None, new_columns: list = None
 ) -> tuple:
-    new_columns = new_columns or []
-
     # Liste finale de colonnes
+    markdown_exceptions = ["montant", "titulaire_distance", "distance", "dureeMois"]
     columns = []
     tooltip = {}
     for column_id in dff.columns:
@@ -358,19 +371,19 @@ def setup_table_columns(
         if column_object:
             column_name = column_object.get("title")
         else:
-            if column_id not in new_columns:
-                # Si le champ n'est pas dans le schéma et pas annoncé, on le skip
-                print("Champ innatendu : ")
-                print(dff[column_id].head())
-                if column_id.endswith("_right") or column_id.endswith("_left"):
-                    continue
+            # Si le champ est un champ créé par erreur lors d'une jointure, on le skip
+            if column_id.endswith("_left") or column_id.endswith("_right"):
+                logger.warning(f"Champ innatendu : {column_id}")
+                continue
             column_name = column_id
             column_object = {"title": column_name, "description": ""}
+
+        presentation = "input" if column_id in markdown_exceptions else "markdown"
 
         column = {
             "name": column_name,
             "id": column_id,
-            "presentation": "markdown",
+            "presentation": presentation,
             "type": "text",
             "format": {"nully": "N/A"},
             "hideable": hideable,
@@ -396,7 +409,7 @@ def get_default_hidden_columns(page):
             "titulaire_id",
             "titulaire_typeIdentifiant",
             "titulaire_nom",
-            "distance",
+            "titulaire_distance",
             "montant",
             "codeCPV",
             "dureeRestanteMois",
@@ -408,7 +421,7 @@ def get_default_hidden_columns(page):
             "dateNotification",
             "acheteur_id",
             "acheteur_nom",
-            "distance",
+            "titulaire_distance",
             "montant",
             "codeCPV",
             "dureeRestanteMois",
@@ -448,11 +461,6 @@ def get_data_schema() -> dict:
     for col in original_schema["fields"]:
         new_schema[col["name"]] = col
 
-    new_schema["sourceDataset"] = {
-        "description": "Code de la source des données, avec un lien vers le fichier Open Data dont proviennent les données de ce marché public.",
-        "title": "Source des données",
-        "short_name": "Source",
-    }
     return new_schema
 
 
@@ -564,7 +572,7 @@ def search_org(dff: pl.DataFrame, query: str, org_type: str) -> pl.DataFrame:
 
 
 def prepare_table_data(
-    data, data_timestamp, filter_query, page_current, page_size, sort_by
+    data, data_timestamp, filter_query, page_current, page_size, sort_by, source_table
 ):
     """
     Fonction de préparation des données pour les datatables, afin de permettre une gestion fine des logiques,
@@ -575,12 +583,12 @@ def prepare_table_data(
     :param page_current:
     :param page_size:
     :param sort_by:
-    :param search_params:
+    :param source_table:
     :return:
     """
 
     if os.getenv("DEVELOPMENT").lower() == "true":
-        print(" + + + + + + + + + + + + + + + + + + ")
+        logger.debug(" + + + + + + + + + + + + + + + + + + ")
 
     # Récupération des données
     if isinstance(data, list):
@@ -588,27 +596,9 @@ def prepare_table_data(
     else:
         lff: pl.LazyFrame = df.lazy()  # start from the original data
 
-    # if search_params:
-    #     if "filtres" in search_params:
-    #         filter_query = search_params["filtres"][0]
-    #
-    #     if "tris" in search_params:
-    #         try:
-    #             sort_by = json.loads(search_params["tris"][0])
-    #         except json.JSONDecodeError:
-    #             pass
-    #
-    #     if "colonnes" in search_params:
-    #         try:
-    #             hidden_columns = json.loads(search_params["colonnes"][0])
-    #             print(hidden_columns)
-    #             lff = lff.drop(hidden_columns)
-    #         except json.JSONDecodeError:
-    #             pass
-
     # Application des filtres
     if filter_query:
-        lff = filter_table_data(lff, filter_query)
+        lff = filter_table_data(lff, filter_query, source_table)
 
     # Application des tris
     if len(sort_by) > 0:
@@ -669,7 +659,7 @@ def get_button_properties(height):
     if height > 65000:
         download_disabled = True
         download_text = "Téléchargement désactivé au-delà de 65 000 lignes"
-        download_title = "Excel ne supporte pas d'avoir plus de 65 000 URLs dans une même feuille de calcul. Contactez-moi pour me présenter votre besoin en téléchargement afin que je puisse adapter la solution."
+        download_title = " Ajoutez des filtres pour réduire le nombre de lignes, Excel ne supporte pas d'avoir plus de 65 000 URLs dans une même feuille de calcul."
     elif height == 0:
         download_disabled = True
         download_text = "Pas de données à télécharger"
@@ -695,11 +685,69 @@ def invert_columns(columns):
     return inverted_columns
 
 
+def make_org_jsonld(org_id, org_type, org_name=None, type_org_id="SIRET") -> dict:
+    org_types = {"acheteur": "GovernmentOrganization", "titulaire": "Organization"}
+    address = None
+    if type_org_id.lower() == "siret" and len(org_id) == 14:
+        annuaire_data = get_annuaire_data(org_id)
+        annuaire_address = annuaire_data["matching_etablissements"][0]
+        code_postal = annuaire_address["code_postal"]
+        commune = annuaire_address["libelle_commune"]
+
+        address = (
+            {
+                "@type": "PostalAddress",
+                "streetAddress": annuaire_address.get("adresse", "")
+                .replace(code_postal, "")
+                .replace(commune, "")
+                .strip(),
+                "addressLocality": commune,
+                "postalCode": code_postal,
+                "addressCountry": "FR",
+            },
+        )
+
+    jsonld = {
+        "@type": org_types[org_type],
+        "name": org_name,
+        "url": f"https://decp.info/{org_type}s/{org_id}",
+        "sameAs": f"https://annuaire-entreprises.data.gouv.fr/etablissement/{org_id}",
+        "identifier": {
+            "@type": "PropertyValue",
+            "propertyID": type_org_id.lower(),
+            "value": org_id,
+        },
+    }
+
+    if address:
+        jsonld["address"] = address
+
+    return jsonld
+
+
 df: pl.DataFrame = get_decp_data()
 schema = df.collect_schema()
 
 df_acheteurs = get_org_data(df, "acheteur")
 df_titulaires = get_org_data(df, "titulaire")
+df_acheteurs_departement: pl.DataFrame = (
+    df_acheteurs.select(["acheteur_id", "acheteur_nom", "acheteur_departement_code"])
+    .unique()
+    .sort("acheteur_nom")
+)
+df_titulaires_departement: pl.DataFrame = (
+    df_titulaires.select(
+        ["titulaire_id", "titulaire_nom", "titulaire_departement_code"]
+    )
+    .unique()
+    .sort("titulaire_nom")
+)
+df_acheteurs_marches: pl.DataFrame = (
+    df.select("uid", "objet", "acheteur_id").unique().sort("acheteur_id")
+)
+df_titulaires_marches: pl.DataFrame = (
+    df.select("uid", "objet", "titulaire_id").unique().sort("titulaire_id")
+)
 
 departements = get_departements()
 domain_name = (

@@ -7,6 +7,7 @@ from src.callbacks import get_top_org_table
 from src.figures import DataTable, point_on_map
 from src.utils import (
     df,
+    df_titulaires,
     filter_table_data,
     format_number,
     get_annuaire_data,
@@ -20,7 +21,12 @@ from src.utils import (
 
 
 def get_title(titulaire_id: str = None) -> str:
-    return f"Titulaire {titulaire_id} | decp.info"
+    titulaire_nom = (
+        df_titulaires.filter(pl.col("titulaire_id") == titulaire_id)
+        .select("titulaire_nom")
+        .item()
+    )
+    return f"Marchés publics remportés par {titulaire_nom} | decp.info"
 
 
 register_page(
@@ -47,7 +53,7 @@ datatable = html.Div(
 
 layout = [
     dcc.Store(id="titulaire_data", storage_type="memory"),
-    dcc.Location(id="url", refresh="callback-nav"),
+    dcc.Location(id="titulaire_url", refresh="callback-nav"),
     html.Div(
         children=[
             html.Div(
@@ -152,7 +158,7 @@ layout = [
     Output(component_id="titulaire_departement", component_property="children"),
     Output(component_id="titulaire_region", component_property="children"),
     Output(component_id="titulaire_lien_annuaire", component_property="href"),
-    Input(component_id="url", component_property="pathname"),
+    Input(component_id="titulaire_url", component_property="pathname"),
 )
 def update_titulaire_infos(url):
     titulaire_siret = url.split("/")[-1]
@@ -219,7 +225,7 @@ def update_titulaire_stats(data):
     Output("btn-download-data-titulaire", "disabled"),
     Output("btn-download-data-titulaire", "children"),
     Output("btn-download-data-titulaire", "title"),
-    Input(component_id="url", component_property="pathname"),
+    Input(component_id="titulaire_url", component_property="pathname"),
     Input(component_id="titulaire_year", component_property="value"),
 )
 def get_titulaire_marches_data(url, titulaire_year: str) -> tuple:
@@ -263,7 +269,13 @@ def get_last_marches_data(
     data, page_current, page_size, filter_query, sort_by, data_timestamp
 ) -> list[dict]:
     return prepare_table_data(
-        data, data_timestamp, filter_query, page_current, page_size, sort_by
+        data,
+        data_timestamp,
+        filter_query,
+        page_current,
+        page_size,
+        sort_by,
+        "titulaire",
     )
 
 
@@ -322,7 +334,7 @@ def download_filtered_titulaire_data(
         lff = lff.drop(hidden_columns)
 
     if filter_query:
-        lff = filter_table_data(lff, filter_query)
+        lff = filter_table_data(lff, filter_query, "titu download")
 
     if len(sort_by) > 0:
         lff = sort_table_data(lff, sort_by)

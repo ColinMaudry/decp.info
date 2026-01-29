@@ -1,3 +1,10 @@
+#### 2.5.0 (29 janvier 2026)
+
+- Refonte graphique et amélioration des textes d'aide
+- Amélioration du filtrage du tableau à partir d'une URL
+- Renforcement du SEO avec une arborescence permettant l'accès aux marchés et des snippets JSON-LD
+- Suppression de la dépendance à Google Fonts grâce à [Bunny Fonts](https://fonts.bunny.net) 🇪🇺 🇸🇮
+
 ##### 2.4.1 (22 janvier 2026)
 
 - Meilleure gestion des colonnes absentes du schéma

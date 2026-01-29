@@ -48,7 +48,6 @@ layout = [
 
                             Les statistiques publiées sur cette page ont été produites automatiquement à partir des données les plus récentes ({today_str}).
                             """),
-                            dcc.Graph(figure=get_map_count_marches(df)),
                             html.H3(
                                 "Statistiques générales sur les marchés",
                                 id="marches",
@@ -66,6 +65,7 @@ layout = [
                                                         """),
                             html.H4("Statistiques par année"),
                             get_yearly_statistics(statistics, today_str),
+                            dcc.Graph(figure=get_map_count_marches(df)),
                             get_duplicate_matrix(),
                             html.H3("Nombre de marchés par source dans le temps"),
                             dcc.Graph(

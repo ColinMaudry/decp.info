@@ -7,6 +7,7 @@ from src.callbacks import get_top_org_table
 from src.figures import DataTable, point_on_map
 from src.utils import (
     df,
+    df_acheteurs,
     filter_table_data,
     format_number,
     get_annuaire_data,
@@ -20,7 +21,12 @@ from src.utils import (
 
 
 def get_title(acheteur_id: str = None) -> str:
-    return f"Acheteur {acheteur_id} | decp.info"
+    acheteur_nom = (
+        df_acheteurs.filter(pl.col("acheteur_id") == acheteur_id)
+        .select("acheteur_nom")
+        .item()
+    )
+    return f"Marchés publics attribués par {acheteur_nom} | decp.info"
 
 
 register_page(
@@ -47,7 +53,7 @@ datatable = html.Div(
 
 layout = [
     dcc.Store(id="acheteur_data", storage_type="memory"),
-    dcc.Location(id="url", refresh="callback-nav"),
+    dcc.Location(id="acheteur_url", refresh="callback-nav"),
     html.Div(
         children=[
             html.Div(
@@ -152,7 +158,7 @@ layout = [
     Output(component_id="acheteur_departement", component_property="children"),
     Output(component_id="acheteur_region", component_property="children"),
     Output(component_id="acheteur_lien_annuaire", component_property="href"),
-    Input(component_id="url", component_property="pathname"),
+    Input(component_id="acheteur_url", component_property="pathname"),
 )
 def update_acheteur_infos(url):
     acheteur_siret = url.split("/")[-1]
@@ -216,7 +222,7 @@ def update_acheteur_stats(data):
     Output("btn-download-data-acheteur", "disabled"),
     Output("btn-download-data-acheteur", "children"),
     Output("btn-download-data-acheteur", "title"),
-    Input(component_id="url", component_property="pathname"),
+    Input(component_id="acheteur_url", component_property="pathname"),
     Input(component_id="acheteur_year", component_property="value"),
 )
 def get_acheteur_marches_data(url, acheteur_year: str) -> tuple:
@@ -254,7 +260,7 @@ def get_last_marches_data(
     data, page_current, page_size, filter_query, sort_by, data_timestamp
 ) -> tuple:
     return prepare_table_data(
-        data, data_timestamp, filter_query, page_current, page_size, sort_by
+        data, data_timestamp, filter_query, page_current, page_size, sort_by, "acheteur"
     )
 
 
@@ -313,7 +319,7 @@ def download_filtered_acheteur_data(
         lff = lff.drop(hidden_columns)
 
     if filter_query:
-        lff = filter_table_data(lff, filter_query)
+        lff = filter_table_data(lff, filter_query, "ach download")
 
     if len(sort_by) > 0:
         lff = sort_table_data(lff, sort_by)

@@ -1,10 +1,22 @@
 import json
 import os
 import urllib.parse
+import uuid
 from datetime import datetime
 
 import polars as pl
-from dash import Input, Output, State, callback, dcc, html, no_update, register_page
+from dash import (
+    ClientsideFunction,
+    Input,
+    Output,
+    State,
+    callback,
+    clientside_callback,
+    dcc,
+    html,
+    no_update,
+    register_page,
+)
 
 from src.figures import DataTable
 from src.utils import (
@@ -12,14 +24,16 @@ from src.utils import (
     filter_table_data,
     get_default_hidden_columns,
     invert_columns,
+    logger,
     meta_content,
     schema,
     sort_table_data,
 )
 from utils import prepare_table_data
 
-update_date = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
-update_date = datetime.fromtimestamp(update_date).strftime("%d/%m/%Y")
+update_date_timestamp = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
+update_date = datetime.fromtimestamp(update_date_timestamp).strftime("%d/%m/%Y")
+update_date_iso = datetime.fromtimestamp(update_date_timestamp).isoformat()
 
 
 name = "Tableau"
@@ -47,40 +61,120 @@ datatable = html.Div(
 )
 
 layout = [
-    dcc.Location(id="url", refresh=False),
+    dcc.Location(id="tableau_url", refresh=False),
+    dcc.Store(id="filter-cleanup-trigger"),
+    html.Script(
+        type="application/ld+json",
+        id="dataset_jsonld",
+        children=[
+            json.dumps(
+                {
+                    "@context": "https://schema.org/",
+                    "@type": "Dataset",
+                    "name": "Données essentielles des marchés publics français (DECP)",
+                    "description": "Données de marchés publics exhaustives décrivant les marchés publics attribués en France depuis 2018.",
+                    "url": "https://decp.info",
+                    "sameAs": "https://www.data.gouv.fr/datasets/608c055b35eb4e6ee20eb325",
+                    "keywords": [
+                        "marchés publics",
+                        "commande publique",
+                        "decp",
+                        "public procurement",
+                    ],
+                    "license": "https://www.etalab.gouv.fr/licence-ouverte-open-licence",
+                    "isAccessibleForFree": True,
+                    "creator": {
+                        "@type": "Organization",
+                        "url": "https://colmo.tech",
+                        "name": "Colmo",
+                        "sameAs": "https://annuaire-entreprises.data.gouv.fr/entreprise/colmo-989393350",
+                        "contactPoint": {
+                            "@type": "ContactPoint",
+                            "contactType": "Support et contact commercial",
+                            "email": "colin@colmo.tech",
+                        },
+                    },
+                    "includedInDataCatalog": {
+                        "@type": "DataCatalog",
+                        "name": "data.gouv.fr",
+                    },
+                    "distribution": [
+                        {
+                            "@type": "DataDownload",
+                            "encodingFormat": "CSV",
+                            "contentUrl": "https://www.data.gouv.fr/api/1/datasets/r/22847056-61df-452d-837d-8b8ceadbfc52",
+                        },
+                        {
+                            "@type": "DataDownload",
+                            "encodingFormat": "Parquet",
+                            "contentUrl": "https://www.data.gouv.fr/api/1/datasets/r/11cea8e8-df3e-4ed1-932b-781e2635e432",
+                        },
+                    ],
+                    "temporalCoverage": f"2018-01-01/{update_date_iso[:10]}",
+                    "spatialCoverage": {
+                        "@type": "Place",
+                        "address": {"countryCode": "FR"},
+                    },
+                },
+                indent=2,
+            )
+        ],
+    ),
+    dcc.Markdown(
+        f"Ce tableau vous permet d'appliquer un filtre sur une ou plusieurs colonnes, et ainsi produire la liste de marchés dont vous avez besoin ([exemple de filtre](/tableau?filtres=%7Bacheteur_id%7D+icontains+24350013900189+%26%26+%7BdateNotification%7D+icontains+2025%2A+%26%26+%7Bmontant%7D+i%3C+40000+%26%26+%7Bobjet%7D+icontains+voirie&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2Cacheteur_departement_code%2CsourceDataset)). Par défaut seules quelques colonnes sont affichées, mais vous pouvez en afficher jusqu'à {str(df.width)} en cliquant sur le bouton **Colonnes affichées**. Cet outil est assez puissant, je vous recommande de lire le mode d'emploi pour en tirer pleinement partie.",
+        style={"maxWidth": "1000px"},
+    ),
     html.Div(
         html.Details(
             children=[
                 html.Summary(
-                    html.H3("Mode d'emploi", style={"textDecoration": "underline"}),
+                    html.H4("Mode d'emploi", style={"textDecoration": "underline"}),
                 ),
                 dcc.Markdown(
                     dangerously_allow_html=True,
-                    children="""
+                    children=f"""
     ##### Définition des colonnes
 
     Pour voir la définition d'une colonne, passez votre souris sur son en-tête.
 
-    ##### Filtres
+    ##### Appliquer des filtres
 
     Vous pouvez appliquer un filtre pour chaque colonne en entrant du texte sous le nom de la colonne, puis en tapant sur `Entrée`.
 
-    - Champs textuels : la recherche est insensible à la casse (majuscules/minuscules) et retourne les valeurs qui contiennent
-    le texte recherché. Exemple : `rennes` retourne "RENNES METROPOLE". Les guillemets simples (apostrophe du 4) doivent être prédédées d'une barre oblique (AltGr + 8). Exemple : `services d\\\'assurances`. Lorsque vous ouvrez une URL de vue, le format équivalent `icontains rennes` est utilisé.
-    - Champs numériques : vous pouvez soit taper un nombre pour trouver les valeurs égales, soit le précéder de **>** ou **<** pour filtrer les valeurs supérieures ou inférieures. Exemple pour les offres reçues : `> 4` retourne les marchés ayant reçu plus de 4 offres.
-    - Champs date : vous pouvez également utiliser **>** ou **<**. Exemples : `< 2024-01-31` pour "avant le 31 janvier 2024",
-    `2024` pour "en 2024", `> 2022` pour "à partir de 2022". Lorsque vous ouvrez une URL de vue, le format équivalent `i<` ou `i>` est utilisé.
-    - Pour les champs textuels et dates : pour chercher du texte qui **commence par** votre texte, entez `texte*`, pour chercher du texte qui **finit par** votre texte, entez `*texte`. C'est par exemple utile pour filtrer des acheteurs ou titulaires par numéro SIREN (`123456789*`).
+    - Champs textuels : la recherche retourne les valeurs qui contiennent le texte recherché et n'est pas sensible à la casse (majuscules/minuscules).
+        - Exemple : `rennes` retourne "RENNES METROPOLE".
+        - Les guillemets simples (apostrophe du 4) doivent être prédédées d'une barre oblique (AltGr + 8). Exemple : `services d\\\'assurances`
+        - Lorsque vous ouvrez une URL de vue (voir "Partager une vue" plus bas), le format équivalent `icontains rennes` est utilisé. Mais dans vos filtres pas besoin de taper `icontains` !
+    - Champs numériques (Durée en mois, Montant, ...) : vous pouvez...
+        - soit taper un nombre pour trouver les valeurs strictement égales. Exemple : `12` ne retourne que des 12
+        - soit le précéder de **>** ou **<** pour filtrer les valeurs supérieures ou inférieures. Exemple pour les offres reçues : `> 4` retourne les marchés ayant reçu plus de 4 offres.
+        - lorsque vous ouvrez une URL de vue (voir "Partager une vue" plus bas), le format équivalent `i<` ou `i>` est utilisé, mais c'est un bug : vous n'avez pas besoin de taper le `i` pour appliquer ce filtre.
+    - Champs date (Date de notification, ...) : vous pouvez également utiliser **>** ou **<**. Exemples :
+        - `< 2024-01-31` pour "avant le 31 janvier 2024"
+        - `2024` pour "en 2024", `> 2022` pour "à partir de 2022".
+    - Pour les champs textuels et les champs dates :
+        - pour chercher du texte qui **commence par** votre texte, entrez `texte*`. C'est par exemple utile pour filtrer des acheteurs ou titulaires par numéro SIREN (`123456789*`) ou les marchés sur une année en particulier (`2024*`)
+        - pour chercher du texte qui **finit par** votre texte, entrez `*texte`
 
     Vous pouvez filtrer plusieurs colonnes à la fois. Vos filtres sont remis à zéro quand vous rafraîchissez la page.
 
-    ##### Tri
+    ##### Trier les données
 
-    Pour trier une colonne, utilisez les flèches grises à côté des noms de colonnes. Chaque clic change le tri dans cet ordre : tri ascendant, tri descendant, pas de tri.
+    Pour trier une colonne, utilisez les flèches grises à côté des noms de colonnes. Chaque clic change le tri dans cet ordre :
+
+    1. tri croissant
+    2. tri décroissant
+    3. pas de tri
+
+    ##### Afficher plus de colonnes
+
+    Par défaut, un nombre réduit de colonnes est affiché pour ne pas surcharger la page. Mais vous avez le choix parmi {str(df.width)} colonnes, ce serait dommage de vous limiter !
+
+    Pour afficher plus de colonnes, cliquez sur le bouton **Colonnes affichées** et cochez les colonnes pour les afficher.
 
     ##### Partager une vue
 
-    Une vue est un ensemble de filtres, de tris et de choix de colonnes que vous avez appliqué. Vous pouvez copier une adresse Web qui reproduit la vue courante à l'identique en cliquant sur l'icône <img src="/assets/copy.svg" alt="drawing" width="20"/>. En la collant dans la barre d'adresse d'un navigateur, vous ouvrez la vue Tableau avec les mêmes paramètres.
+    Une vue est un ensemble de filtres, de tris et de choix de colonnes que vous avez appliqué. Cliquez sur l'icône <img src="/assets/copy.svg" alt="drawing" width="20"/> pour copier une adresse Web qui reproduit la vue courante à l'identique : en la collant dans la barre d'adresse d'un navigateur, vous ouvrez la vue Tableau avec les mêmes paramètres.
 
     Pratique pour partager une vue avec un·e collègue, sur les réseaux sociaux, ou la sauvegarder pour plus tard.
 
@@ -154,7 +248,7 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     # else:
     #     search_params = urllib.parse.parse_qs(search_params.lstrip("?"))
     return prepare_table_data(
-        None, data_timestamp, filter_query, page_current, page_size, sort_by
+        None, data_timestamp, filter_query, page_current, page_size, sort_by, "tableau"
     )
 
 
@@ -174,7 +268,7 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
         lff = lff.drop(hidden_columns)
 
     if filter_query:
-        lff = filter_table_data(lff, filter_query)
+        lff = filter_table_data(lff, filter_query, "tab download")
 
     if len(sort_by) > 0:
         lff = sort_table_data(lff, sort_by)
@@ -190,23 +284,26 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
     Output("table", "filter_query"),
     Output("table", "sort_by"),
     Output("table", "hidden_columns"),
-    Output("url", "search", allow_duplicate=True),
-    Input("url", "search"),
+    Output("tableau_url", "search", allow_duplicate=True),
+    Output("filter-cleanup-trigger", "data"),
+    Input("tableau_url", "search"),
     prevent_initial_call=True,
 )
 def restore_view_from_url(search):
     if not search:
-        return no_update, no_update, no_update, no_update
+        return no_update, no_update, no_update, no_update, no_update
 
     params = urllib.parse.parse_qs(search.lstrip("?"))
-    print("params", params)
+    logger.debug("params", params)
 
     filter_query = no_update
     sort_by = no_update
     hidden_columns = no_update
+    trigger_cleanup = no_update
 
     if "filtres" in params:
         filter_query = params["filtres"][0]
+        trigger_cleanup = str(uuid.uuid4())
 
     if "tris" in params:
         try:
@@ -219,7 +316,18 @@ def restore_view_from_url(search):
         verified_columns = [column for column in columns if column in schema.names()]
         hidden_columns = invert_columns(verified_columns)
 
-    return filter_query, sort_by, hidden_columns, ""
+    return filter_query, sort_by, hidden_columns, "", trigger_cleanup
+
+
+clientside_callback(
+    ClientsideFunction(
+        namespace="clientside",
+        function_name="clean_filters",
+    ),
+    Output("filter-cleanup-trigger", "data", allow_duplicate=True),
+    Input("filter-cleanup-trigger", "data"),
+    prevent_initial_call=True,
+)
 
 
 @callback(
@@ -228,7 +336,8 @@ def restore_view_from_url(search):
     Input("table", "filter_query"),
     Input("table", "sort_by"),
     Input("table", "hidden_columns"),
-    State("url", "href"),
+    State("tableau_url", "href"),
+    prevent_initial_call=True,
 )
 def sync_url_and_reset_button(filter_query, sort_by, hidden_columns, href):
     if not href:

@@ -91,13 +91,21 @@ def get_yearly_statistics(statistics, today_str) -> html.Div:
         page_size=10,
         sort_action="none",
         filter_action="none",
+        style_cell={
+            "border": "solid 1px rgb(179, 56, 33)",
+        },
+        style_header={
+            "border": "solid 1px rgb(179, 56, 33)",
+            "backgroundColor": "rgb(179, 56, 33)",
+            "color": "white",
+        },
     )
 
     return html.Div(children=table, className="marches_table")
 
 
-def get_barchart_sources(df: pl.DataFrame, type_date: str):
-    lf = df.lazy()
+def get_barchart_sources(df_source: pl.DataFrame, type_date: str):
+    lf = df_source.lazy()
     labels = {
         "dateNotification": "notification",
         "datePublicationDonnees": "publication des données",
@@ -169,14 +177,23 @@ def get_sources_tables(source_path) -> html.Div:
             + pl.lit("</a>")
         ).alias("nom")
     )
-    df = df.drop("url")
+    df = df.drop("url", "unique")
     df = df.sort(by=["nb_marchés"], descending=True)
+
+    columns = {
+        "nom": "Nom de la source",
+        "organisation": "Responsable de publication",
+        "nb_marchés": "Nb de marchés",
+        "nb_acheteurs": "Nb d'acheteurs",
+        "code": "Code",
+    }
 
     datatable = dash_table.DataTable(
         id="source_table",
+        data=df.to_dicts(),
         columns=[
             {
-                "name": i,
+                "name": columns[i],
                 "id": i,
                 "presentation": "markdown",
                 "type": "text",
@@ -196,8 +213,12 @@ def get_sources_tables(source_path) -> html.Div:
         ],
         sort_action="native",
         markdown_options={"html": True},
+        style_header={
+            "border": "solid 1px rgb(179, 56, 33)",
+            "backgroundColor": "rgb(179, 56, 33)",
+            "color": "white",
+        },
     )
-    datatable.data = df.to_dicts()
 
     return html.Div(children=datatable)
 
@@ -239,9 +260,9 @@ class DataTable(dash_table.DataTable):
     def __init__(
         self,
         dtid: str,
-        hidden_columns: list = None,
-        data=None,
-        columns: list = None,
+        hidden_columns: list[str] | None = None,
+        data: list[dict[str, str | int | float | bool]] | None = None,
+        columns: list[dict[str, str]] | None = None,
         page_size: int = 20,
         page_action: Literal["native", "custom", "none"] = "native",
         sort_action: Literal["native", "custom", "none"] = "native",
@@ -253,15 +274,19 @@ class DataTable(dash_table.DataTable):
             {
                 "if": {"column_id": "objet"},
                 "minWidth": "350px",
-                "textAlign": "left",
                 "overflow": "hidden",
                 "lineHeight": "18px",
                 "whiteSpace": "normal",
             },
             {
+                "if": {"column_id": "acheteur_id"},
+                "minWidth": "160px",
+                "overflow": "hidden",
+                "whiteSpace": "normal",
+            },
+            {
                 "if": {"column_id": "acheteur_nom"},
                 "minWidth": "250px",
-                "textAlign": "left",
                 "overflow": "hidden",
                 "lineHeight": "18px",
                 "whiteSpace": "normal",
@@ -269,10 +294,21 @@ class DataTable(dash_table.DataTable):
             {
                 "if": {"column_id": "titulaire_nom"},
                 "minWidth": "250px",
-                "textAlign": "left",
                 "overflow": "hidden",
                 "lineHeight": "18px",
                 "whiteSpace": "normal",
+            },
+            {
+                "if": {"column_id": "montant"},
+                "textAlign": "right",
+            },
+            {
+                "if": {"column_id": "dureeMois"},
+                "textAlign": "right",
+            },
+            {
+                "if": {"column_id": "titulaire_distance"},
+                "textAlign": "right",
             },
         ]
 
@@ -285,7 +321,10 @@ class DataTable(dash_table.DataTable):
             page_size=page_size,
             filter_action=filter_action,
             page_action=page_action,
-            filter_options={"case": "insensitive", "placeholder_text": "Filtrer..."},
+            filter_options={
+                "case": "insensitive",
+                "placeholder_text": "",
+            },
             sort_action=sort_action,
             sort_mode="multi",
             sort_by=[],

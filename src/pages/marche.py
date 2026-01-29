@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 import dash_bootstrap_components as dbc
@@ -5,7 +6,14 @@ import polars as pl
 from dash import Input, Output, callback, dcc, html, register_page
 from polars import selectors as cs
 
-from src.utils import data_schema, df, format_values, meta_content
+from src.utils import (
+    data_schema,
+    df,
+    format_values,
+    make_org_jsonld,
+    meta_content,
+    unformat_montant,
+)
 
 
 def get_title(uid: str = None) -> str:
@@ -25,13 +33,15 @@ register_page(
 layout = [
     dcc.Store(id="marche_data"),
     dcc.Store(id="titulaires_data"),
-    dcc.Location(id="url", refresh="callback-nav"),
+    dcc.Location(id="marche_url", refresh="callback-nav"),
+    html.Script(type="application/ld+json", id="marche_jsonld"),
     dbc.Container(
         className="marche_infos",
         children=[
             dbc.Row(
                 dbc.Col(
                     [
+                        html.H1(id="marche_objet", style={"fontSize": "1.5em"}),
                         html.P(
                             "Vous consultez un résumé des données de ce marché public"
                         ),
@@ -73,7 +83,7 @@ layout = [
 @callback(
     Output("marche_data", "data"),
     Output("titulaires_data", "data"),
-    Input(component_id="url", component_property="pathname"),
+    Input(component_id="marche_url", component_property="pathname"),
 )
 def get_marche_data(url) -> tuple[dict, list]:
     marche_uid = url.split("/")[-1]
@@ -94,6 +104,7 @@ def get_marche_data(url) -> tuple[dict, list]:
 
 
 @callback(
+    Output("marche_objet", "children"),
     Output("marche_infos_1", "children"),
     Output("marche_infos_2", "children"),
     Output("marche_infos_titulaires", "children"),
@@ -101,7 +112,7 @@ def get_marche_data(url) -> tuple[dict, list]:
     Input("titulaires_data", "data"),
 )
 def update_marche_info(marche, titulaires):
-    def make_parameter(col):
+    def make_parameter(col, bold=True):
         column_object = data_schema.get(col)
         column_name = column_object.get("title") if column_object else col
 
@@ -145,12 +156,14 @@ def update_marche_info(marche, titulaires):
         else:
             value = ""
 
-        param_content = html.P([column_name, "  : ", html.Strong(value)])
+        value = html.Strong(value) if bold else value
+        param_content = html.P([column_name, "  : ", value])
         return param_content
+
+    marche_objet = make_parameter("objet", bold=False)
 
     marche_infos = [
         make_parameter("id"),
-        make_parameter("objet"),
         make_parameter("dateNotification"),  # date
         make_parameter("nature"),
         make_parameter("acheteur_nom"),  # lien
@@ -159,6 +172,7 @@ def update_marche_info(marche, titulaires):
         make_parameter("procedure"),
         make_parameter("techniques"),  # list
         make_parameter("dureeMois"),
+        make_parameter("dureeRestanteMois"),
         make_parameter("offresRecues"),
         make_parameter("datePublicationDonnees"),  # date
         make_parameter("formePrix"),
@@ -184,14 +198,71 @@ def update_marche_info(marche, titulaires):
     titulaires_lines = []
     for titulaire in titulaires:
         if titulaire["titulaire_typeIdentifiant"] == "SIRET":
+            categorie = titulaire.get("titulaire_categorie", "")
+            if titulaire.get("titulaire_categorie"):
+                distance = str(titulaire.get("titulaire_categorie")) + " km"
+            else:
+                distance = ""
+
             content = html.Li(
-                html.A(
-                    href=f"/titulaires/{titulaire['titulaire_id']}",
-                    children=titulaire["titulaire_nom"],
-                )
+                [
+                    html.A(
+                        href=f"/titulaires/{titulaire['titulaire_id']}",
+                        children=titulaire["titulaire_nom"],
+                    ),
+                    f" ({categorie}, {distance})",
+                ]
             )
         else:
             content = html.Li(titulaire["titulaire_nom"])
         titulaires_lines.append(content)
 
-    return marche_infos[:half], marche_infos[half:], titulaires_lines
+    return marche_objet, marche_infos[:half], marche_infos[half:], titulaires_lines
+
+
+@callback(
+    Output(component_id="marche_jsonld", component_property="children"),
+    Input("marche_data", "data"),
+    Input("titulaires_data", "data"),
+)
+def get_marche_jsonld(marche, titulaires) -> str:
+    acheteur_id = marche.get("acheteur_id")
+    type_order = (
+        "Service" if marche.get("categorie") in ["Services", "Travaux"] else "Product"
+    )
+    result = []
+
+    for titulaire in titulaires:
+        jsonld = {
+            "@context": "https://schema.org",
+            "@type": "Order",
+            "@id": f"https://decp.info/marches/{marche.get('uid')}",
+            "name": f"{marche.get('nature')} conclu par {marche.get('acheteur_nom')} le {marche.get('dateNotification')}",
+            "description": marche.get("objet"),
+            "orderNumber": marche.get("uid"),
+            "orderDate": marche.get("dateNotification"),
+            "price": unformat_montant(marche.get("montant")),
+            "priceCurrency": "EUR",
+            "customer": make_org_jsonld(
+                acheteur_id, org_name=marche.get("acheteur_nom"), org_type="acheteur"
+            ),
+            "seller": make_org_jsonld(
+                titulaire.get("titulaire_id"),
+                org_name=titulaire.get("titulaire_nom"),
+                org_type="titulaire",
+                type_org_id=titulaire.get("titulaire_typeIdentifiant"),
+            ),
+            "orderedItem": {
+                "@type": type_order,
+                "name": marche.get("objet"),
+                "category": {
+                    "@type": "CategoryCode",
+                    "propertyID": "cpv",
+                    "codeValue": marche.get("codeCPV"),
+                    # "description": "Description du code CPV"
+                },
+                # "serviceType": "Description du code CPV"
+            },
+        }
+        result.append(jsonld)
+    return json.dumps(result, indent=2)
