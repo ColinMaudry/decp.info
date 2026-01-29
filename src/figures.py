@@ -91,13 +91,21 @@ def get_yearly_statistics(statistics, today_str) -> html.Div:
         page_size=10,
         sort_action="none",
         filter_action="none",
+        style_cell={
+            "border": "solid 1px rgb(179, 56, 33)",
+        },
+        style_header={
+            "border": "solid 1px rgb(179, 56, 33)",
+            "backgroundColor": "rgb(179, 56, 33)",
+            "color": "white",
+        },
     )
 
     return html.Div(children=table, className="marches_table")
 
 
-def get_barchart_sources(df: pl.DataFrame, type_date: str):
-    lf = df.lazy()
+def get_barchart_sources(df_source: pl.DataFrame, type_date: str):
+    lf = df_source.lazy()
     labels = {
         "dateNotification": "notification",
         "datePublicationDonnees": "publication des données",
@@ -182,6 +190,7 @@ def get_sources_tables(source_path) -> html.Div:
 
     datatable = dash_table.DataTable(
         id="source_table",
+        data=df.to_dicts(),
         columns=[
             {
                 "name": columns[i],
@@ -204,8 +213,15 @@ def get_sources_tables(source_path) -> html.Div:
         ],
         sort_action="native",
         markdown_options={"html": True},
+        style_cell={
+            "border": "solid 1px rgb(179, 56, 33)",
+        },
+        style_header={
+            "border": "solid 1px rgb(179, 56, 33)",
+            "backgroundColor": "rgb(179, 56, 33)",
+            "color": "white",
+        },
     )
-    datatable.data = df.to_dicts()
 
     return html.Div(children=datatable)
 
@@ -247,9 +263,9 @@ class DataTable(dash_table.DataTable):
     def __init__(
         self,
         dtid: str,
-        hidden_columns: list = None,
-        data=None,
-        columns: list = None,
+        hidden_columns: list[str] | None = None,
+        data: list[dict[str, str | int | float | bool]] | None = None,
+        columns: list[dict[str, str]] | None = None,
         page_size: int = 20,
         page_action: Literal["native", "custom", "none"] = "native",
         sort_action: Literal["native", "custom", "none"] = "native",
@@ -306,6 +322,14 @@ class DataTable(dash_table.DataTable):
             row_deletable=False,
             page_current=0,
             style_cell_conditional=style_cell_conditional,
+            style_header={
+                "border": "solid 1px rgb(179, 56, 33)",
+                "backgroundColor": "rgb(179, 56, 33)",
+                "color": "white",
+            },
+            style_table={
+                "border": "solid 0 white",
+            },
             data_timestamp=0,
             markdown_options={"html": True},
             tooltip_duration=8000,
