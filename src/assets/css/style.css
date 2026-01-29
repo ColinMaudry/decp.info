@@ -1,4 +1,4 @@
-@import url(https://fonts.bunny.net/css?family=fira-code:400|inter:300,500);
+@import url(https://fonts.bunny.net/css?family=fira-code:400|inter:300,400,500);
 
 /* ==========================================================================
    Variables
@@ -14,8 +14,12 @@
    ========================================================================== */
 body {
   font-family: "Inter", sans-serif;
-  font-weight: 300;
+  font-weight: 400;
   background-color: rgb(255 240 240 / 40%);
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  font-smooth: always;
+  font-display: swap;
 }
 
 h3 {
@@ -72,6 +76,10 @@ a.logo {
   color: black;
   text-decoration: none;
   float: left;
+}
+
+a.logo > h1 {
+  font-weight: 400;
 }
 
 p.version {
@@ -176,14 +184,6 @@ p.version > a {
   padding-left: 8px;
 }
 
-.dash-table-container
-  .dash-spreadsheet-container
-  .dash-spreadsheet-inner
-  td
-  div.dash-cell-value.cell-markdown {
-  font-family: "Inter";
-}
-
 /* Dash Filters */
 .dash-table-container
   .dash-spreadsheet-container
@@ -218,8 +218,8 @@ p.version > a {
   .dash-spreadsheet-inner
   td
   div.dash-cell-value.cell-markdown {
-  font-family: "Inter", sans-serif;
-  font-weight: 300;
+  font-family: "Inter", sans-serif !important;
+  font-weight: 400;
 }
 
 .marches_table.stuck {
@@ -229,7 +229,6 @@ p.version > a {
 
 .marches_table .cell-table tr:nth-child(even) td {
   background-color: rgb(255 240 240 / 40%);
-  font-family: "Inter", sans-serif;
 }
 
 /* Column Visibility Menu */
