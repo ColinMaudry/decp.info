@@ -206,6 +206,8 @@ table.cell-table tr {
   padding-right: 12px;
   border: 1px solid rgb(179, 56, 33) !important;
   background-color: rgb(179, 56, 33);
+  border-bottom: none !important;
+  height: 34px;
 }
 
 .dash-table-container
