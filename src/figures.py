@@ -91,11 +91,8 @@ def get_yearly_statistics(statistics, today_str) -> html.Div:
         page_size=10,
         sort_action="none",
         filter_action="none",
-        style_header={
-            "border": "solid 1px rgb(179, 56, 33)",
-            "backgroundColor": "rgb(179, 56, 33)",
-            "color": "white",
-        },
+        style_header={"fontFamily": "Inter", "fontSize": "16px"},
+        style_cell={"fontFamily": "Inter", "fontSize": "16px"},
     )
 
     return html.Div(children=table, className="marches_table")
@@ -210,11 +207,8 @@ def get_sources_tables(source_path) -> html.Div:
         ],
         sort_action="native",
         markdown_options={"html": True},
-        style_header={
-            "border": "solid 1px rgb(179, 56, 33)",
-            "backgroundColor": "rgb(179, 56, 33)",
-            "color": "white",
-        },
+        style_header={"fontFamily": "Inter", "fontSize": "16px"},
+        style_cell={"fontFamily": "Inter", "fontSize": "16px"},
     )
 
     return html.Div(children=datatable)
