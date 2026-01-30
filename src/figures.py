@@ -354,13 +354,6 @@ def get_duplicate_matrix() -> html.Div:
 
     Passez votre souris sur une case pour avoir les pourcentages exacts. À noter que ces statistiques sont produites avant le dédoublonnement qui a lieu avant la publication en Open Data et sur ce site.""")
 
-    # Assuming result_df is your DataFrame with structure:
-    # | sourceDataset | unique | dataset1 | dataset2 | dataset3 |
-    # |---------------|--------|----------|----------|----------|
-    # | dataset1      | 0.8    |          | 0.15     | 0.2      |
-    # | dataset2      | 0.75   | 0.15     |          | 0.12     |
-    # | dataset3      | 0.85   | 0.2      | 0.12     |          |
-
     # Extract data
     z_data = result_df.select(pl.all().exclude("sourceDataset")).fill_null(0).to_numpy()
     x_labels = result_df.columns[1:]  # columns after "sourceDataset"
@@ -372,12 +365,6 @@ def get_duplicate_matrix() -> html.Div:
             z=z_data,
             x=x_labels,
             y=y_labels,
-            # colorscale=[
-            #     [0, "white"],  # 0% → white
-            #     [0.10, "lightblue"],  # 1% → light blue (soft start)
-            #     [0.50, "steelblue"],  # 50% → medium blue
-            #     [1, "darkblue"],  # 100% → dark blue
-            # ],
             colorscale=[
                 [0.0, "white"],  # 0% → white
                 [0.10, "lightsalmon"],  # 10% → light warm tone
@@ -385,8 +372,6 @@ def get_duplicate_matrix() -> html.Div:
             ],
             zmin=0,
             zmax=1,
-            # texttemplate="%{z:.0%}",  # Format as percentage
-            # textfont={"size": 10, "color": "black"},  # Smaller font
             hoverongaps=False,
             showscale=True,
             hovertemplate=(
