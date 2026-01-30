@@ -109,6 +109,7 @@ layout = [
                             html.Button(
                                 "Téléchargement au format Excel",
                                 id="btn-download-data-acheteur",
+                                className="btn btn-primary",
                             ),
                             dcc.Download(id="download-data-acheteur"),
                         ],
@@ -136,6 +137,7 @@ layout = [
                             html.Button(
                                 "Téléchargement désactivé au-delà de 65 000 lignes",
                                 id="btn-download-filtered-data-acheteur",
+                                className="btn btn-primary",
                                 disabled=True,
                             ),
                             dcc.Download(id="acheteur-download-filtered-data"),

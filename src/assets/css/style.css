@@ -42,13 +42,13 @@ button {
 
 button.btn.btn-primary,
 button.show-hide {
+  display: block;
   border-radius: 3px;
   outline: 0;
   color: #fff;
   border: 0;
   height: 30px;
   padding-top: 2px;
-  background-color: rgb(179, 56, 33) !important;
   background-image: linear-gradient(
     rgb(209, 96, 73),
     rgb(179, 56, 33) 26%,
