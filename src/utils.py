@@ -284,7 +284,7 @@ def filter_table_data(
     lff: pl.LazyFrame, filter_query: str, filter_source: str
 ) -> pl.LazyFrame:
     _schema = lff.collect_schema()
-    track_search(f"{filter_source}: {filter_query}")
+    track_search(filter_query, filter_source)
     filtering_expressions = filter_query.split(" && ")
     for filter_part in filtering_expressions:
         col_name, operator, filter_value = split_filter_part(filter_part)
@@ -464,21 +464,15 @@ def get_data_schema() -> dict:
     return new_schema
 
 
-def track_search(query):
-    if (
-        len(query) >= 4
-        and os.getenv("DEVELOPMENT").lower != "true"
-        and os.getenv("MATOMO_DOMAIN")
-    ):
-        if os.getenv("DEVELOPMENT").lower() == "true":
-            url = "https://test.decp.info"
-        else:
-            url = "https://decp.info"
+def track_search(query, category):
+    if len(query) >= 4 and not development and os.getenv("MATOMO_DOMAIN"):
+        url = "https://decp.info"
         params = {
             "idsite": os.getenv("MATOMO_ID_SITE"),
             "url": url,
             "rec": "1",
-            "action_name": "front_page_search",
+            "action_name": "search" if category == "home_page_search" else "filter",
+            "search_cat": category,
             "rand": uuid.uuid4().hex,
             "apiv": "1",
             "h": localtime().tm_hour,
@@ -506,7 +500,7 @@ def search_org(dff: pl.DataFrame, query: str, org_type: str) -> pl.DataFrame:
         return dff.select(pl.lit(False).alias("matches"))
 
     # Enregistrement des recherche dans Matomo
-    track_search(query)
+    track_search(query, "home_page_search")
 
     # Normalize query
     normalized_query = unidecode(query.strip()).upper()
