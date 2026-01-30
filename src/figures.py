@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import polars as pl
 from dash import dash_table, dcc, html
 
-from src.utils import format_number
+from src.utils import data_schema, format_number
 
 
 def get_map_count_marches(df: pl.DataFrame):
@@ -91,11 +91,8 @@ def get_yearly_statistics(statistics, today_str) -> html.Div:
         page_size=10,
         sort_action="none",
         filter_action="none",
-        style_header={
-            "border": "solid 1px rgb(179, 56, 33)",
-            "backgroundColor": "rgb(179, 56, 33)",
-            "color": "white",
-        },
+        style_header={"fontFamily": "Inter", "fontSize": "16px"},
+        style_cell={"fontFamily": "Inter", "fontSize": "16px"},
     )
 
     return html.Div(children=table, className="marches_table")
@@ -210,11 +207,8 @@ def get_sources_tables(source_path) -> html.Div:
         ],
         sort_action="native",
         markdown_options={"html": True},
-        style_header={
-            "border": "solid 1px rgb(179, 56, 33)",
-            "backgroundColor": "rgb(179, 56, 33)",
-            "color": "white",
-        },
+        style_header={"fontFamily": "Inter", "fontSize": "16px"},
+        style_cell={"fontFamily": "Inter", "fontSize": "16px"},
     )
 
     return html.Div(children=datatable)
@@ -295,19 +289,17 @@ class DataTable(dash_table.DataTable):
                 "lineHeight": "18px",
                 "whiteSpace": "normal",
             },
-            {
-                "if": {"column_id": "montant"},
-                "textAlign": "right",
-            },
-            {
-                "if": {"column_id": "dureeMois"},
-                "textAlign": "right",
-            },
-            {
-                "if": {"column_id": "titulaire_distance"},
-                "textAlign": "right",
-            },
         ]
+
+        for key in data_schema.keys():
+            field = data_schema[key]
+            if field["type"] in ["number", "integer"]:
+                rule = {
+                    "if": {"column_id": field["name"]},
+                    "textAlign": "right",
+                    # "fontFamily": "Fira Code",
+                }
+                style_cell_conditional.append(rule)
 
         # Initialisation de la classe parente avec les arguments
         super().__init__(
@@ -330,6 +322,8 @@ class DataTable(dash_table.DataTable):
             style_cell_conditional=style_cell_conditional,
             data_timestamp=0,
             markdown_options={"html": True},
+            style_header={"fontFamily": "Inter", "fontSize": "16px"},
+            style_cell={"fontFamily": "Inter", "fontSize": "16px"},
             tooltip_duration=8000,
             tooltip_delay=350,
             hidden_columns=hidden_columns,
@@ -360,13 +354,6 @@ def get_duplicate_matrix() -> html.Div:
 
     Passez votre souris sur une case pour avoir les pourcentages exacts. À noter que ces statistiques sont produites avant le dédoublonnement qui a lieu avant la publication en Open Data et sur ce site.""")
 
-    # Assuming result_df is your DataFrame with structure:
-    # | sourceDataset | unique | dataset1 | dataset2 | dataset3 |
-    # |---------------|--------|----------|----------|----------|
-    # | dataset1      | 0.8    |          | 0.15     | 0.2      |
-    # | dataset2      | 0.75   | 0.15     |          | 0.12     |
-    # | dataset3      | 0.85   | 0.2      | 0.12     |          |
-
     # Extract data
     z_data = result_df.select(pl.all().exclude("sourceDataset")).fill_null(0).to_numpy()
     x_labels = result_df.columns[1:]  # columns after "sourceDataset"
@@ -378,12 +365,6 @@ def get_duplicate_matrix() -> html.Div:
             z=z_data,
             x=x_labels,
             y=y_labels,
-            # colorscale=[
-            #     [0, "white"],  # 0% → white
-            #     [0.10, "lightblue"],  # 1% → light blue (soft start)
-            #     [0.50, "steelblue"],  # 50% → medium blue
-            #     [1, "darkblue"],  # 100% → dark blue
-            # ],
             colorscale=[
                 [0.0, "white"],  # 0% → white
                 [0.10, "lightsalmon"],  # 10% → light warm tone
@@ -391,8 +372,6 @@ def get_duplicate_matrix() -> html.Div:
             ],
             zmin=0,
             zmax=1,
-            # texttemplate="%{z:.0%}",  # Format as percentage
-            # textfont={"size": 10, "color": "black"},  # Smaller font
             hoverongaps=False,
             showscale=True,
             hovertemplate=(

@@ -71,7 +71,7 @@ layout = [
                         className="org_year",
                         children=dcc.Dropdown(
                             id="titulaire_year",
-                            options=["Toutes"]
+                            options=["Toutes les années"]
                             + [
                                 str(year)
                                 for year in range(
@@ -235,7 +235,7 @@ def get_titulaire_marches_data(url, titulaire_year: str) -> tuple:
         (pl.col("titulaire_id") == titulaire_siret)
         & (pl.col("titulaire_typeIdentifiant") == "SIRET")
     )
-    if titulaire_year and titulaire_year != "Toutes":
+    if titulaire_year and titulaire_year != "Toutes les années":
         lff = lff.filter(
             pl.col("dateNotification").cast(pl.String).str.starts_with(titulaire_year)
         )
@@ -305,7 +305,7 @@ def download_titulaire_data(
 
     def to_bytes(buffer):
         df_to_download.write_excel(
-            buffer, worksheet="DECP" if annee in ["Toutes", None] else annee
+            buffer, worksheet="DECP" if annee in ["Toutes les années", None] else annee
         )
 
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")

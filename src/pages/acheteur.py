@@ -71,7 +71,7 @@ layout = [
                         className="org_year",
                         children=dcc.Dropdown(
                             id="acheteur_year",
-                            options=["Toutes"]
+                            options=["Toutes les années"]
                             + [
                                 str(year)
                                 for year in range(
@@ -109,6 +109,7 @@ layout = [
                             html.Button(
                                 "Téléchargement au format Excel",
                                 id="btn-download-data-acheteur",
+                                className="btn btn-primary",
                             ),
                             dcc.Download(id="download-data-acheteur"),
                         ],
@@ -136,6 +137,7 @@ layout = [
                             html.Button(
                                 "Téléchargement désactivé au-delà de 65 000 lignes",
                                 id="btn-download-filtered-data-acheteur",
+                                className="btn btn-primary",
                                 disabled=True,
                             ),
                             dcc.Download(id="acheteur-download-filtered-data"),
@@ -229,7 +231,7 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> tuple:
     acheteur_siret = url.split("/")[-1]
     lff = df.lazy()
     lff = lff.filter(pl.col("acheteur_id") == acheteur_siret)
-    if acheteur_year and acheteur_year != "Toutes":
+    if acheteur_year and acheteur_year != "Toutes les années":
         acheteur_year = int(acheteur_year)
         lff = lff.filter(pl.col("dateNotification").dt.year() == acheteur_year)
     lff = lff.sort(["dateNotification", "uid"], descending=True, nulls_last=True)
@@ -290,7 +292,7 @@ def download_acheteur_data(
 
     def to_bytes(buffer):
         df_to_download.write_excel(
-            buffer, worksheet="DECP" if annee in ["Toutes", None] else annee
+            buffer, worksheet="DECP" if annee in ["Toutes les années", None] else annee
         )
 
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
