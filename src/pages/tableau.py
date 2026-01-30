@@ -294,7 +294,7 @@ def restore_view_from_url(search):
         return no_update, no_update, no_update, no_update, no_update
 
     params = urllib.parse.parse_qs(search.lstrip("?"))
-    logger.debug("params", params)
+    logger.debug("params " + json.dumps(params, indent=2))
 
     filter_query = no_update
     sort_by = no_update
