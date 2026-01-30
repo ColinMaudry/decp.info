@@ -4,6 +4,7 @@ import urllib.parse
 import uuid
 from datetime import datetime
 
+import dash_bootstrap_components as dbc
 import polars as pl
 from dash import (
     ClientsideFunction,
@@ -125,14 +126,15 @@ layout = [
         style={"maxWidth": "1000px"},
     ),
     html.Div(
-        html.Details(
-            children=[
-                html.Summary(
-                    html.H4("Mode d'emploi", style={"textDecoration": "underline"}),
-                ),
-                dcc.Markdown(
-                    dangerously_allow_html=True,
-                    children=f"""
+        [
+            dbc.Button("Mode d'emploi", id="tableau_help_open"),
+            dbc.Modal(
+                [
+                    dbc.ModalHeader(dbc.ModalTitle("Header")),
+                    dbc.ModalBody(
+                        dcc.Markdown(
+                            dangerously_allow_html=True,
+                            children=f"""
     ##### Définition des colonnes
 
     Pour voir la définition d'une colonne, passez votre souris sur son en-tête.
@@ -144,11 +146,9 @@ layout = [
     - Champs textuels : la recherche retourne les valeurs qui contiennent le texte recherché et n'est pas sensible à la casse (majuscules/minuscules).
         - Exemple : `rennes` retourne "RENNES METROPOLE".
         - Les guillemets simples (apostrophe du 4) doivent être prédédées d'une barre oblique (AltGr + 8). Exemple : `services d\\\'assurances`
-        - Lorsque vous ouvrez une URL de vue (voir "Partager une vue" plus bas), le format équivalent `icontains rennes` est utilisé. Mais dans vos filtres pas besoin de taper `icontains` !
     - Champs numériques (Durée en mois, Montant, ...) : vous pouvez...
         - soit taper un nombre pour trouver les valeurs strictement égales. Exemple : `12` ne retourne que des 12
         - soit le précéder de **>** ou **<** pour filtrer les valeurs supérieures ou inférieures. Exemple pour les offres reçues : `> 4` retourne les marchés ayant reçu plus de 4 offres.
-        - lorsque vous ouvrez une URL de vue (voir "Partager une vue" plus bas), le format équivalent `i<` ou `i>` est utilisé, mais c'est un bug : vous n'avez pas besoin de taper le `i` pour appliquer ce filtre.
     - Champs date (Date de notification, ...) : vous pouvez également utiliser **>** ou **<**. Exemples :
         - `< 2024-01-31` pour "avant le 31 janvier 2024"
         - `2024` pour "en 2024", `> 2022` pour "à partir de 2022".
@@ -188,10 +188,24 @@ layout = [
     (informations, marchés attribués/remportés, etc.)
 
     """,
-                ),
-            ],
-            id="instructions",
-        ),
+                        ),
+                    ),
+                    dbc.ModalFooter(
+                        dbc.Button(
+                            "Close",
+                            id="tableau_help_close",
+                            className="ms-auto",
+                            n_clicks=0,
+                        )
+                    ),
+                ],
+                id="tableau_help",
+                is_open=False,
+                fullscreen="md-down",
+                scrollable=True,
+                size="lg",
+            ),
+        ],
         id="header",
     ),
     # html.Div(
@@ -210,7 +224,7 @@ layout = [
                     html.P("lignes", id="nb_rows"),
                     html.Div(id="copy-container"),
                     dcc.Input(id="share-url", readOnly=True, style={"display": "none"}),
-                    html.Button(
+                    dbc.Button(
                         "Téléchargement désactivé au-delà de 65 000 lignes",
                         id="btn-download-data",
                         disabled=True,
@@ -389,3 +403,14 @@ def show_confirmation(n_clicks):
             style={"color": "green", "fontWeight": "bold", "marginLeft": "10px"},
         )
     return no_update
+
+
+@callback(
+    Output("tableau_help", "is_open"),
+    [Input("tableau_help_open", "n_clicks"), Input("tableau_help_close", "n_clicks")],
+    [State("tableau_help", "is_open")],
+)
+def toggle_tableau_help(click_open, click_close, is_open):
+    if click_open or click_close:
+        return not is_open
+    return is_open
