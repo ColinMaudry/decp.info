@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import polars as pl
 from dash import dash_table, dcc, html
 
-from src.utils import format_number
+from src.utils import data_schema, format_number
 
 
 def get_map_count_marches(df: pl.DataFrame):
@@ -295,19 +295,17 @@ class DataTable(dash_table.DataTable):
                 "lineHeight": "18px",
                 "whiteSpace": "normal",
             },
-            {
-                "if": {"column_id": "montant"},
-                "textAlign": "right",
-            },
-            {
-                "if": {"column_id": "dureeMois"},
-                "textAlign": "right",
-            },
-            {
-                "if": {"column_id": "titulaire_distance"},
-                "textAlign": "right",
-            },
         ]
+
+        for key in data_schema.keys():
+            field = data_schema[key]
+            if field["type"] in ["number", "integer"]:
+                rule = {
+                    "if": {"column_id": field["name"]},
+                    "textAlign": "right",
+                    # "fontFamily": "Fira Code",
+                }
+                style_cell_conditional.append(rule)
 
         # Initialisation de la classe parente avec les arguments
         super().__init__(
@@ -330,6 +328,8 @@ class DataTable(dash_table.DataTable):
             style_cell_conditional=style_cell_conditional,
             data_timestamp=0,
             markdown_options={"html": True},
+            style_header={"fontFamily": "Inter", "fontSize": "16px"},
+            style_cell={"fontFamily": "Inter", "fontSize": "16px"},
             tooltip_duration=8000,
             tooltip_delay=350,
             hidden_columns=hidden_columns,
