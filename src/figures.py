@@ -308,9 +308,10 @@ class DataTable(dash_table.DataTable):
         style_cell_conditional = (
             style_cell_conditional or []
         ) + style_cell_conditional_common
-        style_cell.update(style_cell_common) if isinstance(
-            style_cell, dict
-        ) else style_cell_common
+        if style_cell:
+            style_cell.update(style_cell_common)
+        else:
+            style_cell = style_cell_common
         style_header = style_cell
 
         # Initialisation de la classe parente avec les arguments
