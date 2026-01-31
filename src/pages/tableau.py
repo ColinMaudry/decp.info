@@ -189,94 +189,9 @@ layout = [
         style={"maxWidth": "1000px"},
     ),
     html.Div(
-        [
-            dbc.Button("Mode d'emploi", id="tableau_help_open"),
-            dbc.Modal(
-                [
-                    dbc.ModalHeader(dbc.ModalTitle("Header")),
-                    dbc.ModalBody(
-                        dcc.Markdown(
-                            dangerously_allow_html=True,
-                            children=f"""
-    ##### Définition des colonnes
-
-    Pour voir la définition d'une colonne, passez votre souris sur son en-tête.
-
-    ##### Appliquer des filtres
-
-    Vous pouvez appliquer un filtre pour chaque colonne en entrant du texte sous le nom de la colonne, puis en tapant sur `Entrée`.
-
-    - Champs textuels : la recherche retourne les valeurs qui contiennent le texte recherché et n'est pas sensible à la casse (majuscules/minuscules).
-        - Exemple : `rennes` retourne "RENNES METROPOLE".
-        - Les guillemets simples (apostrophe du 4) doivent être prédédées d'une barre oblique (AltGr + 8). Exemple : `services d\\\'assurances`
-    - Champs numériques (Durée en mois, Montant, ...) : vous pouvez...
-        - soit taper un nombre pour trouver les valeurs strictement égales. Exemple : `12` ne retourne que des 12
-        - soit le précéder de **>** ou **<** pour filtrer les valeurs supérieures ou inférieures. Exemple pour les offres reçues : `> 4` retourne les marchés ayant reçu plus de 4 offres.
-    - Champs date (Date de notification, ...) : vous pouvez également utiliser **>** ou **<**. Exemples :
-        - `< 2024-01-31` pour "avant le 31 janvier 2024"
-        - `2024` pour "en 2024", `> 2022` pour "à partir de 2022".
-    - Pour les champs textuels et les champs dates :
-        - pour chercher du texte qui **commence par** votre texte, entrez `texte*`. C'est par exemple utile pour filtrer des acheteurs ou titulaires par numéro SIREN (`123456789*`) ou les marchés sur une année en particulier (`2024*`)
-        - pour chercher du texte qui **finit par** votre texte, entrez `*texte`
-
-    Vous pouvez filtrer plusieurs colonnes à la fois. Vos filtres sont remis à zéro quand vous rafraîchissez la page.
-
-    ##### Trier les données
-
-    Pour trier une colonne, utilisez les flèches grises à côté des noms de colonnes. Chaque clic change le tri dans cet ordre :
-
-    1. tri croissant
-    2. tri décroissant
-    3. pas de tri
-
-    ##### Afficher plus de colonnes
-
-    Par défaut, un nombre réduit de colonnes est affiché pour ne pas surcharger la page. Mais vous avez le choix parmi {str(df.width)} colonnes, ce serait dommage de vous limiter !
-
-    Pour afficher plus de colonnes, cliquez sur le bouton **Colonnes affichées** et cochez les colonnes pour les afficher.
-
-    ##### Partager une vue
-
-    Une vue est un ensemble de filtres, de tris et de choix de colonnes que vous avez appliqué. Cliquez sur l'icône <img src="/assets/copy.svg" alt="drawing" width="20"/> pour copier une adresse Web qui reproduit la vue courante à l'identique : en la collant dans la barre d'adresse d'un navigateur, vous ouvrez la vue Tableau avec les mêmes paramètres.
-
-    Pratique pour partager une vue avec un·e collègue, sur les réseaux sociaux, ou la sauvegarder pour plus tard.
-
-    ##### Télécharger le résultat
-
-    Vous pouvez télécharger le résultat de vos filtres et tris, pour les colonnes affichées, en cliquant sur **Télécharger au format Excel**.
-
-    ##### Liens
-
-    Les liens dans les colonnes Identifiant unique, Acheteur et Titulaire vous permettent de consulter une vue qui leur est dédiée
-    (informations, marchés attribués/remportés, etc.)
-
-    """,
-                        ),
-                    ),
-                    dbc.ModalFooter(
-                        dbc.Button(
-                            "Fermer",
-                            id="tableau_help_close",
-                            className="ms-auto",
-                            n_clicks=0,
-                        )
-                    ),
-                ],
-                id="tableau_help",
-                is_open=False,
-                fullscreen="md-down",
-                scrollable=True,
-                size="lg",
-            ),
-        ],
+        [],
         id="header",
     ),
-    # html.Div(
-    #     [
-    #         "Recherche dans objet : ",
-    #         dcc.Input(id="search", value="", type="text"),
-    #     ]
-    # )]),
     dcc.Loading(
         overlay_style={"visibility": "visible", "filter": "blur(2px)"},
         id="loading-home",
@@ -284,6 +199,84 @@ layout = [
         children=[
             html.Div(
                 [
+                    dbc.Button("Mode d'emploi", id="tableau_help_open"),
+                    dbc.Modal(
+                        [
+                            dbc.ModalHeader(dbc.ModalTitle("Header")),
+                            dbc.ModalBody(
+                                dcc.Markdown(
+                                    dangerously_allow_html=True,
+                                    children=f"""
+            ##### Définition des colonnes
+
+            Pour voir la définition d'une colonne, passez votre souris sur son en-tête.
+
+            ##### Appliquer des filtres
+
+            Vous pouvez appliquer un filtre pour chaque colonne en entrant du texte sous le nom de la colonne, puis en tapant sur `Entrée`.
+
+            - Champs textuels : la recherche retourne les valeurs qui contiennent le texte recherché et n'est pas sensible à la casse (majuscules/minuscules).
+                - Exemple : `rennes` retourne "RENNES METROPOLE".
+                - Les guillemets simples (apostrophe du 4) doivent être prédédées d'une barre oblique (AltGr + 8). Exemple : `services d\\\'assurances`
+            - Champs numériques (Durée en mois, Montant, ...) : vous pouvez...
+                - soit taper un nombre pour trouver les valeurs strictement égales. Exemple : `12` ne retourne que des 12
+                - soit le précéder de **>** ou **<** pour filtrer les valeurs supérieures ou inférieures. Exemple pour les offres reçues : `> 4` retourne les marchés ayant reçu plus de 4 offres.
+            - Champs date (Date de notification, ...) : vous pouvez également utiliser **>** ou **<**. Exemples :
+                - `< 2024-01-31` pour "avant le 31 janvier 2024"
+                - `2024` pour "en 2024", `> 2022` pour "à partir de 2022".
+            - Pour les champs textuels et les champs dates :
+                - pour chercher du texte qui **commence par** votre texte, entrez `texte*`. C'est par exemple utile pour filtrer des acheteurs ou titulaires par numéro SIREN (`123456789*`) ou les marchés sur une année en particulier (`2024*`)
+                - pour chercher du texte qui **finit par** votre texte, entrez `*texte`
+
+            Vous pouvez filtrer plusieurs colonnes à la fois. Vos filtres sont remis à zéro quand vous rafraîchissez la page.
+
+            ##### Trier les données
+
+            Pour trier une colonne, utilisez les flèches grises à côté des noms de colonnes. Chaque clic change le tri dans cet ordre :
+
+            1. tri croissant
+            2. tri décroissant
+            3. pas de tri
+
+            ##### Afficher plus de colonnes
+
+            Par défaut, un nombre réduit de colonnes est affiché pour ne pas surcharger la page. Mais vous avez le choix parmi {str(df.width)} colonnes, ce serait dommage de vous limiter !
+
+            Pour afficher plus de colonnes, cliquez sur le bouton **Colonnes affichées** et cochez les colonnes pour les afficher.
+
+            ##### Partager une vue
+
+            Une vue est un ensemble de filtres, de tris et de choix de colonnes que vous avez appliqué. Cliquez sur l'icône <img src="/assets/copy.svg" alt="drawing" width="20"/> pour copier une adresse Web qui reproduit la vue courante à l'identique : en la collant dans la barre d'adresse d'un navigateur, vous ouvrez la vue Tableau avec les mêmes paramètres.
+
+            Pratique pour partager une vue avec un·e collègue, sur les réseaux sociaux, ou la sauvegarder pour plus tard.
+
+            ##### Télécharger le résultat
+
+            Vous pouvez télécharger le résultat de vos filtres et tris, pour les colonnes affichées, en cliquant sur **Télécharger au format Excel**.
+
+            ##### Liens
+
+            Les liens dans les colonnes Identifiant unique, Acheteur et Titulaire vous permettent de consulter une vue qui leur est dédiée
+            (informations, marchés attribués/remportés, etc.)
+
+            """,
+                                ),
+                            ),
+                            dbc.ModalFooter(
+                                dbc.Button(
+                                    "Fermer",
+                                    id="tableau_help_close",
+                                    className="ms-auto",
+                                    n_clicks=0,
+                                )
+                            ),
+                        ],
+                        id="tableau_help",
+                        is_open=False,
+                        fullscreen="md-down",
+                        scrollable=True,
+                        size="lg",
+                    ),
                     dbc.Button(
                         "Colonnes affichées",
                         id="tableau_columns_open",
@@ -415,8 +408,10 @@ def restore_view_from_url(search):
             pass
 
     if "colonnes" in params:
-        columns = params["colonnes"][0].split(",")
-        verified_columns = [column for column in columns if column in schema.names()]
+        table_columns = params["colonnes"][0].split(",")
+        verified_columns = [
+            column for column in table_columns if column in schema.names()
+        ]
         hidden_columns = invert_columns(verified_columns)
 
     return filter_query, sort_by, hidden_columns, "", trigger_cleanup
