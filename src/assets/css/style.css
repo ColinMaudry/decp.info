@@ -194,7 +194,7 @@ p.version > a {
   margin: 12px 0 12px 0;
   height: 50px;
   display: flex;
-  align-items: baseline;
+  align-items: center;
 }
 
 .table-menu > * {
@@ -364,7 +364,8 @@ table.cell-table th {
   right: 5px;
 }
 
-#column_list .show-hide {
+#column_list .show-hide,
+#table .show-hide {
   display: none;
 }
 

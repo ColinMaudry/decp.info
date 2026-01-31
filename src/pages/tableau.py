@@ -284,6 +284,11 @@ layout = [
         children=[
             html.Div(
                 [
+                    dbc.Button(
+                        "Colonnes affichées",
+                        id="tableau_columns_open",
+                        className="column_list",
+                    ),
                     html.P("lignes", id="nb_rows"),
                     html.Div(id="copy-container"),
                     dcc.Input(id="share-url", readOnly=True, style={"display": "none"}),
@@ -298,7 +303,6 @@ layout = [
                 ],
                 className="table-menu",
             ),
-            dbc.Button("Colonne affichées", id="tableau_columns_open"),
             dbc.Modal(
                 [
                     dbc.ModalHeader(dbc.ModalTitle("Choix des colonnes à afficher")),
@@ -318,7 +322,7 @@ layout = [
                 is_open=False,
                 fullscreen="md-down",
                 scrollable=True,
-                size="lg",
+                size="xl",
             ),
             datatable,
         ],
