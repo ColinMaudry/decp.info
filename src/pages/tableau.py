@@ -21,6 +21,8 @@ from dash import (
 
 from src.figures import DataTable
 from src.utils import (
+    columns,
+    data_schema,
     df,
     filter_table_data,
     get_default_hidden_columns,
@@ -61,9 +63,70 @@ datatable = html.Div(
     ),
 )
 
+
+def make_tableau_columns_table():
+    table_data = []
+    table_columns = [
+        {
+            "id": col,
+            "name": data_schema[col]["title"],
+            "description": data_schema[col]["description"],
+        }
+        for col in df.columns
+    ]
+    for column in table_columns:
+        new_column = {
+            "id": column["id"],
+            "name": column["name"],
+            "description": data_schema[column["id"]]["description"],
+        }
+        table_data.append(new_column)
+
+    table = (
+        DataTable(
+            row_selectable="multi",
+            data=table_data,
+            filter_action="none",
+            sort_action="none",
+            style_cell={
+                "textAlign": "left",
+            },
+            columns=[
+                {
+                    "name": "Nom",
+                    "id": "name",
+                },
+                {
+                    "name": "Description",
+                    "id": "description",
+                },
+                {
+                    "name": "column_id",
+                    "id": "id",
+                },
+            ],
+            hidden_columns=["id"],
+            style_cell_conditional=[
+                {
+                    "if": {"column_id": "description"},
+                    "minWidth": "450px",
+                    "overflow": "hidden",
+                    "lineHeight": "18px",
+                    "whiteSpace": "normal",
+                }
+            ],
+            page_action="none",
+            dtid="column_list",
+        ),
+    )
+
+    return table
+
+
 layout = [
     dcc.Location(id="tableau_url", refresh=False),
     dcc.Store(id="filter-cleanup-trigger"),
+    dcc.Store(id="tableau-hidden-columns"),
     html.Script(
         type="application/ld+json",
         id="dataset_jsonld",
@@ -192,7 +255,7 @@ layout = [
                     ),
                     dbc.ModalFooter(
                         dbc.Button(
-                            "Close",
+                            "Fermer",
                             id="tableau_help_close",
                             className="ms-auto",
                             n_clicks=0,
@@ -234,6 +297,28 @@ layout = [
                     html.P("Données mises à jour le " + str(update_date)),
                 ],
                 className="table-menu",
+            ),
+            dbc.Button("Colonne affichées", id="tableau_columns_open"),
+            dbc.Modal(
+                [
+                    dbc.ModalHeader(dbc.ModalTitle("Choix des colonnes à afficher")),
+                    dbc.ModalBody(
+                        id="tableau_columns_body", children=make_tableau_columns_table()
+                    ),
+                    dbc.ModalFooter(
+                        dbc.Button(
+                            "Fermer",
+                            id="tableau_columns_close",
+                            className="ms-auto",
+                            n_clicks=0,
+                        )
+                    ),
+                ],
+                id="tableau_columns",
+                is_open=False,
+                fullscreen="md-down",
+                scrollable=True,
+                size="lg",
             ),
             datatable,
         ],
@@ -297,7 +382,7 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
 @callback(
     Output("table", "filter_query"),
     Output("table", "sort_by"),
-    Output("table", "hidden_columns"),
+    Output("tableau-hidden-columns", "data"),
     Output("tableau_url", "search", allow_duplicate=True),
     Output("filter-cleanup-trigger", "data"),
     Input("tableau_url", "search"),
@@ -368,9 +453,9 @@ def sync_url_and_reset_button(filter_query, sort_by, hidden_columns, href):
         params["tris"] = json.dumps(sort_by)
 
     if hidden_columns:
-        columns = invert_columns(hidden_columns)
-        columns = ",".join(columns)
-        params["colonnes"] = columns
+        table_columns = invert_columns(hidden_columns)
+        table_columns = ",".join(table_columns)
+        params["colonnes"] = table_columns
 
     query_string = urllib.parse.urlencode(params)
     full_url = f"{base_url}?{query_string}" if query_string else base_url
@@ -411,6 +496,55 @@ def show_confirmation(n_clicks):
     [State("tableau_help", "is_open")],
 )
 def toggle_tableau_help(click_open, click_close, is_open):
+    if click_open or click_close:
+        return not is_open
+    return is_open
+
+
+@callback(
+    Output("tableau-hidden-columns", "data", allow_duplicate=True),
+    Input("column_list", "selected_rows"),
+    prevent_initial_call=True,
+)
+def update_hidden_columns_from_checkboxes(selected_columns):
+    if selected_columns:
+        selected_columns = [columns[i] for i in selected_columns]
+        hidden_columns = [col for col in columns if col not in selected_columns]
+        return hidden_columns
+    else:
+        return []
+
+
+@callback(
+    Output("table", "hidden_columns", allow_duplicate=True),
+    Input(
+        "tableau-hidden-columns",
+        "data",
+    ),
+    prevent_initial_call=True,
+)
+def store_hidden_columns(hidden_columns):
+    return hidden_columns
+
+
+@callback(
+    Output("column_list", "selected_rows"),
+    Input("table", "hidden_columns"),
+    State("column_list", "selected_rows"),  # pour éviter la boucle infinie
+)
+def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
+    # Show all columns that are NOT hidden
+    visible_cols = [columns.index(col) for col in columns if col not in hidden_cols]
+    return visible_cols
+
+
+@callback(
+    Output("tableau_columns", "is_open"),
+    Input("tableau_columns_open", "n_clicks"),
+    Input("tableau_columns_close", "n_clicks"),
+    State("tableau_columns", "is_open"),
+)
+def toggle_tableau_columns(click_open, click_close, is_open):
     if click_open or click_close:
         return not is_open
     return is_open
