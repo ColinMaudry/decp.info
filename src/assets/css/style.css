@@ -350,7 +350,7 @@ table.cell-table th {
   display: none;
 }
 
-.show-hide {
+button.show-hide {
   position: relative;
   width: 180px;
   margin: 0 0 10px 0;

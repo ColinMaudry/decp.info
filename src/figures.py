@@ -244,6 +244,7 @@ def point_on_map(lat, lon):
     fig.update_layout(map_center={"lat": 46.6, "lon": 1.89}, map_zoom=4)
 
     graph = dcc.Graph(id="map", figure=fig)
+    graph = html.Div(style={"width": "400px"})
     return graph
 
 
