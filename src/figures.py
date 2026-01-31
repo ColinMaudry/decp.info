@@ -258,10 +258,12 @@ class DataTable(dash_table.DataTable):
         page_action: Literal["native", "custom", "none"] = "native",
         sort_action: Literal["native", "custom", "none"] = "native",
         filter_action: Literal["native", "custom", "none"] = "native",
+        style_cell_conditional: list | None = None,
+        style_cell: dict | None = None,
         **kwargs,
     ):
         # Styles de base
-        style_cell_conditional = [
+        style_cell_conditional_common = [
             {
                 "if": {"column_id": "objet"},
                 "minWidth": "350px",
@@ -291,6 +293,8 @@ class DataTable(dash_table.DataTable):
             },
         ]
 
+        style_cell_common = {"fontFamily": "Inter", "fontSize": "16px"}
+
         for key in data_schema.keys():
             field = data_schema[key]
             if field["type"] in ["number", "integer"]:
@@ -299,7 +303,15 @@ class DataTable(dash_table.DataTable):
                     "textAlign": "right",
                     # "fontFamily": "Fira Code",
                 }
-                style_cell_conditional.append(rule)
+                style_cell_conditional_common.append(rule)
+
+        style_cell_conditional = (
+            style_cell_conditional or []
+        ) + style_cell_conditional_common
+        style_cell.update(style_cell_common) if isinstance(
+            style_cell, dict
+        ) else style_cell_common
+        style_header = style_cell
 
         # Initialisation de la classe parente avec les arguments
         super().__init__(
@@ -322,8 +334,8 @@ class DataTable(dash_table.DataTable):
             style_cell_conditional=style_cell_conditional,
             data_timestamp=0,
             markdown_options={"html": True},
-            style_header={"fontFamily": "Inter", "fontSize": "16px"},
-            style_cell={"fontFamily": "Inter", "fontSize": "16px"},
+            style_header=style_header,
+            style_cell=style_cell,
             tooltip_duration=8000,
             tooltip_delay=350,
             hidden_columns=hidden_columns,
