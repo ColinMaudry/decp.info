@@ -68,6 +68,7 @@ layout = [
     dcc.Store(id="filter-cleanup-trigger"),
     dcc.Store(id="tableau-hidden-columns"),
     dcc.Store(id="tableau-filters", storage_type="local"),
+    dcc.Store(id="tableau-sort", storage_type="local"),
     dcc.Store(id="tableau-table"),
     html.Script(
         type="application/ld+json",
@@ -237,6 +238,11 @@ layout = [
                     dcc.Download(id="download-data"),
                     dcc.Store(id="filtered_data", storage_type="memory"),
                     html.P("Données mises à jour le " + str(update_date)),
+                    dbc.Button(
+                        "Remise à zéro",
+                        title="Supprime tous les filtres et les tris. Autrement ils sont conservés même si vous fermez la page.",
+                        id="btn-tableau-reset",
+                    ),
                 ],
                 className="table-menu",
             ),
@@ -280,7 +286,7 @@ layout = [
     Input("table", "page_current"),
     Input("table", "page_size"),
     Input("tableau-filters", "data"),
-    Input("table", "sort_by"),
+    Input("tableau-sort", "data"),
     State("table", "data_timestamp"),
 )
 def update_table(page_current, page_size, filter_query, sort_by, data_timestamp):
@@ -330,8 +336,9 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
     Output("filter-cleanup-trigger", "data"),
     Input("tableau_url", "search"),
     State("tableau-filters", "data"),
+    State("tableau-sort", "data"),
 )
-def restore_view_from_url(search, stored_filters):
+def restore_view_from_url(search, stored_filters, stored_sort):
     if not search and not stored_filters:
         return no_update, no_update, no_update, no_update, no_update
 
@@ -355,6 +362,8 @@ def restore_view_from_url(search, stored_filters):
             sort_by = json.loads(params["tris"][0])
         except json.JSONDecodeError:
             pass
+    elif stored_sort:
+        sort_by = stored_sort
 
     if "colonnes" in params:
         table_columns = params["colonnes"][0].split(",")
@@ -500,6 +509,19 @@ def toggle_tableau_columns(click_open, click_close, is_open):
 
 @callback(Output("tableau-filters", "data"), Input("table", "filter_query"))
 def sync_filters_to_local_storage(filter_query):
-    if filter_query:
-        return filter_query
-    return no_update
+    return filter_query
+
+
+@callback(Output("tableau-sort", "data"), Input("table", "sort_by"))
+def sync_sort_to_local_storage(sort_by):
+    return sort_by
+
+
+@callback(
+    Output("table", "filter_query", allow_duplicate=True),
+    Output("table", "sort_by", allow_duplicate=True),
+    Input("btn-tableau-reset", "n_clicks"),
+    prevent_initial_call=True,
+)
+def reset_view(n_clicks):
+    return "", []
