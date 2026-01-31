@@ -65,7 +65,7 @@ layout = [
                                                         """),
                             html.H4("Statistiques par année"),
                             get_yearly_statistics(statistics, today_str),
-                            dcc.Graph(figure=get_map_count_marches(df)),
+                            dcc.Graph(figure=get_map_count_marches()),
                             get_duplicate_matrix(),
                             html.H3("Nombre de marchés par source dans le temps"),
                             dcc.Graph(

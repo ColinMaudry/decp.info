@@ -67,6 +67,8 @@ layout = [
     dcc.Location(id="tableau_url", refresh=False),
     dcc.Store(id="filter-cleanup-trigger"),
     dcc.Store(id="tableau-hidden-columns"),
+    dcc.Store(id="tableau-filters", storage_type="local"),
+    dcc.Store(id="tableau-table"),
     html.Script(
         type="application/ld+json",
         id="dataset_jsonld",
@@ -277,7 +279,7 @@ layout = [
     Output("btn-download-data", "title"),
     Input("table", "page_current"),
     Input("table", "page_size"),
-    Input("table", "filter_query"),
+    Input("tableau-filters", "data"),
     Input("table", "sort_by"),
     State("table", "data_timestamp"),
 )
@@ -286,6 +288,7 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     #     search_params = None
     # else:
     #     search_params = urllib.parse.parse_qs(search_params.lstrip("?"))
+    print(filter_query)
     return prepare_table_data(
         None, data_timestamp, filter_query, page_current, page_size, sort_by, "tableau"
     )
@@ -323,16 +326,16 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
     Output("table", "filter_query"),
     Output("table", "sort_by"),
     Output("tableau-hidden-columns", "data"),
-    Output("tableau_url", "search", allow_duplicate=True),
+    Output("tableau_url", "search"),
     Output("filter-cleanup-trigger", "data"),
     Input("tableau_url", "search"),
-    prevent_initial_call=True,
+    State("tableau-filters", "data"),
 )
-def restore_view_from_url(search):
-    if not search:
+def restore_view_from_url(search, stored_filters):
+    if not search and not stored_filters:
         return no_update, no_update, no_update, no_update, no_update
 
-    params = urllib.parse.parse_qs(search.lstrip("?"))
+    params = urllib.parse.parse_qs(search.lstrip("?")) if search else {}
     logger.debug("params " + json.dumps(params, indent=2))
 
     filter_query = no_update
@@ -342,6 +345,9 @@ def restore_view_from_url(search):
 
     if "filtres" in params:
         filter_query = params["filtres"][0]
+        trigger_cleanup = str(uuid.uuid4())
+    elif stored_filters:
+        filter_query = stored_filters
         trigger_cleanup = str(uuid.uuid4())
 
     if "tris" in params:
@@ -490,3 +496,10 @@ def toggle_tableau_columns(click_open, click_close, is_open):
     if click_open or click_close:
         return not is_open
     return is_open
+
+
+@callback(Output("tableau-filters", "data"), Input("table", "filter_query"))
+def sync_filters_to_local_storage(filter_query):
+    if filter_query:
+        return filter_query
+    return no_update
