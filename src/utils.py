@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import uuid
+from collections import OrderedDict
 from time import localtime, sleep
 
 import polars as pl
@@ -456,7 +457,7 @@ def get_data_schema() -> dict:
     else:
         raise Exception(f"Chemin vers le schéma invalide: {path}")
 
-    new_schema = {}
+    new_schema = OrderedDict()
 
     for col in original_schema["fields"]:
         new_schema[col["name"]] = col
@@ -757,3 +758,4 @@ meta_content = {
     ),
 }
 data_schema = get_data_schema()
+columns = df.columns

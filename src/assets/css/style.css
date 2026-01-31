@@ -194,7 +194,7 @@ p.version > a {
   margin: 12px 0 12px 0;
   height: 50px;
   display: flex;
-  align-items: baseline;
+  align-items: center;
 }
 
 .table-menu > * {
@@ -240,7 +240,11 @@ table.cell-table th {
 .dash-table-container
   .dash-spreadsheet-container
   .dash-spreadsheet-inner
-  th.dash-header {
+  th.dash-header,
+.dash-table-container
+  .dash-spreadsheet-container
+  .dash-spreadsheet-inner
+  th.dash-select-header {
   margin: 0;
   color: white;
   font-family: "Inter", sans-serif;
@@ -258,7 +262,13 @@ table.cell-table th {
   .dash-spreadsheet-inner
   table.cell-table
   tr:first-of-type
-  th.dash-header:first-of-type {
+  th.dash-header:first-of-type,
+.dash-table-container
+  .dash-spreadsheet-container
+  .dash-spreadsheet-inner
+  table.cell-table
+  tr:first-of-type
+  th.dash-select-header:first-of-type {
   border-top-left-radius: 3px !important;
 }
 
@@ -352,6 +362,11 @@ table.cell-table th {
   position: absolute;
   left: 5px;
   right: 5px;
+}
+
+#column_list .show-hide,
+#table .show-hide {
+  display: none;
 }
 
 .show-hide-menu-item > input {
