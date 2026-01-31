@@ -86,7 +86,7 @@ def make_tableau_columns_table():
         DataTable(
             row_selectable="multi",
             data=table_data,
-            filter_action="none",
+            filter_action="native",
             sort_action="none",
             style_cell={
                 "textAlign": "left",
