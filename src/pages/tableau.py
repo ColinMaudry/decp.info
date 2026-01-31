@@ -19,10 +19,10 @@ from dash import (
     register_page,
 )
 
+from figures import make_column_picker
 from src.figures import DataTable
 from src.utils import (
     columns,
-    data_schema,
     df,
     filter_table_data,
     get_default_hidden_columns,
@@ -62,66 +62,6 @@ datatable = html.Div(
         columns=[{"id": col, "name": col} for col in df.columns],
     ),
 )
-
-
-def make_tableau_columns_table():
-    table_data = []
-    table_columns = [
-        {
-            "id": col,
-            "name": data_schema[col]["title"],
-            "description": data_schema[col]["description"],
-        }
-        for col in df.columns
-    ]
-    for column in table_columns:
-        new_column = {
-            "id": column["id"],
-            "name": column["name"],
-            "description": data_schema[column["id"]]["description"],
-        }
-        table_data.append(new_column)
-
-    table = (
-        DataTable(
-            row_selectable="multi",
-            data=table_data,
-            filter_action="native",
-            sort_action="none",
-            style_cell={
-                "textAlign": "left",
-            },
-            columns=[
-                {
-                    "name": "Nom",
-                    "id": "name",
-                },
-                {
-                    "name": "Description",
-                    "id": "description",
-                },
-                {
-                    "name": "column_id",
-                    "id": "id",
-                },
-            ],
-            hidden_columns=["id"],
-            style_cell_conditional=[
-                {
-                    "if": {"column_id": "description"},
-                    "minWidth": "450px",
-                    "overflow": "hidden",
-                    "lineHeight": "18px",
-                    "whiteSpace": "normal",
-                }
-            ],
-            page_action="none",
-            dtid="column_list",
-        ),
-    )
-
-    return table
-
 
 layout = [
     dcc.Location(id="tableau_url", refresh=False),
@@ -199,6 +139,7 @@ layout = [
         children=[
             html.Div(
                 [
+                    # Modal du mode d'emploi
                     dbc.Button("Mode d'emploi", id="tableau_help_open"),
                     dbc.Modal(
                         [
@@ -246,7 +187,7 @@ layout = [
 
             ##### Partager une vue
 
-            Une vue est un ensemble de filtres, de tris et de choix de colonnes que vous avez appliqué. Cliquez sur l'icône <img src="/assets/copy.svg" alt="drawing" width="20"/> pour copier une adresse Web qui reproduit la vue courante à l'identique : en la collant dans la barre d'adresse d'un navigateur, vous ouvrez la vue Tableau avec les mêmes paramètres.
+            Une vue est un ensemble de filtres, de tris et de choix de colonnes que vous avez appliqués. Cliquez sur l'icône <img src="/assets/copy.svg" alt="drawing" width="20"/> pour copier une adresse Web qui reproduit la vue courante à l'identique : en la collant dans la barre d'adresse d'un navigateur, vous ouvrez la vue Tableau avec les mêmes paramètres.
 
             Pratique pour partager une vue avec un·e collègue, sur les réseaux sociaux, ou la sauvegarder pour plus tard.
 
@@ -277,6 +218,7 @@ layout = [
                         scrollable=True,
                         size="lg",
                     ),
+                    # Bouton modal des colonnes affichées
                     dbc.Button(
                         "Colonnes affichées",
                         id="tableau_columns_open",
@@ -300,7 +242,8 @@ layout = [
                 [
                     dbc.ModalHeader(dbc.ModalTitle("Choix des colonnes à afficher")),
                     dbc.ModalBody(
-                        id="tableau_columns_body", children=make_tableau_columns_table()
+                        id="tableau_columns_body",
+                        children=make_column_picker("tableau"),
                     ),
                     dbc.ModalFooter(
                         dbc.Button(
@@ -502,7 +445,7 @@ def toggle_tableau_help(click_open, click_close, is_open):
 
 @callback(
     Output("tableau-hidden-columns", "data", allow_duplicate=True),
-    Input("column_list", "selected_rows"),
+    Input("tableau_column_list", "selected_rows"),
     prevent_initial_call=True,
 )
 def update_hidden_columns_from_checkboxes(selected_columns):
@@ -527,9 +470,9 @@ def store_hidden_columns(hidden_columns):
 
 
 @callback(
-    Output("column_list", "selected_rows"),
+    Output("tableau_column_list", "selected_rows"),
     Input("table", "hidden_columns"),
-    State("column_list", "selected_rows"),  # pour éviter la boucle infinie
+    State("tableau_column_list", "selected_rows"),  # pour éviter la boucle infinie
 )
 def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
     # Show all columns that are NOT hidden

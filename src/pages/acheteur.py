@@ -1,11 +1,13 @@
 import datetime
 
+import dash_bootstrap_components as dbc
 import polars as pl
 from dash import Input, Output, State, callback, dcc, html, register_page
 
 from src.callbacks import get_top_org_table
-from src.figures import DataTable, point_on_map
+from src.figures import DataTable, make_column_picker, point_on_map
 from src.utils import (
+    columns,
     df,
     df_acheteurs,
     filter_table_data,
@@ -53,6 +55,7 @@ datatable = html.Div(
 
 layout = [
     dcc.Store(id="acheteur_data", storage_type="memory"),
+    dcc.Store(id="acheteur-hidden-columns", storage_type="memory"),
     dcc.Location(id="acheteur_url", refresh="callback-nav"),
     html.Div(
         children=[
@@ -133,6 +136,12 @@ layout = [
                 children=[
                     html.Div(
                         [
+                            # Bouton modal des colonnes affichées
+                            dbc.Button(
+                                "Colonnes affichées",
+                                id="acheteur_columns_open",
+                                className="column_list",
+                            ),
                             html.P("lignes", id="acheteur_nb_rows"),
                             html.Button(
                                 "Téléchargement désactivé au-delà de 65 000 lignes",
@@ -143,6 +152,30 @@ layout = [
                             dcc.Download(id="acheteur-download-filtered-data"),
                         ],
                         className="table-menu",
+                    ),
+                    dbc.Modal(
+                        [
+                            dbc.ModalHeader(
+                                dbc.ModalTitle("Choix des colonnes à afficher")
+                            ),
+                            dbc.ModalBody(
+                                id="acheteur_columns_body",
+                                children=make_column_picker("acheteur"),
+                            ),
+                            dbc.ModalFooter(
+                                dbc.Button(
+                                    "Fermer",
+                                    id="acheteur_columns_close",
+                                    className="ms-auto",
+                                    n_clicks=0,
+                                )
+                            ),
+                        ],
+                        id="acheteur_columns",
+                        is_open=False,
+                        fullscreen="md-down",
+                        scrollable=True,
+                        size="xl",
                     ),
                     datatable,
                 ],
@@ -333,3 +366,52 @@ def download_filtered_acheteur_data(
     return dcc.send_bytes(
         to_bytes, filename=f"decp_filtrées_{acheteur_nom}_{date}.xlsx"
     )
+
+
+@callback(
+    Output("acheteur-hidden-columns", "data", allow_duplicate=True),
+    Input("acheteur_column_list", "selected_rows"),
+    prevent_initial_call=True,
+)
+def update_hidden_columns_from_checkboxes(selected_columns):
+    if selected_columns:
+        selected_columns = [columns[i] for i in selected_columns]
+        hidden_columns = [col for col in columns if col not in selected_columns]
+        return hidden_columns
+    else:
+        return []
+
+
+@callback(
+    Output("acheteur_datatable", "hidden_columns", allow_duplicate=True),
+    Input(
+        "acheteur-hidden-columns",
+        "data",
+    ),
+    prevent_initial_call=True,
+)
+def store_hidden_columns(hidden_columns):
+    return hidden_columns
+
+
+@callback(
+    Output("acheteur_column_list", "selected_rows"),
+    Input("acheteur_datatable", "hidden_columns"),
+    State("acheteur_column_list", "selected_rows"),  # pour éviter la boucle infinie
+)
+def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
+    # Show all columns that are NOT hidden
+    visible_cols = [columns.index(col) for col in columns if col not in hidden_cols]
+    return visible_cols
+
+
+@callback(
+    Output("acheteur_columns", "is_open"),
+    Input("acheteur_columns_open", "n_clicks"),
+    Input("acheteur_columns_close", "n_clicks"),
+    State("acheteur_columns", "is_open"),
+)
+def toggle_acheteur_columns(click_open, click_close, is_open):
+    if click_open or click_close:
+        return not is_open
+    return is_open

@@ -354,15 +354,17 @@ table.cell-table th {
   position: relative;
   width: 180px;
   margin: 0 0 10px 0;
+  display: none;
 }
 
+/*
 .show-hide::before {
   background: inherit;
   content: "Colonnes affichées";
   position: absolute;
   left: 5px;
   right: 5px;
-}
+
 
 #column_list .show-hide,
 #table .show-hide {
@@ -371,7 +373,7 @@ table.cell-table th {
 
 .show-hide-menu-item > input {
   margin-right: 10px;
-}
+} */
 
 /* Tooltips */
 .dash-tooltip,

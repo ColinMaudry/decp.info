@@ -6,10 +6,10 @@ import plotly.graph_objects as go
 import polars as pl
 from dash import dash_table, dcc, html
 
-from src.utils import data_schema, format_number
+from src.utils import data_schema, df, format_number
 
 
-def get_map_count_marches(df: pl.DataFrame):
+def get_map_count_marches():
     lf = df.lazy()
     lf = lf.with_columns(
         pl.col("lieuExecution_code").str.head(2).str.zfill(2).alias("Département")
@@ -31,16 +31,16 @@ def get_map_count_marches(df: pl.DataFrame):
     for f in departements["features"]:
         f["id"] = f["properties"]["code"]
 
-    df = lf.collect(engine="streaming")
+    df_map = lf.collect(engine="streaming")
 
     fig = px.choropleth(
-        df,
+        df_map,
         geojson=departements,
         locations="Département",
         color="uid",
         color_continuous_scale="Reds",
         title="Nombres de marchés attribués par département (lieu d'exécution)",
-        range_color=(df["uid"].min(), df["uid"].max()),
+        range_color=(df_map["uid"].min(), df_map["uid"].max()),
         labels={"uid": "Marchés attribués"},
         scope="europe",
         width=900,
@@ -414,3 +414,57 @@ def get_duplicate_matrix() -> html.Div:
             dcc.Graph(figure=fig),
         ]
     )
+
+
+def make_column_picker(page: str):
+    table_data = []
+    table_columns = [
+        {
+            "id": col,
+            "name": data_schema[col]["title"],
+            "description": data_schema[col]["description"],
+        }
+        for col in df.columns
+    ]
+    for column in table_columns:
+        new_column = {
+            "id": column["id"],
+            "name": column["name"],
+            "description": data_schema[column["id"]]["description"],
+        }
+        table_data.append(new_column)
+
+    table = (
+        DataTable(
+            row_selectable="multi",
+            data=table_data,
+            filter_action="native",
+            sort_action="none",
+            style_cell={
+                "textAlign": "left",
+            },
+            columns=[
+                {
+                    "name": "Nom",
+                    "id": "name",
+                },
+                {
+                    "name": "Description",
+                    "id": "description",
+                },
+            ],
+            style_cell_conditional=[
+                {
+                    "if": {"column_id": "description"},
+                    "minWidth": "450px",
+                    "overflow": "hidden",
+                    "lineHeight": "18px",
+                    "whiteSpace": "normal",
+                }
+            ],
+            page_action="none",
+            dtid=f"{page}_column_list",
+        ),
+    )
+
+    return table
