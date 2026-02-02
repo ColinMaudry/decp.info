@@ -428,12 +428,11 @@ def get_default_hidden_columns(page):
             "codeCPV",
             "dureeRestanteMois",
         ]
+    elif page == "titulaire":
+        displayed_columns = os.getenv("DISPLAYED_COLUMNS")
     else:
         displayed_columns = os.getenv("DISPLAYED_COLUMNS")
-        if displayed_columns is None:
-            raise ValueError("DISPLAYED_COLUMNS n'est pas configuré")
-        else:
-            displayed_columns = displayed_columns.replace(" ", "").split(",")
+        logger.warning(f"Invalid page: {page}")
 
     hidden_columns = []
 

@@ -54,7 +54,7 @@ register_page(
 datatable = html.Div(
     className="marches_table",
     children=DataTable(
-        dtid="table",
+        dtid="tableau_datatable",
         page_size=20,
         page_action="custom",
         filter_action="custom",
@@ -276,19 +276,19 @@ layout = [
 
 
 @callback(
-    Output("table", "data"),
-    Output("table", "columns"),
-    Output("table", "tooltip_header"),
-    Output("table", "data_timestamp"),
+    Output("tableau_datatable", "data"),
+    Output("tableau_datatable", "columns"),
+    Output("tableau_datatable", "tooltip_header"),
+    Output("tableau_datatable", "data_timestamp"),
     Output("nb_rows", "children"),
     Output("btn-download-data", "disabled"),
     Output("btn-download-data", "children"),
     Output("btn-download-data", "title"),
-    Input("table", "page_current"),
-    Input("table", "page_size"),
+    Input("tableau_datatable", "page_current"),
+    Input("tableau_datatable", "page_size"),
     Input("tableau-filters", "data"),
     Input("tableau-sort", "data"),
-    State("table", "data_timestamp"),
+    State("tableau_datatable", "data_timestamp"),
 )
 def update_table(page_current, page_size, filter_query, sort_by, data_timestamp):
     # if ctx.triggered_id != "url":
@@ -303,9 +303,9 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
 @callback(
     Output("download-data", "data"),
     Input("btn-download-data", "n_clicks"),
-    State("table", "filter_query"),
-    State("table", "sort_by"),
-    State("table", "hidden_columns"),
+    State("tableau_datatable", "filter_query"),
+    State("tableau_datatable", "sort_by"),
+    State("tableau_datatable", "hidden_columns"),
     prevent_initial_call=True,
 )
 def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
@@ -329,8 +329,8 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
 
 
 @callback(
-    Output("table", "filter_query"),
-    Output("table", "sort_by"),
+    Output("tableau_datatable", "filter_query"),
+    Output("tableau_datatable", "sort_by"),
     Output("tableau-hidden-columns", "data"),
     Output("tableau_url", "search"),
     Output("filter-cleanup-trigger", "data"),
@@ -389,9 +389,9 @@ clientside_callback(
 @callback(
     Output("share-url", "value"),
     Output("copy-container", "children"),
-    Input("table", "filter_query"),
-    Input("table", "sort_by"),
-    Input("table", "hidden_columns"),
+    Input("tableau_datatable", "filter_query"),
+    Input("tableau_datatable", "sort_by"),
+    Input("tableau_datatable", "hidden_columns"),
     State("tableau_url", "href"),
     prevent_initial_call=True,
 )
@@ -473,7 +473,7 @@ def update_hidden_columns_from_checkboxes(selected_columns):
 
 
 @callback(
-    Output("table", "hidden_columns"),
+    Output("tableau_datatable", "hidden_columns"),
     Input(
         "tableau-hidden-columns",
         "data",
@@ -485,11 +485,11 @@ def store_hidden_columns(hidden_columns):
 
 @callback(
     Output("tableau_column_list", "selected_rows"),
-    Input("table", "hidden_columns"),
+    Input("tableau_datatable", "hidden_columns"),
     State("tableau_column_list", "selected_rows"),  # pour éviter la boucle infinie
 )
 def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
-    hidden_cols = hidden_cols or get_default_hidden_columns(None)
+    hidden_cols = hidden_cols or get_default_hidden_columns("tableau")
 
     # Show all columns that are NOT hidden
     visible_cols = [columns.index(col) for col in columns if col not in hidden_cols]
@@ -508,19 +508,19 @@ def toggle_tableau_columns(click_open, click_close, is_open):
     return is_open
 
 
-@callback(Output("tableau-filters", "data"), Input("table", "filter_query"))
+@callback(Output("tableau-filters", "data"), Input("tableau_datatable", "filter_query"))
 def sync_filters_to_local_storage(filter_query):
     return filter_query
 
 
-@callback(Output("tableau-sort", "data"), Input("table", "sort_by"))
+@callback(Output("tableau-sort", "data"), Input("tableau_datatable", "sort_by"))
 def sync_sort_to_local_storage(sort_by):
     return sort_by
 
 
 @callback(
-    Output("table", "filter_query", allow_duplicate=True),
-    Output("table", "sort_by", allow_duplicate=True),
+    Output("tableau_datatable", "filter_query", allow_duplicate=True),
+    Output("tableau_datatable", "sort_by", allow_duplicate=True),
     Input("btn-tableau-reset", "n_clicks"),
     prevent_initial_call=True,
 )
