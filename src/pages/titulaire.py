@@ -99,7 +99,6 @@ layout = [
                             html.A(
                                 id="titulaire_lien_annuaire",
                                 children="Plus de détails sur l'Annuaire des entreprises",
-                                target="_blank",
                             ),
                         ],
                     ),

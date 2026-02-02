@@ -58,7 +58,7 @@ def add_resource_link(dff: pl.DataFrame) -> pl.DataFrame:
     return dff
 
 
-def add_links(dff: pl.DataFrame, target: str = "_blank"):
+def add_links(dff: pl.DataFrame):
     for col in ["uid", "acheteur_nom", "titulaire_nom", "acheteur_id", "titulaire_id"]:
         if col in dff.columns:
             if col.startswith("titulaire_"):
@@ -72,7 +72,7 @@ def add_links(dff: pl.DataFrame, target: str = "_blank"):
                     .then(
                         '<a href = "/titulaires/'
                         + pl.col("titulaire_id")
-                        + f'" target="{target}">'
+                        + '">'
                         + pl.col(col)
                         + "</a>"
                     )
@@ -84,7 +84,7 @@ def add_links(dff: pl.DataFrame, target: str = "_blank"):
                     (
                         '<a href = "/acheteurs/'
                         + pl.col("acheteur_id")
-                        + f'" target="{target}">'
+                        + '">'
                         + pl.col(col)
                         + "</a>"
                     ).alias(col)
@@ -94,7 +94,7 @@ def add_links(dff: pl.DataFrame, target: str = "_blank"):
                     (
                         '<a href = "/marches/'
                         + pl.col("uid")
-                        + f'" target="{target}">'
+                        + '">'
                         + pl.col("uid")
                         + "</a>"
                     ).alias("uid")
@@ -551,7 +551,7 @@ def search_org(dff: pl.DataFrame, query: str, org_type: str) -> pl.DataFrame:
     )
 
     # Format result
-    dff = add_links(dff, target="")
+    dff = add_links(dff)
     dff = dff.with_columns(
         pl.concat_str(
             pl.col(f"{org_type}_departement_nom"),

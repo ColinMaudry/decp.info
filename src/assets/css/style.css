@@ -375,6 +375,11 @@ button.show-hide {
   margin-right: 10px;
 } */
 
+/* Dropdowns */
+.Select-placeholder {
+  color: #333;
+}
+
 /* Tooltips */
 .dash-tooltip,
 .dash-table-tooltip {
