@@ -7,6 +7,7 @@ from dash import Input, Output, State, callback, dcc, html, register_page
 from src.callbacks import get_top_org_table
 from src.figures import DataTable, make_column_picker, point_on_map
 from src.utils import (
+    add_canonical_link,
     columns,
     df,
     df_acheteurs,
@@ -49,13 +50,16 @@ datatable = html.Div(
         filter_action="custom",
         sort_action="custom",
         page_size=10,
-        hidden_columns=get_default_hidden_columns(page="acheteur"),
+        hidden_columns=[],
+        columns=[{"id": col, "name": col} for col in df.columns],
     ),
 )
 
 layout = [
     dcc.Store(id="acheteur_data", storage_type="memory"),
-    dcc.Store(id="acheteur-hidden-columns", storage_type="memory"),
+    dcc.Store(id="acheteur-hidden-columns", storage_type="local"),
+    dcc.Store(id="acheteur-filters", storage_type="local"),
+    dcc.Store(id="acheteur-sort", storage_type="local"),
     dcc.Location(id="acheteur_url", refresh="callback-nav"),
     html.Div(
         children=[
@@ -149,6 +153,11 @@ layout = [
                                 disabled=True,
                             ),
                             dcc.Download(id="acheteur-download-filtered-data"),
+                            dbc.Button(
+                                "Remise à zéro",
+                                title="Supprime tous les filtres et les tris. Autrement ils sont conservés même si vous fermez la page.",
+                                id="btn-acheteur-reset",
+                            ),
                         ],
                         className="table-menu",
                     ),
@@ -286,8 +295,8 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> tuple:
     Input("acheteur_data", "data"),
     Input("acheteur_datatable", "page_current"),
     Input("acheteur_datatable", "page_size"),
-    Input("acheteur_datatable", "filter_query"),
-    Input("acheteur_datatable", "sort_by"),
+    Input("acheteur-filters", "data"),
+    Input("acheteur-sort", "data"),
     State("acheteur_datatable", "data_timestamp"),
 )
 def get_last_marches_data(
@@ -336,8 +345,8 @@ def download_acheteur_data(
     State("acheteur_data", "data"),
     Input("btn-download-filtered-data-acheteur", "n_clicks"),
     State("acheteur_nom", "children"),
-    State("acheteur_datatable", "filter_query"),
-    State("acheteur_datatable", "sort_by"),
+    State("acheteur-filters", "data"),
+    State("acheteur-sort", "data"),
     State("acheteur_datatable", "hidden_columns"),
     prevent_initial_call=True,
 )
@@ -399,6 +408,8 @@ def store_hidden_columns(hidden_columns):
     State("acheteur_column_list", "selected_rows"),  # pour éviter la boucle infinie
 )
 def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
+    hidden_cols = hidden_cols or get_default_hidden_columns("acheteur")
+
     # Show all columns that are NOT hidden
     visible_cols = [columns.index(col) for col in columns if col not in hidden_cols]
     return visible_cols
@@ -414,3 +425,42 @@ def toggle_acheteur_columns(click_open, click_close, is_open):
     if click_open or click_close:
         return not is_open
     return is_open
+
+
+@callback(
+    Output("acheteur-filters", "data"), Input("acheteur_datatable", "filter_query")
+)
+def sync_filters_to_local_storage(filter_query):
+    return filter_query
+
+
+@callback(Output("acheteur-sort", "data"), Input("acheteur_datatable", "sort_by"))
+def sync_sort_to_local_storage(sort_by):
+    return sort_by
+
+
+@callback(
+    Output("acheteur_datatable", "filter_query", allow_duplicate=True),
+    Output("acheteur_datatable", "sort_by", allow_duplicate=True),
+    Input("acheteur_url", "href"),
+    State("acheteur-filters", "data"),
+    State("acheteur-sort", "data"),
+    prevent_initial_call=True,
+)
+def sync_local_storage_to_datatable(href, filter_query, sort_by):
+    return filter_query, sort_by
+
+
+@callback(
+    Output("acheteur_datatable", "filter_query", allow_duplicate=True),
+    Output("acheteur_datatable", "sort_by"),
+    Input("btn-acheteur-reset", "n_clicks"),
+    prevent_initial_call=True,
+)
+def reset_view(n_clicks):
+    return "", []
+
+
+@callback(Input("acheteur_url", "pathname"))
+def cb_add_canonical_link(pathname):
+    add_canonical_link(pathname)
