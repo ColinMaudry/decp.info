@@ -58,7 +58,7 @@ datatable = html.Div(
         page_action="custom",
         filter_action="custom",
         sort_action="custom",
-        hidden_columns=get_default_hidden_columns(None),
+        hidden_columns=[],
         columns=[{"id": col, "name": col} for col in df.columns],
     ),
 )
@@ -66,7 +66,7 @@ datatable = html.Div(
 layout = [
     dcc.Location(id="tableau_url", refresh=False),
     dcc.Store(id="filter-cleanup-trigger"),
-    dcc.Store(id="tableau-hidden-columns"),
+    dcc.Store(id="tableau-hidden-columns", storage_type="local"),
     dcc.Store(id="tableau-filters", storage_type="local"),
     dcc.Store(id="tableau-sort", storage_type="local"),
     dcc.Store(id="tableau-table"),
@@ -294,7 +294,6 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
     #     search_params = None
     # else:
     #     search_params = urllib.parse.parse_qs(search_params.lstrip("?"))
-    print(filter_query)
     return prepare_table_data(
         None, data_timestamp, filter_query, page_current, page_size, sort_by, "tableau"
     )
@@ -473,12 +472,11 @@ def update_hidden_columns_from_checkboxes(selected_columns):
 
 
 @callback(
-    Output("table", "hidden_columns", allow_duplicate=True),
+    Output("table", "hidden_columns"),
     Input(
         "tableau-hidden-columns",
         "data",
     ),
-    prevent_initial_call=True,
 )
 def store_hidden_columns(hidden_columns):
     return hidden_columns
@@ -490,6 +488,8 @@ def store_hidden_columns(hidden_columns):
     State("tableau_column_list", "selected_rows"),  # pour éviter la boucle infinie
 )
 def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
+    hidden_cols = hidden_cols or get_default_hidden_columns(None)
+
     # Show all columns that are NOT hidden
     visible_cols = [columns.index(col) for col in columns if col not in hidden_cols]
     return visible_cols
