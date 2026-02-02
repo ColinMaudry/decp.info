@@ -377,7 +377,7 @@ button.show-hide {
 
 /* Dropdowns */
 .Select-placeholder {
-  color: #333;
+  color: #333 !important;
 }
 
 /* Tooltips */
