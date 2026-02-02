@@ -22,6 +22,7 @@ from dash import (
 from figures import make_column_picker
 from src.figures import DataTable
 from src.utils import (
+    add_canonical_link,
     columns,
     df,
     filter_table_data,
@@ -525,3 +526,8 @@ def sync_sort_to_local_storage(sort_by):
 )
 def reset_view(n_clicks):
     return "", []
+
+
+@callback(Input("tableau_url", "pathname"))
+def cb_add_canonical_link(pathname):
+    add_canonical_link(pathname)
