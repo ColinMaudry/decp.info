@@ -601,7 +601,7 @@ def prepare_table_data(
         trigger_cleanup = no_update if source_table == "tableau" else str(uuid.uuid4())
 
     # Application des tris
-    if len(sort_by) > 0:
+    if sort_by and len(sort_by) > 0:
         lff = sort_table_data(lff, sort_by)
 
     # Matérialisation des filtres
