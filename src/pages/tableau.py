@@ -66,7 +66,7 @@ datatable = html.Div(
 
 layout = [
     dcc.Location(id="tableau_url", refresh=False),
-    dcc.Store(id="filter-cleanup-trigger"),
+    dcc.Store(id="filter-cleanup-trigger-tableau"),
     dcc.Store(id="tableau-hidden-columns", storage_type="local"),
     dcc.Store(id="tableau-filters", storage_type="local"),
     dcc.Store(id="tableau-sort", storage_type="local"),
@@ -284,11 +284,13 @@ layout = [
     Output("btn-download-data", "disabled"),
     Output("btn-download-data", "children"),
     Output("btn-download-data", "title"),
+    Output("filter-cleanup-trigger-tableau", "data", allow_duplicate=True),
     Input("tableau_datatable", "page_current"),
     Input("tableau_datatable", "page_size"),
     Input("tableau-filters", "data"),
     Input("tableau-sort", "data"),
     State("tableau_datatable", "data_timestamp"),
+    prevent_initial_call=True,
 )
 def update_table(page_current, page_size, filter_query, sort_by, data_timestamp):
     # if ctx.triggered_id != "url":
@@ -333,7 +335,7 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
     Output("tableau_datatable", "sort_by"),
     Output("tableau-hidden-columns", "data"),
     Output("tableau_url", "search"),
-    Output("filter-cleanup-trigger", "data"),
+    Output("filter-cleanup-trigger-tableau", "data"),
     Input("tableau_url", "search"),
     State("tableau-filters", "data"),
     State("tableau-sort", "data"),
@@ -375,13 +377,15 @@ def restore_view_from_url(search, stored_filters, stored_sort):
     return filter_query, sort_by, hidden_columns, "", trigger_cleanup
 
 
+# Pour nettoyer les icontains et i< des filtres
+# voir aussi src/assets/dash_clientside.js
 clientside_callback(
     ClientsideFunction(
         namespace="clientside",
         function_name="clean_filters",
     ),
-    Output("filter-cleanup-trigger", "data", allow_duplicate=True),
-    Input("filter-cleanup-trigger", "data"),
+    Output("filter-cleanup-trigger-tableau", "data", allow_duplicate=True),
+    Input("filter-cleanup-trigger-tableau", "data"),
     prevent_initial_call=True,
 )
 

@@ -8,6 +8,7 @@ from time import localtime, sleep
 import dash
 import polars as pl
 import polars.selectors as cs
+from dash import no_update
 from httpx import get, post
 from polars.exceptions import ComputeError
 from unidecode import unidecode
@@ -586,6 +587,8 @@ def prepare_table_data(
     if os.getenv("DEVELOPMENT").lower() == "true":
         logger.debug(" + + + + + + + + + + + + + + + + + + ")
 
+    trigger_cleanup = no_update
+
     # Récupération des données
     if isinstance(data, list):
         lff: pl.LazyFrame = pl.LazyFrame(data, strict=False, infer_schema_length=5000)
@@ -595,6 +598,7 @@ def prepare_table_data(
     # Application des filtres
     if filter_query:
         lff = filter_table_data(lff, filter_query, source_table)
+        trigger_cleanup = no_update if source_table == "tableau" else str(uuid.uuid4())
 
     # Application des tris
     if len(sort_by) > 0:
@@ -632,7 +636,7 @@ def prepare_table_data(
         dff = format_values(dff)
 
     # Récupération des colonnes et tooltip
-    columns, tooltip = setup_table_columns(dff)
+    table_columns, tooltip = setup_table_columns(dff)
 
     dicts = dff.to_dicts()
 
@@ -641,13 +645,14 @@ def prepare_table_data(
 
     return (
         dicts,
-        columns,
+        table_columns,
         tooltip,
         data_timestamp + 1,
         nb_rows,
         download_disabled,
         download_text,
         download_title,
+        trigger_cleanup,
     )
 
 

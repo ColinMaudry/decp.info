@@ -2,7 +2,17 @@ import datetime
 
 import dash_bootstrap_components as dbc
 import polars as pl
-from dash import Input, Output, State, callback, dcc, html, register_page
+from dash import (
+    ClientsideFunction,
+    Input,
+    Output,
+    State,
+    callback,
+    clientside_callback,
+    dcc,
+    html,
+    register_page,
+)
 
 from src.callbacks import get_top_org_table
 from src.figures import DataTable, make_column_picker, point_on_map
@@ -60,6 +70,7 @@ layout = [
     dcc.Store(id="acheteur-hidden-columns", storage_type="local"),
     dcc.Store(id="acheteur-filters", storage_type="local"),
     dcc.Store(id="acheteur-sort", storage_type="local"),
+    dcc.Store(id="filter-cleanup-trigger-acheteur"),
     dcc.Location(id="acheteur_url", refresh="callback-nav"),
     html.Div(
         children=[
@@ -292,12 +303,14 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> tuple:
     Output("btn-download-filtered-data-acheteur", "disabled"),
     Output("btn-download-filtered-data-acheteur", "children"),
     Output("btn-download-filtered-data-acheteur", "title"),
+    Output("filter-cleanup-trigger-acheteur", "data", allow_duplicate=True),
     Input("acheteur_data", "data"),
     Input("acheteur_datatable", "page_current"),
     Input("acheteur_datatable", "page_size"),
     Input("acheteur-filters", "data"),
     Input("acheteur-sort", "data"),
     State("acheteur_datatable", "data_timestamp"),
+    prevent_initial_call=True,
 )
 def get_last_marches_data(
     data, page_current, page_size, filter_query, sort_by, data_timestamp
@@ -374,6 +387,19 @@ def download_filtered_acheteur_data(
     return dcc.send_bytes(
         to_bytes, filename=f"decp_filtrées_{acheteur_nom}_{date}.xlsx"
     )
+
+
+# Pour nettoyer les icontains et i< des filtres
+# voir aussi src/assets/dash_clientside.js
+clientside_callback(
+    ClientsideFunction(
+        namespace="clientside",
+        function_name="clean_filters",
+    ),
+    Output("filter-cleanup-trigger-acheteur", "data", allow_duplicate=True),
+    Input("filter-cleanup-trigger-acheteur", "data"),
+    prevent_initial_call=True,
+)
 
 
 @callback(
