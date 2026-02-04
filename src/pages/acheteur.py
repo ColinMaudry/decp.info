@@ -1,4 +1,5 @@
 import datetime
+import uuid
 
 import dash_bootstrap_components as dbc
 import polars as pl
@@ -11,6 +12,7 @@ from dash import (
     clientside_callback,
     dcc,
     html,
+    no_update,
     register_page,
 )
 
@@ -404,16 +406,19 @@ clientside_callback(
 
 @callback(
     Output("acheteur-hidden-columns", "data", allow_duplicate=True),
+    Output("filter-cleanup-trigger-acheteur", "data", allow_duplicate=True),
     Input("acheteur_column_list", "selected_rows"),
+    State("acheteur-filters", "data"),
     prevent_initial_call=True,
 )
-def update_hidden_columns_from_checkboxes(selected_columns):
+def update_hidden_columns_from_checkboxes(selected_columns, filter_query):
+    trigger_cleanup = str(uuid.uuid4()) if filter_query else no_update
     if selected_columns:
         selected_columns = [columns[i] for i in selected_columns]
         hidden_columns = [col for col in columns if col not in selected_columns]
-        return hidden_columns
+        return hidden_columns, trigger_cleanup
     else:
-        return []
+        return [], trigger_cleanup
 
 
 @callback(
