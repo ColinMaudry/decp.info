@@ -7,6 +7,7 @@ from dash import Input, Output, State, callback, dcc, html, register_page
 from src.callbacks import get_top_org_table
 from src.figures import DataTable, make_column_picker, point_on_map
 from src.utils import (
+    add_canonical_link,
     columns,
     df,
     df_titulaires,
@@ -49,13 +50,16 @@ datatable = html.Div(
         filter_action="custom",
         sort_action="custom",
         page_size=10,
-        hidden_columns=get_default_hidden_columns(page="titulaire"),
+        hidden_columns=[],
+        columns=[{"id": col, "name": col} for col in df.columns],
     ),
 )
 
 layout = [
     dcc.Store(id="titulaire_data", storage_type="memory"),
-    dcc.Store(id="titulaire-hidden-columns", storage_type="memory"),
+    dcc.Store(id="titulaire-hidden-columns", storage_type="local"),
+    dcc.Store(id="titulaire-filters", storage_type="local"),
+    dcc.Store(id="titulaire-sort", storage_type="local"),
     dcc.Location(id="titulaire_url", refresh="callback-nav"),
     html.Div(
         children=[
@@ -111,6 +115,7 @@ layout = [
                             html.Button(
                                 "Téléchargement au format Excel",
                                 id="btn-download-data-titulaire",
+                                className="btn btn-primary",
                             ),
                             dcc.Download(id="download-data-titulaire"),
                         ],
@@ -145,8 +150,15 @@ layout = [
                                 "Téléchargement désactivé au-delà de 65 000 lignes",
                                 id="btn-download-filtered-data-titulaire",
                                 disabled=True,
+                                className="btn btn-primary",
                             ),
                             dcc.Download(id="titulaire-download-filtered-data"),
+                            dbc.Button(
+                                "Remise à zéro",
+                                title="Supprime tous les filtres et les tris. Autrement ils sont conservés même si vous fermez la page.",
+                                id="btn-titulaire-reset",
+                                className="btn btn-primary",
+                            ),
                         ],
                         className="table-menu",
                     ),
@@ -293,8 +305,8 @@ def get_titulaire_marches_data(url, titulaire_year: str) -> tuple:
     Input("titulaire_data", "data"),
     Input("titulaire_datatable", "page_current"),
     Input("titulaire_datatable", "page_size"),
-    Input("titulaire_datatable", "filter_query"),
-    Input("titulaire_datatable", "sort_by"),
+    Input("titulaire-filters", "data"),
+    Input("titulaire-sort", "data"),
     State("titulaire_datatable", "data_timestamp"),
 )
 def get_last_marches_data(
@@ -349,8 +361,8 @@ def download_titulaire_data(
     State("titulaire_data", "data"),
     Input("btn-download-filtered-data-titulaire", "n_clicks"),
     State("titulaire_nom", "children"),
-    State("titulaire_datatable", "filter_query"),
-    State("titulaire_datatable", "sort_by"),
+    State("titulaire-filters", "data"),
+    State("titulaire-sort", "data"),
     State("titulaire_datatable", "hidden_columns"),
     prevent_initial_call=True,
 )
@@ -412,6 +424,8 @@ def store_hidden_columns(hidden_columns):
     State("titulaire_column_list", "selected_rows"),  # pour éviter la boucle infinie
 )
 def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
+    hidden_cols = hidden_cols or get_default_hidden_columns("titulaire")
+
     # Show all columns that are NOT hidden
     visible_cols = [columns.index(col) for col in columns if col not in hidden_cols]
     return visible_cols
@@ -427,3 +441,42 @@ def toggle_titulaire_columns(click_open, click_close, is_open):
     if click_open or click_close:
         return not is_open
     return is_open
+
+
+@callback(
+    Output("titulaire-filters", "data"), Input("titulaire_datatable", "filter_query")
+)
+def sync_filters_to_local_storage(filter_query):
+    return filter_query
+
+
+@callback(Output("titulaire-sort", "data"), Input("titulaire_datatable", "sort_by"))
+def sync_sort_to_local_storage(sort_by):
+    return sort_by
+
+
+@callback(
+    Output("titulaire_datatable", "filter_query", allow_duplicate=True),
+    Output("titulaire_datatable", "sort_by", allow_duplicate=True),
+    Input("titulaire_url", "href"),
+    State("titulaire-filters", "data"),
+    State("titulaire-sort", "data"),
+    prevent_initial_call=True,
+)
+def sync_local_storage_to_datatable(href, filter_query, sort_by):
+    return filter_query, sort_by
+
+
+@callback(
+    Output("titulaire_datatable", "filter_query", allow_duplicate=True),
+    Output("titulaire_datatable", "sort_by"),
+    Input("btn-titulaire-reset", "n_clicks"),
+    prevent_initial_call=True,
+)
+def reset_view(n_clicks):
+    return "", []
+
+
+@callback(Input("titulaire_url", "pathname"))
+def cb_add_canonical_link(pathname):
+    add_canonical_link(pathname)
