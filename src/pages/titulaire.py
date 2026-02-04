@@ -2,7 +2,17 @@ import datetime
 
 import dash_bootstrap_components as dbc
 import polars as pl
-from dash import Input, Output, State, callback, dcc, html, register_page
+from dash import (
+    ClientsideFunction,
+    Input,
+    Output,
+    State,
+    callback,
+    clientside_callback,
+    dcc,
+    html,
+    register_page,
+)
 
 from src.callbacks import get_top_org_table
 from src.figures import DataTable, make_column_picker, point_on_map
@@ -60,6 +70,7 @@ layout = [
     dcc.Store(id="titulaire-hidden-columns", storage_type="local"),
     dcc.Store(id="titulaire-filters", storage_type="local"),
     dcc.Store(id="titulaire-sort", storage_type="local"),
+    dcc.Store(id="filter-cleanup-trigger-titulaire"),
     dcc.Location(id="titulaire_url", refresh="callback-nav"),
     html.Div(
         children=[
@@ -302,12 +313,14 @@ def get_titulaire_marches_data(url, titulaire_year: str) -> tuple:
     Output("btn-download-filtered-data-titulaire", "disabled"),
     Output("btn-download-filtered-data-titulaire", "children"),
     Output("btn-download-filtered-data-titulaire", "title"),
+    Output("filter-cleanup-trigger-titulaire", "data", allow_duplicate=True),
     Input("titulaire_data", "data"),
     Input("titulaire_datatable", "page_current"),
     Input("titulaire_datatable", "page_size"),
     Input("titulaire-filters", "data"),
     Input("titulaire-sort", "data"),
     State("titulaire_datatable", "data_timestamp"),
+    config_prevent_initial_callbacks=True,
 )
 def get_last_marches_data(
     data, page_current, page_size, filter_query, sort_by, data_timestamp
@@ -390,6 +403,19 @@ def download_filtered_titulaire_data(
     return dcc.send_bytes(
         to_bytes, filename=f"decp_filtrées_{titulaire_nom}_{date}.xlsx"
     )
+
+
+# Pour nettoyer les icontains et i< des filtres
+# voir aussi src/assets/dash_clientside.js
+clientside_callback(
+    ClientsideFunction(
+        namespace="clientside",
+        function_name="clean_filters",
+    ),
+    Output("filter-cleanup-trigger-titulaire", "data", allow_duplicate=True),
+    Input("filter-cleanup-trigger-titulaire", "data"),
+    prevent_initial_call=True,
+)
 
 
 @callback(
