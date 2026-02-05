@@ -12,7 +12,6 @@ from dash import (
     clientside_callback,
     dcc,
     html,
-    no_update,
     register_page,
 )
 
@@ -58,6 +57,9 @@ datatable = html.Div(
     className="marches_table",
     children=DataTable(
         dtid="acheteur_datatable",
+        persistence=True,
+        persistence_type="local",
+        persisted_props=["filter_query", "sort_by"],
         page_action="custom",
         filter_action="custom",
         sort_action="custom",
@@ -70,8 +72,6 @@ datatable = html.Div(
 layout = [
     dcc.Store(id="acheteur_data", storage_type="memory"),
     dcc.Store(id="acheteur-hidden-columns", storage_type="local"),
-    dcc.Store(id="acheteur-filters", storage_type="local"),
-    dcc.Store(id="acheteur-sort", storage_type="local"),
     dcc.Store(id="filter-cleanup-trigger-acheteur"),
     dcc.Location(id="acheteur_url", refresh="callback-nav"),
     html.Div(
@@ -320,16 +320,17 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> tuple:
     Output("btn-download-filtered-data-acheteur", "children"),
     Output("btn-download-filtered-data-acheteur", "title"),
     Output("filter-cleanup-trigger-acheteur", "data", allow_duplicate=True),
+    Input("acheteur_url", "href"),
     Input("acheteur_data", "data"),
     Input("acheteur_datatable", "page_current"),
     Input("acheteur_datatable", "page_size"),
-    Input("acheteur-filters", "data"),
-    Input("acheteur-sort", "data"),
+    Input("acheteur_datatable", "filter_query"),
+    Input("acheteur_datatable", "sort_by"),
     State("acheteur_datatable", "data_timestamp"),
     prevent_initial_call=True,
 )
 def get_last_marches_data(
-    data, page_current, page_size, filter_query, sort_by, data_timestamp
+    href, data, page_current, page_size, filter_query, sort_by, data_timestamp
 ) -> tuple:
     return prepare_table_data(
         data, data_timestamp, filter_query, page_current, page_size, sort_by, "acheteur"
@@ -374,8 +375,8 @@ def download_acheteur_data(
     State("acheteur_data", "data"),
     Input("btn-download-filtered-data-acheteur", "n_clicks"),
     State("acheteur_nom", "children"),
-    State("acheteur-filters", "data"),
-    State("acheteur-sort", "data"),
+    State("acheteur_datatable", "filter_query"),
+    State("acheteur_datatable", "sort_by"),
     State("acheteur_datatable", "hidden_columns"),
     prevent_initial_call=True,
 )
@@ -422,11 +423,10 @@ clientside_callback(
     Output("acheteur-hidden-columns", "data", allow_duplicate=True),
     Output("filter-cleanup-trigger-acheteur", "data", allow_duplicate=True),
     Input("acheteur_column_list", "selected_rows"),
-    State("acheteur-filters", "data"),
     prevent_initial_call=True,
 )
-def update_hidden_columns_from_checkboxes(selected_columns, filter_query):
-    trigger_cleanup = str(uuid.uuid4()) if filter_query else no_update
+def update_hidden_columns_from_checkboxes(selected_columns):
+    trigger_cleanup = str(uuid.uuid4())
     if selected_columns:
         selected_columns = [columns[i] for i in selected_columns]
         hidden_columns = [col for col in columns if col not in selected_columns]
@@ -470,30 +470,6 @@ def toggle_acheteur_columns(click_open, click_close, is_open):
     if click_open or click_close:
         return not is_open
     return is_open
-
-
-@callback(
-    Output("acheteur-filters", "data"), Input("acheteur_datatable", "filter_query")
-)
-def sync_filters_to_local_storage(filter_query):
-    return filter_query
-
-
-@callback(Output("acheteur-sort", "data"), Input("acheteur_datatable", "sort_by"))
-def sync_sort_to_local_storage(sort_by):
-    return sort_by
-
-
-@callback(
-    Output("acheteur_datatable", "filter_query", allow_duplicate=True),
-    Output("acheteur_datatable", "sort_by", allow_duplicate=True),
-    Input("acheteur_url", "href"),
-    State("acheteur-filters", "data"),
-    State("acheteur-sort", "data"),
-    prevent_initial_call=True,
-)
-def sync_local_storage_to_datatable(href, filter_query, sort_by):
-    return filter_query, sort_by
 
 
 @callback(
