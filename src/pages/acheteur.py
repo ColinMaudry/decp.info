@@ -318,7 +318,7 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> tuple:
     Output("btn-download-filtered-data-acheteur", "disabled"),
     Output("btn-download-filtered-data-acheteur", "children"),
     Output("btn-download-filtered-data-acheteur", "title"),
-    Output("filter-cleanup-trigger-acheteur", "data", allow_duplicate=True),
+    Output("filter-cleanup-trigger-acheteur", "data"),
     Input("acheteur_url", "href"),
     Input("acheteur_data", "data"),
     Input("acheteur_datatable", "page_current"),
@@ -326,7 +326,6 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> tuple:
     Input("acheteur_datatable", "filter_query"),
     Input("acheteur_datatable", "sort_by"),
     State("acheteur_datatable", "data_timestamp"),
-    prevent_initial_call=True,
 )
 def get_last_marches_data(
     href, data, page_current, page_size, filter_query, sort_by, data_timestamp

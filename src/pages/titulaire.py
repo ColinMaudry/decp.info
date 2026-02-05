@@ -326,7 +326,7 @@ def get_titulaire_marches_data(url, titulaire_year: str) -> tuple:
     Output("btn-download-filtered-data-titulaire", "disabled"),
     Output("btn-download-filtered-data-titulaire", "children"),
     Output("btn-download-filtered-data-titulaire", "title"),
-    Output("filter-cleanup-trigger-titulaire", "data", allow_duplicate=True),
+    Output("filter-cleanup-trigger-titulaire", "data"),
     Input(component_id="titulaire_url", component_property="href"),
     Input("titulaire_data", "data"),
     Input("titulaire_datatable", "page_current"),
@@ -334,7 +334,6 @@ def get_titulaire_marches_data(url, titulaire_year: str) -> tuple:
     Input("titulaire_datatable", "filter_query"),
     Input("titulaire_datatable", "sort_by"),
     State("titulaire_datatable", "data_timestamp"),
-    config_prevent_initial_callbacks=True,
 )
 def get_last_marches_data(
     href, data, page_current, page_size, filter_query, sort_by, data_timestamp

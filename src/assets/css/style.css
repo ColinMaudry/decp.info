@@ -392,6 +392,13 @@ button.show-hide {
   color: #333 !important;
 }
 
+/* Checkboxes */
+
+input[type="checkbox"] {
+  height: 17px;
+  width: 17px;
+}
+
 /* Tooltips */
 .dash-tooltip,
 .dash-table-tooltip {
