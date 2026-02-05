@@ -3,6 +3,7 @@ import os
 
 import polars as pl
 import pytest
+from selenium.webdriver.chrome.options import Options
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -10,9 +11,10 @@ def test_data():
     data = [
         {
             "uid": "1",
-            "acheteur_nom": "Acheteur 1",
+            "id": "1",
+            "acheteur_nom": "ACHETEUR 1",
             "acheteur_id": "a1",
-            "titulaire_nom": "Titulaire 1",
+            "titulaire_nom": "TITULAIRE 1",
             "titulaire_id": "t1",
             "montant": 10,
             "dateNotification": datetime.date(2025, 1, 1),
@@ -24,6 +26,7 @@ def test_data():
             "titulaire_departement_code": "35",
             "titulaire_departement_nom": "Ille-et-Vilaine",
             "titulaire_commune_nom": "Rennes",
+            "titulaire_distance": 10,
             "titulaire_typeIdentifiant": "SIRET",
             "objet": "Objet test",
             "dureeRestanteMois": 12,
@@ -39,3 +42,9 @@ def test_data():
 
     pl.DataFrame(data).write_parquet("tests/test.parquet")
     yield path
+
+
+def pytest_setup_options():
+    options = Options()
+    options.add_argument("--window-size=1200,800")
+    return options
