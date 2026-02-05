@@ -1,3 +1,11 @@
+#### 2.6.0 (5 février 2026)
+
+- Suite de la refonte graphique
+- Persistence des filtres, des tris et des choix de colonnes sur toutes les pages
+- Joli tableau pour choisir les colonnes à afficher
+- Meilleure gestion des acheteurs et titulaires absents de la base SIRENE
+- Amélioration du SEO (liens canoniques)
+
 ##### 2.5.1 (29 janvier 2026)
 
 - Mise en production un peu hâtive ([#67](https://github.com/ColinMaudry/decp.info/issues/67), [#68](https://github.com/ColinMaudry/decp.info/issues/68))
