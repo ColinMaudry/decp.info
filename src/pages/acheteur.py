@@ -218,26 +218,40 @@ layout = [
 )
 def update_acheteur_infos(url):
     acheteur_siret = url.split("/")[-1]
-    if len(acheteur_siret) != 14:
-        acheteur_siret = (
-            f"Le SIRET renseigné doit faire 14 caractères ({acheteur_siret})"
-        )
+    # if len(acheteur_siret) != 14:
+    #     acheteur_siret = (
+    #         f"Le SIRET renseigné doit faire 14 caractères ({acheteur_siret})"
+    #     )
     data = get_annuaire_data(acheteur_siret)
-    data_etablissement = data["matching_etablissements"][0]
-    acheteur_map = point_on_map(
-        data_etablissement["latitude"], data_etablissement["longitude"]
-    )
-    code_departement, nom_departement, nom_region = get_departement_region(
-        data_etablissement["code_postal"]
-    )
-    departement = f"{nom_departement} ({code_departement})"
-    lien_annuaire = (
-        f"https://annuaire-entreprises.data.gouv.fr/etablissement/{acheteur_siret}"
-    )
+    data_etablissement = data.get("matching_etablissements") if data else None
+    if data_etablissement:
+        data_etablissement = data_etablissement[0]
+
+        acheteur_map = point_on_map(
+            data_etablissement["latitude"], data_etablissement["longitude"]
+        )
+        code_departement, nom_departement, nom_region = get_departement_region(
+            data_etablissement["code_postal"]
+        )
+        departement = f"{nom_departement} ({code_departement})"
+        lien_annuaire = (
+            f"https://annuaire-entreprises.data.gouv.fr/etablissement/{acheteur_siret}"
+        )
+        raison_sociale = data["nom_raison_sociale"]
+        libelle_commune = data_etablissement["libelle_commune"]
+
+    else:
+        acheteur_map = html.Div()
+        code_departement, nom_departement, nom_region = "", "", ""
+        departement = ""
+        lien_annuaire = ""
+        raison_sociale = ""
+        libelle_commune = ""
+
     return (
         acheteur_siret,
-        data["nom_raison_sociale"],
-        data_etablissement["libelle_commune"],
+        raison_sociale,
+        libelle_commune,
         acheteur_map,
         departement,
         nom_region,
