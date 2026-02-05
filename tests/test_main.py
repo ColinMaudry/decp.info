@@ -1,5 +1,3 @@
-from time import sleep
-
 from dash.testing.composite import DashComposite
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
@@ -58,6 +56,5 @@ def test_002_filter_persistence(dash_duo: DashComposite):
         filter_input = open_page_and_check_filter_input()
         filter_input.send_keys("11")  # a UID that doesn't exist
         filter_input.send_keys(Keys.ENTER)
-        sleep(1)
         filter_input = open_page_and_check_filter_input()
         assert filter_input.get_attribute("value") == "11"

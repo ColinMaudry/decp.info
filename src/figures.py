@@ -326,7 +326,7 @@ class DataTable(dash_table.DataTable):
             page_action=page_action,
             filter_options={
                 "case": "insensitive",
-                "placeholder_text": "",
+                "placeholder_text": "Filtre de colonne...",
             },
             sort_action=sort_action,
             sort_mode="multi",

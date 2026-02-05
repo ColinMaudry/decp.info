@@ -242,6 +242,15 @@ def get_decp_data() -> pl.DataFrame:
     # Convertir les colonnes booléennes en chaînes de caractères
     lff = booleans_to_strings(lff)
 
+    # Mention pour les org dont on a pas le nom
+    for col in ["acheteur_nom", "titulaire_nom"]:
+        lff = lff.with_columns(
+            pl.when(pl.col(col).is_null())
+            .then(pl.lit("[Identifiant non reconnu dans la base INSEE]"))
+            .otherwise(pl.col(col))
+            .name.keep()
+        )
+
     # Bizarrement je ne peux pas faire lff = lff.fill_null("") ici
     # ça génère une erreur dans la page acheteur (acheteur_data.table) :
     # AttributeError: partially initialized module 'pandas' has no attribute 'NaT' (most likely due to a circular import)
@@ -673,7 +682,7 @@ def get_button_properties(height):
     else:
         download_disabled = False
         download_text = "Télécharger au format Excel"
-        download_title = ""
+        download_title = "Télécharger les données telles qu'affichées au format Excel"
     return download_disabled, download_text, download_title
 
 

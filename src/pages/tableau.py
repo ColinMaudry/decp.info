@@ -130,7 +130,7 @@ layout = [
         ],
     ),
     dcc.Markdown(
-        f"Ce tableau vous permet d'appliquer un filtre sur une ou plusieurs colonnes, et ainsi produire la liste de marchés dont vous avez besoin ([exemple de filtre](/tableau?filtres=%7Bacheteur_id%7D+icontains+24350013900189+%26%26+%7BdateNotification%7D+icontains+2025%2A+%26%26+%7Bmontant%7D+i%3C+40000+%26%26+%7Bobjet%7D+icontains+voirie&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2Cacheteur_departement_code%2CsourceDataset)). Par défaut seules quelques colonnes sont affichées, mais vous pouvez en afficher jusqu'à {str(df.width)} en cliquant sur le bouton **Colonnes affichées**. Cet outil est assez puissant, je vous recommande de lire le mode d'emploi pour en tirer pleinement partie.",
+        f"Ce tableau contient tous les marchés attribués en France. Il vous permet d'appliquer un filtre sur une ou plusieurs colonnes, et ainsi produire la liste de marchés dont vous avez besoin (exemples : [marchés de voirie < 40 k€ en 2025](/tableau?filtres=%7Bacheteur_id%7D+icontains+24350013900189+%26%26+%7BdateNotification%7D+icontains+2025%2A+%26%26+%7Bmontant%7D+i%3C+40000+%26%26+%7Bobjet%7D+icontains+voirie&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2Cacheteur_departement_code%2CsourceDataset), [marchés > 500 k€ avec clause sociale attribués à des PME à plus de 100 km dans le Var](/tableau?filtres=%7Btitulaire_categorie%7D+icontains+PME+%26%26+%7Btitulaire_distance%7D+i%3E+100+%26%26+%7Bmontant%7D+i%3E+500000+%26%26+%7Bacheteur_departement_code%7D+icontains+83+%26%26+%7BconsiderationsSociales%7D+icontains+clause&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2CconsiderationsSociales%2Ctitulaire_distance%2Cacheteur_departement_code%2Ctitulaire_categorie%2CsourceDataset)). Par défaut seules quelques colonnes sont affichées, mais vous pouvez en afficher jusqu'à {str(df.width)} en cliquant sur le bouton **Choisir les colonnes**. Cet outil est assez puissant, je vous recommande de lire le mode d'emploi pour en tirer pleinement partie.",
         style={"maxWidth": "1000px"},
     ),
     html.Div(
@@ -148,7 +148,7 @@ layout = [
                     dbc.Button("Mode d'emploi", id="tableau_help_open"),
                     dbc.Modal(
                         [
-                            dbc.ModalHeader(dbc.ModalTitle("Header")),
+                            dbc.ModalHeader(dbc.ModalTitle("Mode d'emploi")),
                             dbc.ModalBody(
                                 dcc.Markdown(
                                     dangerously_allow_html=True,
@@ -156,6 +156,10 @@ layout = [
             ##### Définition des colonnes
 
             Pour voir la définition d'une colonne, passez votre souris sur son en-tête.
+
+            ##### Vos réglages sont persistents
+
+            Les filtres, les tris et le choix de colonnes sont automatiquement enregistrés dans votre navigateur et persistent même si vous changez de page ou si vous fermez votre navigateur. À votre retour, vous retrouverez cette page comme vous l'avez laissée.
 
             ##### Appliquer des filtres
 
@@ -174,7 +178,7 @@ layout = [
                 - pour chercher du texte qui **commence par** votre texte, entrez `texte*`. C'est par exemple utile pour filtrer des acheteurs ou titulaires par numéro SIREN (`123456789*`) ou les marchés sur une année en particulier (`2024*`)
                 - pour chercher du texte qui **finit par** votre texte, entrez `*texte`
 
-            Vous pouvez filtrer plusieurs colonnes à la fois. Vos filtres sont remis à zéro quand vous rafraîchissez la page.
+            Vous pouvez filtrer plusieurs colonnes à la fois.
 
             ##### Trier les données
 
@@ -188,11 +192,11 @@ layout = [
 
             Par défaut, un nombre réduit de colonnes est affiché pour ne pas surcharger la page. Mais vous avez le choix parmi {str(df.width)} colonnes, ce serait dommage de vous limiter !
 
-            Pour afficher plus de colonnes, cliquez sur le bouton **Colonnes affichées** et cochez les colonnes pour les afficher.
+            Pour afficher plus de colonnes, cliquez sur le bouton **Choisir les colonnes** et cochez les colonnes pour les afficher.
 
             ##### Partager une vue
 
-            Une vue est un ensemble de filtres, de tris et de choix de colonnes que vous avez appliqués. Cliquez sur l'icône <img src="/assets/copy.svg" alt="drawing" width="20"/> pour copier une adresse Web qui reproduit la vue courante à l'identique : en la collant dans la barre d'adresse d'un navigateur, vous ouvrez la vue Tableau avec les mêmes paramètres.
+            Une vue est un ensemble de filtres, de tris et de choix de colonnes que vous avez appliqués. Cliquez sur **Partager** pour copier une adresse Web qui reproduit la vue courante à l'identique : en la collant dans la barre d'adresse d'un navigateur, vous ouvrez la vue Tableau avec les mêmes paramètres.
 
             Pratique pour partager une vue avec un·e collègue, sur les réseaux sociaux, ou la sauvegarder pour plus tard.
 
@@ -225,9 +229,10 @@ layout = [
                     ),
                     # Bouton modal des colonnes affichées
                     dbc.Button(
-                        "Colonnes affichées",
+                        "Choisir les colonnes",
                         id="tableau_columns_open",
                         className="column_list",
+                        title="Choisir les colonnes à afficher et masquer",
                     ),
                     html.P("lignes", id="nb_rows"),
                     html.Div(id="copy-container"),
@@ -241,7 +246,7 @@ layout = [
                     dcc.Store(id="filtered_data", storage_type="memory"),
                     html.P("Données mises à jour le " + str(update_date)),
                     dbc.Button(
-                        "Remise à zéro",
+                        "Remettre à zéro",
                         title="Supprime tous les filtres et les tris. Autrement ils sont conservés même si vous fermez la page.",
                         id="btn-tableau-reset",
                     ),
@@ -434,6 +439,13 @@ def sync_url_and_reset_button(filter_query, sort_by, hidden_columns, href):
             "cursor": "pointer",
         },
         className="fa fa-link",
+        children=[
+            dbc.Button(
+                "Partager",
+                className="btn btn-primary",
+                title="Copier l'adresse de cette vue (filtres, tris, choix de colonnes) pour la partager.",
+            )
+        ],
     )
 
     return full_url, copy_button
@@ -527,3 +539,9 @@ def reset_view(n_clicks):
 @callback(Input("tableau_url", "pathname"))
 def cb_add_canonical_link(pathname):
     add_canonical_link(pathname)
+
+
+# @callback(Input("tableau_url", "pathname"), Output("btn-copy-url", "children"))
+# def cb_add_canonical_link(pathname):
+#     add_canonical_link(pathname)
+#
