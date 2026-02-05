@@ -55,6 +55,9 @@ datatable = html.Div(
     className="marches_table",
     children=DataTable(
         dtid="tableau_datatable",
+        persisted_props=["filter_query", "sort_by"],
+        persistence_type="local",
+        persistence=True,
         page_size=20,
         page_action="custom",
         filter_action="custom",
@@ -68,8 +71,6 @@ layout = [
     dcc.Location(id="tableau_url", refresh=False),
     dcc.Store(id="filter-cleanup-trigger-tableau"),
     dcc.Store(id="tableau-hidden-columns", storage_type="local"),
-    dcc.Store(id="tableau-filters", storage_type="local"),
-    dcc.Store(id="tableau-sort", storage_type="local"),
     dcc.Store(id="tableau-table"),
     html.Script(
         type="application/ld+json",
@@ -285,14 +286,15 @@ layout = [
     Output("btn-download-data", "children"),
     Output("btn-download-data", "title"),
     Output("filter-cleanup-trigger-tableau", "data", allow_duplicate=True),
+    Input("tableau_url", "href"),
     Input("tableau_datatable", "page_current"),
     Input("tableau_datatable", "page_size"),
-    Input("tableau-filters", "data"),
-    Input("tableau-sort", "data"),
+    Input("tableau_datatable", "filter_query"),
+    Input("tableau_datatable", "sort_by"),
     State("tableau_datatable", "data_timestamp"),
     prevent_initial_call=True,
 )
-def update_table(page_current, page_size, filter_query, sort_by, data_timestamp):
+def update_table(href, page_current, page_size, filter_query, sort_by, data_timestamp):
     # if ctx.triggered_id != "url":
     #     search_params = None
     # else:
@@ -337,8 +339,8 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
     Output("tableau_url", "search"),
     Output("filter-cleanup-trigger-tableau", "data"),
     Input("tableau_url", "search"),
-    State("tableau-filters", "data"),
-    State("tableau-sort", "data"),
+    State("tableau_datatable", "filter_query"),
+    State("tableau_datatable", "sort_by"),
 )
 def restore_view_from_url(search, stored_filters, stored_sort):
     if not search and not stored_filters:
@@ -510,16 +512,6 @@ def toggle_tableau_columns(click_open, click_close, is_open):
     if click_open or click_close:
         return not is_open
     return is_open
-
-
-@callback(Output("tableau-filters", "data"), Input("tableau_datatable", "filter_query"))
-def sync_filters_to_local_storage(filter_query):
-    return filter_query
-
-
-@callback(Output("tableau-sort", "data"), Input("tableau_datatable", "sort_by"))
-def sync_sort_to_local_storage(sort_by):
-    return sort_by
 
 
 @callback(

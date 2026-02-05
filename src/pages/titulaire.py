@@ -56,6 +56,9 @@ datatable = html.Div(
     className="marches_table",
     children=DataTable(
         dtid="titulaire_datatable",
+        persistence=True,
+        persistence_type="local",
+        persisted_props=["filter_query", "sort_by"],
         page_action="custom",
         filter_action="custom",
         sort_action="custom",
@@ -68,8 +71,6 @@ datatable = html.Div(
 layout = [
     dcc.Store(id="titulaire_data", storage_type="memory"),
     dcc.Store(id="titulaire-hidden-columns", storage_type="local"),
-    dcc.Store(id="titulaire-filters", storage_type="local"),
-    dcc.Store(id="titulaire-sort", storage_type="local"),
     dcc.Store(id="filter-cleanup-trigger-titulaire"),
     dcc.Location(id="titulaire_url", refresh="callback-nav"),
     html.Div(
@@ -217,26 +218,38 @@ layout = [
 )
 def update_titulaire_infos(url):
     titulaire_siret = url.split("/")[-1]
-    if len(titulaire_siret) != 14:
-        titulaire_siret = (
-            f"Le SIRET renseigné doit faire 14 caractères ({titulaire_siret})"
-        )
     data = get_annuaire_data(titulaire_siret)
-    data_etablissement = data["matching_etablissements"][0]
-    titulaire_map = point_on_map(
-        data_etablissement["latitude"], data_etablissement["longitude"]
-    )
-    code_departement, nom_departement, nom_region = get_departement_region(
-        data_etablissement["code_postal"]
-    )
-    departement = f"{nom_departement} ({code_departement})"
-    lien_annuaire = (
-        f"https://annuaire-entreprises.data.gouv.fr/etablissement/{titulaire_siret}"
-    )
+    data_etablissement = data.get("matching_etablissements") if data else None
+    if data_etablissement:
+        data_etablissement = data_etablissement[0]
+
+        titulaire_map = point_on_map(
+            data_etablissement["latitude"], data_etablissement["longitude"]
+        )
+        code_departement, nom_departement, nom_region = get_departement_region(
+            data_etablissement["code_postal"]
+        )
+        departement = f"{nom_departement} ({code_departement})"
+        lien_annuaire = (
+            f"https://annuaire-entreprises.data.gouv.fr/etablissement/{titulaire_siret}"
+        )
+        raison_sociale = data["nom_raison_sociale"]
+        libelle_commune = data_etablissement["libelle_commune"]
+
+    else:
+        titulaire_map = html.Div()
+        code_departement, nom_departement, nom_region = "", "", ""
+        departement = ""
+        lien_annuaire = ""
+        raison_sociale = html.Span(
+            f"N° SIREN inconnu de l'INSEE ({titulaire_siret[:9]})"
+        )
+        libelle_commune = ""
+
     return (
         titulaire_siret,
-        data["nom_raison_sociale"],
-        data_etablissement["libelle_commune"],
+        raison_sociale,
+        libelle_commune,
         titulaire_map,
         departement,
         nom_region,
@@ -314,16 +327,17 @@ def get_titulaire_marches_data(url, titulaire_year: str) -> tuple:
     Output("btn-download-filtered-data-titulaire", "children"),
     Output("btn-download-filtered-data-titulaire", "title"),
     Output("filter-cleanup-trigger-titulaire", "data", allow_duplicate=True),
+    Input(component_id="titulaire_url", component_property="href"),
     Input("titulaire_data", "data"),
     Input("titulaire_datatable", "page_current"),
     Input("titulaire_datatable", "page_size"),
-    Input("titulaire-filters", "data"),
-    Input("titulaire-sort", "data"),
+    Input("titulaire_datatable", "filter_query"),
+    Input("titulaire_datatable", "sort_by"),
     State("titulaire_datatable", "data_timestamp"),
     config_prevent_initial_callbacks=True,
 )
 def get_last_marches_data(
-    data, page_current, page_size, filter_query, sort_by, data_timestamp
+    href, data, page_current, page_size, filter_query, sort_by, data_timestamp
 ) -> list[dict]:
     return prepare_table_data(
         data,
@@ -374,8 +388,8 @@ def download_titulaire_data(
     State("titulaire_data", "data"),
     Input("btn-download-filtered-data-titulaire", "n_clicks"),
     State("titulaire_nom", "children"),
-    State("titulaire-filters", "data"),
-    State("titulaire-sort", "data"),
+    State("titulaire_datatable", "filter_query"),
+    State("titulaire_datatable", "sort_by"),
     State("titulaire_datatable", "hidden_columns"),
     prevent_initial_call=True,
 )
@@ -467,30 +481,6 @@ def toggle_titulaire_columns(click_open, click_close, is_open):
     if click_open or click_close:
         return not is_open
     return is_open
-
-
-@callback(
-    Output("titulaire-filters", "data"), Input("titulaire_datatable", "filter_query")
-)
-def sync_filters_to_local_storage(filter_query):
-    return filter_query
-
-
-@callback(Output("titulaire-sort", "data"), Input("titulaire_datatable", "sort_by"))
-def sync_sort_to_local_storage(sort_by):
-    return sort_by
-
-
-@callback(
-    Output("titulaire_datatable", "filter_query", allow_duplicate=True),
-    Output("titulaire_datatable", "sort_by", allow_duplicate=True),
-    Input("titulaire_url", "href"),
-    State("titulaire-filters", "data"),
-    State("titulaire-sort", "data"),
-    prevent_initial_call=True,
-)
-def sync_local_storage_to_datatable(href, filter_query, sort_by):
-    return filter_query, sort_by
 
 
 @callback(

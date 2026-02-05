@@ -9,7 +9,7 @@ import dash
 import polars as pl
 import polars.selectors as cs
 from dash import no_update
-from httpx import get, post
+from httpx import HTTPError, get, post
 from polars.exceptions import ComputeError
 from unidecode import unidecode
 
@@ -208,8 +208,13 @@ def format_values(dff: pl.DataFrame) -> pl.DataFrame:
 
 def get_annuaire_data(siret: str) -> dict:
     url = f"https://recherche-entreprises.api.gouv.fr/search?q={siret}"
-    response = get(url)
-    return response.json()["results"][0]
+    try:
+        response = get(url).raise_for_status()
+        response = response.json()["results"][0]
+    except (HTTPError, IndexError):
+        response = None
+        logger.warning("Could not fetch data from recherche-entreprises.api.")
+    return response
 
 
 def get_decp_data() -> pl.DataFrame:
@@ -601,7 +606,7 @@ def prepare_table_data(
         trigger_cleanup = no_update if source_table == "tableau" else str(uuid.uuid4())
 
     # Application des tris
-    if len(sort_by) > 0:
+    if sort_by and len(sort_by) > 0:
         lff = sort_table_data(lff, sort_by)
 
     # Matérialisation des filtres

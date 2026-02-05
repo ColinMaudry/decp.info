@@ -330,7 +330,6 @@ class DataTable(dash_table.DataTable):
             },
             sort_action=sort_action,
             sort_mode="multi",
-            sort_by=[],
             row_deletable=False,
             page_current=0,
             style_cell_conditional=style_cell_conditional,
