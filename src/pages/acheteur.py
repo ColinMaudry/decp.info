@@ -1,11 +1,24 @@
 import datetime
 
+import dash_bootstrap_components as dbc
 import polars as pl
-from dash import Input, Output, State, callback, dcc, html, register_page
+from dash import (
+    ClientsideFunction,
+    Input,
+    Output,
+    State,
+    callback,
+    clientside_callback,
+    dcc,
+    html,
+    register_page,
+)
 
 from src.callbacks import get_top_org_table
-from src.figures import DataTable, point_on_map
+from src.figures import DataTable, make_column_picker, point_on_map
 from src.utils import (
+    add_canonical_link,
+    columns,
     df,
     df_acheteurs,
     filter_table_data,
@@ -43,16 +56,22 @@ datatable = html.Div(
     className="marches_table",
     children=DataTable(
         dtid="acheteur_datatable",
+        persistence=True,
+        persistence_type="local",
+        persisted_props=["filter_query", "sort_by"],
         page_action="custom",
         filter_action="custom",
         sort_action="custom",
         page_size=10,
-        hidden_columns=get_default_hidden_columns(page="acheteur"),
+        hidden_columns=[],
+        columns=[{"id": col, "name": col} for col in df.columns],
     ),
 )
 
 layout = [
     dcc.Store(id="acheteur_data", storage_type="memory"),
+    dcc.Store(id="acheteur-hidden-columns", storage_type="local"),
+    dcc.Store(id="filter-cleanup-trigger-acheteur"),
     dcc.Location(id="acheteur_url", refresh="callback-nav"),
     html.Div(
         children=[
@@ -71,7 +90,7 @@ layout = [
                         className="org_year",
                         children=dcc.Dropdown(
                             id="acheteur_year",
-                            options=["Toutes"]
+                            options=["Toutes les années"]
                             + [
                                 str(year)
                                 for year in range(
@@ -96,7 +115,6 @@ layout = [
                             html.A(
                                 id="acheteur_lien_annuaire",
                                 children="Plus de détails sur l'Annuaire des entreprises",
-                                target="_blank",
                             ),
                         ],
                     ),
@@ -109,6 +127,7 @@ layout = [
                             html.Button(
                                 "Téléchargement au format Excel",
                                 id="btn-download-data-acheteur",
+                                className="btn btn-primary",
                             ),
                             dcc.Download(id="download-data-acheteur"),
                         ],
@@ -132,15 +151,51 @@ layout = [
                 children=[
                     html.Div(
                         [
+                            # Bouton modal des colonnes affichées
+                            dbc.Button(
+                                "Colonnes affichées",
+                                id="acheteur_columns_open",
+                                className="column_list",
+                            ),
                             html.P("lignes", id="acheteur_nb_rows"),
                             html.Button(
                                 "Téléchargement désactivé au-delà de 65 000 lignes",
                                 id="btn-download-filtered-data-acheteur",
+                                className="btn btn-primary",
                                 disabled=True,
                             ),
                             dcc.Download(id="acheteur-download-filtered-data"),
+                            dbc.Button(
+                                "Remise à zéro",
+                                title="Supprime tous les filtres et les tris. Autrement ils sont conservés même si vous fermez la page.",
+                                id="btn-acheteur-reset",
+                            ),
                         ],
                         className="table-menu",
+                    ),
+                    dbc.Modal(
+                        [
+                            dbc.ModalHeader(
+                                dbc.ModalTitle("Choix des colonnes à afficher")
+                            ),
+                            dbc.ModalBody(
+                                id="acheteur_columns_body",
+                                children=make_column_picker("acheteur"),
+                            ),
+                            dbc.ModalFooter(
+                                dbc.Button(
+                                    "Fermer",
+                                    id="acheteur_columns_close",
+                                    className="ms-auto",
+                                    n_clicks=0,
+                                )
+                            ),
+                        ],
+                        id="acheteur_columns",
+                        is_open=False,
+                        fullscreen="md-down",
+                        scrollable=True,
+                        size="xl",
                     ),
                     datatable,
                 ],
@@ -162,26 +217,40 @@ layout = [
 )
 def update_acheteur_infos(url):
     acheteur_siret = url.split("/")[-1]
-    if len(acheteur_siret) != 14:
-        acheteur_siret = (
-            f"Le SIRET renseigné doit faire 14 caractères ({acheteur_siret})"
-        )
+    # if len(acheteur_siret) != 14:
+    #     acheteur_siret = (
+    #         f"Le SIRET renseigné doit faire 14 caractères ({acheteur_siret})"
+    #     )
     data = get_annuaire_data(acheteur_siret)
-    data_etablissement = data["matching_etablissements"][0]
-    acheteur_map = point_on_map(
-        data_etablissement["latitude"], data_etablissement["longitude"]
-    )
-    code_departement, nom_departement, nom_region = get_departement_region(
-        data_etablissement["code_postal"]
-    )
-    departement = f"{nom_departement} ({code_departement})"
-    lien_annuaire = (
-        f"https://annuaire-entreprises.data.gouv.fr/etablissement/{acheteur_siret}"
-    )
+    data_etablissement = data.get("matching_etablissements") if data else None
+    if data_etablissement:
+        data_etablissement = data_etablissement[0]
+
+        acheteur_map = point_on_map(
+            data_etablissement["latitude"], data_etablissement["longitude"]
+        )
+        code_departement, nom_departement, nom_region = get_departement_region(
+            data_etablissement["code_postal"]
+        )
+        departement = f"{nom_departement} ({code_departement})"
+        lien_annuaire = (
+            f"https://annuaire-entreprises.data.gouv.fr/etablissement/{acheteur_siret}"
+        )
+        raison_sociale = data["nom_raison_sociale"]
+        libelle_commune = data_etablissement["libelle_commune"]
+
+    else:
+        acheteur_map = html.Div()
+        code_departement, nom_departement, nom_region = "", "", ""
+        departement = ""
+        lien_annuaire = ""
+        raison_sociale = ""
+        libelle_commune = ""
+
     return (
         acheteur_siret,
-        data["nom_raison_sociale"],
-        data_etablissement["libelle_commune"],
+        raison_sociale,
+        libelle_commune,
         acheteur_map,
         departement,
         nom_region,
@@ -229,7 +298,7 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> tuple:
     acheteur_siret = url.split("/")[-1]
     lff = df.lazy()
     lff = lff.filter(pl.col("acheteur_id") == acheteur_siret)
-    if acheteur_year and acheteur_year != "Toutes":
+    if acheteur_year and acheteur_year != "Toutes les années":
         acheteur_year = int(acheteur_year)
         lff = lff.filter(pl.col("dateNotification").dt.year() == acheteur_year)
     lff = lff.sort(["dateNotification", "uid"], descending=True, nulls_last=True)
@@ -249,6 +318,8 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> tuple:
     Output("btn-download-filtered-data-acheteur", "disabled"),
     Output("btn-download-filtered-data-acheteur", "children"),
     Output("btn-download-filtered-data-acheteur", "title"),
+    Output("filter-cleanup-trigger-acheteur", "data"),
+    Input("acheteur_url", "href"),
     Input("acheteur_data", "data"),
     Input("acheteur_datatable", "page_current"),
     Input("acheteur_datatable", "page_size"),
@@ -257,7 +328,7 @@ def get_acheteur_marches_data(url, acheteur_year: str) -> tuple:
     State("acheteur_datatable", "data_timestamp"),
 )
 def get_last_marches_data(
-    data, page_current, page_size, filter_query, sort_by, data_timestamp
+    href, data, page_current, page_size, filter_query, sort_by, data_timestamp
 ) -> tuple:
     return prepare_table_data(
         data, data_timestamp, filter_query, page_current, page_size, sort_by, "acheteur"
@@ -290,7 +361,7 @@ def download_acheteur_data(
 
     def to_bytes(buffer):
         df_to_download.write_excel(
-            buffer, worksheet="DECP" if annee in ["Toutes", None] else annee
+            buffer, worksheet="DECP" if annee in ["Toutes les années", None] else annee
         )
 
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
@@ -331,3 +402,82 @@ def download_filtered_acheteur_data(
     return dcc.send_bytes(
         to_bytes, filename=f"decp_filtrées_{acheteur_nom}_{date}.xlsx"
     )
+
+
+# Pour nettoyer les icontains et i< des filtres
+# voir aussi src/assets/dash_clientside.js
+clientside_callback(
+    ClientsideFunction(
+        namespace="clientside",
+        function_name="clean_filters",
+    ),
+    Output("filter-cleanup-trigger-acheteur", "data", allow_duplicate=True),
+    Input("filter-cleanup-trigger-acheteur", "data"),
+    prevent_initial_call=True,
+)
+
+
+@callback(
+    Output("acheteur-hidden-columns", "data", allow_duplicate=True),
+    Input("acheteur_column_list", "selected_rows"),
+    prevent_initial_call=True,
+)
+def update_hidden_columns_from_checkboxes(selected_columns):
+    if selected_columns:
+        selected_columns = [columns[i] for i in selected_columns]
+        hidden_columns = [col for col in columns if col not in selected_columns]
+        return hidden_columns
+    else:
+        return []
+
+
+@callback(
+    Output("acheteur_datatable", "hidden_columns", allow_duplicate=True),
+    Input(
+        "acheteur-hidden-columns",
+        "data",
+    ),
+    prevent_initial_call=True,
+)
+def store_hidden_columns(hidden_columns):
+    return hidden_columns
+
+
+@callback(
+    Output("acheteur_column_list", "selected_rows"),
+    Input("acheteur_datatable", "hidden_columns"),
+    State("acheteur_column_list", "selected_rows"),  # pour éviter la boucle infinie
+)
+def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
+    hidden_cols = hidden_cols or get_default_hidden_columns("acheteur")
+
+    # Show all columns that are NOT hidden
+    visible_cols = [columns.index(col) for col in columns if col not in hidden_cols]
+    return visible_cols
+
+
+@callback(
+    Output("acheteur_columns", "is_open"),
+    Input("acheteur_columns_open", "n_clicks"),
+    Input("acheteur_columns_close", "n_clicks"),
+    State("acheteur_columns", "is_open"),
+)
+def toggle_acheteur_columns(click_open, click_close, is_open):
+    if click_open or click_close:
+        return not is_open
+    return is_open
+
+
+@callback(
+    Output("acheteur_datatable", "filter_query", allow_duplicate=True),
+    Output("acheteur_datatable", "sort_by"),
+    Input("btn-acheteur-reset", "n_clicks"),
+    prevent_initial_call=True,
+)
+def reset_view(n_clicks):
+    return "", []
+
+
+@callback(Input("acheteur_url", "pathname"))
+def cb_add_canonical_link(pathname):
+    add_canonical_link(pathname)

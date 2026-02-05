@@ -1,11 +1,24 @@
 import datetime
 
+import dash_bootstrap_components as dbc
 import polars as pl
-from dash import Input, Output, State, callback, dcc, html, register_page
+from dash import (
+    ClientsideFunction,
+    Input,
+    Output,
+    State,
+    callback,
+    clientside_callback,
+    dcc,
+    html,
+    register_page,
+)
 
 from src.callbacks import get_top_org_table
-from src.figures import DataTable, point_on_map
+from src.figures import DataTable, make_column_picker, point_on_map
 from src.utils import (
+    add_canonical_link,
+    columns,
     df,
     df_titulaires,
     filter_table_data,
@@ -43,16 +56,22 @@ datatable = html.Div(
     className="marches_table",
     children=DataTable(
         dtid="titulaire_datatable",
+        persistence=True,
+        persistence_type="local",
+        persisted_props=["filter_query", "sort_by"],
         page_action="custom",
         filter_action="custom",
         sort_action="custom",
         page_size=10,
-        hidden_columns=get_default_hidden_columns(page="titulaire"),
+        hidden_columns=[],
+        columns=[{"id": col, "name": col} for col in df.columns],
     ),
 )
 
 layout = [
     dcc.Store(id="titulaire_data", storage_type="memory"),
+    dcc.Store(id="titulaire-hidden-columns", storage_type="local"),
+    dcc.Store(id="filter-cleanup-trigger-titulaire"),
     dcc.Location(id="titulaire_url", refresh="callback-nav"),
     html.Div(
         children=[
@@ -71,7 +90,7 @@ layout = [
                         className="org_year",
                         children=dcc.Dropdown(
                             id="titulaire_year",
-                            options=["Toutes"]
+                            options=["Toutes les années"]
                             + [
                                 str(year)
                                 for year in range(
@@ -96,7 +115,6 @@ layout = [
                             html.A(
                                 id="titulaire_lien_annuaire",
                                 children="Plus de détails sur l'Annuaire des entreprises",
-                                target="_blank",
                             ),
                         ],
                     ),
@@ -109,6 +127,7 @@ layout = [
                             html.Button(
                                 "Téléchargement au format Excel",
                                 id="btn-download-data-titulaire",
+                                className="btn btn-primary",
                             ),
                             dcc.Download(id="download-data-titulaire"),
                         ],
@@ -132,15 +151,52 @@ layout = [
                 children=[
                     html.Div(
                         [
+                            # Bouton modal des colonnes affichées
+                            dbc.Button(
+                                "Colonnes affichées",
+                                id="titulaire_columns_open",
+                                className="column_list",
+                            ),
                             html.P("lignes", id="titulaire_nb_rows"),
                             html.Button(
                                 "Téléchargement désactivé au-delà de 65 000 lignes",
                                 id="btn-download-filtered-data-titulaire",
                                 disabled=True,
+                                className="btn btn-primary",
                             ),
                             dcc.Download(id="titulaire-download-filtered-data"),
+                            dbc.Button(
+                                "Remise à zéro",
+                                title="Supprime tous les filtres et les tris. Autrement ils sont conservés même si vous fermez la page.",
+                                id="btn-titulaire-reset",
+                                className="btn btn-primary",
+                            ),
                         ],
                         className="table-menu",
+                    ),
+                    dbc.Modal(
+                        [
+                            dbc.ModalHeader(
+                                dbc.ModalTitle("Choix des colonnes à afficher")
+                            ),
+                            dbc.ModalBody(
+                                id="titulaire_columns_body",
+                                children=make_column_picker("titulaire"),
+                            ),
+                            dbc.ModalFooter(
+                                dbc.Button(
+                                    "Fermer",
+                                    id="titulaire_columns_close",
+                                    className="ms-auto",
+                                    n_clicks=0,
+                                )
+                            ),
+                        ],
+                        id="titulaire_columns",
+                        is_open=False,
+                        fullscreen="md-down",
+                        scrollable=True,
+                        size="xl",
                     ),
                     datatable,
                 ],
@@ -162,26 +218,38 @@ layout = [
 )
 def update_titulaire_infos(url):
     titulaire_siret = url.split("/")[-1]
-    if len(titulaire_siret) != 14:
-        titulaire_siret = (
-            f"Le SIRET renseigné doit faire 14 caractères ({titulaire_siret})"
-        )
     data = get_annuaire_data(titulaire_siret)
-    data_etablissement = data["matching_etablissements"][0]
-    titulaire_map = point_on_map(
-        data_etablissement["latitude"], data_etablissement["longitude"]
-    )
-    code_departement, nom_departement, nom_region = get_departement_region(
-        data_etablissement["code_postal"]
-    )
-    departement = f"{nom_departement} ({code_departement})"
-    lien_annuaire = (
-        f"https://annuaire-entreprises.data.gouv.fr/etablissement/{titulaire_siret}"
-    )
+    data_etablissement = data.get("matching_etablissements") if data else None
+    if data_etablissement:
+        data_etablissement = data_etablissement[0]
+
+        titulaire_map = point_on_map(
+            data_etablissement["latitude"], data_etablissement["longitude"]
+        )
+        code_departement, nom_departement, nom_region = get_departement_region(
+            data_etablissement["code_postal"]
+        )
+        departement = f"{nom_departement} ({code_departement})"
+        lien_annuaire = (
+            f"https://annuaire-entreprises.data.gouv.fr/etablissement/{titulaire_siret}"
+        )
+        raison_sociale = data["nom_raison_sociale"]
+        libelle_commune = data_etablissement["libelle_commune"]
+
+    else:
+        titulaire_map = html.Div()
+        code_departement, nom_departement, nom_region = "", "", ""
+        departement = ""
+        lien_annuaire = ""
+        raison_sociale = html.Span(
+            f"N° SIREN inconnu de l'INSEE ({titulaire_siret[:9]})"
+        )
+        libelle_commune = ""
+
     return (
         titulaire_siret,
-        data["nom_raison_sociale"],
-        data_etablissement["libelle_commune"],
+        raison_sociale,
+        libelle_commune,
         titulaire_map,
         departement,
         nom_region,
@@ -235,7 +303,7 @@ def get_titulaire_marches_data(url, titulaire_year: str) -> tuple:
         (pl.col("titulaire_id") == titulaire_siret)
         & (pl.col("titulaire_typeIdentifiant") == "SIRET")
     )
-    if titulaire_year and titulaire_year != "Toutes":
+    if titulaire_year and titulaire_year != "Toutes les années":
         lff = lff.filter(
             pl.col("dateNotification").cast(pl.String).str.starts_with(titulaire_year)
         )
@@ -258,6 +326,8 @@ def get_titulaire_marches_data(url, titulaire_year: str) -> tuple:
     Output("btn-download-filtered-data-titulaire", "disabled"),
     Output("btn-download-filtered-data-titulaire", "children"),
     Output("btn-download-filtered-data-titulaire", "title"),
+    Output("filter-cleanup-trigger-titulaire", "data"),
+    Input(component_id="titulaire_url", component_property="href"),
     Input("titulaire_data", "data"),
     Input("titulaire_datatable", "page_current"),
     Input("titulaire_datatable", "page_size"),
@@ -266,7 +336,7 @@ def get_titulaire_marches_data(url, titulaire_year: str) -> tuple:
     State("titulaire_datatable", "data_timestamp"),
 )
 def get_last_marches_data(
-    data, page_current, page_size, filter_query, sort_by, data_timestamp
+    href, data, page_current, page_size, filter_query, sort_by, data_timestamp
 ) -> list[dict]:
     return prepare_table_data(
         data,
@@ -305,7 +375,7 @@ def download_titulaire_data(
 
     def to_bytes(buffer):
         df_to_download.write_excel(
-            buffer, worksheet="DECP" if annee in ["Toutes", None] else annee
+            buffer, worksheet="DECP" if annee in ["Toutes les années", None] else annee
         )
 
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
@@ -346,3 +416,82 @@ def download_filtered_titulaire_data(
     return dcc.send_bytes(
         to_bytes, filename=f"decp_filtrées_{titulaire_nom}_{date}.xlsx"
     )
+
+
+# Pour nettoyer les icontains et i< des filtres
+# voir aussi src/assets/dash_clientside.js
+clientside_callback(
+    ClientsideFunction(
+        namespace="clientside",
+        function_name="clean_filters",
+    ),
+    Output("filter-cleanup-trigger-titulaire", "data", allow_duplicate=True),
+    Input("filter-cleanup-trigger-titulaire", "data"),
+    prevent_initial_call=True,
+)
+
+
+@callback(
+    Output("titulaire-hidden-columns", "data", allow_duplicate=True),
+    Input("titulaire_column_list", "selected_rows"),
+    prevent_initial_call=True,
+)
+def update_hidden_columns_from_checkboxes(selected_columns):
+    if selected_columns:
+        selected_columns = [columns[i] for i in selected_columns]
+        hidden_columns = [col for col in columns if col not in selected_columns]
+        return hidden_columns
+    else:
+        return []
+
+
+@callback(
+    Output("titulaire_datatable", "hidden_columns", allow_duplicate=True),
+    Input(
+        "titulaire-hidden-columns",
+        "data",
+    ),
+    prevent_initial_call=True,
+)
+def store_hidden_columns(hidden_columns):
+    return hidden_columns
+
+
+@callback(
+    Output("titulaire_column_list", "selected_rows"),
+    Input("titulaire_datatable", "hidden_columns"),
+    State("titulaire_column_list", "selected_rows"),  # pour éviter la boucle infinie
+)
+def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
+    hidden_cols = hidden_cols or get_default_hidden_columns("titulaire")
+
+    # Show all columns that are NOT hidden
+    visible_cols = [columns.index(col) for col in columns if col not in hidden_cols]
+    return visible_cols
+
+
+@callback(
+    Output("titulaire_columns", "is_open"),
+    Input("titulaire_columns_open", "n_clicks"),
+    Input("titulaire_columns_close", "n_clicks"),
+    State("titulaire_columns", "is_open"),
+)
+def toggle_titulaire_columns(click_open, click_close, is_open):
+    if click_open or click_close:
+        return not is_open
+    return is_open
+
+
+@callback(
+    Output("titulaire_datatable", "filter_query", allow_duplicate=True),
+    Output("titulaire_datatable", "sort_by"),
+    Input("btn-titulaire-reset", "n_clicks"),
+    prevent_initial_call=True,
+)
+def reset_view(n_clicks):
+    return "", []
+
+
+@callback(Input("titulaire_url", "pathname"))
+def cb_add_canonical_link(pathname):
+    add_canonical_link(pathname)

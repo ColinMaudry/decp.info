@@ -2,11 +2,14 @@ import json
 import logging
 import os
 import uuid
+from collections import OrderedDict
 from time import localtime, sleep
 
+import dash
 import polars as pl
 import polars.selectors as cs
-from httpx import get, post
+from dash import no_update
+from httpx import HTTPError, get, post
 from polars.exceptions import ComputeError
 from unidecode import unidecode
 
@@ -32,14 +35,14 @@ def split_filter_part(filter_part):
         ["icontains", "contains"],
         # [" ", "contains"]
     ]
-    logger.debug("filter part", filter_part)
+    logger.debug("filter part " + filter_part)
     for operator_group in operators:
         if operator_group[0] in filter_part:
             name_part, value_part = filter_part.split(operator_group[0], 1)
             name_part = name_part.strip()
             value = value_part.strip()
             name = name_part[name_part.find("{") + 1 : name_part.rfind("}")]
-            logger.debug("=>", name, operator_group[1], value)
+            logger.debug("=> " + " ".join([name, operator_group[1], value]))
 
             return name, operator_group[1], value
 
@@ -56,7 +59,7 @@ def add_resource_link(dff: pl.DataFrame) -> pl.DataFrame:
     return dff
 
 
-def add_links(dff: pl.DataFrame, target: str = "_blank"):
+def add_links(dff: pl.DataFrame):
     for col in ["uid", "acheteur_nom", "titulaire_nom", "acheteur_id", "titulaire_id"]:
         if col in dff.columns:
             if col.startswith("titulaire_"):
@@ -70,7 +73,7 @@ def add_links(dff: pl.DataFrame, target: str = "_blank"):
                     .then(
                         '<a href = "/titulaires/'
                         + pl.col("titulaire_id")
-                        + f'" target="{target}">'
+                        + '">'
                         + pl.col(col)
                         + "</a>"
                     )
@@ -82,7 +85,7 @@ def add_links(dff: pl.DataFrame, target: str = "_blank"):
                     (
                         '<a href = "/acheteurs/'
                         + pl.col("acheteur_id")
-                        + f'" target="{target}">'
+                        + '">'
                         + pl.col(col)
                         + "</a>"
                     ).alias(col)
@@ -92,7 +95,7 @@ def add_links(dff: pl.DataFrame, target: str = "_blank"):
                     (
                         '<a href = "/marches/'
                         + pl.col("uid")
-                        + f'" target="{target}">'
+                        + '">'
                         + pl.col("uid")
                         + "</a>"
                     ).alias("uid")
@@ -205,8 +208,13 @@ def format_values(dff: pl.DataFrame) -> pl.DataFrame:
 
 def get_annuaire_data(siret: str) -> dict:
     url = f"https://recherche-entreprises.api.gouv.fr/search?q={siret}"
-    response = get(url)
-    return response.json()["results"][0]
+    try:
+        response = get(url).raise_for_status()
+        response = response.json()["results"][0]
+    except (HTTPError, IndexError):
+        response = None
+        logger.warning("Could not fetch data from recherche-entreprises.api.")
+    return response
 
 
 def get_decp_data() -> pl.DataFrame:
@@ -233,6 +241,15 @@ def get_decp_data() -> pl.DataFrame:
 
     # Convertir les colonnes booléennes en chaînes de caractères
     lff = booleans_to_strings(lff)
+
+    # Mention pour les org dont on a pas le nom
+    for col in ["acheteur_nom", "titulaire_nom"]:
+        lff = lff.with_columns(
+            pl.when(pl.col(col).is_null())
+            .then(pl.lit("[Identifiant non reconnu dans la base INSEE]"))
+            .otherwise(pl.col(col))
+            .name.keep()
+        )
 
     # Bizarrement je ne peux pas faire lff = lff.fill_null("") ici
     # ça génère une erreur dans la page acheteur (acheteur_data.table) :
@@ -284,7 +301,7 @@ def filter_table_data(
     lff: pl.LazyFrame, filter_query: str, filter_source: str
 ) -> pl.LazyFrame:
     _schema = lff.collect_schema()
-    track_search(f"{filter_source}: {filter_query}")
+    track_search(filter_query, filter_source)
     filtering_expressions = filter_query.split(" && ")
     for filter_part in filtering_expressions:
         col_name, operator, filter_value = split_filter_part(filter_part)
@@ -426,12 +443,11 @@ def get_default_hidden_columns(page):
             "codeCPV",
             "dureeRestanteMois",
         ]
+    elif page == "titulaire":
+        displayed_columns = os.getenv("DISPLAYED_COLUMNS")
     else:
         displayed_columns = os.getenv("DISPLAYED_COLUMNS")
-        if displayed_columns is None:
-            raise ValueError("DISPLAYED_COLUMNS n'est pas configuré")
-        else:
-            displayed_columns = displayed_columns.replace(" ", "").split(",")
+        logger.warning(f"Invalid page: {page}")
 
     hidden_columns = []
 
@@ -456,7 +472,7 @@ def get_data_schema() -> dict:
     else:
         raise Exception(f"Chemin vers le schéma invalide: {path}")
 
-    new_schema = {}
+    new_schema = OrderedDict()
 
     for col in original_schema["fields"]:
         new_schema[col["name"]] = col
@@ -464,21 +480,15 @@ def get_data_schema() -> dict:
     return new_schema
 
 
-def track_search(query):
-    if (
-        len(query) >= 4
-        and os.getenv("DEVELOPMENT").lower != "true"
-        and os.getenv("MATOMO_DOMAIN")
-    ):
-        if os.getenv("DEVELOPMENT").lower() == "true":
-            url = "https://test.decp.info"
-        else:
-            url = "https://decp.info"
+def track_search(query, category):
+    if len(query) >= 4 and not development and os.getenv("MATOMO_DOMAIN"):
+        url = "https://decp.info"
         params = {
             "idsite": os.getenv("MATOMO_ID_SITE"),
             "url": url,
             "rec": "1",
-            "action_name": "front_page_search",
+            "action_name": "search" if category == "home_page_search" else "filter",
+            "search_cat": category,
             "rand": uuid.uuid4().hex,
             "apiv": "1",
             "h": localtime().tm_hour,
@@ -506,7 +516,7 @@ def search_org(dff: pl.DataFrame, query: str, org_type: str) -> pl.DataFrame:
         return dff.select(pl.lit(False).alias("matches"))
 
     # Enregistrement des recherche dans Matomo
-    track_search(query)
+    track_search(query, "home_page_search")
 
     # Normalize query
     normalized_query = unidecode(query.strip()).upper()
@@ -555,7 +565,7 @@ def search_org(dff: pl.DataFrame, query: str, org_type: str) -> pl.DataFrame:
     )
 
     # Format result
-    dff = add_links(dff, target="")
+    dff = add_links(dff)
     dff = dff.with_columns(
         pl.concat_str(
             pl.col(f"{org_type}_departement_nom"),
@@ -591,6 +601,8 @@ def prepare_table_data(
     if os.getenv("DEVELOPMENT").lower() == "true":
         logger.debug(" + + + + + + + + + + + + + + + + + + ")
 
+    trigger_cleanup = no_update
+
     # Récupération des données
     if isinstance(data, list):
         lff: pl.LazyFrame = pl.LazyFrame(data, strict=False, infer_schema_length=5000)
@@ -600,9 +612,10 @@ def prepare_table_data(
     # Application des filtres
     if filter_query:
         lff = filter_table_data(lff, filter_query, source_table)
+        trigger_cleanup = no_update if source_table == "tableau" else str(uuid.uuid4())
 
     # Application des tris
-    if len(sort_by) > 0:
+    if sort_by and len(sort_by) > 0:
         lff = sort_table_data(lff, sort_by)
 
     # Matérialisation des filtres
@@ -637,7 +650,7 @@ def prepare_table_data(
         dff = format_values(dff)
 
     # Récupération des colonnes et tooltip
-    columns, tooltip = setup_table_columns(dff)
+    table_columns, tooltip = setup_table_columns(dff)
 
     dicts = dff.to_dicts()
 
@@ -646,13 +659,14 @@ def prepare_table_data(
 
     return (
         dicts,
-        columns,
+        table_columns,
         tooltip,
         data_timestamp + 1,
         nb_rows,
         download_disabled,
         download_text,
         download_title,
+        trigger_cleanup,
     )
 
 
@@ -668,7 +682,7 @@ def get_button_properties(height):
     else:
         download_disabled = False
         download_text = "Télécharger au format Excel"
-        download_title = ""
+        download_title = "Télécharger les données telles qu'affichées au format Excel"
     return download_disabled, download_text, download_title
 
 
@@ -726,6 +740,14 @@ def make_org_jsonld(org_id, org_type, org_name=None, type_org_id="SIRET") -> dic
     return jsonld
 
 
+def add_canonical_link(pathname):
+    @dash.hooks.index()
+    def update_index(html_string):
+        url = f"https://{domain_name}{pathname}"
+        canonical_tag = f'<link rel="canonical" href="{url}" />'
+        return html_string.replace("</head>", f"{canonical_tag}\n    </head>")
+
+
 df: pl.DataFrame = get_decp_data()
 schema = df.collect_schema()
 
@@ -763,3 +785,4 @@ meta_content = {
     ),
 }
 data_schema = get_data_schema()
+columns = df.columns

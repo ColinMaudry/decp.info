@@ -6,10 +6,10 @@ import plotly.graph_objects as go
 import polars as pl
 from dash import dash_table, dcc, html
 
-from src.utils import format_number
+from src.utils import data_schema, df, format_number
 
 
-def get_map_count_marches(df: pl.DataFrame):
+def get_map_count_marches():
     lf = df.lazy()
     lf = lf.with_columns(
         pl.col("lieuExecution_code").str.head(2).str.zfill(2).alias("Département")
@@ -31,16 +31,16 @@ def get_map_count_marches(df: pl.DataFrame):
     for f in departements["features"]:
         f["id"] = f["properties"]["code"]
 
-    df = lf.collect(engine="streaming")
+    df_map = lf.collect(engine="streaming")
 
     fig = px.choropleth(
-        df,
+        df_map,
         geojson=departements,
         locations="Département",
         color="uid",
         color_continuous_scale="Reds",
         title="Nombres de marchés attribués par département (lieu d'exécution)",
-        range_color=(df["uid"].min(), df["uid"].max()),
+        range_color=(df_map["uid"].min(), df_map["uid"].max()),
         labels={"uid": "Marchés attribués"},
         scope="europe",
         width=900,
@@ -91,11 +91,8 @@ def get_yearly_statistics(statistics, today_str) -> html.Div:
         page_size=10,
         sort_action="none",
         filter_action="none",
-        style_header={
-            "border": "solid 1px rgb(179, 56, 33)",
-            "backgroundColor": "rgb(179, 56, 33)",
-            "color": "white",
-        },
+        style_header={"fontFamily": "Inter", "fontSize": "16px"},
+        style_cell={"fontFamily": "Inter", "fontSize": "16px"},
     )
 
     return html.Div(children=table, className="marches_table")
@@ -210,11 +207,8 @@ def get_sources_tables(source_path) -> html.Div:
         ],
         sort_action="native",
         markdown_options={"html": True},
-        style_header={
-            "border": "solid 1px rgb(179, 56, 33)",
-            "backgroundColor": "rgb(179, 56, 33)",
-            "color": "white",
-        },
+        style_header={"fontFamily": "Inter", "fontSize": "16px"},
+        style_cell={"fontFamily": "Inter", "fontSize": "16px"},
     )
 
     return html.Div(children=datatable)
@@ -250,6 +244,7 @@ def point_on_map(lat, lon):
     fig.update_layout(map_center={"lat": 46.6, "lon": 1.89}, map_zoom=4)
 
     graph = dcc.Graph(id="map", figure=fig)
+    graph = html.Div(style={"width": "400px"})
     return graph
 
 
@@ -264,10 +259,12 @@ class DataTable(dash_table.DataTable):
         page_action: Literal["native", "custom", "none"] = "native",
         sort_action: Literal["native", "custom", "none"] = "native",
         filter_action: Literal["native", "custom", "none"] = "native",
+        style_cell_conditional: list | None = None,
+        style_cell: dict | None = None,
         **kwargs,
     ):
         # Styles de base
-        style_cell_conditional = [
+        style_cell_conditional_common = [
             {
                 "if": {"column_id": "objet"},
                 "minWidth": "350px",
@@ -295,19 +292,28 @@ class DataTable(dash_table.DataTable):
                 "lineHeight": "18px",
                 "whiteSpace": "normal",
             },
-            {
-                "if": {"column_id": "montant"},
-                "textAlign": "right",
-            },
-            {
-                "if": {"column_id": "dureeMois"},
-                "textAlign": "right",
-            },
-            {
-                "if": {"column_id": "titulaire_distance"},
-                "textAlign": "right",
-            },
         ]
+
+        style_cell_common = {"fontFamily": "Inter", "fontSize": "16px"}
+
+        for key in data_schema.keys():
+            field = data_schema[key]
+            if field["type"] in ["number", "integer"]:
+                rule = {
+                    "if": {"column_id": field["name"]},
+                    "textAlign": "right",
+                    # "fontFamily": "Fira Code",
+                }
+                style_cell_conditional_common.append(rule)
+
+        style_cell_conditional = (
+            style_cell_conditional or []
+        ) + style_cell_conditional_common
+        if style_cell:
+            style_cell.update(style_cell_common)
+        else:
+            style_cell = style_cell_common
+        style_header = style_cell
 
         # Initialisation de la classe parente avec les arguments
         super().__init__(
@@ -320,16 +326,17 @@ class DataTable(dash_table.DataTable):
             page_action=page_action,
             filter_options={
                 "case": "insensitive",
-                "placeholder_text": "",
+                "placeholder_text": "Filtre de colonne...",
             },
             sort_action=sort_action,
             sort_mode="multi",
-            sort_by=[],
             row_deletable=False,
             page_current=0,
             style_cell_conditional=style_cell_conditional,
             data_timestamp=0,
             markdown_options={"html": True},
+            style_header=style_header,
+            style_cell=style_cell,
             tooltip_duration=8000,
             tooltip_delay=350,
             hidden_columns=hidden_columns,
@@ -360,13 +367,6 @@ def get_duplicate_matrix() -> html.Div:
 
     Passez votre souris sur une case pour avoir les pourcentages exacts. À noter que ces statistiques sont produites avant le dédoublonnement qui a lieu avant la publication en Open Data et sur ce site.""")
 
-    # Assuming result_df is your DataFrame with structure:
-    # | sourceDataset | unique | dataset1 | dataset2 | dataset3 |
-    # |---------------|--------|----------|----------|----------|
-    # | dataset1      | 0.8    |          | 0.15     | 0.2      |
-    # | dataset2      | 0.75   | 0.15     |          | 0.12     |
-    # | dataset3      | 0.85   | 0.2      | 0.12     |          |
-
     # Extract data
     z_data = result_df.select(pl.all().exclude("sourceDataset")).fill_null(0).to_numpy()
     x_labels = result_df.columns[1:]  # columns after "sourceDataset"
@@ -378,12 +378,6 @@ def get_duplicate_matrix() -> html.Div:
             z=z_data,
             x=x_labels,
             y=y_labels,
-            # colorscale=[
-            #     [0, "white"],  # 0% → white
-            #     [0.10, "lightblue"],  # 1% → light blue (soft start)
-            #     [0.50, "steelblue"],  # 50% → medium blue
-            #     [1, "darkblue"],  # 100% → dark blue
-            # ],
             colorscale=[
                 [0.0, "white"],  # 0% → white
                 [0.10, "lightsalmon"],  # 10% → light warm tone
@@ -391,8 +385,6 @@ def get_duplicate_matrix() -> html.Div:
             ],
             zmin=0,
             zmax=1,
-            # texttemplate="%{z:.0%}",  # Format as percentage
-            # textfont={"size": 10, "color": "black"},  # Smaller font
             hoverongaps=False,
             showscale=True,
             hovertemplate=(
@@ -422,3 +414,57 @@ def get_duplicate_matrix() -> html.Div:
             dcc.Graph(figure=fig),
         ]
     )
+
+
+def make_column_picker(page: str):
+    table_data = []
+    table_columns = [
+        {
+            "id": col,
+            "name": data_schema[col]["title"],
+            "description": data_schema[col]["description"],
+        }
+        for col in df.columns
+    ]
+    for column in table_columns:
+        new_column = {
+            "id": column["id"],
+            "name": column["name"],
+            "description": data_schema[column["id"]]["description"],
+        }
+        table_data.append(new_column)
+
+    table = (
+        DataTable(
+            row_selectable="multi",
+            data=table_data,
+            filter_action="native",
+            sort_action="none",
+            style_cell={
+                "textAlign": "left",
+            },
+            columns=[
+                {
+                    "name": "Nom",
+                    "id": "name",
+                },
+                {
+                    "name": "Description",
+                    "id": "description",
+                },
+            ],
+            style_cell_conditional=[
+                {
+                    "if": {"column_id": "description"},
+                    "minWidth": "450px",
+                    "overflow": "hidden",
+                    "lineHeight": "18px",
+                    "whiteSpace": "normal",
+                }
+            ],
+            page_action="none",
+            dtid=f"{page}_column_list",
+        ),
+    )
+
+    return table

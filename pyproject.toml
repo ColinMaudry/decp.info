@@ -1,7 +1,7 @@
 [project]
 name = "decp.info"
 description = "Interface d'exploration et d'analyse des marchés publics français."
-version = "2.5.1"
+version = "2.6.0"
 requires-python = ">= 3.10"
 authors = [
     { name = "Colin Maudry", email = "colin@colmo.tech" }
@@ -22,5 +22,22 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "pytest",
+    "pytest-env",
     "pre-commit",
+    "selenium",
+    "webdriver-manager",
+    "dash[testing]",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "src"
+]
+testpaths = [
+    "tests"
+]
+env = [
+    "DATA_FILE_PARQUET_PATH=tests/test.parquet"
+]
+addopts = "-p no:warnings"

@@ -4,6 +4,7 @@ import urllib.parse
 import uuid
 from datetime import datetime
 
+import dash_bootstrap_components as dbc
 import polars as pl
 from dash import (
     ClientsideFunction,
@@ -18,8 +19,11 @@ from dash import (
     register_page,
 )
 
+from figures import make_column_picker
 from src.figures import DataTable
 from src.utils import (
+    add_canonical_link,
+    columns,
     df,
     filter_table_data,
     get_default_hidden_columns,
@@ -50,19 +54,24 @@ register_page(
 datatable = html.Div(
     className="marches_table",
     children=DataTable(
-        dtid="table",
+        dtid="tableau_datatable",
+        persisted_props=["filter_query", "sort_by"],
+        persistence_type="local",
+        persistence=True,
         page_size=20,
         page_action="custom",
         filter_action="custom",
         sort_action="custom",
-        hidden_columns=get_default_hidden_columns(None),
+        hidden_columns=[],
         columns=[{"id": col, "name": col} for col in df.columns],
     ),
 )
 
 layout = [
     dcc.Location(id="tableau_url", refresh=False),
-    dcc.Store(id="filter-cleanup-trigger"),
+    dcc.Store(id="filter-cleanup-trigger-tableau"),
+    dcc.Store(id="tableau-hidden-columns", storage_type="local"),
+    dcc.Store(id="tableau-table"),
     html.Script(
         type="application/ld+json",
         id="dataset_jsonld",
@@ -121,85 +130,13 @@ layout = [
         ],
     ),
     dcc.Markdown(
-        f"Ce tableau vous permet d'appliquer un filtre sur une ou plusieurs colonnes, et ainsi produire la liste de marchés dont vous avez besoin ([exemple de filtre](/tableau?filtres=%7Bacheteur_id%7D+icontains+24350013900189+%26%26+%7BdateNotification%7D+icontains+2025%2A+%26%26+%7Bmontant%7D+i%3C+40000+%26%26+%7Bobjet%7D+icontains+voirie&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2Cacheteur_departement_code%2CsourceDataset)). Par défaut seules quelques colonnes sont affichées, mais vous pouvez en afficher jusqu'à {str(df.width)} en cliquant sur le bouton **Colonnes affichées**. Cet outil est assez puissant, je vous recommande de lire le mode d'emploi pour en tirer pleinement partie.",
+        f"Ce tableau contient tous les marchés attribués en France. Il vous permet d'appliquer un filtre sur une ou plusieurs colonnes, et ainsi produire la liste de marchés dont vous avez besoin (exemples : [marchés de voirie < 40 k€ en 2025](/tableau?filtres=%7Bacheteur_id%7D+icontains+24350013900189+%26%26+%7BdateNotification%7D+icontains+2025%2A+%26%26+%7Bmontant%7D+i%3C+40000+%26%26+%7Bobjet%7D+icontains+voirie&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2Cacheteur_departement_code%2CsourceDataset), [marchés > 500 k€ avec clause sociale attribués à des PME à plus de 100 km dans le Var](/tableau?filtres=%7Btitulaire_categorie%7D+icontains+PME+%26%26+%7Btitulaire_distance%7D+i%3E+100+%26%26+%7Bmontant%7D+i%3E+500000+%26%26+%7Bacheteur_departement_code%7D+icontains+83+%26%26+%7BconsiderationsSociales%7D+icontains+clause&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2CconsiderationsSociales%2Ctitulaire_distance%2Cacheteur_departement_code%2Ctitulaire_categorie%2CsourceDataset)). Par défaut seules quelques colonnes sont affichées, mais vous pouvez en afficher jusqu'à {str(df.width)} en cliquant sur le bouton **Choisir les colonnes**. Cet outil est assez puissant, je vous recommande de lire le mode d'emploi pour en tirer pleinement partie.",
         style={"maxWidth": "1000px"},
     ),
     html.Div(
-        html.Details(
-            children=[
-                html.Summary(
-                    html.H4("Mode d'emploi", style={"textDecoration": "underline"}),
-                ),
-                dcc.Markdown(
-                    dangerously_allow_html=True,
-                    children=f"""
-    ##### Définition des colonnes
-
-    Pour voir la définition d'une colonne, passez votre souris sur son en-tête.
-
-    ##### Appliquer des filtres
-
-    Vous pouvez appliquer un filtre pour chaque colonne en entrant du texte sous le nom de la colonne, puis en tapant sur `Entrée`.
-
-    - Champs textuels : la recherche retourne les valeurs qui contiennent le texte recherché et n'est pas sensible à la casse (majuscules/minuscules).
-        - Exemple : `rennes` retourne "RENNES METROPOLE".
-        - Les guillemets simples (apostrophe du 4) doivent être prédédées d'une barre oblique (AltGr + 8). Exemple : `services d\\\'assurances`
-        - Lorsque vous ouvrez une URL de vue (voir "Partager une vue" plus bas), le format équivalent `icontains rennes` est utilisé. Mais dans vos filtres pas besoin de taper `icontains` !
-    - Champs numériques (Durée en mois, Montant, ...) : vous pouvez...
-        - soit taper un nombre pour trouver les valeurs strictement égales. Exemple : `12` ne retourne que des 12
-        - soit le précéder de **>** ou **<** pour filtrer les valeurs supérieures ou inférieures. Exemple pour les offres reçues : `> 4` retourne les marchés ayant reçu plus de 4 offres.
-        - lorsque vous ouvrez une URL de vue (voir "Partager une vue" plus bas), le format équivalent `i<` ou `i>` est utilisé, mais c'est un bug : vous n'avez pas besoin de taper le `i` pour appliquer ce filtre.
-    - Champs date (Date de notification, ...) : vous pouvez également utiliser **>** ou **<**. Exemples :
-        - `< 2024-01-31` pour "avant le 31 janvier 2024"
-        - `2024` pour "en 2024", `> 2022` pour "à partir de 2022".
-    - Pour les champs textuels et les champs dates :
-        - pour chercher du texte qui **commence par** votre texte, entrez `texte*`. C'est par exemple utile pour filtrer des acheteurs ou titulaires par numéro SIREN (`123456789*`) ou les marchés sur une année en particulier (`2024*`)
-        - pour chercher du texte qui **finit par** votre texte, entrez `*texte`
-
-    Vous pouvez filtrer plusieurs colonnes à la fois. Vos filtres sont remis à zéro quand vous rafraîchissez la page.
-
-    ##### Trier les données
-
-    Pour trier une colonne, utilisez les flèches grises à côté des noms de colonnes. Chaque clic change le tri dans cet ordre :
-
-    1. tri croissant
-    2. tri décroissant
-    3. pas de tri
-
-    ##### Afficher plus de colonnes
-
-    Par défaut, un nombre réduit de colonnes est affiché pour ne pas surcharger la page. Mais vous avez le choix parmi {str(df.width)} colonnes, ce serait dommage de vous limiter !
-
-    Pour afficher plus de colonnes, cliquez sur le bouton **Colonnes affichées** et cochez les colonnes pour les afficher.
-
-    ##### Partager une vue
-
-    Une vue est un ensemble de filtres, de tris et de choix de colonnes que vous avez appliqué. Cliquez sur l'icône <img src="/assets/copy.svg" alt="drawing" width="20"/> pour copier une adresse Web qui reproduit la vue courante à l'identique : en la collant dans la barre d'adresse d'un navigateur, vous ouvrez la vue Tableau avec les mêmes paramètres.
-
-    Pratique pour partager une vue avec un·e collègue, sur les réseaux sociaux, ou la sauvegarder pour plus tard.
-
-    ##### Télécharger le résultat
-
-    Vous pouvez télécharger le résultat de vos filtres et tris, pour les colonnes affichées, en cliquant sur **Télécharger au format Excel**.
-
-    ##### Liens
-
-    Les liens dans les colonnes Identifiant unique, Acheteur et Titulaire vous permettent de consulter une vue qui leur est dédiée
-    (informations, marchés attribués/remportés, etc.)
-
-    """,
-                ),
-            ],
-            id="instructions",
-        ),
+        [],
         id="header",
     ),
-    # html.Div(
-    #     [
-    #         "Recherche dans objet : ",
-    #         dcc.Input(id="search", value="", type="text"),
-    #     ]
-    # )]),
     dcc.Loading(
         overlay_style={"visibility": "visible", "filter": "blur(2px)"},
         id="loading-home",
@@ -207,10 +144,100 @@ layout = [
         children=[
             html.Div(
                 [
+                    # Modal du mode d'emploi
+                    dbc.Button("Mode d'emploi", id="tableau_help_open"),
+                    dbc.Modal(
+                        [
+                            dbc.ModalHeader(dbc.ModalTitle("Mode d'emploi")),
+                            dbc.ModalBody(
+                                dcc.Markdown(
+                                    dangerously_allow_html=True,
+                                    children=f"""
+            ##### Définition des colonnes
+
+            Pour voir la définition d'une colonne, passez votre souris sur son en-tête.
+
+            ##### Vos réglages sont persistents
+
+            Les filtres, les tris et le choix de colonnes sont automatiquement enregistrés dans votre navigateur et persistent même si vous changez de page ou si vous fermez votre navigateur. À votre retour, vous retrouverez cette page comme vous l'avez laissée.
+
+            ##### Appliquer des filtres
+
+            Vous pouvez appliquer un filtre pour chaque colonne en entrant du texte sous le nom de la colonne, puis en tapant sur `Entrée`.
+
+            - Champs textuels : la recherche retourne les valeurs qui contiennent le texte recherché et n'est pas sensible à la casse (majuscules/minuscules).
+                - Exemple : `rennes` retourne "RENNES METROPOLE".
+                - Les guillemets simples (apostrophe du 4) doivent être prédédées d'une barre oblique (AltGr + 8). Exemple : `services d\\\'assurances`
+            - Champs numériques (Durée en mois, Montant, ...) : vous pouvez...
+                - soit taper un nombre pour trouver les valeurs strictement égales. Exemple : `12` ne retourne que des 12
+                - soit le précéder de **>** ou **<** pour filtrer les valeurs supérieures ou inférieures. Exemple pour les offres reçues : `> 4` retourne les marchés ayant reçu plus de 4 offres.
+            - Champs date (Date de notification, ...) : vous pouvez également utiliser **>** ou **<**. Exemples :
+                - `< 2024-01-31` pour "avant le 31 janvier 2024"
+                - `2024` pour "en 2024", `> 2022` pour "à partir de 2022".
+            - Pour les champs textuels et les champs dates :
+                - pour chercher du texte qui **commence par** votre texte, entrez `texte*`. C'est par exemple utile pour filtrer des acheteurs ou titulaires par numéro SIREN (`123456789*`) ou les marchés sur une année en particulier (`2024*`)
+                - pour chercher du texte qui **finit par** votre texte, entrez `*texte`
+
+            Vous pouvez filtrer plusieurs colonnes à la fois.
+
+            ##### Trier les données
+
+            Pour trier une colonne, utilisez les flèches grises à côté des noms de colonnes. Chaque clic change le tri dans cet ordre :
+
+            1. tri croissant
+            2. tri décroissant
+            3. pas de tri
+
+            ##### Afficher plus de colonnes
+
+            Par défaut, un nombre réduit de colonnes est affiché pour ne pas surcharger la page. Mais vous avez le choix parmi {str(df.width)} colonnes, ce serait dommage de vous limiter !
+
+            Pour afficher plus de colonnes, cliquez sur le bouton **Choisir les colonnes** et cochez les colonnes pour les afficher.
+
+            ##### Partager une vue
+
+            Une vue est un ensemble de filtres, de tris et de choix de colonnes que vous avez appliqués. Cliquez sur **Partager** pour copier une adresse Web qui reproduit la vue courante à l'identique : en la collant dans la barre d'adresse d'un navigateur, vous ouvrez la vue Tableau avec les mêmes paramètres.
+
+            Pratique pour partager une vue avec un·e collègue, sur les réseaux sociaux, ou la sauvegarder pour plus tard.
+
+            ##### Télécharger le résultat
+
+            Vous pouvez télécharger le résultat de vos filtres et tris, pour les colonnes affichées, en cliquant sur **Télécharger au format Excel**.
+
+            ##### Liens
+
+            Les liens dans les colonnes Identifiant unique, Acheteur et Titulaire vous permettent de consulter une vue qui leur est dédiée
+            (informations, marchés attribués/remportés, etc.)
+
+            """,
+                                ),
+                            ),
+                            dbc.ModalFooter(
+                                dbc.Button(
+                                    "Fermer",
+                                    id="tableau_help_close",
+                                    className="ms-auto",
+                                    n_clicks=0,
+                                )
+                            ),
+                        ],
+                        id="tableau_help",
+                        is_open=False,
+                        fullscreen="md-down",
+                        scrollable=True,
+                        size="lg",
+                    ),
+                    # Bouton modal des colonnes affichées
+                    dbc.Button(
+                        "Choisir les colonnes",
+                        id="tableau_columns_open",
+                        className="column_list",
+                        title="Choisir les colonnes à afficher et masquer",
+                    ),
                     html.P("lignes", id="nb_rows"),
                     html.Div(id="copy-container"),
                     dcc.Input(id="share-url", readOnly=True, style={"display": "none"}),
-                    html.Button(
+                    dbc.Button(
                         "Téléchargement désactivé au-delà de 65 000 lignes",
                         id="btn-download-data",
                         disabled=True,
@@ -218,8 +245,35 @@ layout = [
                     dcc.Download(id="download-data"),
                     dcc.Store(id="filtered_data", storage_type="memory"),
                     html.P("Données mises à jour le " + str(update_date)),
+                    dbc.Button(
+                        "Remettre à zéro",
+                        title="Supprime tous les filtres et les tris. Autrement ils sont conservés même si vous fermez la page.",
+                        id="btn-tableau-reset",
+                    ),
                 ],
                 className="table-menu",
+            ),
+            dbc.Modal(
+                [
+                    dbc.ModalHeader(dbc.ModalTitle("Choix des colonnes à afficher")),
+                    dbc.ModalBody(
+                        id="tableau_columns_body",
+                        children=make_column_picker("tableau"),
+                    ),
+                    dbc.ModalFooter(
+                        dbc.Button(
+                            "Fermer",
+                            id="tableau_columns_close",
+                            className="ms-auto",
+                            n_clicks=0,
+                        )
+                    ),
+                ],
+                id="tableau_columns",
+                is_open=False,
+                fullscreen="md-down",
+                scrollable=True,
+                size="xl",
             ),
             datatable,
         ],
@@ -228,21 +282,24 @@ layout = [
 
 
 @callback(
-    Output("table", "data"),
-    Output("table", "columns"),
-    Output("table", "tooltip_header"),
-    Output("table", "data_timestamp"),
+    Output("tableau_datatable", "data"),
+    Output("tableau_datatable", "columns"),
+    Output("tableau_datatable", "tooltip_header"),
+    Output("tableau_datatable", "data_timestamp"),
     Output("nb_rows", "children"),
     Output("btn-download-data", "disabled"),
     Output("btn-download-data", "children"),
     Output("btn-download-data", "title"),
-    Input("table", "page_current"),
-    Input("table", "page_size"),
-    Input("table", "filter_query"),
-    Input("table", "sort_by"),
-    State("table", "data_timestamp"),
+    Output("filter-cleanup-trigger-tableau", "data", allow_duplicate=True),
+    Input("tableau_url", "href"),
+    Input("tableau_datatable", "page_current"),
+    Input("tableau_datatable", "page_size"),
+    Input("tableau_datatable", "filter_query"),
+    Input("tableau_datatable", "sort_by"),
+    State("tableau_datatable", "data_timestamp"),
+    prevent_initial_call=True,
 )
-def update_table(page_current, page_size, filter_query, sort_by, data_timestamp):
+def update_table(href, page_current, page_size, filter_query, sort_by, data_timestamp):
     # if ctx.triggered_id != "url":
     #     search_params = None
     # else:
@@ -255,9 +312,9 @@ def update_table(page_current, page_size, filter_query, sort_by, data_timestamp)
 @callback(
     Output("download-data", "data"),
     Input("btn-download-data", "n_clicks"),
-    State("table", "filter_query"),
-    State("table", "sort_by"),
-    State("table", "hidden_columns"),
+    State("tableau_datatable", "filter_query"),
+    State("tableau_datatable", "sort_by"),
+    State("tableau_datatable", "hidden_columns"),
     prevent_initial_call=True,
 )
 def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
@@ -281,20 +338,21 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
 
 
 @callback(
-    Output("table", "filter_query"),
-    Output("table", "sort_by"),
-    Output("table", "hidden_columns"),
-    Output("tableau_url", "search", allow_duplicate=True),
-    Output("filter-cleanup-trigger", "data"),
+    Output("tableau_datatable", "filter_query"),
+    Output("tableau_datatable", "sort_by"),
+    Output("tableau-hidden-columns", "data"),
+    Output("tableau_url", "search"),
+    Output("filter-cleanup-trigger-tableau", "data"),
     Input("tableau_url", "search"),
-    prevent_initial_call=True,
+    State("tableau_datatable", "filter_query"),
+    State("tableau_datatable", "sort_by"),
 )
-def restore_view_from_url(search):
-    if not search:
+def restore_view_from_url(search, stored_filters, stored_sort):
+    if not search and not stored_filters:
         return no_update, no_update, no_update, no_update, no_update
 
-    params = urllib.parse.parse_qs(search.lstrip("?"))
-    logger.debug("params", params)
+    params = urllib.parse.parse_qs(search.lstrip("?")) if search else {}
+    logger.debug("params " + json.dumps(params, indent=2))
 
     filter_query = no_update
     sort_by = no_update
@@ -304,28 +362,37 @@ def restore_view_from_url(search):
     if "filtres" in params:
         filter_query = params["filtres"][0]
         trigger_cleanup = str(uuid.uuid4())
+    elif stored_filters:
+        filter_query = stored_filters
+        trigger_cleanup = str(uuid.uuid4())
 
     if "tris" in params:
         try:
             sort_by = json.loads(params["tris"][0])
         except json.JSONDecodeError:
             pass
+    elif stored_sort:
+        sort_by = stored_sort
 
     if "colonnes" in params:
-        columns = params["colonnes"][0].split(",")
-        verified_columns = [column for column in columns if column in schema.names()]
+        table_columns = params["colonnes"][0].split(",")
+        verified_columns = [
+            column for column in table_columns if column in schema.names()
+        ]
         hidden_columns = invert_columns(verified_columns)
 
     return filter_query, sort_by, hidden_columns, "", trigger_cleanup
 
 
+# Pour nettoyer les icontains et i< des filtres
+# voir aussi src/assets/dash_clientside.js
 clientside_callback(
     ClientsideFunction(
         namespace="clientside",
         function_name="clean_filters",
     ),
-    Output("filter-cleanup-trigger", "data", allow_duplicate=True),
-    Input("filter-cleanup-trigger", "data"),
+    Output("filter-cleanup-trigger-tableau", "data", allow_duplicate=True),
+    Input("filter-cleanup-trigger-tableau", "data"),
     prevent_initial_call=True,
 )
 
@@ -333,9 +400,9 @@ clientside_callback(
 @callback(
     Output("share-url", "value"),
     Output("copy-container", "children"),
-    Input("table", "filter_query"),
-    Input("table", "sort_by"),
-    Input("table", "hidden_columns"),
+    Input("tableau_datatable", "filter_query"),
+    Input("tableau_datatable", "sort_by"),
+    Input("tableau_datatable", "hidden_columns"),
     State("tableau_url", "href"),
     prevent_initial_call=True,
 )
@@ -354,9 +421,9 @@ def sync_url_and_reset_button(filter_query, sort_by, hidden_columns, href):
         params["tris"] = json.dumps(sort_by)
 
     if hidden_columns:
-        columns = invert_columns(hidden_columns)
-        columns = ",".join(columns)
-        params["colonnes"] = columns
+        table_columns = invert_columns(hidden_columns)
+        table_columns = ",".join(table_columns)
+        params["colonnes"] = table_columns
 
     query_string = urllib.parse.urlencode(params)
     full_url = f"{base_url}?{query_string}" if query_string else base_url
@@ -372,6 +439,13 @@ def sync_url_and_reset_button(filter_query, sort_by, hidden_columns, href):
             "cursor": "pointer",
         },
         className="fa fa-link",
+        children=[
+            dbc.Button(
+                "Partager",
+                className="btn btn-primary",
+                title="Copier l'adresse de cette vue (filtres, tris, choix de colonnes) pour la partager.",
+            )
+        ],
     )
 
     return full_url, copy_button
@@ -389,3 +463,85 @@ def show_confirmation(n_clicks):
             style={"color": "green", "fontWeight": "bold", "marginLeft": "10px"},
         )
     return no_update
+
+
+@callback(
+    Output("tableau_help", "is_open"),
+    [Input("tableau_help_open", "n_clicks"), Input("tableau_help_close", "n_clicks")],
+    [State("tableau_help", "is_open")],
+)
+def toggle_tableau_help(click_open, click_close, is_open):
+    if click_open or click_close:
+        return not is_open
+    return is_open
+
+
+@callback(
+    Output("tableau-hidden-columns", "data", allow_duplicate=True),
+    Input("tableau_column_list", "selected_rows"),
+    prevent_initial_call=True,
+)
+def update_hidden_columns_from_checkboxes(selected_columns):
+    if selected_columns:
+        selected_columns = [columns[i] for i in selected_columns]
+        hidden_columns = [col for col in columns if col not in selected_columns]
+        return hidden_columns
+    else:
+        return []
+
+
+@callback(
+    Output("tableau_datatable", "hidden_columns"),
+    Input(
+        "tableau-hidden-columns",
+        "data",
+    ),
+)
+def store_hidden_columns(hidden_columns):
+    return hidden_columns
+
+
+@callback(
+    Output("tableau_column_list", "selected_rows"),
+    Input("tableau_datatable", "hidden_columns"),
+    State("tableau_column_list", "selected_rows"),  # pour éviter la boucle infinie
+)
+def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
+    hidden_cols = hidden_cols or get_default_hidden_columns("tableau")
+
+    # Show all columns that are NOT hidden
+    visible_cols = [columns.index(col) for col in columns if col not in hidden_cols]
+    return visible_cols
+
+
+@callback(
+    Output("tableau_columns", "is_open"),
+    Input("tableau_columns_open", "n_clicks"),
+    Input("tableau_columns_close", "n_clicks"),
+    State("tableau_columns", "is_open"),
+)
+def toggle_tableau_columns(click_open, click_close, is_open):
+    if click_open or click_close:
+        return not is_open
+    return is_open
+
+
+@callback(
+    Output("tableau_datatable", "filter_query", allow_duplicate=True),
+    Output("tableau_datatable", "sort_by", allow_duplicate=True),
+    Input("btn-tableau-reset", "n_clicks"),
+    prevent_initial_call=True,
+)
+def reset_view(n_clicks):
+    return "", []
+
+
+@callback(Input("tableau_url", "pathname"))
+def cb_add_canonical_link(pathname):
+    add_canonical_link(pathname)
+
+
+# @callback(Input("tableau_url", "pathname"), Output("btn-copy-url", "children"))
+# def cb_add_canonical_link(pathname):
+#     add_canonical_link(pathname)
+#

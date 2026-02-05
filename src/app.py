@@ -9,6 +9,10 @@ from flask import Response
 
 load_dotenv()
 
+# if os.getenv("PYTEST_CURRENT_TEST"):
+#     os.environ["DATA_FILE_PARQUET_PATH"]
+
+
 development = os.getenv("DEVELOPMENT").lower() == "true"
 
 meta_tags = [
@@ -22,7 +26,7 @@ meta_tags = [
 if development:
     meta_tags.append({"name": "robots", "content": "noindex"})
 
-app = Dash(
+app: Dash = Dash(
     title="decp.info",
     use_pages=True,
     compress=True,
