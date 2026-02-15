@@ -34,12 +34,12 @@ from src.utils import (
 
 
 def get_title(titulaire_id: str = None) -> str:
-    titulaire_nom = (
-        df_titulaires.filter(pl.col("titulaire_id") == titulaire_id)
-        .select("titulaire_nom")
-        .item(0, 0)
+    titulaire_nom = df_titulaires.filter(pl.col("titulaire_id") == titulaire_id).select(
+        "titulaire_nom"
     )
-    return f"Marchés publics remportés par {titulaire_nom} | decp.info"
+    if titulaire_nom.height > 0:
+        return f"Marchés publics remportés par {titulaire_nom.item(0, 0)} | decp.info"
+    return "Marchés publics remportés | decp.info"
 
 
 register_page(

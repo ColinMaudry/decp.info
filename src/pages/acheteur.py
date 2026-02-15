@@ -34,12 +34,12 @@ from src.utils import (
 
 
 def get_title(acheteur_id: str = None) -> str:
-    df_acheteur = df_acheteurs.filter(pl.col("acheteur_id") == acheteur_id).select(
+    acheteur_nom = df_acheteurs.filter(pl.col("acheteur_id") == acheteur_id).select(
         "acheteur_nom"
     )
-    acheteur_nom = df_acheteur.item(0, 0)
-
-    return f"Marchés publics attribués par {acheteur_nom} | decp.info"
+    if acheteur_nom.height > 0:
+        return f"Marchés publics attribués par {acheteur_nom.item(0, 0)} | decp.info"
+    return "Marchés publics attribués | decp.info"
 
 
 register_page(
@@ -480,4 +480,5 @@ def reset_view(n_clicks):
 
 @callback(Input("acheteur_url", "pathname"))
 def cb_add_canonical_link(pathname):
+    print("coucou 2")
     add_canonical_link(pathname)
