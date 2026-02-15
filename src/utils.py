@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import uuid
 from collections import OrderedDict
 from time import localtime, sleep
@@ -443,7 +444,7 @@ def get_default_hidden_columns(page):
             "codeCPV",
             "dureeRestanteMois",
         ]
-    elif page == "titulaire":
+    elif page == "tableau":
         displayed_columns = os.getenv("DISPLAYED_COLUMNS")
     else:
         displayed_columns = os.getenv("DISPLAYED_COLUMNS")
@@ -742,10 +743,16 @@ def make_org_jsonld(org_id, org_type, org_name=None, type_org_id="SIRET") -> dic
 
 def add_canonical_link(pathname):
     @dash.hooks.index()
-    def update_index(html_string):
+    def update_index(html_string: str):
         url = f"https://{domain_name}{pathname}"
         canonical_tag = f'<link rel="canonical" href="{url}" />'
-        return html_string.replace("</head>", f"{canonical_tag}\n    </head>")
+        html_string = re.sub(
+            r'<link rel="canonical" href="https://([a-z\./0-9]+)" />',
+            canonical_tag,
+            html_string,
+        )
+        html_string = html_string.replace("<!-- canonical link -->", canonical_tag)
+        return html_string
 
 
 df: pl.DataFrame = get_decp_data()
