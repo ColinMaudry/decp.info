@@ -22,7 +22,6 @@ from dash import (
 from figures import make_column_picker
 from src.figures import DataTable
 from src.utils import (
-    add_canonical_link,
     columns,
     df,
     filter_table_data,
@@ -534,14 +533,3 @@ def toggle_tableau_columns(click_open, click_close, is_open):
 )
 def reset_view(n_clicks):
     return "", []
-
-
-@callback(Input("tableau_url", "pathname"))
-def cb_add_canonical_link(pathname):
-    add_canonical_link(pathname)
-
-
-# @callback(Input("tableau_url", "pathname"), Output("btn-copy-url", "children"))
-# def cb_add_canonical_link(pathname):
-#     add_canonical_link(pathname)
-#

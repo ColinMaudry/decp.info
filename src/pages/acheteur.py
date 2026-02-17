@@ -17,7 +17,6 @@ from dash import (
 from src.callbacks import get_top_org_table
 from src.figures import DataTable, make_column_picker, point_on_map
 from src.utils import (
-    add_canonical_link,
     columns,
     df,
     df_acheteurs,
@@ -476,9 +475,3 @@ def toggle_acheteur_columns(click_open, click_close, is_open):
 )
 def reset_view(n_clicks):
     return "", []
-
-
-@callback(Input("acheteur_url", "pathname"))
-def cb_add_canonical_link(pathname):
-    print("coucou 2")
-    add_canonical_link(pathname)

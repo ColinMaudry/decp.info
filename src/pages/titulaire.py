@@ -17,7 +17,6 @@ from dash import (
 from src.callbacks import get_top_org_table
 from src.figures import DataTable, make_column_picker, point_on_map
 from src.utils import (
-    add_canonical_link,
     columns,
     df,
     df_titulaires,
@@ -490,8 +489,3 @@ def toggle_titulaire_columns(click_open, click_close, is_open):
 )
 def reset_view(n_clicks):
     return "", []
-
-
-@callback(Input("titulaire_url", "pathname"))
-def cb_add_canonical_link(pathname):
-    add_canonical_link(pathname)

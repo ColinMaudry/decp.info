@@ -1,12 +1,10 @@
 import json
 import logging
 import os
-import re
 import uuid
 from collections import OrderedDict
 from time import localtime, sleep
 
-import dash
 import polars as pl
 import polars.selectors as cs
 from dash import no_update
@@ -739,20 +737,6 @@ def make_org_jsonld(org_id, org_type, org_name=None, type_org_id="SIRET") -> dic
         jsonld["address"] = address
 
     return jsonld
-
-
-def add_canonical_link(pathname):
-    @dash.hooks.index()
-    def update_index(html_string: str):
-        url = f"https://{domain_name}{pathname}"
-        canonical_tag = f'<link rel="canonical" href="{url}" />'
-        html_string = re.sub(
-            r'<link rel="canonical" href="https://([a-z\./0-9]+)" />',
-            canonical_tag,
-            html_string,
-        )
-        html_string = html_string.replace("<!-- canonical link -->", canonical_tag)
-        return html_string
 
 
 df: pl.DataFrame = get_decp_data()
