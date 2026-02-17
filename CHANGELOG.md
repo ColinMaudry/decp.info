@@ -1,3 +1,7 @@
+#### 2.6.1 (17 février 2026)
+
+- Corrections la création des liens canoniques (SEO)
+
 #### 2.6.0 (5 février 2026)
 
 - Suite de la refonte graphique
