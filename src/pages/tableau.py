@@ -326,7 +326,7 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
     if filter_query:
         lff = filter_table_data(lff, filter_query, "tab download")
 
-    if len(sort_by) > 0:
+    if sort_by and len(sort_by) > 0:
         lff = sort_table_data(lff, sort_by)
 
     def to_bytes(buffer):

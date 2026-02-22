@@ -1,4 +1,5 @@
 import datetime
+from typing import Any
 
 import dash_bootstrap_components as dbc
 import polars as pl
@@ -352,7 +353,7 @@ def get_top_titulaires(data):
 )
 def download_acheteur_data(
     n_clicks,
-    data: [dict],
+    data: list[dict[str, Any]],
     acheteur_nom: str,
     annee: str,
 ):

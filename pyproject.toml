@@ -28,6 +28,7 @@ dev = [
     "selenium",
     "webdriver-manager",
     "dash[testing]",
+    "fastexcel"
 ]
 
 [tool.pytest.ini_options]
@@ -38,6 +39,7 @@ testpaths = [
     "tests"
 ]
 env = [
-    "DATA_FILE_PARQUET_PATH=tests/test.parquet"
+    "DATA_FILE_PARQUET_PATH=tests/test.parquet",
+    "DEVELOPMENT=true"
 ]
 addopts = "-p no:warnings"

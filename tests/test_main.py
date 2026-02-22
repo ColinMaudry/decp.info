@@ -1,3 +1,4 @@
+import polars as pl
 from dash.testing.composite import DashComposite
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
@@ -58,3 +59,31 @@ def test_002_filter_persistence(dash_duo: DashComposite):
         filter_input.send_keys(Keys.ENTER)
         filter_input = open_page_and_check_filter_input()
         assert filter_input.get_attribute("value") == "11"
+
+
+def test_003_tableau_download(dash_duo: DashComposite):
+    from pages.acheteur import download_acheteur_data
+    from pages.tableau import download_data
+    from pages.titulaire import download_titulaire_data
+    from src.app import app
+
+    # Juste pour instancier l'app
+    print(app.server.name)
+
+    dicts = pl.read_parquet("tests/test.parquet").to_dicts()
+
+    outputs = [
+        download_data(1, "", [], None),
+        download_acheteur_data(1, dicts, "a1", "2025"),
+        download_titulaire_data(1, dicts, "t1", "2025"),
+    ]
+    for output in outputs:
+        assert isinstance(output, dict)
+        for f in ["content", "filename", "type", "base64"]:
+            assert f in output
+        assert isinstance(output["content"], str) and len(output["content"]) > 100
+        assert isinstance(output["filename"], str) and output["filename"].startswith(
+            "decp_"
+        )
+        assert output["type"] is None
+        assert output["base64"] is True
