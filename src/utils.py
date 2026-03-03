@@ -5,7 +5,6 @@ import uuid
 from collections import OrderedDict
 from time import localtime, sleep
 
-import dash
 import polars as pl
 import polars.selectors as cs
 from dash import no_update
@@ -443,7 +442,7 @@ def get_default_hidden_columns(page):
             "codeCPV",
             "dureeRestanteMois",
         ]
-    elif page == "titulaire":
+    elif page == "tableau":
         displayed_columns = os.getenv("DISPLAYED_COLUMNS")
     else:
         displayed_columns = os.getenv("DISPLAYED_COLUMNS")
@@ -738,14 +737,6 @@ def make_org_jsonld(org_id, org_type, org_name=None, type_org_id="SIRET") -> dic
         jsonld["address"] = address
 
     return jsonld
-
-
-def add_canonical_link(pathname):
-    @dash.hooks.index()
-    def update_index(html_string):
-        url = f"https://{domain_name}{pathname}"
-        canonical_tag = f'<link rel="canonical" href="{url}" />'
-        return html_string.replace("</head>", f"{canonical_tag}\n    </head>")
 
 
 df: pl.DataFrame = get_decp_data()

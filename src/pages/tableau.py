@@ -22,7 +22,6 @@ from dash import (
 from figures import make_column_picker
 from src.figures import DataTable
 from src.utils import (
-    add_canonical_link,
     columns,
     df,
     filter_table_data,
@@ -327,7 +326,7 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
     if filter_query:
         lff = filter_table_data(lff, filter_query, "tab download")
 
-    if len(sort_by) > 0:
+    if sort_by and len(sort_by) > 0:
         lff = sort_table_data(lff, sort_by)
 
     def to_bytes(buffer):
@@ -534,14 +533,3 @@ def toggle_tableau_columns(click_open, click_close, is_open):
 )
 def reset_view(n_clicks):
     return "", []
-
-
-@callback(Input("tableau_url", "pathname"))
-def cb_add_canonical_link(pathname):
-    add_canonical_link(pathname)
-
-
-# @callback(Input("tableau_url", "pathname"), Output("btn-copy-url", "children"))
-# def cb_add_canonical_link(pathname):
-#     add_canonical_link(pathname)
-#

@@ -1,4 +1,5 @@
 import datetime
+from typing import Any
 
 import dash_bootstrap_components as dbc
 import polars as pl
@@ -17,7 +18,6 @@ from dash import (
 from src.callbacks import get_top_org_table
 from src.figures import DataTable, make_column_picker, point_on_map
 from src.utils import (
-    add_canonical_link,
     columns,
     df,
     df_titulaires,
@@ -34,12 +34,12 @@ from src.utils import (
 
 
 def get_title(titulaire_id: str = None) -> str:
-    titulaire_nom = (
-        df_titulaires.filter(pl.col("titulaire_id") == titulaire_id)
-        .select("titulaire_nom")
-        .item(0, 0)
+    titulaire_nom = df_titulaires.filter(pl.col("titulaire_id") == titulaire_id).select(
+        "titulaire_nom"
     )
-    return f"Marchés publics remportés par {titulaire_nom} | decp.info"
+    if titulaire_nom.height > 0:
+        return f"Marchés publics remportés par {titulaire_nom.item(0, 0)} | decp.info"
+    return "Marchés publics remportés | decp.info"
 
 
 register_page(
@@ -367,7 +367,7 @@ def get_top_acheteurs(data):
 )
 def download_titulaire_data(
     n_clicks,
-    data: [dict],
+    data: list[dict[str, Any]],
     titulaire_nom: str,
     annee: str,
 ):
@@ -490,8 +490,3 @@ def toggle_titulaire_columns(click_open, click_close, is_open):
 )
 def reset_view(n_clicks):
     return "", []
-
-
-@callback(Input("titulaire_url", "pathname"))
-def cb_add_canonical_link(pathname):
-    add_canonical_link(pathname)

@@ -43,8 +43,21 @@ def test_data():
     pl.DataFrame(data).write_parquet("tests/test.parquet")
     yield path
 
+    if os.path.exists(path):
+        os.unlink(path)
+        print(path, "deleted")
+
 
 def pytest_setup_options():
     options = Options()
-    options.add_argument("--window-size=1200,800")
+    options.add_argument("--window-size=1200,1200 ")
+    options.add_experimental_option(
+        "prefs",
+        {
+            "download.default_directory": "/home/colin/git/decp.info",
+            "download.prompt_for_download": False,
+            "download.directory_upgrade": True,
+            "safebrowsing.enabled": True,
+        },
+    )
     return options

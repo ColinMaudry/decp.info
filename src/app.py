@@ -87,6 +87,7 @@ app.index_string = """
         <title>{%title%}</title>
         {%favicon%}
         {%css%}
+        <!-- canonical link -->
     </head>
     <body>
         {%app_entry%}
