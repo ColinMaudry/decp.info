@@ -426,10 +426,18 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
     Génère les cartes géographiques pour la métropole et les DOM-TOM.
     """
 
-    # Seulement si les données ne sont pas trop importantes
-
-    if dff.height > 10000:
-        return []
+    # Si les données sont trop importantes on utilise une carte chloropleth
+    if dff.height > 5000:
+        return [
+            dbc.Col(
+                dcc.Graph(
+                    figure=get_map_count_marches(dff), config={"displayModeBar": False}
+                ),
+                width=12,
+                md=12,
+                className="mb-4",
+            )
+        ]
 
     # Liste des codes départements Outre-Mer
     dom_codes = ["971", "972", "973", "974", "976"]
