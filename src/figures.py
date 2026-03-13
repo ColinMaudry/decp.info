@@ -11,20 +11,20 @@ from dash import dash_table, dcc, html
 from src.utils import data_schema, df, format_number
 
 
-def get_map_count_marches():
-    lf = df.lazy()
-    lf = lf.with_columns(
-        pl.col("lieuExecution_code").str.head(2).str.zfill(2).alias("Département")
-    )
-    lf = (
-        lf.select(["uid", "Département"])
+def get_map_count_marches(dff: pl.DataFrame) -> go.Figure:
+    lff: pl.LazyFrame = dff.lazy()
+    lff = lff.rename({"acheteur_departement_code": "Département"})
+
+    lff = (
+        lff.select(["uid", "Département"])
         .drop_nulls()
-        .unique(subset="uid")
+        .group_by("uid")
+        .agg(pl.col("Département").first())
         .group_by("Département")
         .len("uid")
     )
     # Suppression des infos pour les DOM/TOM pour l'instant
-    lf = lf.remove(pl.col("Département").is_in(["97", "98"]))
+    lff = lff.filter(~pl.col("Département").str.head(2).is_in(["97", "98"]))
 
     with open("./data/departements-1000m.geojson") as f:
         departements = json.load(f)
@@ -33,7 +33,7 @@ def get_map_count_marches():
     for f in departements["features"]:
         f["id"] = f["properties"]["code"]
 
-    df_map = lf.collect(engine="streaming")
+    df_map = lff.collect(engine="streaming")
 
     fig = px.choropleth(
         df_map,
