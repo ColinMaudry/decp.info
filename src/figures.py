@@ -3,10 +3,13 @@ from typing import Literal
 from urllib.error import HTTPError, URLError
 
 import dash_bootstrap_components as dbc
+import dash_leaflet as dl
+import dash_leaflet.express as dlx
 import plotly.express as px
 import plotly.graph_objects as go
 import polars as pl
 from dash import dash_table, dcc, html
+from dash_extensions.javascript import Namespace
 
 from src.utils import data_schema, df, format_number
 
@@ -452,8 +455,8 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
 
     # Ajout des DOM s'ils ont des données
     for code in dom_codes:
-        dom_data = dff.filter(pl.col("acheteur_departement_code") == code)
-        if dom_data.height > 0:
+        dff_dom = dff.filter(pl.col("acheteur_departement_code") == code)
+        if dff_dom.height > 0:
             name = f"Département {code}"
             if code == "971":
                 name = "Guadeloupe"
@@ -465,76 +468,106 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
                 name = "La Réunion"
             elif code == "976":
                 name = "Mayotte"
-            regions[name] = dom_data
+            regions[name] = dff_dom
+
+    # Region centers for dash-leaflet
+    region_centers = {
+        "Métropole": ([46.6, 2.2], 6),
+        "Guadeloupe": ([16.23, -61.55], 9),
+        "Martinique": ([14.64, -61.02], 10),
+        "Guyane": ([3.93, -53.12], 7),
+        "La Réunion": ([-21.11, 55.53], 10),
+        "Mayotte": ([-12.82, 45.16], 11),
+    }
+
+    # JavaScript functions for styling
+    ns = Namespace("dash_clientside", "leaflet")
+    point_to_layer = ns("pointToLayer")
+    cluster_to_layer = ns("clusterToLayer")
 
     cols = []
     for name, region_df in regions.items():
-        fig = go.Figure()
+        # Prepare data for GeoJSON
+        marker_dicts = []
 
         # Trace Acheteurs
-        mask_acheteur = region_df.filter(
-            pl.col("acheteur_latitude").is_not_null()
-            & pl.col("acheteur_longitude").is_not_null()
-        )
-        if mask_acheteur.height > 0:
-            fig.add_trace(
-                go.Scattergeo(
-                    lat=mask_acheteur["acheteur_latitude"],
-                    lon=mask_acheteur["acheteur_longitude"],
-                    mode="markers",
-                    marker=dict(size=6, color=color_acheteur, opacity=0.5),
-                    name="Acheteurs",
-                    text=mask_acheteur["acheteur_nom"],
-                )
+        mask_acheteur = (
+            region_df.select(
+                "uid", "acheteur_longitude", "acheteur_latitude", "acheteur_nom"
             )
+            .group_by("acheteur_longitude", "acheteur_latitude", "acheteur_nom")
+            .len("nb_marches")
+            .filter(
+                pl.col("acheteur_latitude").is_not_null()
+                & pl.col("acheteur_longitude").is_not_null()
+            )
+        )
+
+        if mask_acheteur.height > 0:
+            for row in mask_acheteur.to_dicts():
+                marker_dicts.append(
+                    {
+                        "lat": row["acheteur_latitude"],
+                        "lon": row["acheteur_longitude"],
+                        "tooltip": f"{row['acheteur_nom']} ({row['nb_marches']} marchés)",
+                        "marker_color": color_acheteur,
+                    }
+                )
 
         # Trace Titulaires
-        mask_titulaire = region_df.filter(
-            pl.col("titulaire_latitude").is_not_null()
-            & pl.col("titulaire_longitude").is_not_null()
-        )
-        if mask_titulaire.height > 0:
-            fig.add_trace(
-                go.Scattergeo(
-                    lat=mask_titulaire["titulaire_latitude"],
-                    lon=mask_titulaire["titulaire_longitude"],
-                    mode="markers",
-                    marker=dict(size=6, color=color_titulaire, opacity=0.5),
-                    name="Titulaires",
-                    text=mask_titulaire["titulaire_nom"],
-                )
+        mask_titulaire = (
+            region_df.select(
+                "uid", "titulaire_longitude", "titulaire_latitude", "titulaire_nom"
             )
-
-        # Configuration spécifique de la vue
-        geo_config = dict(
-            projection_type="mercator",
-            showland=True,
-            landcolor="lightgray",
-            showcountries=True,
-            countrycolor="white",
-            fitbounds="locations" if name != "Métropole" else False,
-            resolution=50,
+            .group_by("titulaire_longitude", "titulaire_latitude", "titulaire_nom")
+            .len("nb_marches")
+            .filter(
+                pl.col("titulaire_latitude").is_not_null()
+                & pl.col("titulaire_longitude").is_not_null()
+            )
         )
 
-        if name == "Métropole":
-            geo_config["lataxis_range"] = [41, 52]
-            geo_config["lonaxis_range"] = [-5, 10]
+        if mask_titulaire.height > 0:
+            for row in mask_titulaire.to_dicts():
+                marker_dicts.append(
+                    {
+                        "lat": row["titulaire_latitude"],
+                        "lon": row["titulaire_longitude"],
+                        "tooltip": f"{row['titulaire_nom']} ({row['nb_marches']} marchés)",
+                        "marker_color": color_titulaire,
+                    }
+                )
 
-        fig.update_layout(
-            title=name,
-            geo=geo_config,
-            margin=dict(l=0, r=0, t=30, b=0),
-            height=400 if name == "Métropole" else 300,
-            showlegend=(name == "Métropole"),
-            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
-        )
+        geojson_data = dlx.dicts_to_geojson(marker_dicts)
 
-        # Taille de la colonne : 4 slots (md=12) pour Métropole, 1 slot (md=3) pour DOM
-        # On suppose une grille de 12 colonnes où 1 card = md=3
+        center, zoom = region_centers.get(name, ([46.6, 2.2], 6))
         col_width = 12 if name == "Métropole" else 3
+        region_id = name.lower().replace(" ", "-")
         cols.append(
             dbc.Col(
-                dcc.Graph(figure=fig, config={"displayModeBar": False}),
+                [
+                    html.H5(name),
+                    dl.Map(
+                        [
+                            dl.TileLayer(),
+                            dl.GeoJSON(
+                                data=geojson_data,
+                                cluster=True,
+                                zoomToBoundsOnClick=True,
+                                pointToLayer=point_to_layer,
+                                clusterToLayer=cluster_to_layer,
+                                id=f"geojson-{region_id}",
+                            ),
+                        ],
+                        center=center,
+                        zoom=zoom,
+                        style={
+                            "width": "100%",
+                            "height": "400px" if name == "Métropole" else "300px",
+                        },
+                        id=f"map-{region_id}",
+                    ),
+                ],
                 width=12,
                 md=col_width,
                 className="mb-4",

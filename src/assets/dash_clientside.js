@@ -1,4 +1,27 @@
 window.dash_clientside = Object.assign({}, window.dash_clientside, {
+  leaflet: {
+    pointToLayer: function (feature, latlng, context) {
+      return L.circleMarker(latlng, {
+        radius: 5,
+        fillColor: feature.properties.marker_color,
+        color: "white",
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 0.8,
+      }).bindTooltip(feature.properties.tooltip);
+    },
+    clusterToLayer: function (feature, latlng, index, context) {
+      const count = feature.properties.point_count;
+      const size = count < 100 ? 30 : count < 1000 ? 40 : 50;
+      const color = "#333"; // Default cluster color
+      const icon = L.divIcon({
+        html: `<div style="background-color: ${color}; width: ${size}px; height: ${size}px; border-radius: 50%; display: flex; align-items:center; justify-content:center; color: white; border: 2px solid white; font-weight: bold;">${count}</div>`,
+        className: "marker-cluster",
+        iconSize: L.point(size, size),
+      });
+      return L.marker(latlng, { icon: icon });
+    },
+  },
   clientside: {
     clean_filters: function (trigger) {
       if (!trigger) {

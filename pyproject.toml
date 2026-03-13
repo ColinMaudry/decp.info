@@ -17,7 +17,9 @@ dependencies = [
     "plotly[express]",
     "httpx",
     "pandas", # utilisé pour la création de certains graphiques
-    "unidecode"
+    "unidecode",
+    "dash-leaflet",
+    "dash-extensions"
 ]
 
 [project.optional-dependencies]

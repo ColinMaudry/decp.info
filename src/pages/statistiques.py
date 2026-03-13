@@ -142,9 +142,7 @@ def udpate_dashboard_cards(
         )
 
     if dashboard_acheteur_categorie:
-        lff = lff.filter(
-            pl.col("acheteur_categorie").is_in(dashboard_acheteur_categorie)
-        )
+        lff = lff.filter(pl.col("acheteur_categorie") == dashboard_acheteur_categorie)
 
     if dashboard_acheteur_departement_code:
         lff = lff.filter(
