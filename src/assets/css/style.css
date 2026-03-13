@@ -151,6 +151,10 @@ p.version > a {
   max-width: 900px;
 }
 
+.seeBorder {
+  border: dotted 1px green;
+}
+
 /* --- Search Page --- */
 .tagline {
   text-align: center;

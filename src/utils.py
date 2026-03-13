@@ -685,6 +685,16 @@ def get_button_properties(height):
     return download_disabled, download_text, download_title
 
 
+def get_enum_values_as_dict(column_name):
+    for column in data_schema:
+        if column == column_name:
+            options = {}
+            for value in data_schema[column]["enum"]:
+                options[value] = value
+            return options
+    return {"not_found": "not found"}
+
+
 def invert_columns(columns):
     """
     Renvoie les colonnes du schéma non spécifiées en paramètre. Utile pour passer d'une colonnes masquées à une liste de colonnes affichées, et vice versa.

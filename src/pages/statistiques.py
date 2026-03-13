@@ -1,14 +1,20 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from dash import dcc, html, register_page
+import dash_bootstrap_components as dbc
+import polars as pl
+import polars.selectors as cs
+from dash import Input, Output, callback, dcc, html, register_page
 
 from src.figures import (
-    get_barchart_sources,
-    get_duplicate_matrix,
-    get_map_count_marches,
-    get_yearly_statistics,
+    get_geographic_maps,
 )
-from src.utils import df, format_number, get_statistics, meta_content
+from src.utils import (
+    departements,
+    df,
+    format_number,
+    get_enum_values_as_dict,
+    meta_content,
+)
 
 name = "Statistiques"
 
@@ -21,13 +27,21 @@ register_page(
     image_url=meta_content["image_url"],
     order=3,
 )
+options_years = {}
+for year in reversed(range(2017, datetime.now().year + 1)):
+    year = str(year)
+    options_years[year] = year
 
-statistics: dict = get_statistics()
-today_str = datetime.fromisoformat(statistics["datetime"]).strftime("%d/%m/%Y")
+options_departements = {}
+for code, obj in departements.items():
+    options_departements[code] = f"{obj['departement']} ({code})"
+
 
 layout = [
+    dcc.Store(id="dashboard-filters"),
+    dcc.Location(id="dashboard_url"),
     html.Div(
-        className="container",
+        className="container-fluid",
         children=[
             html.H2(name),
             dcc.Loading(
@@ -35,51 +49,136 @@ layout = [
                 id="loading-statistques",
                 type="default",
                 children=[
-                    html.Div(
-                        children=[
-                            dcc.Markdown(f"""
-                            La publication de données essentielles de marchés publics (DECP) est souvent effectuée par
-                            les plateformes de marchés publics (profils d'acheteurs). Cependant, certaines plateformes ne publient pas,
-                            ou publient d'une manière qui rend la récupération des données compliquée. Les données présentées sur ce site
-                            ne représentent donc pas tous les marchés attribués en France, seulement une partie significative.
-
-                            L'ajout de nouvelles plateformes [est en cours](https://github.com/ColinMaudry/decp-processing/issues?q=is%3Aissue%20label%3A%22source%20de%20donn%C3%A9es%22),
-                            toutes les [contributions](/a-propos#contribuer) sont les bienvenues pour atteindre l'exhaustivité.
-
-                            Les statistiques publiées sur cette page ont été produites automatiquement à partir des données les plus récentes ({today_str}).
-                            """),
-                            html.H3(
-                                "Statistiques générales sur les marchés",
-                                id="marches",
+                    dbc.Row(
+                        [
+                            dbc.Col(
+                                width=12,
+                                md=3,
+                                id="filters",
+                                children=[
+                                    html.H5("Période d'attribution"),
+                                    dbc.Row(
+                                        dcc.Dropdown(
+                                            id="dashboard_year",
+                                            options=options_years,
+                                            placeholder="12 derniers mois",
+                                        ),
+                                    ),
+                                    html.H5("Acheteur"),
+                                    dbc.Row(
+                                        dcc.Dropdown(
+                                            id="dashboard_acheteur_categorie",
+                                            options=get_enum_values_as_dict(
+                                                "acheteur_categorie"
+                                            ),
+                                            placeholder="Catégorie d'acheteur",
+                                        ),
+                                    ),
+                                    dbc.Row(
+                                        dcc.Dropdown(
+                                            id="dashboard_acheteur_departement_code",
+                                            searchable=True,
+                                            multi=True,
+                                            placeholder="Code département acheteur",
+                                            options=options_departements,
+                                        ),
+                                    ),
+                                ],
                             ),
-                            html.P(
-                                "À noter qu'une fois un marché attribué ses données essentielles peuvent malheureusement mettre plusieurs mois à être publiées par l'acheteur."
+                            dbc.Col(
+                                width=12,
+                                md=9,
+                                id="cards",
+                                children=[
+                                    dbc.Row(
+                                        (
+                                            dbc.Col(
+                                                width=6,
+                                                md=4,
+                                                className="card",
+                                                id="card_basic_counts",
+                                            )
+                                        ),
+                                        className="mb-4",
+                                    ),
+                                    dbc.Row(id="maps_row"),
+                                ],
                             ),
-                            html.H4("Statistiques cumulées"),
-                            dcc.Markdown(f"""
-                            - Nombre de marchés publics et accord-cadres : {format_number(statistics["nb_marches"])}
-                            - Nombre d'acheteurs publics (SIRET) : {format_number(statistics["nb_acheteurs_uniques"])}
-                            - Nombre de titulaires (SIRET) : {format_number(statistics["nb_titulaires_uniques"])}
-
-                            Je ne publie pas encore de statistiques sur les montants de marchés car je n'ai pas encore trouvé la bonne formule pour traiter les trop nombreux montants fantaisistes qui polluent les calculs.
-                                                        """),
-                            html.H4("Statistiques par année"),
-                            get_yearly_statistics(statistics, today_str),
-                            dcc.Graph(figure=get_map_count_marches()),
-                            get_duplicate_matrix(),
-                            html.H3("Nombre de marchés par source dans le temps"),
-                            dcc.Graph(
-                                figure=get_barchart_sources(df, "dateNotification")
-                            ),
-                            dcc.Graph(
-                                figure=get_barchart_sources(
-                                    df, "datePublicationDonnees"
-                                )
-                            ),
-                        ],
+                        ]
                     )
                 ],
             ),
         ],
-    )
+    ),
 ]
+
+
+@callback(
+    Output("card_basic_counts", "children"),
+    Output("maps_row", "children"),
+    Input("dashboard_year", "value"),
+    Input("dashboard_acheteur_categorie", "value"),
+    Input("dashboard_acheteur_departement_code", "value"),
+)
+def udpate_dashboard_cards(
+    dashboard_year, dashboard_acheteur_categorie, dashboard_acheteur_departement_code
+):
+    lff: pl.LazyFrame = df.lazy()
+    lff = lff.select(
+        "uid",
+        cs.starts_with("acheteur"),
+        cs.starts_with("titulaire"),
+        "dateNotification",
+        "montant",
+    )
+
+    # Application des filtres
+
+    if dashboard_year:
+        lff = lff.filter(pl.col("dateNotification").dt.year() == int(dashboard_year))
+    else:
+        lff = lff.filter(
+            pl.col("dateNotification") > (datetime.now() - timedelta(days=365))
+        )
+
+    if dashboard_acheteur_categorie:
+        lff = lff.filter(
+            pl.col("acheteur_categorie").is_in(dashboard_acheteur_categorie)
+        )
+
+    if (
+        dashboard_acheteur_departement_code
+        and len(dashboard_acheteur_departement_code) >= 2
+    ):
+        lff = lff.filter(
+            pl.col("acheteur_departement_code").is_in(
+                dashboard_acheteur_departement_code
+            )
+        )
+
+    # Génération des métriques
+    dff = lff.collect()
+
+    nb_acheteurs = dff.select("acheteur_id").n_unique()
+    nb_titulaires = dff.select("titulaire_id", "titulaire_typeIdentifiant").n_unique()
+
+    df_per_uid = (
+        dff.select("uid", "montant").group_by("uid").agg(pl.col("montant").first())
+    )
+    total_montant = df_per_uid.select(pl.col("montant").sum()).item()
+    nb_marches = df_per_uid.height
+
+    card_basic_counts = [
+        html.P(["Nombre de marchés : ", html.Strong(str(format_number(nb_marches)))]),
+        html.P(
+            ["Nombre d'acheteurs : ", html.Strong(str(format_number(nb_acheteurs)))]
+        ),
+        html.P(
+            ["Nombre de titulaires : ", html.Strong(str(format_number(nb_titulaires)))]
+        ),
+        html.P(["Montant total : ", html.Strong(format_number(total_montant) + " €")]),
+    ]
+
+    geographic_maps = get_geographic_maps(dff)
+
+    return card_basic_counts, geographic_maps

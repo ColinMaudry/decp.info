@@ -1,6 +1,8 @@
 import json
 from typing import Literal
+from urllib.error import HTTPError, URLError
 
+import dash_bootstrap_components as dbc
 import plotly.express as px
 import plotly.graph_objects as go
 import polars as pl
@@ -161,8 +163,11 @@ def get_barchart_sources(df_source: pl.DataFrame, type_date: str):
 
 
 def get_sources_tables(source_path) -> html.Div:
-    df = pl.read_csv(source_path)
-    df = df.with_columns(
+    try:
+        dff = pl.read_csv(source_path)
+    except (URLError, HTTPError):
+        return html.Div("Erreur de connexion")
+    dff = dff.with_columns(
         (
             pl.lit('<a href = "')
             + pl.col("url")
@@ -171,8 +176,8 @@ def get_sources_tables(source_path) -> html.Div:
             + pl.lit("</a>")
         ).alias("nom")
     )
-    df = df.drop("url", "unique")
-    df = df.sort(by=["nb_marchés"], descending=True)
+    dff = dff.drop("url", "unique")
+    dff = dff.sort(by=["nb_marchés"], descending=True)
 
     columns = {
         "nom": "Nom de la source",
@@ -184,7 +189,7 @@ def get_sources_tables(source_path) -> html.Div:
 
     datatable = dash_table.DataTable(
         id="source_table",
-        data=df.to_dicts(),
+        data=dff.to_dicts(),
         columns=[
             {
                 "name": columns[i],
@@ -193,7 +198,7 @@ def get_sources_tables(source_path) -> html.Div:
                 "type": "text",
                 "format": {"nully": "N/A"},
             }
-            for i in df.schema.names()
+            for i in dff.schema.names()
         ],
         style_cell_conditional=[
             {
@@ -414,6 +419,121 @@ def get_duplicate_matrix() -> html.Div:
             dcc.Graph(figure=fig),
         ]
     )
+
+
+def get_geographic_maps(dff: pl.DataFrame) -> list | None:
+    """
+    Génère les cartes géographiques pour la métropole et les DOM-TOM.
+    """
+
+    # Seulement si les données ne sont pas trop importantes
+
+    if dff.height > 10000:
+        return []
+
+    # Liste des codes départements Outre-Mer
+    dom_codes = ["971", "972", "973", "974", "976"]
+
+    # Couleurs accessibles (Okabe-Ito)
+    color_acheteur = "#E69F00"  # Orange
+    color_titulaire = "#56B4E9"  # Bleu ciel
+
+    regions = {
+        "Métropole": dff.filter(~pl.col("acheteur_departement_code").is_in(dom_codes))
+    }
+
+    # Ajout des DOM s'ils ont des données
+    for code in dom_codes:
+        dom_data = dff.filter(pl.col("acheteur_departement_code") == code)
+        if dom_data.height > 0:
+            name = f"Département {code}"
+            if code == "971":
+                name = "Guadeloupe"
+            elif code == "972":
+                name = "Martinique"
+            elif code == "973":
+                name = "Guyane"
+            elif code == "974":
+                name = "La Réunion"
+            elif code == "976":
+                name = "Mayotte"
+            regions[name] = dom_data
+
+    cols = []
+    for name, region_df in regions.items():
+        fig = go.Figure()
+
+        # Trace Acheteurs
+        mask_acheteur = region_df.filter(
+            pl.col("acheteur_latitude").is_not_null()
+            & pl.col("acheteur_longitude").is_not_null()
+        )
+        if mask_acheteur.height > 0:
+            fig.add_trace(
+                go.Scattergeo(
+                    lat=mask_acheteur["acheteur_latitude"],
+                    lon=mask_acheteur["acheteur_longitude"],
+                    mode="markers",
+                    marker=dict(size=6, color=color_acheteur, opacity=0.5),
+                    name="Acheteurs",
+                    text=mask_acheteur["acheteur_nom"],
+                )
+            )
+
+        # Trace Titulaires
+        mask_titulaire = region_df.filter(
+            pl.col("titulaire_latitude").is_not_null()
+            & pl.col("titulaire_longitude").is_not_null()
+        )
+        if mask_titulaire.height > 0:
+            fig.add_trace(
+                go.Scattergeo(
+                    lat=mask_titulaire["titulaire_latitude"],
+                    lon=mask_titulaire["titulaire_longitude"],
+                    mode="markers",
+                    marker=dict(size=6, color=color_titulaire, opacity=0.5),
+                    name="Titulaires",
+                    text=mask_titulaire["titulaire_nom"],
+                )
+            )
+
+        # Configuration spécifique de la vue
+        geo_config = dict(
+            projection_type="mercator",
+            showland=True,
+            landcolor="lightgray",
+            showcountries=True,
+            countrycolor="white",
+            fitbounds="locations" if name != "Métropole" else False,
+            resolution=50,
+        )
+
+        if name == "Métropole":
+            geo_config["lataxis_range"] = [41, 52]
+            geo_config["lonaxis_range"] = [-5, 10]
+
+        fig.update_layout(
+            title=name,
+            geo=geo_config,
+            margin=dict(l=0, r=0, t=30, b=0),
+            height=400 if name == "Métropole" else 300,
+            showlegend=(name == "Métropole"),
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+        )
+
+        # Taille de la colonne : 4 slots (md=12) pour Métropole, 1 slot (md=3) pour DOM
+        # On suppose une grille de 12 colonnes où 1 card = md=3
+        col_width = 12 if name == "Métropole" else 3
+        cols.append(
+            dbc.Col(
+                dcc.Graph(figure=fig, config={"displayModeBar": False}),
+                width=12,
+                md=col_width,
+                className="mb-4",
+            )
+        )
+
+    return cols
 
 
 def make_column_picker(page: str):
