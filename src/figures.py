@@ -430,7 +430,7 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
     """
 
     # Si les données sont trop importantes on utilise une carte chloropleth
-    if dff.height > 5000:
+    if dff.height > 50000:
         return [
             dbc.Col(
                 dcc.Graph(
@@ -443,21 +443,30 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
         ]
 
     # Liste des codes départements Outre-Mer
-    dom_codes = ["971", "972", "973", "974", "976"]
+    region_codes: list = ["Métropole", "971", "972", "973", "974", "976"]
+    dom_codes = region_codes[1:]
 
     # Couleurs accessibles (Okabe-Ito)
     color_acheteur = "#E69F00"  # Orange
     color_titulaire = "#56B4E9"  # Bleu ciel
 
-    regions = {
-        "Métropole": dff.filter(~pl.col("acheteur_departement_code").is_in(dom_codes))
-    }
+    regions = {}
 
     # Ajout des DOM s'ils ont des données
-    for code in dom_codes:
-        dff_dom = dff.filter(pl.col("acheteur_departement_code") == code)
-        if dff_dom.height > 0:
-            name = f"Département {code}"
+    for code in region_codes:
+        if code == "Métropole":
+            dff_region = dff.filter(
+                (
+                    ~pl.col("acheteur_departement_code").is_in(dom_codes)
+                    | (~pl.col("titulaire_departement_code").is_in(dom_codes))
+                )
+            )
+        else:
+            dff_region = dff.filter(
+                (pl.col("acheteur_departement_code") == code)
+                | (pl.col("titulaire_departement_code") == code)
+            )
+        if dff_region.height > 0:
             if code == "971":
                 name = "Guadeloupe"
             elif code == "972":
@@ -468,16 +477,21 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
                 name = "La Réunion"
             elif code == "976":
                 name = "Mayotte"
-            regions[name] = dff_dom
+            elif code == "Métropole":
+                name = "Métropole"
+            else:
+                name = f"Département {code}"
+
+            regions[name] = dff_region
 
     # Region centers for dash-leaflet
     region_centers = {
-        "Métropole": ([46.6, 2.2], 6),
+        "Métropole": ([46.6, 2.2], 5),
         "Guadeloupe": ([16.23, -61.55], 9),
         "Martinique": ([14.64, -61.02], 10),
         "Guyane": ([3.93, -53.12], 7),
-        "La Réunion": ([-21.11, 55.53], 10),
-        "Mayotte": ([-12.82, 45.16], 11),
+        "La Réunion": ([-21.11, 55.53], 9),
+        "Mayotte": ([-12.82, 45.16], 10),
     }
 
     # JavaScript functions for styling
@@ -487,9 +501,6 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
 
     cols = []
     for name, region_df in regions.items():
-        # Prepare data for GeoJSON
-        marker_dicts = []
-
         # Trace Acheteurs
         mask_acheteur = (
             region_df.select(
@@ -503,9 +514,11 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
             )
         )
 
+        acheteurs_marker_dicts = []
+
         if mask_acheteur.height > 0:
             for row in mask_acheteur.to_dicts():
-                marker_dicts.append(
+                acheteurs_marker_dicts.append(
                     {
                         "lat": row["acheteur_latitude"],
                         "lon": row["acheteur_longitude"],
@@ -527,9 +540,11 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
             )
         )
 
+        titulaires_marker_dicts = []
+
         if mask_titulaire.height > 0:
             for row in mask_titulaire.to_dicts():
-                marker_dicts.append(
+                titulaires_marker_dicts.append(
                     {
                         "lat": row["titulaire_latitude"],
                         "lon": row["titulaire_longitude"],
@@ -538,10 +553,11 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
                     }
                 )
 
-        geojson_data = dlx.dicts_to_geojson(marker_dicts)
+        acheteurs_geojson_data = dlx.dicts_to_geojson(acheteurs_marker_dicts)
+        titulaires_geojson_data = dlx.dicts_to_geojson(titulaires_marker_dicts)
 
         center, zoom = region_centers.get(name, ([46.6, 2.2], 6))
-        col_width = 12 if name == "Métropole" else 3
+        col_width = 6 if name == "Métropole" else 3
         region_id = name.lower().replace(" ", "-")
         cols.append(
             dbc.Col(
@@ -551,12 +567,22 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
                         [
                             dl.TileLayer(),
                             dl.GeoJSON(
-                                data=geojson_data,
+                                data=titulaires_geojson_data,
                                 cluster=True,
                                 zoomToBoundsOnClick=True,
                                 pointToLayer=point_to_layer,
                                 clusterToLayer=cluster_to_layer,
-                                id=f"geojson-{region_id}",
+                                id=f"geojson-{region_id}-titulaires",
+                                options={"fillColor": color_titulaire},
+                            ),
+                            dl.GeoJSON(
+                                data=acheteurs_geojson_data,
+                                cluster=True,
+                                zoomToBoundsOnClick=True,
+                                pointToLayer=point_to_layer,
+                                clusterToLayer=cluster_to_layer,
+                                id=f"geojson-{region_id}-acheteurs",
+                                options={"fillColor": color_acheteur},
                             ),
                         ],
                         center=center,

@@ -163,6 +163,7 @@ def udpate_dashboard_cards(
     total_montant = df_per_uid.select(pl.col("montant").sum()).item()
     nb_marches = df_per_uid.height
 
+    # À transformer en fonction
     card_basic_counts = [
         html.P(["Nombre de marchés : ", html.Strong(str(format_number(nb_marches)))]),
         html.P(
