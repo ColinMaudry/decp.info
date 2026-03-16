@@ -1,4 +1,3 @@
-import json
 from typing import Literal
 from urllib.error import HTTPError, URLError
 
@@ -11,57 +10,7 @@ import polars as pl
 from dash import dash_table, dcc, html
 from dash_extensions.javascript import Namespace
 
-from src.utils import data_schema, df, format_number
-
-
-def get_map_count_marches(dff: pl.DataFrame) -> go.Figure:
-    lff: pl.LazyFrame = dff.lazy()
-    lff = lff.rename({"acheteur_departement_code": "Département"})
-
-    lff = (
-        lff.select(["uid", "Département"])
-        .drop_nulls()
-        .group_by("uid")
-        .agg(pl.col("Département").first())
-        .group_by("Département")
-        .len("uid")
-    )
-    # Suppression des infos pour les DOM/TOM pour l'instant
-    lff = lff.filter(~pl.col("Département").str.head(2).is_in(["97", "98"]))
-
-    with open("./data/departements-1000m.geojson") as f:
-        departements = json.load(f)
-
-    # Ajout de feature.id
-    for f in departements["features"]:
-        f["id"] = f["properties"]["code"]
-
-    df_map = lff.collect(engine="streaming")
-
-    fig = px.choropleth(
-        df_map,
-        geojson=departements,
-        locations="Département",
-        color="uid",
-        color_continuous_scale="Reds",
-        title="Nombres de marchés attribués par département (lieu d'exécution)",
-        range_color=(df_map["uid"].min(), df_map["uid"].max()),
-        labels={"uid": "Marchés attribués"},
-        scope="europe",
-        width=900,
-        height=700,
-    )
-
-    fig.update_geos(fitbounds="locations", visible=False)
-    fig.update_layout(
-        mapbox={
-            "style": "carto-positron",
-            "center": {"lon": 10, "lat": 10},
-            "zoom": 1,
-            "domain": {"x": [0, 1], "y": [0, 1]},
-        }
-    )
-    return fig
+from src.utils import data_schema, departements_geojson, df, format_number
 
 
 def get_yearly_statistics(statistics, today_str) -> html.Div:
@@ -82,11 +31,11 @@ def get_yearly_statistics(statistics, today_str) -> html.Div:
             }
         )
 
-    df = pl.DataFrame(data)
+    dff = pl.DataFrame(data)
 
     # Create Dash DataTable
     table = dash_table.DataTable(
-        data=df.to_dicts(),
+        data=dff.to_dicts(),
         columns=[
             {"name": "Année", "id": "Année"},
             {"name": "Marchés et accord-cadres", "id": "Marchés et accord-cadres"},
@@ -429,178 +378,241 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
     Génère les cartes géographiques pour la métropole et les DOM-TOM.
     """
 
-    # Si les données sont trop importantes on utilise une carte chloropleth
-    if dff.height > 50000:
-        return [
-            dbc.Col(
-                dcc.Graph(
-                    figure=get_map_count_marches(dff), config={"displayModeBar": False}
-                ),
-                width=12,
-                md=12,
-                className="mb-4",
-            )
-        ]
+    regions: dict = {
+        "Métropole": {
+            "coordinates": [46.6, 2.2],
+            "zoom_leaflet": 5,
+            "zoom_chloropleth": 1,
+            "name": "Métropole",
+        },
+        "971": {
+            "coordinates": [16.23, -61.55],
+            "zoom_leaflet": 9,
+            "zoom_chloropleth": 1,
+            "name": "Guadeloupe",
+        },
+        "972": {
+            "coordinates": [14.64, -61.02],
+            "zoom_leaflet": 10,
+            "zoom_chloropleth": 1,
+            "name": "Martinique",
+        },
+        "973": {
+            "coordinates": [3.93, -53.12],
+            "zoom_leaflet": 7,
+            "zoom_chloropleth": 1,
+            "name": "Guyane",
+        },
+        "974": {
+            "coordinates": [-21.11, 55.53],
+            "zoom_leaflet": 9,
+            "zoom_chloropleth": 1,
+            "name": "La Réunion",
+        },
+        "976": {
+            "coordinates": [-12.82, 45.16],
+            "zoom_leaflet": 10,
+            "zoom_chloropleth": 1,
+            "name": "Mayotte",
+        },
+    }
 
     # Liste des codes départements Outre-Mer
-    region_codes: list = ["Métropole", "971", "972", "973", "974", "976"]
-    dom_codes = region_codes[1:]
+    dom_codes = [code for code in regions.keys() if code != "Métropole"]
+    print("dom codes", dom_codes)
 
-    # Couleurs accessibles (Okabe-Ito)
-    color_acheteur = "#E69F00"  # Orange
-    color_titulaire = "#56B4E9"  # Bleu ciel
-
-    regions = {}
-
-    # Ajout des DOM s'ils ont des données
-    for code in region_codes:
-        if code == "Métropole":
-            dff_region = dff.filter(
+    def make_map_data(region_code: str) -> tuple[list, str or None]:
+        lff: pl.LazyFrame = dff.lazy()
+        if region_code == "Métropole":
+            lff = lff.filter(
                 (
                     ~pl.col("acheteur_departement_code").is_in(dom_codes)
                     | (~pl.col("titulaire_departement_code").is_in(dom_codes))
                 )
             )
         else:
-            dff_region = dff.filter(
+            lff = lff.filter(
                 (pl.col("acheteur_departement_code") == code)
                 | (pl.col("titulaire_departement_code") == code)
             )
-        if dff_region.height > 0:
-            if code == "971":
-                name = "Guadeloupe"
-            elif code == "972":
-                name = "Martinique"
-            elif code == "973":
-                name = "Guyane"
-            elif code == "974":
-                name = "La Réunion"
-            elif code == "976":
-                name = "Mayotte"
-            elif code == "Métropole":
-                name = "Métropole"
-            else:
-                name = f"Département {code}"
 
-            regions[name] = dff_region
+        nb_marches = lff.select("uid").group_by("uid").first().collect().height
 
-    # Region centers for dash-leaflet
-    region_centers = {
-        "Métropole": ([46.6, 2.2], 5),
-        "Guadeloupe": ([16.23, -61.55], 9),
-        "Martinique": ([14.64, -61.02], 10),
-        "Guyane": ([3.93, -53.12], 7),
-        "La Réunion": ([-21.11, 55.53], 9),
-        "Mayotte": ([-12.82, 45.16], 10),
-    }
+        if nb_marches == 0:
+            return [], None
 
+        dfs = []
+
+        if (code == "Métropole" and nb_marches > 20000) or (
+            code != "Métropole" and nb_marches > 10000
+        ):
+            _map_type: str = "chloropleth"
+
+            lff = lff.rename({"acheteur_departement_code": "Département"})
+            lff = (
+                lff.select(["uid", "Département"])
+                .drop_nulls()
+                .group_by("uid")
+                .agg(pl.col("Département").first())
+                .group_by("Département")
+                .len("uid")
+            )
+            dfs.append(lff.collect())
+        else:
+            _map_type: str = "clusters"
+            for org_type in ["acheteur", "titulaire"]:
+                lff_org = (
+                    lff.select(
+                        "uid",
+                        f"{org_type}_longitude",
+                        f"{org_type}_latitude",
+                        f"{org_type}_nom",
+                    )
+                    .group_by(
+                        f"{org_type}_longitude",
+                        f"{org_type}_latitude",
+                        f"{org_type}_nom",
+                    )
+                    .len("nb_marches")
+                    .filter(
+                        pl.col(f"{org_type}_latitude").is_not_null()
+                        & pl.col(f"{org_type}_longitude").is_not_null()
+                    )
+                )
+
+                markers = []
+
+                # Couleurs accessibles (Okabe-Ito)
+                colors = {
+                    "acheteur": "#E69F00",  # orange
+                    "titulaire": "#56B4E9",  # bleu ciel
+                }
+
+                for row in lff_org.collect().to_dicts():
+                    markers.append(
+                        {
+                            "lat": row[f"{org_type}_latitude"],
+                            "lon": row[f"{org_type}_longitude"],
+                            "tooltip": f"{row[f'{org_type}_nom']} ({row['nb_marches']} marchés)",
+                            "marker_color": colors[org_type],
+                        }
+                    )
+                dfs.append(markers)
+
+        return dfs, _map_type
+
+    cols = []
+
+    for code in regions.keys():
+        regions[code]["data"], map_type = make_map_data(code)
+        print("region", regions[code]["name"], len(regions[code]["data"][0]), map_type)
+
+        if map_type == "chloropleth":
+            map_graph = make_chloropleth_map(regions[code])  # call chloropleth function
+        elif map_type == "clusters":
+            map_graph = make_clusters_map(regions[code])
+        elif map_type is None:
+            continue
+        else:
+            raise ValueError(f"Map type '{map_type}' not recognised")
+
+        col = dbc.Col(
+            children=[
+                html.H5(regions[code]["name"]),
+                map_graph,
+            ],
+            md=6 if code == "Métropole" else 3,
+            width=12,
+            className="mb-4",
+        )
+        cols.append(col)
+
+    return cols
+
+
+def make_chloropleth_map(region: dict) -> dcc.Graph:
+    df_map = region["data"][0]
+
+    fig = px.choropleth(
+        df_map,
+        geojson=departements_geojson,
+        locations="Département",
+        color="uid",
+        color_continuous_scale="Reds",
+        title="Nombres de marchés attribués",
+        range_color=(df_map["uid"].min(), df_map["uid"].max()),
+        labels={"uid": "Marchés attribués"},
+        scope="europe",
+        width=400,
+        height=400,
+    )
+
+    fig.update_geos(fitbounds="locations", visible=False)
+    fig.update_layout(
+        mapbox={
+            "style": "carto-positron",
+            "center": {"lon": 10, "lat": 10},
+            "zoom": 8,
+            "domain": {"x": [0, 1], "y": [0, 1]},
+        }
+    )
+
+    graph = dcc.Graph(figure=fig, config={"displayModeBar": False})
+    return graph
+
+
+def make_clusters_map(region: dict):
     # JavaScript functions for styling
     ns = Namespace("dash_clientside", "leaflet")
     point_to_layer = ns("pointToLayer")
     cluster_to_layer = ns("clusterToLayer")
 
-    cols = []
-    for name, region_df in regions.items():
-        # Trace Acheteurs
-        mask_acheteur = (
-            region_df.select(
-                "uid", "acheteur_longitude", "acheteur_latitude", "acheteur_nom"
-            )
-            .group_by("acheteur_longitude", "acheteur_latitude", "acheteur_nom")
-            .len("nb_marches")
-            .filter(
-                pl.col("acheteur_latitude").is_not_null()
-                & pl.col("acheteur_longitude").is_not_null()
-            )
-        )
+    name = region["name"]
 
-        acheteurs_marker_dicts = []
+    # Données de la région
+    region_acheteurs = region["data"][0]
+    region_titulaires = region["data"][1]
 
-        if mask_acheteur.height > 0:
-            for row in mask_acheteur.to_dicts():
-                acheteurs_marker_dicts.append(
-                    {
-                        "lat": row["acheteur_latitude"],
-                        "lon": row["acheteur_longitude"],
-                        "tooltip": f"{row['acheteur_nom']} ({row['nb_marches']} marchés)",
-                        "marker_color": color_acheteur,
-                    }
-                )
+    # Couleurs
+    color_acheteur = region_acheteurs[0]["marker_color"]
+    color_titulaire = region_titulaires[0]["marker_color"]
 
-        # Trace Titulaires
-        mask_titulaire = (
-            region_df.select(
-                "uid", "titulaire_longitude", "titulaire_latitude", "titulaire_nom"
-            )
-            .group_by("titulaire_longitude", "titulaire_latitude", "titulaire_nom")
-            .len("nb_marches")
-            .filter(
-                pl.col("titulaire_latitude").is_not_null()
-                & pl.col("titulaire_longitude").is_not_null()
-            )
-        )
+    acheteurs_geojson_data = dlx.dicts_to_geojson(region_acheteurs)
+    titulaires_geojson_data = dlx.dicts_to_geojson(region_titulaires)
 
-        titulaires_marker_dicts = []
-
-        if mask_titulaire.height > 0:
-            for row in mask_titulaire.to_dicts():
-                titulaires_marker_dicts.append(
-                    {
-                        "lat": row["titulaire_latitude"],
-                        "lon": row["titulaire_longitude"],
-                        "tooltip": f"{row['titulaire_nom']} ({row['nb_marches']} marchés)",
-                        "marker_color": color_titulaire,
-                    }
-                )
-
-        acheteurs_geojson_data = dlx.dicts_to_geojson(acheteurs_marker_dicts)
-        titulaires_geojson_data = dlx.dicts_to_geojson(titulaires_marker_dicts)
-
-        center, zoom = region_centers.get(name, ([46.6, 2.2], 6))
-        col_width = 6 if name == "Métropole" else 3
-        region_id = name.lower().replace(" ", "-")
-        cols.append(
-            dbc.Col(
-                [
-                    html.H5(name),
-                    dl.Map(
-                        [
-                            dl.TileLayer(),
-                            dl.GeoJSON(
-                                data=titulaires_geojson_data,
-                                cluster=True,
-                                zoomToBoundsOnClick=True,
-                                pointToLayer=point_to_layer,
-                                clusterToLayer=cluster_to_layer,
-                                id=f"geojson-{region_id}-titulaires",
-                                options={"fillColor": color_titulaire},
-                            ),
-                            dl.GeoJSON(
-                                data=acheteurs_geojson_data,
-                                cluster=True,
-                                zoomToBoundsOnClick=True,
-                                pointToLayer=point_to_layer,
-                                clusterToLayer=cluster_to_layer,
-                                id=f"geojson-{region_id}-acheteurs",
-                                options={"fillColor": color_acheteur},
-                            ),
-                        ],
-                        center=center,
-                        zoom=zoom,
-                        style={
-                            "width": "100%",
-                            "height": "400px" if name == "Métropole" else "300px",
-                        },
-                        id=f"map-{region_id}",
-                    ),
-                ],
-                width=12,
-                md=col_width,
-                className="mb-4",
-            )
-        )
-
-    return cols
+    center, zoom = region["coordinates"], region["zoom_leaflet"]
+    region_id = name.lower().replace(" ", "-")
+    leaflet_map = dl.Map(
+        [
+            dl.TileLayer(),
+            dl.GeoJSON(
+                data=titulaires_geojson_data,
+                cluster=True,
+                zoomToBoundsOnClick=True,
+                pointToLayer=point_to_layer,
+                clusterToLayer=cluster_to_layer,
+                id=f"geojson-{region_id}-titulaires",
+                options={"fillColor": color_titulaire},
+            ),
+            dl.GeoJSON(
+                data=acheteurs_geojson_data,
+                cluster=True,
+                zoomToBoundsOnClick=True,
+                pointToLayer=point_to_layer,
+                clusterToLayer=cluster_to_layer,
+                id=f"geojson-{region_id}-acheteurs",
+                options={"fillColor": color_acheteur},
+            ),
+        ],
+        center=center,
+        zoom=zoom,
+        style={
+            "width": "100%",
+            "height": "400px" if name == "Métropole" else "300px",
+        },
+        id=f"map-{region_id}",
+    )
+    return leaflet_map
 
 
 def make_column_picker(page: str):

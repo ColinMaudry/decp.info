@@ -286,6 +286,17 @@ def get_departements() -> dict:
         return data
 
 
+def get_departements_geojson() -> dict:
+    with open("./data/departements-1000m.geojson") as f:
+        geojson = json.load(f)
+
+    # Ajout de feature.id
+    for f in geojson["features"]:
+        f["id"] = f["properties"]["code"]
+
+    return geojson
+
+
 def get_departement_region(code_postal):
     if code_postal > "97000":
         code_departement = code_postal[:3]
@@ -774,6 +785,7 @@ df_titulaires_marches: pl.DataFrame = (
 )
 
 departements = get_departements()
+departements_geojson = get_departements_geojson()
 domain_name = (
     "test.decp.info" if os.getenv("DEVELOPMENT").lower() == "true" else "decp.info"
 )
