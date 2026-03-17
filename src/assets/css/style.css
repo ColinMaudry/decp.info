@@ -423,6 +423,11 @@ input[type="checkbox"] {
 }
 
 /* --- Organization Cards (Grid Items) --- */
+
+#cards .card {
+  margin-bottom: 16px;
+}
+
 .org_title {
   grid-column: 1 / 3;
   grid-row: 1;

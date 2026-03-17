@@ -509,9 +509,9 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
         else:
             raise ValueError(f"Map type '{map_type}' not recognised")
 
-        md = 6 if code == "Métropole" else 3
+        lg, xl = (12, 8) if code == "Métropole" else (6, 4)
 
-        col = make_card(regions[code]["name"], md=md, fig=map_graph)
+        col = make_card(regions[code]["name"], fig=map_graph, lg=lg, xl=xl)
         cols.append(col)
 
     return cols
@@ -526,11 +526,9 @@ def make_chloropleth_map(region: dict) -> dcc.Graph:
         locations="Département",
         color="uid",
         color_continuous_scale="Reds",
-        title="Nombres de marchés attribués",
         range_color=(df_map["uid"].min(), df_map["uid"].max()),
         labels={"uid": "Marchés attribués"},
         scope="europe",
-        height=400,
     )
 
     fig.update_geos(fitbounds="locations", visible=False)
@@ -602,7 +600,7 @@ def make_clusters_map(region: dict) -> dl.Map:
 
 
 def make_card(
-    title: str, subtitle=None, fig=None, paragraphs=None, md=3, width=12
+    title: str, subtitle=None, fig=None, paragraphs=None, lg=6, xl=4
 ) -> dbc.Col:
     children = []
     if title:
@@ -618,8 +616,8 @@ def make_card(
 
     card = dbc.Col(
         html.Div(html.Div(className="card-body", children=children), className="card"),
-        lg=6,
-        xl=4,
+        lg=lg,
+        xl=xl,
         # width=width,
         # className="mb-4",
     )
