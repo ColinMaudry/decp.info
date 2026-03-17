@@ -14,12 +14,12 @@ from src.utils import (
     meta_content,
 )
 
-name = "Statistiques"
+name = "Observatoire"
 
 register_page(
     __name__,
-    path="/statistiques",
-    title="Statistiques | decp.info",
+    path="/observatoire",
+    title="Observatoire | decp.info",
     name=name,
     description="Visualisez l'état de la publication des données essentielles des marchés publics en France.",
     image_url=meta_content["image_url"],
