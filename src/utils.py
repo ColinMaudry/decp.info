@@ -697,13 +697,13 @@ def get_button_properties(height):
 
 
 def get_enum_values_as_dict(column_name):
-    for column in data_schema:
-        if column == column_name:
-            options = {}
-            for value in data_schema[column]["enum"]:
-                options[value] = value
-            return options
-    return {"not_found": "not found"}
+    try:
+        options = {}
+        for value in data_schema[column_name]["enum"]:
+            options[value] = value
+        return options
+    except KeyError:
+        return {"not_found": "not found"}
 
 
 def invert_columns(columns):

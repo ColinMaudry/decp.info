@@ -190,6 +190,13 @@ p.version > a {
   grid-row: 1;
 }
 
+/* --- Dashboard inputs --- */
+
+.Select--multi .Select-value {
+  color: var(--primary-color);
+  background-color: rgba(255, 240, 240, 0.4);
+}
+
 /* --- Tables (Dash & Custom) --- */
 
 /* Table Menu (Exports etc) */

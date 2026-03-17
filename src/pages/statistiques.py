@@ -5,7 +5,7 @@ import polars as pl
 import polars.selectors as cs
 from dash import Input, Output, callback, dcc, html, register_page
 
-from src.figures import get_geographic_maps, make_card
+from src.figures import get_geographic_maps, make_card, make_donut
 from src.utils import (
     departements,
     df,
@@ -69,7 +69,7 @@ layout = [
                                             options=get_enum_values_as_dict(
                                                 "acheteur_categorie"
                                             ),
-                                            placeholder="Catégorie d'acheteur",
+                                            placeholder="Catégorie",
                                         ),
                                     ),
                                     dbc.Row(
@@ -81,12 +81,42 @@ layout = [
                                             options=options_departements,
                                         ),
                                     ),
+                                    html.H5("Titulaire"),
+                                    dbc.Row(
+                                        dcc.Dropdown(
+                                            id="dashboard_titulaire_categorie",
+                                            placeholder="Catégorie",
+                                            options=get_enum_values_as_dict(
+                                                "titulaire_categorie"
+                                            ),
+                                        ),
+                                    ),
                                     html.H5("Marché"),
                                     dbc.Row(
                                         dcc.Dropdown(
                                             id="dashboard_marche_type",
-                                            placeholder="Type de marché",
+                                            placeholder="Type",
                                             options=get_enum_values_as_dict("type"),
+                                        ),
+                                    ),
+                                    dbc.Row(
+                                        dcc.Dropdown(
+                                            id="dashboard_marche_considerationsSociales",
+                                            placeholder="Considérations sociales",
+                                            options=get_enum_values_as_dict(
+                                                "considerationsSociales"
+                                            ),
+                                            multi=True,
+                                        ),
+                                    ),
+                                    dbc.Row(
+                                        dcc.Dropdown(
+                                            id="dashboard_marche_considerationsEnvironnementales",
+                                            placeholder="Considérations environnementales",
+                                            multi=True,
+                                            options=get_enum_values_as_dict(
+                                                "considerationsEnvironnementales"
+                                            ),
                                         ),
                                     ),
                                 ],
@@ -112,13 +142,19 @@ layout = [
     Input("dashboard_year", "value"),
     Input("dashboard_acheteur_categorie", "value"),
     Input("dashboard_acheteur_departement_code", "value"),
+    Input("dashboard_titulaire_categorie", "value"),
     Input("dashboard_marche_type", "value"),
+    Input("dashboard_marche_considerationsSociales", "value"),
+    Input("dashboard_marche_considerationsEnvironnementales", "value"),
 )
 def udpate_dashboard_cards(
     dashboard_year,
     dashboard_acheteur_categorie,
     dashboard_acheteur_departement_code,
+    dashboard_titulaire_categorie,
     dashboard_marche_type,
+    dashboard_marche_considerationsSociales,
+    dashboard_marche_considerationsEnvironnementales,
 ):
     lff: pl.LazyFrame = df.lazy()
     lff = lff.select(
@@ -127,9 +163,13 @@ def udpate_dashboard_cards(
         cs.starts_with("titulaire"),
         "dateNotification",
         "montant",
+        "considerationsSociales",
+        "considerationsEnvironnementales",
     )
 
     # Application des filtres
+
+    ## Période
 
     if dashboard_year:
         lff = lff.filter(pl.col("dateNotification").dt.year() == int(dashboard_year))
@@ -137,6 +177,8 @@ def udpate_dashboard_cards(
         lff = lff.filter(
             pl.col("dateNotification") > (datetime.now() - timedelta(days=365))
         )
+
+    ## Acheteur
 
     if dashboard_acheteur_categorie:
         lff = lff.filter(pl.col("acheteur_categorie") == dashboard_acheteur_categorie)
@@ -148,12 +190,38 @@ def udpate_dashboard_cards(
             )
         )
 
+    ## Titulaire
+
+    if dashboard_titulaire_categorie:
+        lff = lff.filter(pl.col("titulaire_categorie") == dashboard_titulaire_categorie)
+
+    ## Marché
+
     if dashboard_marche_type:
         lff = lff.filter(pl.col("type") == dashboard_marche_type)
 
-    # Génération des métriques
-    dff = lff.collect()
+    if dashboard_marche_considerationsSociales:
+        lff = lff.filter(
+            pl.col("considerationsSociales")
+            .str.split(", ")
+            .list.set_intersection(dashboard_marche_considerationsSociales)
+            .list.len()
+            > 0
+        )
 
+    if dashboard_marche_considerationsEnvironnementales:
+        lff = lff.filter(
+            pl.col("considerationsEnvironnementales")
+            .str.split(", ")
+            .list.set_intersection(dashboard_marche_considerationsEnvironnementales)
+            .list.len()
+            > 0
+        )
+
+    # Génération des métriques
+    dff = lff.collect(engine="streaming")
+
+    # À transformer en fonction
     nb_acheteurs = dff.select("acheteur_id").n_unique()
     nb_titulaires = dff.select("titulaire_id", "titulaire_typeIdentifiant").n_unique()
 
@@ -165,7 +233,6 @@ def udpate_dashboard_cards(
 
     cards = []
 
-    # À transformer en fonction
     card_basic_counts = [
         html.P(["Nombre de marchés : ", html.Strong(str(format_number(nb_marches)))]),
         html.P(
@@ -178,6 +245,14 @@ def udpate_dashboard_cards(
     ]
 
     cards.append(make_card(title="Résumé", paragraphs=card_basic_counts))
+
+    donut_acheteur_categorie = make_donut(lff, "acheteur_categorie")
+    cards.append(make_card(title="Catégorie d'acheteur", fig=donut_acheteur_categorie))
+
+    donut_titulaire_categorie = make_donut(lff, "titulaire_categorie")
+    cards.append(
+        make_card(title="Catégorie d'entreprise", fig=donut_titulaire_categorie)
+    )
 
     geographic_maps: list[dbc.Col] = get_geographic_maps(dff)
 

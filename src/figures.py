@@ -624,6 +624,25 @@ def make_card(
     return card
 
 
+def make_donut(lff: pl.LazyFrame, names_col):
+    title = data_schema[names_col]["title"]
+    lff = lff.rename({names_col: title})
+    lff = lff.select("uid", title)
+    lff = lff.group_by(title).len("Nombre")
+    lff = lff.with_columns(pl.col(title).replace(None, pl.lit("?")))
+    fig = px.pie(
+        lff.collect(engine="streaming"),
+        values="Nombre",
+        names=title,
+        hole=0.4,
+        color_discrete_sequence=px.colors.qualitative.Safe,
+    )
+    fig = fig.update_traces(texttemplate="<b>%{label}</b><br><b>%{percent}</b>")
+    fig = fig.update_layout(showlegend=False, font=dict(size=14))
+    graph = dcc.Graph(figure=fig)
+    return graph
+
+
 def make_column_picker(page: str):
     table_data = []
     table_columns = [
