@@ -81,6 +81,14 @@ layout = [
                                             options=options_departements,
                                         ),
                                     ),
+                                    html.H5("Marché"),
+                                    dbc.Row(
+                                        dcc.Dropdown(
+                                            id="dashboard_marche_type",
+                                            placeholder="Type de marché",
+                                            options=get_enum_values_as_dict("type"),
+                                        ),
+                                    ),
                                 ],
                             ),
                             dbc.Col(
@@ -104,9 +112,13 @@ layout = [
     Input("dashboard_year", "value"),
     Input("dashboard_acheteur_categorie", "value"),
     Input("dashboard_acheteur_departement_code", "value"),
+    Input("dashboard_marche_type", "value"),
 )
 def udpate_dashboard_cards(
-    dashboard_year, dashboard_acheteur_categorie, dashboard_acheteur_departement_code
+    dashboard_year,
+    dashboard_acheteur_categorie,
+    dashboard_acheteur_departement_code,
+    dashboard_marche_type,
 ):
     lff: pl.LazyFrame = df.lazy()
     lff = lff.select(
@@ -135,6 +147,9 @@ def udpate_dashboard_cards(
                 dashboard_acheteur_departement_code
             )
         )
+
+    if dashboard_marche_type:
+        lff = lff.filter(pl.col("type") == dashboard_marche_type)
 
     # Génération des métriques
     dff = lff.collect()
