@@ -5,9 +5,7 @@ import polars as pl
 import polars.selectors as cs
 from dash import Input, Output, callback, dcc, html, register_page
 
-from src.figures import (
-    get_geographic_maps,
-)
+from src.figures import get_geographic_maps, make_card
 from src.utils import (
     departements,
     df,
@@ -52,8 +50,8 @@ layout = [
                     dbc.Row(
                         [
                             dbc.Col(
-                                width=12,
-                                md=3,
+                                xl=3,
+                                lg=4,
                                 id="filters",
                                 children=[
                                     html.H5("Période d'attribution"),
@@ -87,22 +85,10 @@ layout = [
                             ),
                             dbc.Col(
                                 width=12,
-                                md=9,
+                                lg=8,
+                                xl=9,
                                 id="cards",
-                                children=[
-                                    dbc.Row(
-                                        (
-                                            dbc.Col(
-                                                width=6,
-                                                md=4,
-                                                className="card",
-                                                id="card_basic_counts",
-                                            )
-                                        ),
-                                        className="mb-4",
-                                    ),
-                                    dbc.Row(id="maps_row"),
-                                ],
+                                children=[],
                             ),
                         ]
                     )
@@ -114,8 +100,7 @@ layout = [
 
 
 @callback(
-    Output("card_basic_counts", "children"),
-    Output("maps_row", "children"),
+    Output("cards", "children"),
     Input("dashboard_year", "value"),
     Input("dashboard_acheteur_categorie", "value"),
     Input("dashboard_acheteur_departement_code", "value"),
@@ -163,6 +148,8 @@ def udpate_dashboard_cards(
     total_montant = df_per_uid.select(pl.col("montant").sum()).item()
     nb_marches = df_per_uid.height
 
+    cards = []
+
     # À transformer en fonction
     card_basic_counts = [
         html.P(["Nombre de marchés : ", html.Strong(str(format_number(nb_marches)))]),
@@ -175,6 +162,8 @@ def udpate_dashboard_cards(
         html.P(["Montant total : ", html.Strong(format_number(total_montant) + " €")]),
     ]
 
-    geographic_maps = get_geographic_maps(dff)
+    cards.append(make_card(title="Résumé", paragraphs=card_basic_counts))
 
-    return card_basic_counts, geographic_maps
+    geographic_maps: list[dbc.Col] = get_geographic_maps(dff)
+
+    return dbc.Row(children=cards + geographic_maps)

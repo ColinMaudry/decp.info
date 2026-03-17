@@ -417,18 +417,12 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
         },
     }
 
-    # Liste des codes départements Outre-Mer
-    dom_codes = [code for code in regions.keys() if code != "Métropole"]
-    print("dom codes", dom_codes)
-
     def make_map_data(region_code: str) -> tuple[list, str or None]:
         lff: pl.LazyFrame = dff.lazy()
         if region_code == "Métropole":
             lff = lff.filter(
-                (
-                    ~pl.col("acheteur_departement_code").is_in(dom_codes)
-                    | (~pl.col("titulaire_departement_code").is_in(dom_codes))
-                )
+                (pl.col("acheteur_departement_code").str.len_chars() == 2)
+                & (pl.col("titulaire_departement_code").str.len_chars() == 2)
             )
         else:
             lff = lff.filter(
@@ -436,14 +430,14 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
                 | (pl.col("titulaire_departement_code") == code)
             )
 
-        nb_marches = lff.select("uid").group_by("uid").first().collect().height
+        nb_marches = lff.select("uid").collect()["uid"].n_unique()
 
         if nb_marches == 0:
             return [], None
 
         dfs = []
 
-        if (code == "Métropole" and nb_marches > 20000) or (
+        if (code == "Métropole" and nb_marches > 30000) or (
             code != "Métropole" and nb_marches > 10000
         ):
             _map_type: str = "chloropleth"
@@ -505,10 +499,9 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
 
     for code in regions.keys():
         regions[code]["data"], map_type = make_map_data(code)
-        print("region", regions[code]["name"], len(regions[code]["data"][0]), map_type)
 
         if map_type == "chloropleth":
-            map_graph = make_chloropleth_map(regions[code])  # call chloropleth function
+            map_graph = make_chloropleth_map(regions[code])
         elif map_type == "clusters":
             map_graph = make_clusters_map(regions[code])
         elif map_type is None:
@@ -516,15 +509,9 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
         else:
             raise ValueError(f"Map type '{map_type}' not recognised")
 
-        col = dbc.Col(
-            children=[
-                html.H5(regions[code]["name"]),
-                map_graph,
-            ],
-            md=6 if code == "Métropole" else 3,
-            width=12,
-            className="mb-4",
-        )
+        md = 6 if code == "Métropole" else 3
+
+        col = make_card(regions[code]["name"], md=md, fig=map_graph)
         cols.append(col)
 
     return cols
@@ -543,7 +530,6 @@ def make_chloropleth_map(region: dict) -> dcc.Graph:
         range_color=(df_map["uid"].min(), df_map["uid"].max()),
         labels={"uid": "Marchés attribués"},
         scope="europe",
-        width=400,
         height=400,
     )
 
@@ -561,7 +547,7 @@ def make_chloropleth_map(region: dict) -> dcc.Graph:
     return graph
 
 
-def make_clusters_map(region: dict):
+def make_clusters_map(region: dict) -> dl.Map:
     # JavaScript functions for styling
     ns = Namespace("dash_clientside", "leaflet")
     point_to_layer = ns("pointToLayer")
@@ -613,6 +599,31 @@ def make_clusters_map(region: dict):
         id=f"map-{region_id}",
     )
     return leaflet_map
+
+
+def make_card(
+    title: str, subtitle=None, fig=None, paragraphs=None, md=3, width=12
+) -> dbc.Col:
+    children = []
+    if title:
+        children.append(html.H5(title, className="card-title"))
+    if subtitle:
+        children.append(html.H6(subtitle, className="card-subtitle mb-2 text-muted"))
+    if fig:
+        children.append(fig)
+    if paragraphs:
+        for p in paragraphs:
+            p.className = "card-text"
+            children.append(p)
+
+    card = dbc.Col(
+        html.Div(html.Div(className="card-body", children=children), className="card"),
+        lg=6,
+        xl=4,
+        # width=width,
+        # className="mb-4",
+    )
+    return card
 
 
 def make_column_picker(page: str):

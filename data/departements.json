@@ -391,8 +391,16 @@
     "departement": "La Réunion",
     "region": "La Réunion"
   },
+  "975": {
+    "departement": "Saint-Pierre-et-Miquelon",
+    "region": "Saint-Pierre-et-Miquelon"
+  },
   "976": {
     "departement": "Mayotte",
     "region": "Mayotte"
+  },
+  "977": {
+    "departement": "Saint-Barthelemy",
+    "region": "Saint-Barthelemy"
   }
 }
