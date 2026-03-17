@@ -609,7 +609,7 @@ def make_card(
         children.append(html.H5(title, className="card-title"))
     if subtitle:
         children.append(html.H6(subtitle, className="card-subtitle mb-2 text-muted"))
-    if fig:
+    if fig is not None:
         children.append(fig)
     if paragraphs:
         for p in paragraphs:
