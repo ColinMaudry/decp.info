@@ -82,68 +82,94 @@ layout = [
     html.Div(
         children=[
             html.Div(
-                className="wrapper",
+                style={"marginBottom": "50px"},
                 children=[
-                    html.H2(
-                        className="org_title",
+                    dbc.Row(
+                        className="mb-2",
                         children=[
-                            html.Span(id="titulaire_siret"),
-                            " - ",
-                            html.Span(id="titulaire_nom"),
-                        ],
-                    ),
-                    html.Div(
-                        className="org_year",
-                        children=dcc.Dropdown(
-                            id="titulaire_year",
-                            options=["Toutes les années"]
-                            + [
-                                str(year)
-                                for year in range(
-                                    2018, int(datetime.date.today().year) + 1
-                                )
-                            ],
-                            placeholder="Année",
-                        ),
-                    ),
-                    html.Div(
-                        className="org_infos",
-                        children=[
-                            # TODO: ajouter le type d'acheteur : commune, CD, CR, etc.
-                            html.P(["Commune : ", html.Strong(id="titulaire_commune")]),
-                            html.P(
-                                [
-                                    "Département : ",
-                                    html.Strong(id="titulaire_departement"),
-                                ]
+                            dbc.Col(
+                                html.H2(
+                                    children=[
+                                        html.Span(id="titulaire_siret"),
+                                        " - ",
+                                        html.Span(id="titulaire_nom"),
+                                    ],
+                                ),
+                                width=8,
                             ),
-                            html.P(["Région : ", html.Strong(id="titulaire_region")]),
-                            html.A(
-                                id="titulaire_lien_annuaire",
-                                children="Plus de détails sur l'Annuaire des entreprises",
+                            dbc.Col(
+                                dcc.Dropdown(
+                                    id="titulaire_year",
+                                    options=["Toutes les années"]
+                                    + [
+                                        str(year)
+                                        for year in range(
+                                            2018, int(datetime.date.today().year) + 1
+                                        )
+                                    ],
+                                    placeholder="Année",
+                                ),
+                                width=4,
                             ),
                         ],
                     ),
-                    html.Div(
-                        className="org_stats",
+                    dbc.Row(
+                        className="mb-2",
                         children=[
-                            html.P(id="titulaire_titre_stats"),
-                            html.P(id="titulaire_marches_remportes"),
-                            html.P(id="titulaire_acheteurs_differents"),
-                            html.Button(
-                                "Téléchargement au format Excel",
-                                id="btn-download-data-titulaire",
-                                className="btn btn-primary",
+                            dbc.Col(
+                                html.Div(
+                                    className="org_infos",
+                                    children=[
+                                        # TODO: ajouter le type d'acheteur : commune, CD, CR, etc.
+                                        html.P(["Commune : ", html.Strong(id="titulaire_commune")]),
+                                        html.P(
+                                            [
+                                                "Département : ",
+                                                html.Strong(id="titulaire_departement"),
+                                            ]
+                                        ),
+                                        html.P(["Région : ", html.Strong(id="titulaire_region")]),
+                                        html.A(
+                                            id="titulaire_lien_annuaire",
+                                            children="Plus de détails sur l'Annuaire des entreprises",
+                                        ),
+                                    ],
+                                ),
+                                width=4,
                             ),
-                            dcc.Download(id="download-data-titulaire"),
+                            dbc.Col(
+                                html.Div(
+                                    children=[
+                                        html.P(id="titulaire_titre_stats"),
+                                        html.P(id="titulaire_marches_remportes"),
+                                        html.P(id="titulaire_acheteurs_differents"),
+                                        html.Button(
+                                            "Téléchargement au format Excel",
+                                            id="btn-download-data-titulaire",
+                                            className="btn btn-primary",
+                                        ),
+                                        dcc.Download(id="download-data-titulaire"),
+                                    ],
+                                ),
+                                width=4,
+                            ),
+                            dbc.Col(
+                                html.Div(id="titulaire_map"),
+                                width=4,
+                            ),
                         ],
                     ),
-                    html.Div(className="org_map", id="titulaire_map"),
-                    html.Div(
-                        className="org_top",
+                    dbc.Row(
                         children=[
-                            html.H3("Top acheteurs"),
-                            html.Div(className="marches_table", id="top10_acheteurs"),
+                            dbc.Col(
+                                html.Div(
+                                    children=[
+                                        html.H3("Top acheteurs"),
+                                        html.Div(className="marches_table", id="top10_acheteurs"),
+                                    ],
+                                ),
+                                width=8,
+                            ),
                         ],
                     ),
                     html.Div(id="titulaire-distance-histogram"),

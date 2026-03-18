@@ -1,3 +1,4 @@
+import dash_bootstrap_components as dbc
 from dash import Input, Output, State, callback, dcc, html, register_page
 
 from src.figures import DataTable
@@ -77,7 +78,7 @@ layout = html.Div(
         #     className="search_options",
         #     children=[dcc.RadioItems(options=["Acheteur(s)"])],
         # ),
-        html.Div(id="search_results", className="wrapper"),
+        html.Div(id="search_results"),
     ],
 )
 
@@ -92,7 +93,7 @@ layout = html.Div(
 )
 def update_search_results(n_submit, n_clicks, query):
     if query and len(query) >= 1:
-        content = []
+        cols = []
 
         for org_type in ["acheteur", "titulaire"]:
             if org_type == "acheteur":
@@ -109,9 +110,8 @@ def update_search_results(n_submit, n_clicks, query):
             # Format output
             columns, tooltip = setup_table_columns(results, hideable=False)
 
-            org_content = [
+            col_content = (
                 html.Div(
-                    className=f"results_{org_type}",
                     children=[
                         html.H3(f"{org_type.title()}s : {count}"),
                         DataTable(
@@ -125,10 +125,10 @@ def update_search_results(n_submit, n_clicks, query):
                     ],
                 )
                 if count > 0
-                else html.P(f"Aucun {org_type} trouvé."),
-            ]
-            content.extend(org_content)
-            style = {"textAlign": "center", "display": "none"}
+                else html.P(f"Aucun {org_type} trouvé.")
+            )
+            cols.append(dbc.Col(col_content, width=6))
 
-        return content, style
+        style = {"textAlign": "center", "display": "none"}
+        return dbc.Row(cols), style
     return html.P(""), {"textAlign": "center"}

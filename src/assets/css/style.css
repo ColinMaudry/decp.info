@@ -94,12 +94,6 @@ button:hover:not([disabled]) {
   padding: 28px 24px 0 24px;
 }
 
-.wrapper {
-  display: grid;
-  grid-gap: 10px;
-  margin-bottom: 50px;
-  justify-content: space-between;
-}
 
 #header > * {
   margin: 0 0 20px 0px;
@@ -180,15 +174,6 @@ p.version > a {
   margin-right: 12px;
 }
 
-.results_acheteur {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.results_titulaire {
-  grid-column: 2;
-  grid-row: 1;
-}
 
 /* --- Dashboard inputs --- */
 
@@ -446,38 +431,8 @@ input[type="checkbox"] {
   margin-bottom: 16px;
 }
 
-.org_title {
-  grid-column: 1 / 3;
-  grid-row: 1;
-}
-
-.org_year {
-  grid-column: 3;
-  grid-row: 1;
-}
-
-.org_infos {
-  grid-column: 1;
-  grid-row: 2;
-}
-
 .org_infos > p {
   margin: 8px 0;
-}
-
-.org_stats {
-  grid-column: 2;
-  grid-row: 2;
-}
-
-.org_map {
-  grid-column: 3;
-  grid-row: 2;
-}
-
-.org_top {
-  grid-column: 1/3;
-  grid-row: 3;
 }
 
 /* --- About Page (A Propos) --- */
