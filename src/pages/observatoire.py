@@ -673,10 +673,16 @@ def add_organization_name_in_title(acheteur_id, titulaire_id):
 
     if acheteur_id and len(acheteur_id) == 14:
         if nom := lookup_nom(df_acheteurs, "acheteur_id", "acheteur_nom", acheteur_id):
-            return f"{name} - {nom}"
+            return [
+                name,
+                html.Small(nom, className="text-muted d-block fw-normal fs-5"),
+            ]
     elif titulaire_id and len(titulaire_id) == 14:
         if nom := lookup_nom(
             df_titulaires, "titulaire_id", "titulaire_nom", titulaire_id
         ):
-            return f"{name} - {nom}"
+            return [
+                name,
+                html.Small(nom, className="text-muted d-block fw-normal fs-5"),
+            ]
     return name
