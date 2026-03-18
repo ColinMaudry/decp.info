@@ -157,3 +157,25 @@ def test_006_observatoire_url_to_input(dash_duo: DashComposite):
     assert acheteur_input.get_attribute("value") == "a1", (
         "acheteur_id input should be populated from URL param"
     )
+
+
+def test_007_observatoire_share_url(dash_duo: DashComposite):
+    from src.app import app
+
+    dash_duo.start_server(app)
+    dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
+
+    # Navigate to observatoire with acheteur_id query param
+    dash_duo.wait_for_page(f"{dash_duo.server_url}/observatoire?acheteur_id=a1")
+    dash_duo.wait_for_element("#observatoire-share-url", timeout=4)
+
+    import time
+
+    time.sleep(1)  # Allow callback chain to complete
+
+    share_url_input = dash_duo.find_element("#observatoire-share-url")
+    share_url_value = share_url_input.get_attribute("value")
+
+    assert "acheteur_id=a1" in share_url_value, (
+        f"Share URL should contain acheteur_id param, got: {share_url_value}"
+    )

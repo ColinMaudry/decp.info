@@ -274,6 +274,12 @@ Alors, on fait comment ?
                                         disabled=True,
                                         className="mt-2",
                                     ),
+                                    dcc.Input(
+                                        id="observatoire-share-url",
+                                        readOnly=True,
+                                        style={"display": "none"},
+                                    ),
+                                    html.Div(id="observatoire-copy-container"),
                                 ],
                             ),
                             dbc.Col(
@@ -308,6 +314,52 @@ def restore_filters_from_url(search):
     titulaire_id = params.get("titulaire_id", [None])[0] or no_update
 
     return acheteur_id, titulaire_id, ""
+
+
+@callback(
+    Output("observatoire-share-url", "value"),
+    Output("observatoire-copy-container", "children"),
+    Input("dashboard_acheteur_id", "value"),
+    Input("dashboard_titulaire_id", "value"),
+    State("dashboard_url", "href"),
+    prevent_initial_call=True,
+)
+def sync_observatoire_share_url(acheteur_id, titulaire_id, href):
+    if not href:
+        return no_update, no_update
+
+    base_url = href.split("?")[0]
+
+    params = {}
+    if acheteur_id:
+        params["acheteur_id"] = acheteur_id
+    if titulaire_id:
+        params["titulaire_id"] = titulaire_id
+
+    query_string = urllib.parse.urlencode(params)
+    full_url = f"{base_url}?{query_string}" if query_string else base_url
+
+    copy_button = dcc.Clipboard(
+        id="btn-copy-observatoire-url",
+        target_id="observatoire-share-url",
+        title="Copier l'URL de cette vue",
+        style={
+            "display": "inline-block",
+            "fontSize": 20,
+            "verticalAlign": "top",
+            "cursor": "pointer",
+        },
+        className="fa fa-link",
+        children=[
+            dbc.Button(
+                "Partager",
+                className="btn btn-primary mt-2",
+                title="Copier l'adresse de cette vue filtrée pour la partager.",
+            )
+        ],
+    )
+
+    return full_url, copy_button
 
 
 @callback(
