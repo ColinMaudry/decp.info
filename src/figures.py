@@ -89,11 +89,6 @@ def get_barchart_sources(lff: pl.LazyFrame, type_date: str):
         .sort(by=[type_date, "len"], descending=True)
     )
 
-    # lff = lff.with_columns(
-    #     pl.when(pl.col("sourceDataset").is_null()).then(
-    #         pl.lit("Source inconnue")).alias("sourceDataset")
-    #     )
-
     lff = lff.sort(by=["sourceDataset"], descending=False)
     dff: pl.DataFrame = lff.collect(engine="streaming")
 

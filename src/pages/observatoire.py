@@ -671,10 +671,10 @@ def add_organization_name_in_title(acheteur_id, titulaire_id):
         match = df_org.filter(pl.col(id_col) == org_id)
         return match[nom_col].item(0) if match.height >= 1 else None
 
-    if acheteur_id and len(acheteur_id) == 12:
+    if acheteur_id and len(acheteur_id) == 14:
         if nom := lookup_nom(df_acheteurs, "acheteur_id", "acheteur_nom", acheteur_id):
             return f"{name} - {nom}"
-    elif titulaire_id and len(titulaire_id) == 12:
+    elif titulaire_id and len(titulaire_id) == 14:
         if nom := lookup_nom(
             df_titulaires, "titulaire_id", "titulaire_nom", titulaire_id
         ):
