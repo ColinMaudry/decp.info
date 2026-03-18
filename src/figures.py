@@ -102,7 +102,6 @@ def get_barchart_sources(lff: pl.LazyFrame, type_date: str):
         x=type_date,
         y="len",
         color="sourceDataset",
-        title=f"Nombre de marchés attribués par date de {labels[type_date]} et source de données",
         labels={
             "len": "Nombre de marchés",
             type_date: f"Mois de {labels[type_date]}",

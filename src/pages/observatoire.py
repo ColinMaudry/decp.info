@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import dash_bootstrap_components as dbc
 import polars as pl
 import polars.selectors as cs
-from dash import ALL, Input, Output, callback, ctx, dcc, html, register_page
+from dash import ALL, Input, Output, State, callback, ctx, dcc, html, register_page
 
 from src.figures import (
     get_barchart_sources,
@@ -41,6 +41,70 @@ for code, obj in departements.items():
     options_departements[code] = f"{obj['departement']} ({code})"
 
 
+def _apply_filters(
+    lff: pl.LazyFrame,
+    year,
+    acheteur_id,
+    acheteur_categorie,
+    acheteur_departement_code,
+    titulaire_id,
+    titulaire_categorie,
+    titulaire_departement_code,
+    marche_type,
+    considerations_sociales,
+    considerations_environnementales,
+) -> pl.LazyFrame:
+    if year:
+        lff = lff.filter(pl.col("dateNotification").dt.year() == int(year))
+    else:
+        lff = lff.filter(
+            pl.col("dateNotification") > (datetime.now() - timedelta(days=365))
+        )
+
+    if acheteur_id:
+        lff = lff.filter(pl.col("acheteur_id").str.contains(acheteur_id))
+    else:
+        if acheteur_categorie:
+            lff = lff.filter(pl.col("acheteur_categorie") == acheteur_categorie)
+        if acheteur_departement_code:
+            lff = lff.filter(
+                pl.col("acheteur_departement_code").is_in(acheteur_departement_code)
+            )
+
+    if titulaire_id:
+        lff = lff.filter(pl.col("titulaire_id").str.contains(titulaire_id))
+    else:
+        if titulaire_categorie:
+            lff = lff.filter(pl.col("titulaire_categorie") == titulaire_categorie)
+        if titulaire_departement_code:
+            lff = lff.filter(
+                pl.col("titulaire_departement_code").is_in(titulaire_departement_code)
+            )
+
+    if marche_type:
+        lff = lff.filter(pl.col("type") == marche_type)
+
+    if considerations_sociales:
+        lff = lff.filter(
+            pl.col("considerationsSociales")
+            .str.split(", ")
+            .list.set_intersection(considerations_sociales)
+            .list.len()
+            > 0
+        )
+
+    if considerations_environnementales:
+        lff = lff.filter(
+            pl.col("considerationsEnvironnementales")
+            .str.split(", ")
+            .list.set_intersection(considerations_environnementales)
+            .list.len()
+            > 0
+        )
+
+    return lff
+
+
 layout = [
     dcc.Store(id="dashboard-filters"),
     dcc.Location(id="dashboard_url"),
@@ -55,7 +119,7 @@ Les données saisies et publiées par les acheteurs comportent de nombreux monta
 
 Alors, on fait comment ?
 
-\* Les montants composés de plus de 11 chiffres, sans les décimales, [sont ramenés](https://github.com/ColinMaudry/decp-processing/blob/main/src/tasks/clean.py#L63-L71) à 12 311 111 111, un nombre qui reste très élevé et qui est facilement reconnaissable.
+\\* Les montants composés de plus de 11 chiffres, sans les décimales, [sont ramenés](https://github.com/ColinMaudry/decp-processing/blob/main/src/tasks/clean.py#L63-L71) à 12 311 111 111, un nombre qui reste très élevé et qui est facilement reconnaissable.
 """
                     ),
                 ]
@@ -191,6 +255,13 @@ Alors, on fait comment ?
                                             ),
                                         ),
                                     ),
+                                    dcc.Download(id="download-observatoire"),
+                                    dbc.Button(
+                                        "Télécharger au format Excel",
+                                        id="btn-download-observatoire",
+                                        disabled=True,
+                                        className="mt-2",
+                                    ),
                                 ],
                             ),
                             dbc.Col(
@@ -211,6 +282,8 @@ Alors, on fait comment ?
 
 @callback(
     Output("cards", "children"),
+    Output("btn-download-observatoire", "disabled"),
+    Output("btn-download-observatoire", "children"),
     Input("dashboard_year", "value"),
     Input("dashboard_acheteur_id", "value"),
     Input("dashboard_acheteur_categorie", "value"),
@@ -246,74 +319,19 @@ def udpate_dashboard_cards(
         "sourceDataset",
         "type",
     )
-
-    # Application des filtres
-
-    ## Période
-
-    if dashboard_year:
-        lff = lff.filter(pl.col("dateNotification").dt.year() == int(dashboard_year))
-    else:
-        lff = lff.filter(
-            pl.col("dateNotification") > (datetime.now() - timedelta(days=365))
-        )
-
-    ## Acheteur
-
-    if dashboard_acheteur_id:
-        lff = lff.filter(pl.col("acheteur_id").str.contains(dashboard_acheteur_id))
-    else:
-        if dashboard_acheteur_categorie:
-            lff = lff.filter(
-                pl.col("acheteur_categorie") == dashboard_acheteur_categorie
-            )
-
-        if dashboard_acheteur_departement_code:
-            lff = lff.filter(
-                pl.col("acheteur_departement_code").is_in(
-                    dashboard_acheteur_departement_code
-                )
-            )
-
-    ## Titulaire
-
-    if dashboard_titulaire_id:
-        lff = lff.filter(pl.col("titulaire_id").str.contains(dashboard_titulaire_id))
-    else:
-        if dashboard_titulaire_categorie:
-            lff = lff.filter(
-                pl.col("titulaire_categorie") == dashboard_titulaire_categorie
-            )
-
-        if dashboard_titulaire_departement_code:
-            lff = lff.filter(
-                pl.col("titulaire_departement_code").is_in(
-                    dashboard_titulaire_departement_code
-                )
-            )
-
-    ## Marché
-
-    if dashboard_marche_type:
-        lff = lff.filter(pl.col("type") == dashboard_marche_type)
-
-    if dashboard_marche_considerations_sociales:
-        lff = lff.filter(
-            pl.col("considerationsSociales")
-            .str.split(", ")
-            .list.set_intersection(dashboard_marche_considerations_sociales)
-            .list.len()
-            > 0
-        )
-
-    if dashboard_marche_considerations_environnementales:
-        lff = lff.filter(
-            pl.col("considerationsEnvironnementales")
-            .str.split(", ")
-            .list.set_intersection(dashboard_marche_considerations_environnementales)
-            .list.len()
-            > 0
-        )
+    lff = _apply_filters(
+        lff,
+        dashboard_year,
+        dashboard_acheteur_id,
+        dashboard_acheteur_categorie,
+        dashboard_acheteur_departement_code,
+        dashboard_titulaire_id,
+        dashboard_titulaire_categorie,
+        dashboard_titulaire_departement_code,
+        dashboard_marche_type,
+        dashboard_marche_considerations_sociales,
+        dashboard_marche_considerations_environnementales,
+    )
 
     # Génération des métriques
     dff = lff.collect(engine="streaming")
@@ -328,6 +346,13 @@ def udpate_dashboard_cards(
 
     total_montant = int(df_per_uid.select(pl.col("montant").sum()).item())
     nb_marches = df_per_uid.height
+
+    if nb_marches == 0:
+        dl_disabled, dl_text = True, "Pas de données à télécharger"
+    elif nb_marches > 65000:
+        dl_disabled, dl_text = True, "Téléchargement désactivé au-delà de 65 000 lignes"
+    else:
+        dl_disabled, dl_text = False, "Télécharger au format Excel"
 
     cards = []
 
@@ -380,7 +405,13 @@ def udpate_dashboard_cards(
 
     sources_barchart = get_barchart_sources(lff, type_date="dateNotification")
     other_cards.append(
-        make_card(title="Sources de données", fig=sources_barchart, lg=12, xl=8)
+        make_card(
+            title="Sources de données",
+            subtitle="Nombre de marchés attribués par mois de notification et source de données",
+            fig=sources_barchart,
+            lg=12,
+            xl=8,
+        )
     )
 
     duplicate_matrix = get_duplicate_matrix()
@@ -394,7 +425,56 @@ def udpate_dashboard_cards(
         )
     )
 
-    return dbc.Row(children=cards + geographic_maps + other_cards)
+    return dbc.Row(children=cards + geographic_maps + other_cards), dl_disabled, dl_text
+
+
+@callback(
+    Output("download-observatoire", "data"),
+    Input("btn-download-observatoire", "n_clicks"),
+    State("dashboard_year", "value"),
+    State("dashboard_acheteur_id", "value"),
+    State("dashboard_acheteur_categorie", "value"),
+    State("dashboard_acheteur_departement_code", "value"),
+    State("dashboard_titulaire_id", "value"),
+    State("dashboard_titulaire_categorie", "value"),
+    State("dashboard_titulaire_departement_code", "value"),
+    State("dashboard_marche_type", "value"),
+    State("dashboard_marche_considerationsSociales", "value"),
+    State("dashboard_marche_considerationsEnvironnementales", "value"),
+    prevent_initial_call=True,
+)
+def download_observatoire(
+    _n_clicks,
+    year,
+    acheteur_id,
+    acheteur_categorie,
+    acheteur_departement_code,
+    titulaire_id,
+    titulaire_categorie,
+    titulaire_departement_code,
+    marche_type,
+    considerations_sociales,
+    considerations_environnementales,
+):
+    lff = _apply_filters(
+        df.lazy(),
+        year,
+        acheteur_id,
+        acheteur_categorie,
+        acheteur_departement_code,
+        titulaire_id,
+        titulaire_categorie,
+        titulaire_departement_code,
+        marche_type,
+        considerations_sociales,
+        considerations_environnementales,
+    )
+
+    def to_bytes(buffer):
+        lff.collect(engine="streaming").write_excel(buffer, worksheet="DECP")
+
+    date = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    return dcc.send_bytes(to_bytes, filename=f"decp_observatoire_{date}.xlsx")
 
 
 @callback(
