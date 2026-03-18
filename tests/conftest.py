@@ -34,6 +34,11 @@ def test_data():
             "sourceFile": "test.xml",
             "sourceDataset": "test_dataset",
             "datePublicationDonnees": datetime.date(2025, 1, 1),
+            "considerationsSociales": "",
+            "considerationsEnvironnementales": "",
+            "type": "Marché",
+            "acheteur_categorie": "Collectivité",
+            "titulaire_categorie": "PME",
         }
     ]
     path = "tests/test.parquet"

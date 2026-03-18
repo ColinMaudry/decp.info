@@ -1,9 +1,21 @@
+import urllib.parse
 from datetime import datetime, timedelta
 
 import dash_bootstrap_components as dbc
 import polars as pl
 import polars.selectors as cs
-from dash import ALL, Input, Output, State, callback, ctx, dcc, html, register_page
+from dash import (
+    ALL,
+    Input,
+    Output,
+    State,
+    callback,
+    ctx,
+    dcc,
+    html,
+    no_update,
+    register_page,
+)
 
 from src.figures import (
     get_barchart_sources,
@@ -107,7 +119,7 @@ def _apply_filters(
 
 layout = [
     dcc.Store(id="dashboard-filters"),
-    dcc.Location(id="dashboard_url"),
+    dcc.Location(id="dashboard_url", refresh="callback-nav"),
     dbc.Modal(
         [
             dbc.ModalHeader(dbc.ModalTitle("Montants")),
@@ -278,6 +290,24 @@ Alors, on fait comment ?
         ],
     ),
 ]
+
+
+@callback(
+    Output("dashboard_acheteur_id", "value"),
+    Output("dashboard_titulaire_id", "value"),
+    Output("dashboard_url", "search"),
+    Input("dashboard_url", "search"),
+)
+def restore_filters_from_url(search):
+    if not search:
+        return no_update, no_update, no_update
+
+    params = urllib.parse.parse_qs(search.lstrip("?"))
+
+    acheteur_id = params.get("acheteur_id", [None])[0] or no_update
+    titulaire_id = params.get("titulaire_id", [None])[0] or no_update
+
+    return acheteur_id, titulaire_id, ""
 
 
 @callback(

@@ -137,3 +137,23 @@ def test_005_add_links_observatoire_titulaire():
 
     # titulaire_id should NOT contain observatoire link
     assert "/observatoire" not in id_value
+
+
+def test_006_observatoire_url_to_input(dash_duo: DashComposite):
+    from src.app import app
+
+    dash_duo.start_server(app)
+    dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
+
+    # Navigate to observatoire with acheteur_id query param
+    dash_duo.wait_for_page(f"{dash_duo.server_url}/observatoire?acheteur_id=a1")
+    dash_duo.wait_for_element("#dashboard_acheteur_id", timeout=4)
+
+    import time
+
+    time.sleep(1)  # Allow callback chain to complete
+
+    acheteur_input = dash_duo.find_element("#dashboard_acheteur_id")
+    assert acheteur_input.get_attribute("value") == "a1", (
+        "acheteur_id input should be populated from URL param"
+    )
