@@ -479,6 +479,7 @@ def sync_observatoire_share_url(acheteur_id, titulaire_id, href):
                 "Partager",
                 className="btn btn-primary mt-2",
                 title="Copier l'adresse de cette vue filtrée pour la partager.",
+                style={"display": "none"},
             )
         ],
     )
