@@ -539,16 +539,20 @@ def udpate_dashboard_cards(
 
     cards.append(make_card(title="Résumé", paragraphs=card_basic_counts))
 
-    donut_acheteur_categorie = make_donut(
-        lff, "acheteur_categorie", nulls="Autres", per_uid=True
+    donut_acheteur_categorie, nb_acheteur_categories = make_donut(
+        lff,
+        "acheteur_categorie",
+        nulls="Autres",
+        per_uid=True,
+        potentially_many_names=True,
     )
     cards.append(
         make_card(
             title="Catégorie d'acheteur",
             subtitle="en nombre de marchés attribués",
             fig=donut_acheteur_categorie,
-            lg=12,
-            xl=8,
+            lg=12 if nb_acheteur_categories > 4 else 6,
+            xl=8 if nb_acheteur_categories > 4 else 4,
         )
     )
 

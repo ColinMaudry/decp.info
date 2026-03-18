@@ -609,6 +609,7 @@ def make_donut(
     names_col,
     per_uid: bool,
     nulls="?",
+    potentially_many_names: bool = False,
 ):
     title = data_schema[names_col]["title"]
     lff = lff.rename({names_col: title})
@@ -620,6 +621,7 @@ def make_donut(
     lff = lff.group_by(title).len("Nombre")
     lff = lff.with_columns(pl.col(title).replace(None, pl.lit(nulls)))
     dff = lff.collect(engine="streaming")
+    nb_names = dff[title].n_unique()
     dff = dff.with_columns(
         pl.col("Nombre")
         .map_elements(format_number, return_dtype=pl.String)
@@ -639,6 +641,8 @@ def make_donut(
     )
     fig = fig.update_layout(showlegend=False, font=dict(size=14))
     graph = dcc.Graph(figure=fig)
+    if potentially_many_names:
+        return graph, nb_names
     return graph
 
 
