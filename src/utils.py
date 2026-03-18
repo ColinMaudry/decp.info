@@ -62,6 +62,20 @@ def add_links(dff: pl.DataFrame):
     for col in ["uid", "acheteur_nom", "titulaire_nom", "acheteur_id", "titulaire_id"]:
         if col in dff.columns:
             if col.startswith("titulaire_"):
+                detail_link = (
+                    '<a href = "/titulaires/'
+                    + pl.col("titulaire_id")
+                    + '">'
+                    + pl.col(col)
+                    + "</a>"
+                )
+                if col == "titulaire_nom":
+                    detail_link = (
+                        detail_link
+                        + ' <a href="/observatoire?titulaire_id='
+                        + pl.col("titulaire_id")
+                        + '" title="Voir dans l\'observatoire">📊</a>'
+                    )
                 dff = dff.with_columns(
                     pl.when(
                         pl.Expr.or_(
@@ -69,13 +83,7 @@ def add_links(dff: pl.DataFrame):
                             pl.col("titulaire_typeIdentifiant") == "SIRET",
                         )
                     )
-                    .then(
-                        '<a href = "/titulaires/'
-                        + pl.col("titulaire_id")
-                        + '">'
-                        + pl.col(col)
-                        + "</a>"
-                    )
+                    .then(detail_link)
                     .otherwise(pl.col(col))
                     .alias(col)
                 )

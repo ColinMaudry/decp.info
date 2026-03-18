@@ -111,3 +111,29 @@ def test_004_add_links_observatoire_acheteur():
 
     # acheteur_id should NOT contain observatoire link
     assert "/observatoire" not in id_value
+
+
+def test_005_add_links_observatoire_titulaire():
+    import polars as pl
+
+    from src.utils import add_links
+
+    dff = pl.DataFrame(
+        {
+            "titulaire_id": ["t1"],
+            "titulaire_nom": ["TITULAIRE 1"],
+            "titulaire_typeIdentifiant": ["SIRET"],
+        }
+    )
+    result = add_links(dff)
+    nom_value = result["titulaire_nom"][0]
+    id_value = result["titulaire_id"][0]
+
+    # titulaire_nom should contain detail link + observatoire link
+    assert "/titulaires/t1" in nom_value
+    assert "TITULAIRE 1" in nom_value
+    assert "/observatoire?titulaire_id=t1" in nom_value
+    assert "📊" in nom_value
+
+    # titulaire_id should NOT contain observatoire link
+    assert "/observatoire" not in id_value
