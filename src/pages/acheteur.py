@@ -490,7 +490,7 @@ def reset_view(n_clicks):
     Input("acheteur_data", "data"),
 )
 def update_acheteur_distance_histogram(data):
-    lff = pl.LazyFrame(data)
+    lff = pl.LazyFrame(data, strict=False, infer_schema_length=5000)
     fig = get_distance_histogram(lff)
     return make_card(
         title="Distance acheteur–titulaire",
