@@ -5,7 +5,6 @@ import uuid
 from collections import OrderedDict
 from time import localtime, sleep
 
-import dash
 import polars as pl
 import polars.selectors as cs
 from dash import no_update
@@ -63,6 +62,20 @@ def add_links(dff: pl.DataFrame):
     for col in ["uid", "acheteur_nom", "titulaire_nom", "acheteur_id", "titulaire_id"]:
         if col in dff.columns:
             if col.startswith("titulaire_"):
+                detail_link = (
+                    '<a href = "/titulaires/'
+                    + pl.col("titulaire_id")
+                    + '">'
+                    + pl.col(col)
+                    + "</a>"
+                )
+                if col == "titulaire_nom":
+                    detail_link = (
+                        detail_link
+                        + ' <a href="/observatoire?titulaire_id='
+                        + pl.col("titulaire_id")
+                        + '" title="Voir dans l\'observatoire">📊</a>'
+                    )
                 dff = dff.with_columns(
                     pl.when(
                         pl.Expr.or_(
@@ -70,26 +83,26 @@ def add_links(dff: pl.DataFrame):
                             pl.col("titulaire_typeIdentifiant") == "SIRET",
                         )
                     )
-                    .then(
-                        '<a href = "/titulaires/'
-                        + pl.col("titulaire_id")
-                        + '">'
-                        + pl.col(col)
-                        + "</a>"
-                    )
+                    .then(detail_link)
                     .otherwise(pl.col(col))
                     .alias(col)
                 )
             if col.startswith("acheteur_"):
-                dff = dff.with_columns(
-                    (
-                        '<a href = "/acheteurs/'
-                        + pl.col("acheteur_id")
-                        + '">'
-                        + pl.col(col)
-                        + "</a>"
-                    ).alias(col)
+                detail_link = (
+                    '<a href = "/acheteurs/'
+                    + pl.col("acheteur_id")
+                    + '">'
+                    + pl.col(col)
+                    + "</a>"
                 )
+                if col == "acheteur_nom":
+                    detail_link = (
+                        detail_link
+                        + ' <a href="/observatoire?acheteur_id='
+                        + pl.col("acheteur_id")
+                        + '" title="Voir dans l\'observatoire">📊</a>'
+                    )
+                dff = dff.with_columns(detail_link.alias(col))
             if col == "uid":
                 dff = dff.with_columns(
                     (
@@ -242,6 +255,15 @@ def get_decp_data() -> pl.DataFrame:
     # Convertir les colonnes booléennes en chaînes de caractères
     lff = booleans_to_strings(lff)
 
+    # Mention pour les org dont on a pas le nom
+    for col in ["acheteur_nom", "titulaire_nom"]:
+        lff = lff.with_columns(
+            pl.when(pl.col(col).is_null())
+            .then(pl.lit("[Identifiant non reconnu dans la base INSEE]"))
+            .otherwise(pl.col(col))
+            .name.keep()
+        )
+
     # Bizarrement je ne peux pas faire lff = lff.fill_null("") ici
     # ça génère une erreur dans la page acheteur (acheteur_data.table) :
     # AttributeError: partially initialized module 'pandas' has no attribute 'NaT' (most likely due to a circular import)
@@ -276,6 +298,17 @@ def get_departements() -> dict:
     with open("data/departements.json", "rb") as f:
         data = json.load(f)
         return data
+
+
+def get_departements_geojson() -> dict:
+    with open("./data/departements-1000m.geojson") as f:
+        geojson = json.load(f)
+
+    # Ajout de feature.id
+    for f in geojson["features"]:
+        f["id"] = f["properties"]["code"]
+
+    return geojson
 
 
 def get_departement_region(code_postal):
@@ -434,7 +467,7 @@ def get_default_hidden_columns(page):
             "codeCPV",
             "dureeRestanteMois",
         ]
-    elif page == "titulaire":
+    elif page == "tableau":
         displayed_columns = os.getenv("DISPLAYED_COLUMNS")
     else:
         displayed_columns = os.getenv("DISPLAYED_COLUMNS")
@@ -629,7 +662,7 @@ def prepare_table_data(
     # Remplace les strings null par "", mais pas les numeric null
     dff = dff.fill_null("")
 
-    # Ajout des liens vers l'annuaire des entreprises
+    # Ajout des liens vers les pages de détails
     dff = add_links(dff)
 
     # Ajout des liens vers les fichiers Open Data
@@ -673,8 +706,18 @@ def get_button_properties(height):
     else:
         download_disabled = False
         download_text = "Télécharger au format Excel"
-        download_title = ""
+        download_title = "Télécharger les données telles qu'affichées au format Excel"
     return download_disabled, download_text, download_title
+
+
+def get_enum_values_as_dict(column_name):
+    try:
+        options = {}
+        for value in data_schema[column_name]["enum"]:
+            options[value] = value
+        return options
+    except KeyError:
+        return {"not_found": "not found"}
 
 
 def invert_columns(columns):
@@ -731,14 +774,6 @@ def make_org_jsonld(org_id, org_type, org_name=None, type_org_id="SIRET") -> dic
     return jsonld
 
 
-def add_canonical_link(pathname):
-    @dash.hooks.index()
-    def update_index(html_string):
-        url = f"https://{domain_name}{pathname}"
-        canonical_tag = f'<link rel="canonical" href="{url}" />'
-        return html_string.replace("</head>", f"{canonical_tag}\n    </head>")
-
-
 df: pl.DataFrame = get_decp_data()
 schema = df.collect_schema()
 
@@ -764,6 +799,7 @@ df_titulaires_marches: pl.DataFrame = (
 )
 
 departements = get_departements()
+departements_geojson = get_departements_geojson()
 domain_name = (
     "test.decp.info" if os.getenv("DEVELOPMENT").lower() == "true" else "decp.info"
 )

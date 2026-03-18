@@ -13,9 +13,9 @@ def test_data():
             "uid": "1",
             "id": "1",
             "acheteur_nom": "ACHETEUR 1",
-            "acheteur_id": "a1",
+            "acheteur_id": "123",
             "titulaire_nom": "TITULAIRE 1",
-            "titulaire_id": "t1",
+            "titulaire_id": "345",
             "montant": 10,
             "dateNotification": datetime.date(2025, 1, 1),
             "codeCPV": "71600000",
@@ -34,6 +34,11 @@ def test_data():
             "sourceFile": "test.xml",
             "sourceDataset": "test_dataset",
             "datePublicationDonnees": datetime.date(2025, 1, 1),
+            "considerationsSociales": "",
+            "considerationsEnvironnementales": "",
+            "type": "Marché",
+            "acheteur_categorie": "Collectivité",
+            "titulaire_categorie": "PME",
         }
     ]
     path = "tests/test.parquet"
@@ -46,5 +51,14 @@ def test_data():
 
 def pytest_setup_options():
     options = Options()
-    options.add_argument("--window-size=1200,800")
+    options.add_argument("--window-size=1200,1200 ")
+    options.add_experimental_option(
+        "prefs",
+        {
+            "download.default_directory": "/home/colin/git/decp.info",
+            "download.prompt_for_download": False,
+            "download.directory_upgrade": True,
+            "safebrowsing.enabled": True,
+        },
+    )
     return options

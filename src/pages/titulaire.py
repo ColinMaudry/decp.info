@@ -1,4 +1,5 @@
 import datetime
+from typing import Any
 
 import dash_bootstrap_components as dbc
 import polars as pl
@@ -15,9 +16,14 @@ from dash import (
 )
 
 from src.callbacks import get_top_org_table
-from src.figures import DataTable, make_column_picker, point_on_map
+from src.figures import (
+    DataTable,
+    get_distance_histogram,
+    make_card,
+    make_column_picker,
+    point_on_map,
+)
 from src.utils import (
-    add_canonical_link,
     columns,
     df,
     df_titulaires,
@@ -34,12 +40,12 @@ from src.utils import (
 
 
 def get_title(titulaire_id: str = None) -> str:
-    titulaire_nom = (
-        df_titulaires.filter(pl.col("titulaire_id") == titulaire_id)
-        .select("titulaire_nom")
-        .item(0, 0)
+    titulaire_nom = df_titulaires.filter(pl.col("titulaire_id") == titulaire_id).select(
+        "titulaire_nom"
     )
-    return f"Marchés publics remportés par {titulaire_nom} | decp.info"
+    if titulaire_nom.height > 0:
+        return f"Marchés publics remportés par {titulaire_nom.item(0, 0)} | decp.info"
+    return "Marchés publics remportés | decp.info"
 
 
 register_page(
@@ -140,6 +146,7 @@ layout = [
                             html.Div(className="marches_table", id="top10_acheteurs"),
                         ],
                     ),
+                    html.Div(id="titulaire-distance-histogram"),
                 ],
             ),
             # récupérer les données de l'acheteur sur l'api annuaire
@@ -326,7 +333,7 @@ def get_titulaire_marches_data(url, titulaire_year: str) -> tuple:
     Output("btn-download-filtered-data-titulaire", "disabled"),
     Output("btn-download-filtered-data-titulaire", "children"),
     Output("btn-download-filtered-data-titulaire", "title"),
-    Output("filter-cleanup-trigger-titulaire", "data", allow_duplicate=True),
+    Output("filter-cleanup-trigger-titulaire", "data"),
     Input(component_id="titulaire_url", component_property="href"),
     Input("titulaire_data", "data"),
     Input("titulaire_datatable", "page_current"),
@@ -334,7 +341,6 @@ def get_titulaire_marches_data(url, titulaire_year: str) -> tuple:
     Input("titulaire_datatable", "filter_query"),
     Input("titulaire_datatable", "sort_by"),
     State("titulaire_datatable", "data_timestamp"),
-    config_prevent_initial_callbacks=True,
 )
 def get_last_marches_data(
     href, data, page_current, page_size, filter_query, sort_by, data_timestamp
@@ -355,7 +361,7 @@ def get_last_marches_data(
     Input(component_id="titulaire_data", component_property="data"),
 )
 def get_top_acheteurs(data):
-    return get_top_org_table(data, "acheteur")
+    return get_top_org_table(data, "acheteur", ["titulaire_distance", "montant"])
 
 
 @callback(
@@ -368,7 +374,7 @@ def get_top_acheteurs(data):
 )
 def download_titulaire_data(
     n_clicks,
-    data: [dict],
+    data: list[dict[str, Any]],
     titulaire_nom: str,
     annee: str,
 ):
@@ -493,6 +499,19 @@ def reset_view(n_clicks):
     return "", []
 
 
-@callback(Input("titulaire_url", "pathname"))
-def cb_add_canonical_link(pathname):
-    add_canonical_link(pathname)
+@callback(
+    Output("titulaire-distance-histogram", "children"),
+    Input("titulaire_data", "data"),
+)
+def update_titulaire_distance_histogram(data):
+    lff = pl.LazyFrame(data)
+    if "titulaire_distance" in lff.collect_schema().names():
+        lff = lff.with_columns(
+            pl.col("titulaire_distance").cast(pl.Float64, strict=False)
+        )
+    fig = get_distance_histogram(lff)
+    return make_card(
+        title="Distance acheteur–titulaire",
+        subtitle="en nombre de marchés, échelle logarithmique",
+        fig=fig,
+    )

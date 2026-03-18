@@ -53,7 +53,7 @@ def sitemap():
     base_url = "https://decp.info"
     pages = [
         "/",
-        "/statistiques",
+        "/observatoire",
         "/tableau",
         "/a-propos",
     ]
@@ -87,6 +87,7 @@ app.index_string = """
         <title>{%title%}</title>
         {%favicon%}
         {%css%}
+        <!-- canonical link -->
     </head>
     <body>
         {%app_entry%}
@@ -159,7 +160,7 @@ navbar = dbc.Navbar(
                         )
                         for page in page_registry.values()
                         if page["name"]
-                        in ["Recherche", "À propos", "Tableau", "Statistiques"]
+                        in ["Recherche", "À propos", "Tableau", "Observatoire"]
                     ],
                     className="ms-auto",
                     navbar=True,

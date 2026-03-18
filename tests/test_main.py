@@ -1,5 +1,4 @@
-from time import sleep
-
+import polars as pl
 from dash.testing.composite import DashComposite
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
@@ -30,12 +29,11 @@ def test_001_logo_and_search(dash_duo: DashComposite):
         assert len(result_table.find_elements(by=By.TAG_NAME, value="tr")) == 2, (
             "The search should return only one result"
         )  # header row + 1 result
-        assert (
-            result_table.find_element(
-                by=By.CSS_SELECTOR, value=f'td[data-dash-column="{org_type}_nom"]'
-            ).text
-            == name
-        ), f"The search result should have the right {org_type} name"
+        assert result_table.find_element(
+            by=By.CSS_SELECTOR, value=f'td[data-dash-column="{org_type}_nom"]'
+        ).text.startswith(name), (
+            f"The search result should have the right {org_type} name"
+        )
 
 
 def test_002_filter_persistence(dash_duo: DashComposite):
@@ -53,11 +51,287 @@ def test_002_filter_persistence(dash_duo: DashComposite):
         _filter_input: WebElement = dash_duo.find_element(filter_input_selector)
         return _filter_input
 
-    for page in ["tableau", "acheteurs/a1", "titulaires/t1"]:
+    for page in ["tableau", "acheteurs/123", "titulaires/345"]:
         print("page:", page)
         filter_input = open_page_and_check_filter_input()
         filter_input.send_keys("11")  # a UID that doesn't exist
         filter_input.send_keys(Keys.ENTER)
-        sleep(1)
         filter_input = open_page_and_check_filter_input()
         assert filter_input.get_attribute("value") == "11"
+
+
+def test_003_tableau_download(dash_duo: DashComposite):
+    from pages.acheteur import download_acheteur_data
+    from pages.tableau import download_data
+    from pages.titulaire import download_titulaire_data
+    from src.app import app
+
+    # Juste pour instancier l'app
+    print(app.server.name)
+
+    dicts = pl.read_parquet("tests/test.parquet").to_dicts()
+
+    outputs = [
+        download_data(1, "", [], None),
+        download_acheteur_data(1, dicts, "123", "2025"),
+        download_titulaire_data(1, dicts, "345", "2025"),
+    ]
+    for output in outputs:
+        assert isinstance(output, dict)
+        for f in ["content", "filename", "type", "base64"]:
+            assert f in output
+        assert isinstance(output["content"], str) and len(output["content"]) > 100
+        assert isinstance(output["filename"], str) and output["filename"].startswith(
+            "decp_"
+        )
+        assert output["type"] is None
+        assert output["base64"] is True
+
+
+def test_004_add_links_observatoire_acheteur():
+    import polars as pl
+
+    from src.utils import add_links
+
+    dff = pl.DataFrame(
+        {
+            "acheteur_id": ["123"],
+            "acheteur_nom": ["ACHETEUR 1"],
+        }
+    )
+    result = add_links(dff)
+    nom_value = result["acheteur_nom"][0]
+    id_value = result["acheteur_id"][0]
+
+    # acheteur_nom should contain detail link + observatoire link
+    assert "/acheteurs/123" in nom_value
+    assert "ACHETEUR 1" in nom_value
+    assert "/observatoire?acheteur_id=123" in nom_value
+    assert "📊" in nom_value
+
+    # acheteur_id should NOT contain observatoire link
+    assert "/observatoire" not in id_value
+
+
+def test_005_add_links_observatoire_titulaire():
+    import polars as pl
+
+    from src.utils import add_links
+
+    dff = pl.DataFrame(
+        {
+            "titulaire_id": ["345"],
+            "titulaire_nom": ["TITULAIRE 1"],
+            "titulaire_typeIdentifiant": ["SIRET"],
+        }
+    )
+    result = add_links(dff)
+    nom_value = result["titulaire_nom"][0]
+    id_value = result["titulaire_id"][0]
+
+    # titulaire_nom should contain detail link + observatoire link
+    assert "/titulaires/345" in nom_value
+    assert "TITULAIRE 1" in nom_value
+    assert "/observatoire?titulaire_id=345" in nom_value
+    assert "📊" in nom_value
+
+    # titulaire_id should NOT contain observatoire link
+    assert "/observatoire" not in id_value
+
+
+def test_006_observatoire_url_to_input(dash_duo: DashComposite):
+    from src.app import app
+
+    dash_duo.start_server(app)
+    dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
+
+    # Navigate to observatoire with acheteur_id query param
+    dash_duo.wait_for_page(f"{dash_duo.server_url}/observatoire?acheteur_id=123")
+    dash_duo.wait_for_element("#dashboard_acheteur_id", timeout=4)
+
+    import time
+
+    time.sleep(1)  # Allow callback chain to complete
+
+    acheteur_input = dash_duo.find_element("#dashboard_acheteur_id")
+    assert acheteur_input.get_attribute("value") == "123", (
+        "acheteur_id input should be populated from URL param"
+    )
+
+
+def test_007_observatoire_share_url(dash_duo: DashComposite):
+    from src.app import app
+
+    dash_duo.start_server(app)
+    dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
+
+    # Navigate to observatoire with acheteur_id query param
+    dash_duo.wait_for_page(f"{dash_duo.server_url}/observatoire?acheteur_id=123")
+    dash_duo.wait_for_element("#observatoire-share-url", timeout=4)
+
+    import time
+
+    time.sleep(1)  # Allow callback chain to complete
+
+    share_url_input = dash_duo.find_element("#observatoire-share-url")
+    share_url_value = share_url_input.get_attribute("value")
+
+    assert "acheteur_id=123" in share_url_value, (
+        f"Share URL should contain acheteur_id param, got: {share_url_value}"
+    )
+
+
+def test_008_search_to_observatoire(dash_duo: DashComposite):
+    from src.app import app
+
+    dash_duo.start_server(app)
+    dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
+
+    # Search for an acheteur
+    search_bar = dash_duo.find_element("#search")
+    search_bar.send_keys("ACHETEUR 1")
+    search_bar.send_keys(Keys.ENTER)
+
+    dash_duo.wait_for_element("#results_acheteur_datatable", timeout=2)
+
+    # Find the observatoire link in acheteur_nom column
+    observatoire_link = dash_duo.find_element(
+        '#results_acheteur_datatable td[data-dash-column="acheteur_nom"] a[href*="observatoire"]'
+    )
+    assert "📊" in observatoire_link.text
+
+    # Click the observatoire link
+    observatoire_link.click()
+
+    # Wait for observatoire page to load
+    dash_duo.wait_for_element("#dashboard_acheteur_id", timeout=4)
+
+    import time
+
+    time.sleep(1)  # Allow callback chain to complete
+
+    acheteur_input = dash_duo.find_element("#dashboard_acheteur_id")
+    assert acheteur_input.get_attribute("value") == "123", (
+        "acheteur_id input should be populated after navigating from search"
+    )
+
+
+def test_010_observatoire_montant_filter():
+    import datetime
+
+    import polars as pl
+
+    from pages.observatoire import _apply_filters
+    from src.app import (
+        app,  # noqa: F401 – instantiates the Dash app before register_page() calls
+    )
+
+    data = pl.DataFrame(
+        {
+            "uid": ["1", "2", "3"],
+            "montant": [100.0, 500.0, 1000.0],
+            "dateNotification": [datetime.date(2025, 1, 1)] * 3,
+        }
+    )
+
+    def apply(min_val=None, max_val=None):
+        return _apply_filters(
+            data.lazy(),
+            year="2025",
+            acheteur_id=None,
+            acheteur_categorie=None,
+            acheteur_departement_code=None,
+            titulaire_id=None,
+            titulaire_categorie=None,
+            titulaire_departement_code=None,
+            marche_type=None,
+            considerations_sociales=None,
+            considerations_environnementales=None,
+            montant_min=min_val,
+            montant_max=max_val,
+        ).collect()
+
+    assert apply().height == 3
+    assert apply(min_val=400).height == 2  # 500, 1000
+    assert apply(max_val=500).height == 2  # 100, 500
+    assert apply(min_val=200, max_val=600).height == 1  # 500 only
+
+
+def test_009_observatoire_filter_persistence(dash_duo: DashComposite):
+    import time
+
+    from src.app import app
+
+    dash_duo.start_server(app)
+    dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
+
+    # Clear localStorage to start from a clean state
+    dash_duo.driver.execute_script("localStorage.clear()")
+
+    # Navigate to observatoire without URL params
+    dash_duo.wait_for_page(f"{dash_duo.server_url}/observatoire")
+    dash_duo.wait_for_element("#dashboard_acheteur_id", timeout=4)
+
+    # Set the acheteur_id text input; press Enter to trigger the debounced save callback
+    acheteur_input = dash_duo.find_element("#dashboard_acheteur_id")
+    dash_duo.clear_input(acheteur_input)
+    acheteur_input.send_keys("123")
+    acheteur_input.send_keys(Keys.ENTER)
+
+    time.sleep(0.3)  # allow the save callback to write to localStorage
+
+    # Navigate away
+    dash_duo.wait_for_page(f"{dash_duo.server_url}/")
+
+    # Navigate back without URL params
+    dash_duo.wait_for_page(f"{dash_duo.server_url}/observatoire")
+    dash_duo.wait_for_element("#dashboard_acheteur_id", timeout=4)
+    time.sleep(0.5)  # allow restore callback chain to complete
+
+    acheteur_input = dash_duo.find_element("#dashboard_acheteur_id")
+    assert acheteur_input.get_attribute("value") == "123", (
+        "acheteur_id should be restored from localStorage after navigating back"
+    )
+
+    # Also verify URL params still override localStorage
+    dash_duo.wait_for_page(f"{dash_duo.server_url}/observatoire?acheteur_id=123")
+    dash_duo.wait_for_element("#dashboard_acheteur_id", timeout=4)
+    time.sleep(0.5)
+
+    acheteur_input = dash_duo.find_element("#dashboard_acheteur_id")
+    assert acheteur_input.get_attribute("value") == "123", (
+        "URL param acheteur_id should override the value stored in localStorage"
+    )
+
+
+def test_get_distance_histogram_returns_graph():
+    import polars as pl
+    from dash import dcc
+
+    from src.figures import get_distance_histogram
+
+    lff = pl.LazyFrame({"titulaire_distance": [1, 10, 100, 500, 1000]})
+    result = get_distance_histogram(lff)
+    assert isinstance(result, dcc.Graph)
+
+
+def test_get_distance_histogram_handles_nulls():
+    import polars as pl
+    from dash import dcc
+
+    from src.figures import get_distance_histogram
+
+    lff = pl.LazyFrame({"titulaire_distance": [None, None, 50]})
+    result = get_distance_histogram(lff)
+    assert isinstance(result, dcc.Graph)
+
+
+def test_get_distance_histogram_all_nulls():
+    import polars as pl
+    from dash import dcc
+
+    from src.figures import get_distance_histogram
+
+    lff = pl.LazyFrame({"titulaire_distance": pl.Series([], dtype=pl.Int64)})
+    result = get_distance_histogram(lff)
+    assert isinstance(result, dcc.Graph)

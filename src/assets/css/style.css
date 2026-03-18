@@ -151,6 +151,10 @@ p.version > a {
   max-width: 900px;
 }
 
+.seeBorder {
+  border: dotted 1px green;
+}
+
 /* --- Search Page --- */
 .tagline {
   text-align: center;
@@ -184,6 +188,24 @@ p.version > a {
 .results_titulaire {
   grid-column: 2;
   grid-row: 1;
+}
+
+/* --- Dashboard inputs --- */
+
+.Select--multi .Select-value {
+  color: var(--primary-color);
+  background-color: rgba(255, 240, 240, 0.4);
+}
+
+#filters .col > * {
+  margin-bottom: 6px;
+}
+
+#filters input[type="text"],
+#filters input[type="number"] {
+  border: 1px #ccc solid;
+  border-radius: 3px;
+  padding-left: 8px;
 }
 
 /* --- Tables (Dash & Custom) --- */
@@ -301,6 +323,15 @@ table.cell-table th {
   vertical-align: center;
 }
 
+.dash-table-container
+  .dash-spreadsheet-container
+  .dash-spreadsheet-inner
+  .cell-table
+  .dash-filter
+  input[type="text"]::placeholder {
+  color: #999;
+}
+
 .dash-filter--case {
   display: none;
 }
@@ -375,9 +406,19 @@ button.show-hide {
   margin-right: 10px;
 } */
 
+#btn-copy-url:before {
+}
+
 /* Dropdowns */
 .Select-placeholder {
   color: #333 !important;
+}
+
+/* Checkboxes */
+
+input[type="checkbox"] {
+  height: 17px;
+  width: 17px;
 }
 
 /* Tooltips */
@@ -400,6 +441,11 @@ button.show-hide {
 }
 
 /* --- Organization Cards (Grid Items) --- */
+
+#cards .card {
+  margin-bottom: 16px;
+}
+
 .org_title {
   grid-column: 1 / 3;
   grid-row: 1;
@@ -532,4 +578,14 @@ summary > h4 {
   .a-propos-toc {
     display: none;
   }
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
 }
