@@ -1,6 +1,7 @@
 from typing import Literal
 from urllib.error import HTTPError, URLError
 
+import numpy as np
 import dash_bootstrap_components as dbc
 import dash_leaflet as dl
 import dash_leaflet.express as dlx
@@ -589,13 +590,42 @@ def get_distance_histogram(lff: pl.LazyFrame) -> dcc.Graph:
             .filter(pl.col("titulaire_distance") > 0)
             .collect(engine="streaming")
         )
-    dff = dff.with_columns(pl.col("titulaire_distance").log(10))
-    fig = px.histogram(
-        dff,
-        x="titulaire_distance",
-        nbins=50,
-        labels={"titulaire_distance": "Distance (km)"},
-    )
+    log_distances = dff["titulaire_distance"].log(10).to_numpy()
+
+    fig = go.Figure()
+    if len(log_distances) > 0:
+        counts, bin_edges = np.histogram(log_distances, bins=50)
+        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+        bin_widths = bin_edges[1:] - bin_edges[:-1]
+        bin_edges_km = 10.0 ** bin_edges
+
+        def fmt_km(km):
+            if km < 10:
+                return f"{km:.1f}"
+            elif km < 1000:
+                return f"{round(km)}"
+            else:
+                return f"{round(km):,}".replace(",", " ")
+
+        hover_texts = []
+        for i in range(len(counts)):
+            nb = f"{counts[i]:,}".replace(",", " ")
+            hover_texts.append(
+                f"Distance : {fmt_km(bin_edges_km[i])} – {fmt_km(bin_edges_km[i + 1])} km"
+                f"<br>Nombre de marchés : {nb}"
+            )
+
+        fig.add_trace(
+            go.Bar(
+                x=bin_centers,
+                y=counts,
+                width=bin_widths,
+                hovertext=hover_texts,
+                hoverinfo="text",
+            )
+        )
+        fig.update_layout(bargap=0)
+
     fig.update_xaxes(
         tickvals=[0, 1, 2, 3, 4],
         ticktext=["1", "10", "100", "1 000", "10 000"],
