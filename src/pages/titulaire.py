@@ -16,7 +16,13 @@ from dash import (
 )
 
 from src.callbacks import get_top_org_table
-from src.figures import DataTable, make_column_picker, point_on_map
+from src.figures import (
+    DataTable,
+    get_distance_histogram,
+    make_card,
+    make_column_picker,
+    point_on_map,
+)
 from src.utils import (
     columns,
     df,
@@ -140,6 +146,7 @@ layout = [
                             html.Div(className="marches_table", id="top10_acheteurs"),
                         ],
                     ),
+                    html.Div(id="titulaire-distance-histogram"),
                 ],
             ),
             # récupérer les données de l'acheteur sur l'api annuaire
@@ -490,3 +497,21 @@ def toggle_titulaire_columns(click_open, click_close, is_open):
 )
 def reset_view(n_clicks):
     return "", []
+
+
+@callback(
+    Output("titulaire-distance-histogram", "children"),
+    Input("titulaire_data", "data"),
+)
+def update_titulaire_distance_histogram(data):
+    lff = pl.LazyFrame(data)
+    if "titulaire_distance" in lff.collect_schema().names():
+        lff = lff.with_columns(
+            pl.col("titulaire_distance").cast(pl.Float64, strict=False)
+        )
+    fig = get_distance_histogram(lff)
+    return make_card(
+        title="Distance acheteur–titulaire",
+        subtitle="en nombre de marchés, échelle logarithmique",
+        fig=fig,
+    )
