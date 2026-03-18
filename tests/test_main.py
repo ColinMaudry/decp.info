@@ -216,6 +216,47 @@ def test_008_search_to_observatoire(dash_duo: DashComposite):
     )
 
 
+def test_010_observatoire_montant_filter():
+    import datetime
+
+    import polars as pl
+
+    from pages.observatoire import _apply_filters
+    from src.app import (
+        app,  # noqa: F401 – instantiates the Dash app before register_page() calls
+    )
+
+    data = pl.DataFrame(
+        {
+            "uid": ["1", "2", "3"],
+            "montant": [100.0, 500.0, 1000.0],
+            "dateNotification": [datetime.date(2025, 1, 1)] * 3,
+        }
+    )
+
+    def apply(min_val=None, max_val=None):
+        return _apply_filters(
+            data.lazy(),
+            year="2025",
+            acheteur_id=None,
+            acheteur_categorie=None,
+            acheteur_departement_code=None,
+            titulaire_id=None,
+            titulaire_categorie=None,
+            titulaire_departement_code=None,
+            marche_type=None,
+            considerations_sociales=None,
+            considerations_environnementales=None,
+            montant_min=min_val,
+            montant_max=max_val,
+        ).collect()
+
+    assert apply().height == 3
+    assert apply(min_val=400).height == 2  # 500, 1000
+    assert apply(max_val=500).height == 2  # 100, 500
+    assert apply(min_val=200, max_val=600).height == 1  # 500 only
+
+
 def test_009_observatoire_filter_persistence(dash_duo: DashComposite):
     import time
 

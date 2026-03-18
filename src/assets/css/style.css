@@ -201,7 +201,8 @@ p.version > a {
   margin-bottom: 6px;
 }
 
-#filters input[type="text"] {
+#filters input[type="text"],
+#filters input[type="number"] {
   border: 1px #ccc solid;
   border-radius: 3px;
   padding-left: 8px;
@@ -577,4 +578,14 @@ summary > h4 {
   .a-propos-toc {
     display: none;
   }
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
 }

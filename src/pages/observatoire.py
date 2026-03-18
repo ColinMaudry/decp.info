@@ -67,6 +67,8 @@ def _apply_filters(
     marche_type,
     considerations_sociales,
     considerations_environnementales,
+    montant_min=None,
+    montant_max=None,
 ) -> pl.LazyFrame:
     if year:
         lff = lff.filter(pl.col("dateNotification").dt.year() == int(year))
@@ -115,6 +117,12 @@ def _apply_filters(
             .list.len()
             > 0
         )
+
+    if montant_min is not None:
+        lff = lff.filter(pl.col("montant") >= montant_min)
+
+    if montant_max is not None:
+        lff = lff.filter(pl.col("montant") <= montant_max)
 
     return lff
 
@@ -271,6 +279,32 @@ Alors, on fait comment ?
                                             ),
                                         ),
                                     ),
+                                    dbc.Row(
+                                        [
+                                            dbc.Col(
+                                                dcc.Input(
+                                                    id="dashboard_montant_min",
+                                                    placeholder="Montant min.",
+                                                    type="number",
+                                                    min=0,
+                                                    debounce=True,
+                                                    style={"width": "100%"},
+                                                ),
+                                                width=6,
+                                            ),
+                                            dbc.Col(
+                                                dcc.Input(
+                                                    id="dashboard_montant_max",
+                                                    placeholder="Montant max.",
+                                                    type="number",
+                                                    min=0,
+                                                    debounce=True,
+                                                    style={"width": "100%"},
+                                                ),
+                                                width=6,
+                                            ),
+                                        ]
+                                    ),
                                     dcc.Download(id="download-observatoire"),
                                     dbc.Button(
                                         "Télécharger au format Excel",
@@ -313,6 +347,8 @@ Alors, on fait comment ?
     Output("dashboard_marche_type", "value"),
     Output("dashboard_marche_considerationsSociales", "value"),
     Output("dashboard_marche_considerationsEnvironnementales", "value"),
+    Output("dashboard_montant_min", "value"),
+    Output("dashboard_montant_max", "value"),
     Input("dashboard_url", "search"),
     Input("dashboard_url", "pathname"),
     State("observatoire-filters", "data"),
@@ -334,6 +370,8 @@ def restore_filters(search, _pathname, stored_filters):
                 None,
                 None,
                 None,
+                None,
+                None,
             )
 
     if stored_filters:
@@ -348,9 +386,11 @@ def restore_filters(search, _pathname, stored_filters):
             stored_filters.get("marche_type"),
             stored_filters.get("considerations_sociales"),
             stored_filters.get("considerations_environnementales"),
+            stored_filters.get("montant_min"),
+            stored_filters.get("montant_max"),
         )
 
-    return (no_update,) * 10
+    return (no_update,) * 12
 
 
 @callback(
@@ -365,6 +405,8 @@ def restore_filters(search, _pathname, stored_filters):
     Input("dashboard_marche_type", "value"),
     Input("dashboard_marche_considerationsSociales", "value"),
     Input("dashboard_marche_considerationsEnvironnementales", "value"),
+    Input("dashboard_montant_min", "value"),
+    Input("dashboard_montant_max", "value"),
     prevent_initial_call=True,
 )
 def save_filters_to_storage(
@@ -378,6 +420,8 @@ def save_filters_to_storage(
     marche_type,
     considerations_sociales,
     considerations_environnementales,
+    montant_min,
+    montant_max,
 ):
     return {
         "year": year,
@@ -390,6 +434,8 @@ def save_filters_to_storage(
         "marche_type": marche_type,
         "considerations_sociales": considerations_sociales,
         "considerations_environnementales": considerations_environnementales,
+        "montant_min": montant_min,
+        "montant_max": montant_max,
     }
 
 
@@ -453,6 +499,8 @@ def sync_observatoire_share_url(acheteur_id, titulaire_id, href):
     Input("dashboard_marche_type", "value"),
     Input("dashboard_marche_considerationsSociales", "value"),
     Input("dashboard_marche_considerationsEnvironnementales", "value"),
+    Input("dashboard_montant_min", "value"),
+    Input("dashboard_montant_max", "value"),
 )
 def udpate_dashboard_cards(
     dashboard_year,
@@ -465,6 +513,8 @@ def udpate_dashboard_cards(
     dashboard_marche_type,
     dashboard_marche_considerations_sociales,
     dashboard_marche_considerations_environnementales,
+    dashboard_montant_min,
+    dashboard_montant_max,
 ):
     lff: pl.LazyFrame = df.lazy()
     lff = lff.select(
@@ -490,6 +540,8 @@ def udpate_dashboard_cards(
         dashboard_marche_type,
         dashboard_marche_considerations_sociales,
         dashboard_marche_considerations_environnementales,
+        montant_min=dashboard_montant_min,
+        montant_max=dashboard_montant_max,
     )
 
     # Génération des métriques
@@ -618,6 +670,8 @@ def udpate_dashboard_cards(
     State("dashboard_marche_type", "value"),
     State("dashboard_marche_considerationsSociales", "value"),
     State("dashboard_marche_considerationsEnvironnementales", "value"),
+    State("dashboard_montant_min", "value"),
+    State("dashboard_montant_max", "value"),
     prevent_initial_call=True,
 )
 def download_observatoire(
@@ -632,6 +686,8 @@ def download_observatoire(
     marche_type,
     considerations_sociales,
     considerations_environnementales,
+    montant_min,
+    montant_max,
 ):
     lff = _apply_filters(
         df.lazy(),
@@ -645,6 +701,8 @@ def download_observatoire(
         marche_type,
         considerations_sociales,
         considerations_environnementales,
+        montant_min=montant_min,
+        montant_max=montant_max,
     )
 
     def to_bytes(buffer):
