@@ -19,6 +19,7 @@ from dash import (
 
 from src.figures import (
     get_barchart_sources,
+    get_distance_histogram,
     get_duplicate_matrix,
     get_geographic_maps,
     make_card,
@@ -625,6 +626,15 @@ def udpate_dashboard_cards(
             title="Type d'achat",
             subtitle="en nombre de marchés attribués",
             fig=donut_marche_type,
+        )
+    )
+
+    distance_histogram = get_distance_histogram(lff)
+    cards.append(
+        make_card(
+            title="Distance acheteur–titulaire",
+            subtitle="en nombre de marchés, échelle logarithmique",
+            fig=distance_histogram,
         )
     )
 
