@@ -2,7 +2,7 @@ import polars as pl
 from dash import html
 
 from src.figures import DataTable
-from utils import add_links_in_dict, format_values, setup_table_columns
+from src.utils import add_links_in_dict, format_values, setup_table_columns
 
 
 def get_top_org_table(data, org_type: str, extra_columns: list):

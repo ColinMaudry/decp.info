@@ -19,8 +19,7 @@ from dash import (
     register_page,
 )
 
-from figures import make_column_picker
-from src.figures import DataTable
+from src.figures import DataTable, make_column_picker
 from src.utils import (
     columns,
     df,
@@ -31,8 +30,8 @@ from src.utils import (
     meta_content,
     schema,
     sort_table_data,
+    prepare_table_data,
 )
-from utils import prepare_table_data
 
 update_date_timestamp = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
 update_date = datetime.fromtimestamp(update_date_timestamp).strftime("%d/%m/%Y")

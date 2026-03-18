@@ -45,6 +45,10 @@ Tests require a running Chrome/Chromium browser. They use `DashComposite` from `
 - `src/pages/*.py` — each page registers itself with `@register_page()` and owns its own layout and callbacks
 - `run.py` — dev entry point; exports `server` (Flask) for gunicorn
 
+### Module imports
+
+- always import modules from the app starting with `src.` (e.g. `src.utils.`, `src.pages.recherche`, etc.)
+
 ### Key pages
 
 | Page              | URL             | Purpose                                |
