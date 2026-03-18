@@ -197,6 +197,16 @@ p.version > a {
   background-color: rgba(255, 240, 240, 0.4);
 }
 
+#filters .col > * {
+  margin-bottom: 6px;
+}
+
+#filters input[type="text"] {
+  border: 1px #ccc solid;
+  border-radius: 3px;
+  padding-left: 8px;
+}
+
 /* --- Tables (Dash & Custom) --- */
 
 /* Table Menu (Exports etc) */

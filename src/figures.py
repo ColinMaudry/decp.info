@@ -52,19 +52,18 @@ def get_yearly_statistics(statistics, today_str) -> html.Div:
     return html.Div(children=table, className="marches_table")
 
 
-def get_barchart_sources(df_source: pl.DataFrame, type_date: str):
-    lf = df_source.lazy()
+def get_barchart_sources(lff: pl.LazyFrame, type_date: str):
     labels = {
         "dateNotification": "notification",
         "datePublicationDonnees": "publication des données",
     }
 
-    lf = lf.select("uid", type_date, "sourceDataset")
+    lff = lff.select("uid", type_date, "sourceDataset")
 
-    lf = lf.unique("uid")
+    lff = lff.unique("uid")
 
     # Rassemblement des datasets Atexo pour ne pas surcharger le graphique
-    lf = lf.with_columns(
+    lff = lff.with_columns(
         pl.when(pl.col("sourceDataset").str.starts_with("atexo"))
         .then(pl.lit("plateformes atexo"))
         .otherwise(pl.col("sourceDataset"))
@@ -72,34 +71,34 @@ def get_barchart_sources(df_source: pl.DataFrame, type_date: str):
     )
 
     # Rassemblement des datasets AWS pour ne pas surcharger le graphique
-    lf = lf.with_columns(
+    lff = lff.with_columns(
         pl.when(pl.col("sourceDataset").str.contains(r"aws|marches\-publics.info"))
         .then(pl.lit("aws"))
         .otherwise(pl.col("sourceDataset"))
         .alias("sourceDataset")
     )
 
-    lf = lf.with_columns(pl.col(type_date).dt.year().alias("annee"))
-    lf = lf.filter(
+    lff = lff.with_columns(pl.col(type_date).dt.year().alias("annee"))
+    lff = lff.filter(
         pl.col(type_date).is_not_null() & pl.col("annee").is_between(2019, 2025)
     )
-    lf = lf.with_columns(pl.col(type_date).cast(pl.String).str.head(7))
-    lf = (
-        lf.group_by([type_date, "sourceDataset"])
+    lff = lff.with_columns(pl.col(type_date).cast(pl.String).str.head(7))
+    lff = (
+        lff.group_by([type_date, "sourceDataset"])
         .len()
         .sort(by=[type_date, "len"], descending=True)
     )
 
-    # lf = lf.with_columns(
+    # lff = lff.with_columns(
     #     pl.when(pl.col("sourceDataset").is_null()).then(
     #         pl.lit("Source inconnue")).alias("sourceDataset")
     #     )
 
-    lf = lf.sort(by=["sourceDataset"], descending=False)
-    df: pl.DataFrame = lf.collect(engine="streaming")
+    lff = lff.sort(by=["sourceDataset"], descending=False)
+    dff: pl.DataFrame = lff.collect(engine="streaming")
 
     fig = px.bar(
-        df,
+        dff,
         x=type_date,
         y="len",
         color="sourceDataset",
@@ -111,7 +110,9 @@ def get_barchart_sources(df_source: pl.DataFrame, type_date: str):
         },
     )
 
-    return fig
+    graph = dcc.Graph(figure=fig)
+
+    return graph
 
 
 def get_sources_tables(source_path) -> html.Div:
@@ -301,33 +302,24 @@ class DataTable(dash_table.DataTable):
         )
 
 
-def get_duplicate_matrix() -> html.Div:
+def get_duplicate_matrix() -> dcc.Graph:
     """
     Fonction développée avec l'aide de la LLM Euria d'Infomaniak.
     :return:
     """
-    result_df = pl.read_parquet(
+    lff = pl.scan_parquet(
         "https://www.data.gouv.fr/api/1/datasets/r/a545bf6c-8b24-46ed-b49f-a32bf02eaffa"
     ).sort("sourceDataset")
-    result_df = result_df.select(
-        ["sourceDataset", "unique"] + sorted(result_df.columns[2:])
+    lff = lff.select(
+        ["sourceDataset", "unique"] + sorted(lff.collect_schema().names()[2:])
     )
 
-    description = dcc.Markdown("""
-    Ce graphique illustre les doublons de marchés publics entre sources, c'est-à-dire la proportion de marchés publiés par plus d'une source. Il s'appuie sur les identifiants `uid` qui sont pour chaque marché la concaténation du SIRET de l'acheteur et de l'identifiant interne du marché.
-
-    **Comment lire ce graphique ?**
-
-    On part des codes de sources de données en ordonnée. Ces jeux de données sont documentés dans [À propos](/a-propos#sources).
-
-    La première colonne (**unique**) représente le pourcentage de marchés fournis par cette source qui sont uniquement disponibles dans cette source. Plus le rouge est foncé, plus important est le pourcentage. Donc, à l'inverse, plus le rouge est clair dans la première colonne, plus la source en ordonnée a des marchés en commun avec d'autres sources, et donc plus on trouvera sur la même ligne d'autres cases plus ou moins foncées qui indiqueront avec quelles autres sources cette source partage des marchés.
-
-    Passez votre souris sur une case pour avoir les pourcentages exacts. À noter que ces statistiques sont produites avant le dédoublonnement qui a lieu avant la publication en Open Data et sur ce site.""")
+    dff = lff.collect()
 
     # Extract data
-    z_data = result_df.select(pl.all().exclude("sourceDataset")).fill_null(0).to_numpy()
-    x_labels = result_df.columns[1:]  # columns after "sourceDataset"
-    y_labels = result_df["sourceDataset"].to_list()
+    z_data = dff.select(pl.all().exclude("sourceDataset")).fill_null(0).to_numpy()
+    x_labels = dff.columns[1:]  # columns after "sourceDataset"
+    y_labels = dff["sourceDataset"].to_list()
 
     # Create heatmap
     fig = go.Figure(
@@ -345,7 +337,7 @@ def get_duplicate_matrix() -> html.Div:
             hoverongaps=False,
             showscale=True,
             hovertemplate=(
-                "<b>%{z:.0%}</b> des marchés de <b>%{y}</b> sont également présents dans <b>%{x}</b>"
+                "<b>%{z:.0%}</b> des marchés présents dans <b>%{y}</b> sont également présents dans <b>%{x}</b>"
             ),
         )
     )
@@ -364,13 +356,7 @@ def get_duplicate_matrix() -> html.Div:
         margin=dict(l=100, r=50, t=80, b=100),  # Add margin for labels
     )
 
-    return html.Div(
-        children=[
-            html.H3("Doublons de marchés entre les sources"),
-            description,
-            dcc.Graph(figure=fig),
-        ]
-    )
+    return dcc.Graph(figure=fig)
 
 
 def get_geographic_maps(dff: pl.DataFrame) -> list | None:
@@ -624,20 +610,39 @@ def make_card(
     return card
 
 
-def make_donut(lff: pl.LazyFrame, names_col):
+def make_donut(
+    lff: pl.LazyFrame,
+    names_col,
+    per_uid: bool,
+    nulls="?",
+):
     title = data_schema[names_col]["title"]
     lff = lff.rename({names_col: title})
     lff = lff.select("uid", title)
+
+    if per_uid:
+        lff = lff.group_by("uid").first()
+
     lff = lff.group_by(title).len("Nombre")
-    lff = lff.with_columns(pl.col(title).replace(None, pl.lit("?")))
+    lff = lff.with_columns(pl.col(title).replace(None, pl.lit(nulls)))
+    dff = lff.collect(engine="streaming")
+    dff = dff.with_columns(
+        pl.col("Nombre")
+        .map_elements(format_number, return_dtype=pl.String)
+        .alias("Nombre_fmt")
+    )
     fig = px.pie(
-        lff.collect(engine="streaming"),
+        dff,
         values="Nombre",
         names=title,
         hole=0.4,
         color_discrete_sequence=px.colors.qualitative.Safe,
+        custom_data=["Nombre_fmt"],
     )
-    fig = fig.update_traces(texttemplate="<b>%{label}</b><br><b>%{percent}</b>")
+    fig = fig.update_traces(
+        texttemplate="<b>%{label}</b><br><b>%{percent}</b>",
+        hovertemplate="<b>%{label}</b><br>%{customdata[0]}<extra></extra>",
+    )
     fig = fig.update_layout(showlegend=False, font=dict(size=14))
     graph = dcc.Graph(figure=fig)
     return graph
