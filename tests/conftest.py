@@ -48,10 +48,6 @@ def test_data():
     pl.DataFrame(data).write_parquet("tests/test.parquet")
     yield path
 
-    if os.path.exists(path):
-        os.unlink(path)
-        print(path, "deleted")
-
 
 def pytest_setup_options():
     options = Options()
