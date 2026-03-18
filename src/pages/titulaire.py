@@ -19,7 +19,6 @@ from src.callbacks import get_top_org_table
 from src.figures import (
     DataTable,
     get_distance_histogram,
-    make_card,
     make_column_picker,
     point_on_map,
 )
@@ -117,44 +116,50 @@ layout = [
                         className="mb-2",
                         children=[
                             dbc.Col(
-                                html.Div(
-                                    className="org_infos",
-                                    children=[
-                                        # TODO: ajouter le type d'acheteur : commune, CD, CR, etc.
-                                        html.P(["Commune : ", html.Strong(id="titulaire_commune")]),
-                                        html.P(
-                                            [
-                                                "Département : ",
-                                                html.Strong(id="titulaire_departement"),
-                                            ]
-                                        ),
-                                        html.P(["Région : ", html.Strong(id="titulaire_region")]),
-                                        html.A(
-                                            id="titulaire_lien_annuaire",
-                                            children="Plus de détails sur l'Annuaire des entreprises",
-                                        ),
-                                    ],
-                                ),
+                                className="org_infos",
+                                children=[
+                                    # TODO: ajouter le type d'acheteur : commune, CD, CR, etc.
+                                    html.P(
+                                        [
+                                            "Commune : ",
+                                            html.Strong(id="titulaire_commune"),
+                                        ]
+                                    ),
+                                    html.P(
+                                        [
+                                            "Département : ",
+                                            html.Strong(id="titulaire_departement"),
+                                        ]
+                                    ),
+                                    html.P(
+                                        [
+                                            "Région : ",
+                                            html.Strong(id="titulaire_region"),
+                                        ]
+                                    ),
+                                    html.A(
+                                        id="titulaire_lien_annuaire",
+                                        children="Plus de détails sur l'Annuaire des entreprises",
+                                    ),
+                                ],
                                 width=4,
                             ),
                             dbc.Col(
-                                html.Div(
-                                    children=[
-                                        html.P(id="titulaire_titre_stats"),
-                                        html.P(id="titulaire_marches_remportes"),
-                                        html.P(id="titulaire_acheteurs_differents"),
-                                        html.Button(
-                                            "Téléchargement au format Excel",
-                                            id="btn-download-data-titulaire",
-                                            className="btn btn-primary",
-                                        ),
-                                        dcc.Download(id="download-data-titulaire"),
-                                    ],
-                                ),
+                                children=[
+                                    html.P(id="titulaire_titre_stats"),
+                                    html.P(id="titulaire_marches_remportes"),
+                                    html.P(id="titulaire_acheteurs_differents"),
+                                    html.Button(
+                                        "Téléchargement au format Excel",
+                                        id="btn-download-data-titulaire",
+                                        className="btn btn-primary",
+                                    ),
+                                    dcc.Download(id="download-data-titulaire"),
+                                ],
                                 width=4,
                             ),
                             dbc.Col(
-                                html.Div(id="titulaire_map"),
+                                id="titulaire_map",
                                 width=4,
                             ),
                         ],
@@ -165,14 +170,17 @@ layout = [
                                 html.Div(
                                     children=[
                                         html.H3("Top acheteurs"),
-                                        html.Div(className="marches_table", id="top10_acheteurs"),
+                                        html.Div(
+                                            className="marches_table",
+                                            id="top10_acheteurs",
+                                        ),
                                     ],
                                 ),
                                 width=8,
                             ),
+                            dbc.Col(id="titulaire-distance-histogram", width=4),
                         ],
                     ),
-                    html.Div(id="titulaire-distance-histogram"),
                 ],
             ),
             # récupérer les données de l'acheteur sur l'api annuaire
@@ -536,8 +544,8 @@ def update_titulaire_distance_histogram(data):
             pl.col("titulaire_distance").cast(pl.Float64, strict=False)
         )
     fig = get_distance_histogram(lff)
-    return make_card(
-        title="Distance acheteur–titulaire",
-        subtitle="en nombre de marchés, échelle logarithmique",
-        fig=fig,
-    )
+    return [
+        html.H3("Distance acheteur-titulaire"),
+        html.H6("par nombre de marchés", className="card-subtitle mb-2 text-muted"),
+        fig,
+    ]

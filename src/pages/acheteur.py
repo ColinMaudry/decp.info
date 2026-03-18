@@ -117,44 +117,47 @@ layout = [
                         className="mb-2",
                         children=[
                             dbc.Col(
-                                html.Div(
-                                    className="org_infos",
-                                    children=[
-                                        # TODO: ajouter le type d'acheteur : commune, CD, CR, etc.
-                                        html.P(["Commune : ", html.Strong(id="acheteur_commune")]),
-                                        html.P(
-                                            [
-                                                "Département : ",
-                                                html.Strong(id="acheteur_departement"),
-                                            ]
-                                        ),
-                                        html.P(["Région : ", html.Strong(id="acheteur_region")]),
-                                        html.A(
-                                            id="acheteur_lien_annuaire",
-                                            children="Plus de détails sur l'Annuaire des entreprises",
-                                        ),
-                                    ],
-                                ),
+                                className="org_infos",
+                                children=[
+                                    # TODO: ajouter le type d'acheteur : commune, CD, CR, etc.
+                                    html.P(
+                                        [
+                                            "Commune : ",
+                                            html.Strong(id="acheteur_commune"),
+                                        ]
+                                    ),
+                                    html.P(
+                                        [
+                                            "Département : ",
+                                            html.Strong(id="acheteur_departement"),
+                                        ]
+                                    ),
+                                    html.P(
+                                        ["Région : ", html.Strong(id="acheteur_region")]
+                                    ),
+                                    html.A(
+                                        id="acheteur_lien_annuaire",
+                                        children="Plus de détails sur l'Annuaire des entreprises",
+                                    ),
+                                ],
                                 width=4,
                             ),
                             dbc.Col(
-                                html.Div(
-                                    children=[
-                                        html.P(id="acheteur_titre_stats"),
-                                        html.P(id="acheteur_marches_attribues"),
-                                        html.P(id="acheteur_titulaires_differents"),
-                                        html.Button(
-                                            "Téléchargement au format Excel",
-                                            id="btn-download-data-acheteur",
-                                            className="btn btn-primary",
-                                        ),
-                                        dcc.Download(id="download-data-acheteur"),
-                                    ],
-                                ),
+                                children=[
+                                    html.P(id="acheteur_titre_stats"),
+                                    html.P(id="acheteur_marches_attribues"),
+                                    html.P(id="acheteur_titulaires_differents"),
+                                    html.Button(
+                                        "Téléchargement au format Excel",
+                                        id="btn-download-data-acheteur",
+                                        className="btn btn-primary",
+                                    ),
+                                    dcc.Download(id="download-data-acheteur"),
+                                ],
                                 width=4,
                             ),
                             dbc.Col(
-                                html.Div(id="acheteur_map"),
+                                id="acheteur_map",
                                 width=4,
                             ),
                         ],
@@ -162,17 +165,13 @@ layout = [
                     dbc.Row(
                         children=[
                             dbc.Col(
-                                html.Div(
-                                    children=[
-                                        html.H3("Top titulaires"),
-                                        html.Div(className="marches_table", id="top10_titulaires"),
-                                    ],
-                                ),
+                                className="marches_table",
+                                id="top10_titulaires",
                                 width=8,
                             ),
+                            dbc.Col(id="acheteur-distance-histogram", width=4),
                         ],
                     ),
-                    html.Div(id="acheteur-distance-histogram"),
                 ],
             ),
             # récupérer les données de l'acheteur sur l'api annuaire
@@ -373,7 +372,8 @@ def get_last_marches_data(
     Input(component_id="acheteur_data", component_property="data"),
 )
 def get_top_titulaires(data):
-    return get_top_org_table(data, "titulaire", ["titulaire_distance", "montant"])
+    table = get_top_org_table(data, "titulaire", ["titulaire_distance", "montant"])
+    return make_card(fig=table, title="Top titulaires", lg=12, xl=12)
 
 
 @callback(
@@ -522,4 +522,6 @@ def update_acheteur_distance_histogram(data):
         title="Distance acheteur–titulaire",
         subtitle="en nombre de marchés, échelle logarithmique",
         fig=fig,
+        lg=12,
+        xl=12,
     )
