@@ -354,7 +354,7 @@ def get_last_marches_data(
     Input(component_id="titulaire_data", component_property="data"),
 )
 def get_top_acheteurs(data):
-    return get_top_org_table(data, "acheteur")
+    return get_top_org_table(data, "acheteur", ["titulaire_distance", "montant"])
 
 
 @callback(

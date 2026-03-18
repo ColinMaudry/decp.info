@@ -5,14 +5,14 @@ from src.figures import DataTable
 from utils import add_links_in_dict, format_values, setup_table_columns
 
 
-def get_top_org_table(data, org_type: str):
+def get_top_org_table(data, org_type: str, extra_columns: list):
     dff = pl.DataFrame(data, strict=False, infer_schema_length=5000)
     if dff.height == 0:
         return html.Div()
 
-    dff = dff.select(
-        ["uid", f"{org_type}_id", f"{org_type}_nom", "titulaire_distance", "montant"]
-    )
+    extra_columns = [] if extra_columns is None else extra_columns
+
+    dff = dff.select(["uid", f"{org_type}_id", f"{org_type}_nom"] + extra_columns)
     dff_nb = dff.group_by(
         f"{org_type}_id", f"{org_type}_nom", "titulaire_distance"
     ).agg(pl.len().alias("Attributions"), pl.sum("montant").alias("montant"))
