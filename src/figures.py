@@ -579,6 +579,24 @@ def make_clusters_map(region: dict) -> dl.Map:
     return leaflet_map
 
 
+def get_distance_histogram(lff: pl.LazyFrame) -> dcc.Graph:
+    dff = lff.select("titulaire_distance").drop_nulls().collect()
+    dff = dff.with_columns(pl.col("titulaire_distance").log(10))
+    fig = px.histogram(
+        dff,
+        x="titulaire_distance",
+        nbins=50,
+        labels={"titulaire_distance": "Distance (km)"},
+    )
+    fig.update_xaxes(
+        tickvals=[0, 1, 2, 3, 4],
+        ticktext=["1", "10", "100", "1 000", "10 000"],
+        title_text="Distance (km)",
+    )
+    fig.update_yaxes(title_text="Nombre de marchés")
+    return dcc.Graph(figure=fig)
+
+
 def make_card(
     title: str, subtitle=None, fig=None, paragraphs=None, lg=6, xl=4
 ) -> dbc.Col:

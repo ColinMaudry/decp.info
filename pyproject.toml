@@ -42,6 +42,7 @@ testpaths = [
 ]
 env = [
     "DATA_FILE_PARQUET_PATH=tests/test.parquet",
-    "DEVELOPMENT=true"
+    "DEVELOPMENT=true",
+    "DATA_SCHEMA_PATH=/home/colin/git/decp-processing/dist/schema.json"
 ]
 addopts = "-p no:warnings"

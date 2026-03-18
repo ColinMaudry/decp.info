@@ -302,3 +302,36 @@ def test_009_observatoire_filter_persistence(dash_duo: DashComposite):
     assert acheteur_input.get_attribute("value") == "123", (
         "URL param acheteur_id should override the value stored in localStorage"
     )
+
+
+def test_get_distance_histogram_returns_graph():
+    import polars as pl
+    from dash import dcc
+
+    from src.figures import get_distance_histogram
+
+    lff = pl.LazyFrame({"titulaire_distance": [1, 10, 100, 500, 1000]})
+    result = get_distance_histogram(lff)
+    assert isinstance(result, dcc.Graph)
+
+
+def test_get_distance_histogram_handles_nulls():
+    import polars as pl
+    from dash import dcc
+
+    from src.figures import get_distance_histogram
+
+    lff = pl.LazyFrame({"titulaire_distance": [None, None, 50]})
+    result = get_distance_histogram(lff)
+    assert isinstance(result, dcc.Graph)
+
+
+def test_get_distance_histogram_all_nulls():
+    import polars as pl
+    from dash import dcc
+
+    from src.figures import get_distance_histogram
+
+    lff = pl.LazyFrame({"titulaire_distance": pl.Series([], dtype=pl.Int64)})
+    result = get_distance_histogram(lff)
+    assert isinstance(result, dcc.Graph)
