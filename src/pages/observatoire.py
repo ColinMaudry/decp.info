@@ -303,27 +303,54 @@ Alors, on fait comment ?
 
 
 @callback(
+    Output("dashboard_year", "value"),
     Output("dashboard_acheteur_id", "value"),
+    Output("dashboard_acheteur_categorie", "value"),
+    Output("dashboard_acheteur_departement_code", "value"),
     Output("dashboard_titulaire_id", "value"),
-    # Output("dashboard_url", "search"),
+    Output("dashboard_titulaire_categorie", "value"),
+    Output("dashboard_titulaire_departement_code", "value"),
+    Output("dashboard_marche_type", "value"),
+    Output("dashboard_marche_considerationsSociales", "value"),
+    Output("dashboard_marche_considerationsEnvironnementales", "value"),
     Input("dashboard_url", "search"),
+    Input("dashboard_url", "pathname"),
+    State("observatoire-filters", "data"),
 )
-def restore_filters_from_url(search):
-    if not search:
-        return no_update, no_update
+def restore_filters(search, _pathname, stored_filters):
+    if search:
+        params = urllib.parse.parse_qs(search.lstrip("?"))
+        acheteur_id = (params.get("acheteur_id") or [None])[0] or None
+        titulaire_id = (params.get("titulaire_id") or [None])[0] or None
+        if acheteur_id or titulaire_id:
+            return (
+                None,
+                acheteur_id,
+                None,
+                None,
+                titulaire_id,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
 
-    params = urllib.parse.parse_qs(search.lstrip("?"))
+    if stored_filters:
+        return (
+            stored_filters.get("year"),
+            stored_filters.get("acheteur_id"),
+            stored_filters.get("acheteur_categorie"),
+            stored_filters.get("acheteur_departement_code"),
+            stored_filters.get("titulaire_id"),
+            stored_filters.get("titulaire_categorie"),
+            stored_filters.get("titulaire_departement_code"),
+            stored_filters.get("marche_type"),
+            stored_filters.get("considerations_sociales"),
+            stored_filters.get("considerations_environnementales"),
+        )
 
-    def get_param_value(key):
-        values = params.get(key)
-        if values and values[0] is not None:
-            return values[0]
-        return no_update
-
-    acheteur_id = get_param_value("acheteur_id")
-    titulaire_id = get_param_value("titulaire_id")
-
-    return acheteur_id, titulaire_id
+    return (no_update,) * 10
 
 
 @callback(
