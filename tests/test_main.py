@@ -51,7 +51,7 @@ def test_002_filter_persistence(dash_duo: DashComposite):
         _filter_input: WebElement = dash_duo.find_element(filter_input_selector)
         return _filter_input
 
-    for page in ["tableau", "acheteurs/a1", "titulaires/t1"]:
+    for page in ["tableau", "acheteurs/123", "titulaires/345"]:
         print("page:", page)
         filter_input = open_page_and_check_filter_input()
         filter_input.send_keys("11")  # a UID that doesn't exist
@@ -73,8 +73,8 @@ def test_003_tableau_download(dash_duo: DashComposite):
 
     outputs = [
         download_data(1, "", [], None),
-        download_acheteur_data(1, dicts, "a1", "2025"),
-        download_titulaire_data(1, dicts, "t1", "2025"),
+        download_acheteur_data(1, dicts, "123", "2025"),
+        download_titulaire_data(1, dicts, "345", "2025"),
     ]
     for output in outputs:
         assert isinstance(output, dict)
@@ -95,7 +95,7 @@ def test_004_add_links_observatoire_acheteur():
 
     dff = pl.DataFrame(
         {
-            "acheteur_id": ["a1"],
+            "acheteur_id": ["123"],
             "acheteur_nom": ["ACHETEUR 1"],
         }
     )
@@ -104,9 +104,9 @@ def test_004_add_links_observatoire_acheteur():
     id_value = result["acheteur_id"][0]
 
     # acheteur_nom should contain detail link + observatoire link
-    assert "/acheteurs/a1" in nom_value
+    assert "/acheteurs/123" in nom_value
     assert "ACHETEUR 1" in nom_value
-    assert "/observatoire?acheteur_id=a1" in nom_value
+    assert "/observatoire?acheteur_id=123" in nom_value
     assert "📊" in nom_value
 
     # acheteur_id should NOT contain observatoire link
@@ -120,7 +120,7 @@ def test_005_add_links_observatoire_titulaire():
 
     dff = pl.DataFrame(
         {
-            "titulaire_id": ["t1"],
+            "titulaire_id": ["345"],
             "titulaire_nom": ["TITULAIRE 1"],
             "titulaire_typeIdentifiant": ["SIRET"],
         }
@@ -130,9 +130,9 @@ def test_005_add_links_observatoire_titulaire():
     id_value = result["titulaire_id"][0]
 
     # titulaire_nom should contain detail link + observatoire link
-    assert "/titulaires/t1" in nom_value
+    assert "/titulaires/345" in nom_value
     assert "TITULAIRE 1" in nom_value
-    assert "/observatoire?titulaire_id=t1" in nom_value
+    assert "/observatoire?titulaire_id=345" in nom_value
     assert "📊" in nom_value
 
     # titulaire_id should NOT contain observatoire link
@@ -146,7 +146,7 @@ def test_006_observatoire_url_to_input(dash_duo: DashComposite):
     dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
 
     # Navigate to observatoire with acheteur_id query param
-    dash_duo.wait_for_page(f"{dash_duo.server_url}/observatoire?acheteur_id=a1")
+    dash_duo.wait_for_page(f"{dash_duo.server_url}/observatoire?acheteur_id=123")
     dash_duo.wait_for_element("#dashboard_acheteur_id", timeout=4)
 
     import time
@@ -154,7 +154,7 @@ def test_006_observatoire_url_to_input(dash_duo: DashComposite):
     time.sleep(1)  # Allow callback chain to complete
 
     acheteur_input = dash_duo.find_element("#dashboard_acheteur_id")
-    assert acheteur_input.get_attribute("value") == "a1", (
+    assert acheteur_input.get_attribute("value") == "123", (
         "acheteur_id input should be populated from URL param"
     )
 
@@ -166,7 +166,7 @@ def test_007_observatoire_share_url(dash_duo: DashComposite):
     dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
 
     # Navigate to observatoire with acheteur_id query param
-    dash_duo.wait_for_page(f"{dash_duo.server_url}/observatoire?acheteur_id=a1")
+    dash_duo.wait_for_page(f"{dash_duo.server_url}/observatoire?acheteur_id=123")
     dash_duo.wait_for_element("#observatoire-share-url", timeout=4)
 
     import time
@@ -176,7 +176,7 @@ def test_007_observatoire_share_url(dash_duo: DashComposite):
     share_url_input = dash_duo.find_element("#observatoire-share-url")
     share_url_value = share_url_input.get_attribute("value")
 
-    assert "acheteur_id=a1" in share_url_value, (
+    assert "acheteur_id=123" in share_url_value, (
         f"Share URL should contain acheteur_id param, got: {share_url_value}"
     )
 
@@ -211,6 +211,53 @@ def test_008_search_to_observatoire(dash_duo: DashComposite):
     time.sleep(1)  # Allow callback chain to complete
 
     acheteur_input = dash_duo.find_element("#dashboard_acheteur_id")
-    assert acheteur_input.get_attribute("value") == "a1", (
+    assert acheteur_input.get_attribute("value") == "123", (
         "acheteur_id input should be populated after navigating from search"
+    )
+
+
+def test_009_observatoire_filter_persistence(dash_duo: DashComposite):
+    import time
+
+    from src.app import app
+
+    dash_duo.start_server(app)
+    dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
+
+    # Clear localStorage to start from a clean state
+    dash_duo.driver.execute_script("localStorage.clear()")
+
+    # Navigate to observatoire without URL params
+    dash_duo.wait_for_page(f"{dash_duo.server_url}/observatoire")
+    dash_duo.wait_for_element("#dashboard_acheteur_id", timeout=4)
+
+    # Set the acheteur_id text input; press Enter to trigger the debounced save callback
+    acheteur_input = dash_duo.find_element("#dashboard_acheteur_id")
+    dash_duo.clear_input(acheteur_input)
+    acheteur_input.send_keys("123")
+    acheteur_input.send_keys(Keys.ENTER)
+
+    time.sleep(0.3)  # allow the save callback to write to localStorage
+
+    # Navigate away
+    dash_duo.wait_for_page(f"{dash_duo.server_url}/")
+
+    # Navigate back without URL params
+    dash_duo.wait_for_page(f"{dash_duo.server_url}/observatoire")
+    dash_duo.wait_for_element("#dashboard_acheteur_id", timeout=4)
+    time.sleep(0.5)  # allow restore callback chain to complete
+
+    acheteur_input = dash_duo.find_element("#dashboard_acheteur_id")
+    assert acheteur_input.get_attribute("value") == "123", (
+        "acheteur_id should be restored from localStorage after navigating back"
+    )
+
+    # Also verify URL params still override localStorage
+    dash_duo.wait_for_page(f"{dash_duo.server_url}/observatoire?acheteur_id=123")
+    dash_duo.wait_for_element("#dashboard_acheteur_id", timeout=4)
+    time.sleep(0.5)
+
+    acheteur_input = dash_duo.find_element("#dashboard_acheteur_id")
+    assert acheteur_input.get_attribute("value") == "123", (
+        "URL param acheteur_id should override the value stored in localStorage"
     )
