@@ -580,7 +580,12 @@ def make_clusters_map(region: dict) -> dl.Map:
 
 
 def get_distance_histogram(lff: pl.LazyFrame) -> dcc.Graph:
-    dff = lff.select("titulaire_distance").drop_nulls().collect()
+    dff = (
+        lff.select("titulaire_distance")
+        .drop_nulls()
+        .filter(pl.col("titulaire_distance") > 0)
+        .collect(engine="streaming")
+    )
     dff = dff.with_columns(pl.col("titulaire_distance").log(10))
     fig = px.histogram(
         dff,
