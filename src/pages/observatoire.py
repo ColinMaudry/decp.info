@@ -27,6 +27,8 @@ from src.figures import (
 from src.utils import (
     departements,
     df,
+    df_acheteurs,
+    df_titulaires,
     format_number,
     get_enum_values_as_dict,
     meta_content,
@@ -118,8 +120,8 @@ def _apply_filters(
 
 
 layout = [
-    dcc.Store(id="dashboard-filters"),
     dcc.Location(id="dashboard_url", refresh="callback-nav"),
+    dcc.Store(id="observatoire-filters", storage_type="local"),
     dbc.Modal(
         [
             dbc.ModalHeader(dbc.ModalTitle("Montants")),
@@ -146,7 +148,7 @@ Alors, on fait comment ?
     html.Div(
         className="container-fluid",
         children=[
-            html.H2(name),
+            html.H2(children=[name], id="page_title"),
             dcc.Loading(
                 overlay_style={"visibility": "visible", "filter": "blur(2px)"},
                 id="loading-statistques",
@@ -175,6 +177,7 @@ Alors, on fait comment ?
                                             dcc.Input(
                                                 id="dashboard_acheteur_id",
                                                 placeholder="SIRET",
+                                                debounce=True,
                                                 style={"width": "100%"},
                                             ),
                                         ),
@@ -207,6 +210,7 @@ Alors, on fait comment ?
                                             dcc.Input(
                                                 id="dashboard_titulaire_id",
                                                 placeholder="SIRET",
+                                                debounce=True,
                                                 style={"width": "100%"},
                                             ),
                                         ),
@@ -473,7 +477,11 @@ def udpate_dashboard_cards(
     )
     cards.append(
         make_card(
-            title="Catégorie d'acheteur", fig=donut_acheteur_categorie, lg=12, xl=8
+            title="Catégorie d'acheteur",
+            subtitle="en nombre de marchés attribués",
+            fig=donut_acheteur_categorie,
+            lg=12,
+            xl=8,
         )
     )
 
@@ -481,11 +489,21 @@ def udpate_dashboard_cards(
         lff, "titulaire_categorie", per_uid=False, nulls="?"
     )
     cards.append(
-        make_card(title="Catégorie d'entreprise", fig=donut_titulaire_categorie)
+        make_card(
+            title="Catégorie d'entreprise",
+            subtitle="en nombre de marchés attribués",
+            fig=donut_titulaire_categorie,
+        )
     )
 
     donut_marche_type = make_donut(lff, "type", per_uid=True, nulls="?")
-    cards.append(make_card(title="Type d'achat", fig=donut_marche_type))
+    cards.append(
+        make_card(
+            title="Type d'achat",
+            subtitle="en nombre de marchés attribués",
+            fig=donut_marche_type,
+        )
+    )
 
     geographic_maps: list[dbc.Col] = get_geographic_maps(dff)
 
@@ -573,3 +591,25 @@ def download_observatoire(
 )
 def toggle_montant_modal(n_triggers, _close):
     return isinstance(ctx.triggered_id, dict) and any(n_triggers)
+
+
+@callback(
+    Output("page_title", "children"),
+    Input("dashboard_acheteur_id", "value"),
+    Input("dashboard_titulaire_id", "value"),
+    prevent_initial_call=False,
+)
+def add_organization_name_in_title(acheteur_id, titulaire_id):
+    def lookup_nom(df_org, id_col, nom_col, org_id):
+        match = df_org.filter(pl.col(id_col) == org_id)
+        return match[nom_col].item(0) if match.height >= 1 else None
+
+    if acheteur_id and len(acheteur_id) == 12:
+        if nom := lookup_nom(df_acheteurs, "acheteur_id", "acheteur_nom", acheteur_id):
+            return f"{name} - {nom}"
+    elif titulaire_id and len(titulaire_id) == 12:
+        if nom := lookup_nom(
+            df_titulaires, "titulaire_id", "titulaire_nom", titulaire_id
+        ):
+            return f"{name} - {nom}"
+    return name
