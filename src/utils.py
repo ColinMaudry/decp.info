@@ -80,15 +80,21 @@ def add_links(dff: pl.DataFrame):
                     .alias(col)
                 )
             if col.startswith("acheteur_"):
-                dff = dff.with_columns(
-                    (
-                        '<a href = "/acheteurs/'
-                        + pl.col("acheteur_id")
-                        + '">'
-                        + pl.col(col)
-                        + "</a>"
-                    ).alias(col)
+                detail_link = (
+                    '<a href = "/acheteurs/'
+                    + pl.col("acheteur_id")
+                    + '">'
+                    + pl.col(col)
+                    + "</a>"
                 )
+                if col == "acheteur_nom":
+                    detail_link = (
+                        detail_link
+                        + ' <a href="/observatoire?acheteur_id='
+                        + pl.col("acheteur_id")
+                        + '" title="Voir dans l\'observatoire">📊</a>'
+                    )
+                dff = dff.with_columns(detail_link.alias(col))
             if col == "uid":
                 dff = dff.with_columns(
                     (
@@ -648,7 +654,7 @@ def prepare_table_data(
     # Remplace les strings null par "", mais pas les numeric null
     dff = dff.fill_null("")
 
-    # Ajout des liens vers l'annuaire des entreprises
+    # Ajout des liens vers les pages de détails
     dff = add_links(dff)
 
     # Ajout des liens vers les fichiers Open Data

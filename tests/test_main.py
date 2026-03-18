@@ -29,12 +29,11 @@ def test_001_logo_and_search(dash_duo: DashComposite):
         assert len(result_table.find_elements(by=By.TAG_NAME, value="tr")) == 2, (
             "The search should return only one result"
         )  # header row + 1 result
-        assert (
-            result_table.find_element(
-                by=By.CSS_SELECTOR, value=f'td[data-dash-column="{org_type}_nom"]'
-            ).text
-            == name
-        ), f"The search result should have the right {org_type} name"
+        assert result_table.find_element(
+            by=By.CSS_SELECTOR, value=f'td[data-dash-column="{org_type}_nom"]'
+        ).text.startswith(name), (
+            f"The search result should have the right {org_type} name"
+        )
 
 
 def test_002_filter_persistence(dash_duo: DashComposite):
@@ -87,3 +86,28 @@ def test_003_tableau_download(dash_duo: DashComposite):
         )
         assert output["type"] is None
         assert output["base64"] is True
+
+
+def test_004_add_links_observatoire_acheteur():
+    import polars as pl
+
+    from src.utils import add_links
+
+    dff = pl.DataFrame(
+        {
+            "acheteur_id": ["a1"],
+            "acheteur_nom": ["ACHETEUR 1"],
+        }
+    )
+    result = add_links(dff)
+    nom_value = result["acheteur_nom"][0]
+    id_value = result["acheteur_id"][0]
+
+    # acheteur_nom should contain detail link + observatoire link
+    assert "/acheteurs/a1" in nom_value
+    assert "ACHETEUR 1" in nom_value
+    assert "/observatoire?acheteur_id=a1" in nom_value
+    assert "📊" in nom_value
+
+    # acheteur_id should NOT contain observatoire link
+    assert "/observatoire" not in id_value
