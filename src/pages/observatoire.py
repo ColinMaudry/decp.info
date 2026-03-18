@@ -301,19 +301,25 @@ Alors, on fait comment ?
 @callback(
     Output("dashboard_acheteur_id", "value"),
     Output("dashboard_titulaire_id", "value"),
-    Output("dashboard_url", "search"),
+    # Output("dashboard_url", "search"),
     Input("dashboard_url", "search"),
 )
 def restore_filters_from_url(search):
     if not search:
-        return no_update, no_update, no_update
+        return no_update, no_update
 
     params = urllib.parse.parse_qs(search.lstrip("?"))
 
-    acheteur_id = params.get("acheteur_id", [None])[0] or no_update
-    titulaire_id = params.get("titulaire_id", [None])[0] or no_update
+    def get_param_value(key):
+        values = params.get(key)
+        if values and values[0] is not None:
+            return values[0]
+        return no_update
 
-    return acheteur_id, titulaire_id, ""
+    acheteur_id = get_param_value("acheteur_id")
+    titulaire_id = get_param_value("titulaire_id")
+
+    return acheteur_id, titulaire_id
 
 
 @callback(
