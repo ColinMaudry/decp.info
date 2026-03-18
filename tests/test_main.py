@@ -179,3 +179,38 @@ def test_007_observatoire_share_url(dash_duo: DashComposite):
     assert "acheteur_id=a1" in share_url_value, (
         f"Share URL should contain acheteur_id param, got: {share_url_value}"
     )
+
+
+def test_008_search_to_observatoire(dash_duo: DashComposite):
+    from src.app import app
+
+    dash_duo.start_server(app)
+    dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
+
+    # Search for an acheteur
+    search_bar = dash_duo.find_element("#search")
+    search_bar.send_keys("ACHETEUR 1")
+    search_bar.send_keys(Keys.ENTER)
+
+    dash_duo.wait_for_element("#results_acheteur_datatable", timeout=2)
+
+    # Find the observatoire link in acheteur_nom column
+    observatoire_link = dash_duo.find_element(
+        '#results_acheteur_datatable td[data-dash-column="acheteur_nom"] a[href*="observatoire"]'
+    )
+    assert "📊" in observatoire_link.text
+
+    # Click the observatoire link
+    observatoire_link.click()
+
+    # Wait for observatoire page to load
+    dash_duo.wait_for_element("#dashboard_acheteur_id", timeout=4)
+
+    import time
+
+    time.sleep(1)  # Allow callback chain to complete
+
+    acheteur_input = dash_duo.find_element("#dashboard_acheteur_id")
+    assert acheteur_input.get_attribute("value") == "a1", (
+        "acheteur_id input should be populated after navigating from search"
+    )
