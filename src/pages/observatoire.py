@@ -327,6 +327,46 @@ def restore_filters_from_url(search):
 
 
 @callback(
+    Output("observatoire-filters", "data"),
+    Input("dashboard_year", "value"),
+    Input("dashboard_acheteur_id", "value"),
+    Input("dashboard_acheteur_categorie", "value"),
+    Input("dashboard_acheteur_departement_code", "value"),
+    Input("dashboard_titulaire_id", "value"),
+    Input("dashboard_titulaire_categorie", "value"),
+    Input("dashboard_titulaire_departement_code", "value"),
+    Input("dashboard_marche_type", "value"),
+    Input("dashboard_marche_considerationsSociales", "value"),
+    Input("dashboard_marche_considerationsEnvironnementales", "value"),
+    prevent_initial_call=True,
+)
+def save_filters_to_storage(
+    year,
+    acheteur_id,
+    acheteur_categorie,
+    acheteur_departement_code,
+    titulaire_id,
+    titulaire_categorie,
+    titulaire_departement_code,
+    marche_type,
+    considerations_sociales,
+    considerations_environnementales,
+):
+    return {
+        "year": year,
+        "acheteur_id": acheteur_id,
+        "acheteur_categorie": acheteur_categorie,
+        "acheteur_departement_code": acheteur_departement_code,
+        "titulaire_id": titulaire_id,
+        "titulaire_categorie": titulaire_categorie,
+        "titulaire_departement_code": titulaire_departement_code,
+        "marche_type": marche_type,
+        "considerations_sociales": considerations_sociales,
+        "considerations_environnementales": considerations_environnementales,
+    }
+
+
+@callback(
     Output("observatoire-share-url", "value"),
     Output("observatoire-copy-container", "children"),
     Input("dashboard_acheteur_id", "value"),
