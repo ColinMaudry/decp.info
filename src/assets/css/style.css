@@ -94,7 +94,6 @@ button:hover:not([disabled]) {
   padding: 28px 24px 0 24px;
 }
 
-
 #header > * {
   margin: 0 0 20px 0px;
 }
@@ -174,7 +173,6 @@ p.version > a {
   margin-right: 12px;
 }
 
-
 /* --- Dashboard inputs --- */
 
 .Select--multi .Select-value {
@@ -182,7 +180,7 @@ p.version > a {
   background-color: rgba(255, 240, 240, 0.4);
 }
 
-#filters .col > * {
+#filters .row > * {
   margin-bottom: 6px;
 }
 

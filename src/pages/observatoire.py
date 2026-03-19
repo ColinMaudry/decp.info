@@ -1,5 +1,5 @@
 import urllib.parse
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import dash_bootstrap_components as dbc
 import polars as pl
@@ -33,6 +33,7 @@ from src.utils import (
     format_number,
     get_enum_values_as_dict,
     meta_content,
+    prepare_dashboard_data,
 )
 
 name = "Observatoire"
@@ -58,78 +59,6 @@ options_departements = {
         key=lambda c: 20.1 if c == "2A" else (20.2 if c == "2B" else float(c)),
     )
 }
-
-
-def _apply_filters(
-    lff: pl.LazyFrame,
-    year,
-    acheteur_id,
-    acheteur_categorie,
-    acheteur_departement_code,
-    titulaire_id,
-    titulaire_categorie,
-    titulaire_departement_code,
-    marche_type,
-    considerations_sociales,
-    considerations_environnementales,
-    montant_min=None,
-    montant_max=None,
-) -> pl.LazyFrame:
-    if year:
-        lff = lff.filter(pl.col("dateNotification").dt.year() == int(year))
-    else:
-        lff = lff.filter(
-            pl.col("dateNotification") > (datetime.now() - timedelta(days=365))
-        )
-
-    if acheteur_id:
-        lff = lff.filter(pl.col("acheteur_id").str.contains(acheteur_id))
-    else:
-        if acheteur_categorie:
-            lff = lff.filter(pl.col("acheteur_categorie") == acheteur_categorie)
-        if acheteur_departement_code:
-            lff = lff.filter(
-                pl.col("acheteur_departement_code").is_in(acheteur_departement_code)
-            )
-
-    if titulaire_id:
-        lff = lff.filter(pl.col("titulaire_id").str.contains(titulaire_id))
-    else:
-        if titulaire_categorie:
-            lff = lff.filter(pl.col("titulaire_categorie") == titulaire_categorie)
-        if titulaire_departement_code:
-            lff = lff.filter(
-                pl.col("titulaire_departement_code").is_in(titulaire_departement_code)
-            )
-
-    if marche_type:
-        lff = lff.filter(pl.col("type") == marche_type)
-
-    if considerations_sociales:
-        lff = lff.filter(
-            pl.col("considerationsSociales")
-            .str.split(", ")
-            .list.set_intersection(considerations_sociales)
-            .list.len()
-            > 0
-        )
-
-    if considerations_environnementales:
-        lff = lff.filter(
-            pl.col("considerationsEnvironnementales")
-            .str.split(", ")
-            .list.set_intersection(considerations_environnementales)
-            .list.len()
-            > 0
-        )
-
-    if montant_min is not None:
-        lff = lff.filter(pl.col("montant") >= montant_min)
-
-    if montant_max is not None:
-        lff = lff.filter(pl.col("montant") <= montant_max)
-
-    return lff
 
 
 layout = [
@@ -181,6 +110,8 @@ Alors, on fait comment ?
                                                 id="dashboard_year",
                                                 options=options_years,
                                                 placeholder="12 derniers mois",
+                                                persistence=True,
+                                                persistence_type="local",
                                             ),
                                         ),
                                     ),
@@ -192,6 +123,8 @@ Alors, on fait comment ?
                                                 placeholder="SIRET",
                                                 debounce=True,
                                                 style={"width": "100%"},
+                                                persistence=True,
+                                                persistence_type="local",
                                             ),
                                         ),
                                     ),
@@ -203,6 +136,8 @@ Alors, on fait comment ?
                                                     "acheteur_categorie"
                                                 ),
                                                 placeholder="Catégorie",
+                                                persistence=True,
+                                                persistence_type="local",
                                             )
                                         ),
                                     ),
@@ -214,6 +149,8 @@ Alors, on fait comment ?
                                                 multi=True,
                                                 placeholder="Département",
                                                 options=options_departements,
+                                                persistence=True,
+                                                persistence_type="local",
                                             ),
                                         ),
                                     ),
@@ -225,6 +162,8 @@ Alors, on fait comment ?
                                                 placeholder="SIRET",
                                                 debounce=True,
                                                 style={"width": "100%"},
+                                                persistence=True,
+                                                persistence_type="local",
                                             ),
                                         ),
                                     ),
@@ -236,6 +175,8 @@ Alors, on fait comment ?
                                                 options=get_enum_values_as_dict(
                                                     "titulaire_categorie"
                                                 ),
+                                                persistence=True,
+                                                persistence_type="local",
                                             ),
                                         ),
                                     ),
@@ -247,6 +188,8 @@ Alors, on fait comment ?
                                                 multi=True,
                                                 placeholder="Département",
                                                 options=options_departements,
+                                                persistence=True,
+                                                persistence_type="local",
                                             ),
                                         ),
                                     ),
@@ -257,30 +200,8 @@ Alors, on fait comment ?
                                                 id="dashboard_marche_type",
                                                 placeholder="Type",
                                                 options=get_enum_values_as_dict("type"),
-                                            ),
-                                        ),
-                                    ),
-                                    dbc.Row(
-                                        dbc.Col(
-                                            dcc.Dropdown(
-                                                id="dashboard_marche_considerationsSociales",
-                                                placeholder="Considérations sociales",
-                                                options=get_enum_values_as_dict(
-                                                    "considerationsSociales"
-                                                ),
-                                                multi=True,
-                                            ),
-                                        ),
-                                    ),
-                                    dbc.Row(
-                                        dbc.Col(
-                                            dcc.Dropdown(
-                                                id="dashboard_marche_considerationsEnvironnementales",
-                                                placeholder="Considérations environnementales",
-                                                multi=True,
-                                                options=get_enum_values_as_dict(
-                                                    "considerationsEnvironnementales"
-                                                ),
+                                                persistence=True,
+                                                persistence_type="local",
                                             ),
                                         ),
                                     ),
@@ -294,6 +215,8 @@ Alors, on fait comment ?
                                                     min=0,
                                                     debounce=True,
                                                     style={"width": "100%"},
+                                                    persistence=True,
+                                                    persistence_type="local",
                                                 ),
                                                 width=6,
                                             ),
@@ -305,10 +228,112 @@ Alors, on fait comment ?
                                                     min=0,
                                                     debounce=True,
                                                     style={"width": "100%"},
+                                                    persistence=True,
+                                                    persistence_type="local",
                                                 ),
                                                 width=6,
                                             ),
                                         ]
+                                    ),
+                                    dbc.Row(
+                                        dbc.Col(
+                                            dcc.Dropdown(
+                                                id="dashboard_marche_techniques",
+                                                placeholder="Techniques d'achat",
+                                                options=get_enum_values_as_dict(
+                                                    "techniques"
+                                                ),
+                                                multi=True,
+                                                persistence=True,
+                                                persistence_type="local",
+                                            ),
+                                        ),
+                                    ),
+                                    dbc.Row(
+                                        [
+                                            dbc.Col("Sous-traitance :", lg=5),
+                                            dbc.Col(
+                                                dbc.RadioItems(
+                                                    id="dashboard_marche_sousTraitanceDeclaree",
+                                                    options=[
+                                                        {
+                                                            "label": "Tous",
+                                                            "value": "all",
+                                                        },
+                                                        {
+                                                            "label": "Oui",
+                                                            "value": "oui",
+                                                        },
+                                                        {
+                                                            "label": "Non",
+                                                            "value": "non",
+                                                        },
+                                                    ],
+                                                    value="all",
+                                                    inline=True,
+                                                    persistence=True,
+                                                    persistence_type="local",
+                                                ),
+                                                lg=7,
+                                            ),
+                                        ]
+                                    ),
+                                    dbc.Row(
+                                        [
+                                            dbc.Col("Marché innovant :", lg=5),
+                                            dbc.Col(
+                                                dbc.RadioItems(
+                                                    id="dashboard_marche_innovant",
+                                                    options=[
+                                                        {
+                                                            "label": "Tous",
+                                                            "value": "all",
+                                                        },
+                                                        {
+                                                            "label": "Oui",
+                                                            "value": "oui",
+                                                        },
+                                                        {
+                                                            "label": "Non",
+                                                            "value": "non",
+                                                        },
+                                                    ],
+                                                    value="all",
+                                                    inline=True,
+                                                    persistence=True,
+                                                    persistence_type="local",
+                                                ),
+                                                lg=7,
+                                            ),
+                                        ]
+                                    ),
+                                    dbc.Row(
+                                        dbc.Col(
+                                            dcc.Dropdown(
+                                                id="dashboard_marche_considerationsSociales",
+                                                placeholder="Considérations sociales",
+                                                options=get_enum_values_as_dict(
+                                                    "considerationsSociales"
+                                                ),
+                                                multi=True,
+                                                persistence=True,
+                                                persistence_type="local",
+                                            ),
+                                        ),
+                                    ),
+                                    dbc.Row(
+                                        dbc.Col(
+                                            dcc.Dropdown(
+                                                id="dashboard_marche_considerationsEnvironnementales",
+                                                placeholder="Considérations environnementales",
+                                                multi=True,
+                                                options=get_enum_values_as_dict(
+                                                    "considerationsEnvironnementales"
+                                                ),
+                                                persistence=True,
+                                                persistence_type="local",
+                                            ),
+                                        ),
                                     ),
                                     dcc.Download(id="download-observatoire"),
                                     dbc.Button(
@@ -350,10 +375,13 @@ Alors, on fait comment ?
     Output("dashboard_titulaire_categorie", "value"),
     Output("dashboard_titulaire_departement_code", "value"),
     Output("dashboard_marche_type", "value"),
-    Output("dashboard_marche_considerationsSociales", "value"),
-    Output("dashboard_marche_considerationsEnvironnementales", "value"),
     Output("dashboard_montant_min", "value"),
     Output("dashboard_montant_max", "value"),
+    Output("dashboard_marche_techniques", "value"),
+    Output("dashboard_marche_innovant", "value"),
+    Output("dashboard_marche_sousTraitanceDeclaree", "value"),
+    Output("dashboard_marche_considerationsSociales", "value"),
+    Output("dashboard_marche_considerationsEnvironnementales", "value"),
     Input("dashboard_url", "search"),
     Input("dashboard_url", "pathname"),
     State("observatoire-filters", "data"),
@@ -377,71 +405,11 @@ def restore_filters(search, _pathname, stored_filters):
                 None,
                 None,
                 None,
+                None,
+                None,
+                None,
             )
-
-    if stored_filters:
-        return (
-            stored_filters.get("year"),
-            stored_filters.get("acheteur_id"),
-            stored_filters.get("acheteur_categorie"),
-            stored_filters.get("acheteur_departement_code"),
-            stored_filters.get("titulaire_id"),
-            stored_filters.get("titulaire_categorie"),
-            stored_filters.get("titulaire_departement_code"),
-            stored_filters.get("marche_type"),
-            stored_filters.get("considerations_sociales"),
-            stored_filters.get("considerations_environnementales"),
-            stored_filters.get("montant_min"),
-            stored_filters.get("montant_max"),
-        )
-
-    return (no_update,) * 12
-
-
-@callback(
-    Output("observatoire-filters", "data"),
-    Input("dashboard_year", "value"),
-    Input("dashboard_acheteur_id", "value"),
-    Input("dashboard_acheteur_categorie", "value"),
-    Input("dashboard_acheteur_departement_code", "value"),
-    Input("dashboard_titulaire_id", "value"),
-    Input("dashboard_titulaire_categorie", "value"),
-    Input("dashboard_titulaire_departement_code", "value"),
-    Input("dashboard_marche_type", "value"),
-    Input("dashboard_marche_considerationsSociales", "value"),
-    Input("dashboard_marche_considerationsEnvironnementales", "value"),
-    Input("dashboard_montant_min", "value"),
-    Input("dashboard_montant_max", "value"),
-    prevent_initial_call=True,
-)
-def save_filters_to_storage(
-    year,
-    acheteur_id,
-    acheteur_categorie,
-    acheteur_departement_code,
-    titulaire_id,
-    titulaire_categorie,
-    titulaire_departement_code,
-    marche_type,
-    considerations_sociales,
-    considerations_environnementales,
-    montant_min,
-    montant_max,
-):
-    return {
-        "year": year,
-        "acheteur_id": acheteur_id,
-        "acheteur_categorie": acheteur_categorie,
-        "acheteur_departement_code": acheteur_departement_code,
-        "titulaire_id": titulaire_id,
-        "titulaire_categorie": titulaire_categorie,
-        "titulaire_departement_code": titulaire_departement_code,
-        "marche_type": marche_type,
-        "considerations_sociales": considerations_sociales,
-        "considerations_environnementales": considerations_environnementales,
-        "montant_min": montant_min,
-        "montant_max": montant_max,
-    }
+    return (no_update,) * 15
 
 
 @callback(
@@ -503,10 +471,13 @@ def sync_observatoire_share_url(acheteur_id, titulaire_id, href):
     Input("dashboard_titulaire_categorie", "value"),
     Input("dashboard_titulaire_departement_code", "value"),
     Input("dashboard_marche_type", "value"),
-    Input("dashboard_marche_considerationsSociales", "value"),
-    Input("dashboard_marche_considerationsEnvironnementales", "value"),
     Input("dashboard_montant_min", "value"),
     Input("dashboard_montant_max", "value"),
+    Input("dashboard_marche_techniques", "value"),
+    Input("dashboard_marche_innovant", "value"),
+    Input("dashboard_marche_sousTraitanceDeclaree", "value"),
+    Input("dashboard_marche_considerationsSociales", "value"),
+    Input("dashboard_marche_considerationsEnvironnementales", "value"),
 )
 def udpate_dashboard_cards(
     dashboard_year,
@@ -517,10 +488,13 @@ def udpate_dashboard_cards(
     dashboard_titulaire_categorie,
     dashboard_titulaire_departement_code,
     dashboard_marche_type,
-    dashboard_marche_considerations_sociales,
-    dashboard_marche_considerations_environnementales,
     dashboard_montant_min,
     dashboard_montant_max,
+    dashboard_marche_techniques,
+    dashboard_marche_innovant,
+    dashboard_marche_sous_traitance_declaree,
+    dashboard_marche_considerations_sociales,
+    dashboard_marche_considerations_environnementales,
 ):
     lff: pl.LazyFrame = df.lazy()
     lff = lff.select(
@@ -531,23 +505,29 @@ def udpate_dashboard_cards(
         "montant",
         "considerationsSociales",
         "considerationsEnvironnementales",
+        "marcheInnovant",
+        "sousTraitanceDeclaree",
+        "techniques",
         "sourceDataset",
         "type",
     )
-    lff = _apply_filters(
-        lff,
-        dashboard_year,
-        dashboard_acheteur_id,
-        dashboard_acheteur_categorie,
-        dashboard_acheteur_departement_code,
-        dashboard_titulaire_id,
-        dashboard_titulaire_categorie,
-        dashboard_titulaire_departement_code,
-        dashboard_marche_type,
-        dashboard_marche_considerations_sociales,
-        dashboard_marche_considerations_environnementales,
+    lff = prepare_dashboard_data(
+        lff=lff,
+        year=dashboard_year,
+        acheteur_id=dashboard_acheteur_id,
+        acheteur_categorie=dashboard_acheteur_categorie,
+        acheteur_departement_code=dashboard_acheteur_departement_code,
+        titulaire_id=dashboard_titulaire_id,
+        titulaire_categorie=dashboard_titulaire_categorie,
+        titulaire_departement_code=dashboard_titulaire_departement_code,
+        type=dashboard_marche_type,
+        considerations_sociales=dashboard_marche_considerations_sociales,
+        considerations_environnementales=dashboard_marche_considerations_environnementales,
         montant_min=dashboard_montant_min,
         montant_max=dashboard_montant_max,
+        techniques=dashboard_marche_techniques,
+        marche_innovant=dashboard_marche_innovant,
+        sous_traitance_declaree=dashboard_marche_sous_traitance_declaree,
     )
 
     # Génération des métriques
@@ -620,7 +600,7 @@ def udpate_dashboard_cards(
     cards.append(
         make_card(
             title="Catégorie d'entreprise",
-            subtitle="en nombre de marchés attribués",
+            subtitle="en nombre de titulaires",
             fig=donut_titulaire_categorie,
         )
     )
@@ -683,41 +663,50 @@ def udpate_dashboard_cards(
     State("dashboard_titulaire_categorie", "value"),
     State("dashboard_titulaire_departement_code", "value"),
     State("dashboard_marche_type", "value"),
-    State("dashboard_marche_considerationsSociales", "value"),
-    State("dashboard_marche_considerationsEnvironnementales", "value"),
     State("dashboard_montant_min", "value"),
     State("dashboard_montant_max", "value"),
+    State("dashboard_marche_techniques", "value"),
+    State("dashboard_marche_innovant", "value"),
+    State("dashboard_marche_sousTraitanceDeclaree", "value"),
+    State("dashboard_marche_considerationsSociales", "value"),
+    State("dashboard_marche_considerationsEnvironnementales", "value"),
     prevent_initial_call=True,
 )
 def download_observatoire(
     _n_clicks,
-    year,
-    acheteur_id,
-    acheteur_categorie,
-    acheteur_departement_code,
-    titulaire_id,
-    titulaire_categorie,
-    titulaire_departement_code,
-    marche_type,
-    considerations_sociales,
-    considerations_environnementales,
-    montant_min,
-    montant_max,
+    dashboard_year,
+    dashboard_acheteur_id,
+    dashboard_acheteur_categorie,
+    dashboard_acheteur_departement_code,
+    dashboard_titulaire_id,
+    dashboard_titulaire_categorie,
+    dashboard_titulaire_departement_code,
+    dashboard_marche_type,
+    dashboard_montant_min,
+    dashboard_montant_max,
+    dashboard_marche_techniques,
+    dashboard_marche_innovant,
+    dashboard_marche_sous_traitance_declaree,
+    dashboard_considerations_sociales,
+    dashboard_considerations_environnementales,
 ):
-    lff = _apply_filters(
-        df.lazy(),
-        year,
-        acheteur_id,
-        acheteur_categorie,
-        acheteur_departement_code,
-        titulaire_id,
-        titulaire_categorie,
-        titulaire_departement_code,
-        marche_type,
-        considerations_sociales,
-        considerations_environnementales,
-        montant_min=montant_min,
-        montant_max=montant_max,
+    lff = prepare_dashboard_data(
+        lff=df.lazy(),
+        year=dashboard_year,
+        acheteur_id=dashboard_acheteur_id,
+        acheteur_categorie=dashboard_acheteur_categorie,
+        acheteur_departement_code=dashboard_acheteur_departement_code,
+        titulaire_id=dashboard_titulaire_id,
+        titulaire_categorie=dashboard_titulaire_categorie,
+        titulaire_departement_code=dashboard_titulaire_departement_code,
+        type=dashboard_marche_type,
+        considerations_sociales=dashboard_considerations_sociales,
+        considerations_environnementales=dashboard_considerations_environnementales,
+        montant_min=dashboard_montant_min,
+        montant_max=dashboard_montant_max,
+        techniques=dashboard_marche_techniques,
+        marche_innovant=dashboard_marche_innovant,
+        sous_traitance_declaree=dashboard_marche_sous_traitance_declaree,
     )
 
     def to_bytes(buffer):

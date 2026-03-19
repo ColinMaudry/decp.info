@@ -3,6 +3,7 @@ import logging
 import os
 import uuid
 from collections import OrderedDict
+from datetime import datetime, timedelta
 from time import localtime, sleep
 
 import polars as pl
@@ -692,6 +693,96 @@ def prepare_table_data(
         download_title,
         trigger_cleanup,
     )
+
+
+def prepare_dashboard_data(
+    lff: pl.LazyFrame,
+    year,
+    acheteur_id,
+    acheteur_categorie,
+    acheteur_departement_code,
+    titulaire_id,
+    titulaire_categorie,
+    titulaire_departement_code,
+    type,
+    considerations_sociales,
+    considerations_environnementales,
+    techniques,
+    marche_innovant,
+    sous_traitance_declaree,
+    montant_min=None,
+    montant_max=None,
+) -> pl.LazyFrame:
+    if year:
+        lff = lff.filter(pl.col("dateNotification").dt.year() == int(year))
+    else:
+        lff = lff.filter(
+            pl.col("dateNotification") > (datetime.now() - timedelta(days=365))
+        )
+
+    if acheteur_id:
+        lff = lff.filter(pl.col("acheteur_id").str.contains(acheteur_id))
+    else:
+        if acheteur_categorie:
+            lff = lff.filter(pl.col("acheteur_categorie") == acheteur_categorie)
+        if acheteur_departement_code:
+            lff = lff.filter(
+                pl.col("acheteur_departement_code").is_in(acheteur_departement_code)
+            )
+
+    if titulaire_id:
+        lff = lff.filter(pl.col("titulaire_id").str.contains(titulaire_id))
+    else:
+        if titulaire_categorie:
+            lff = lff.filter(pl.col("titulaire_categorie") == titulaire_categorie)
+        if titulaire_departement_code:
+            lff = lff.filter(
+                pl.col("titulaire_departement_code").is_in(titulaire_departement_code)
+            )
+
+    if type:
+        lff = lff.filter(pl.col("type") == type)
+
+    if marche_innovant != "all":
+        lff = lff.filter(pl.col("marcheInnovant") == marche_innovant)
+
+    if sous_traitance_declaree != "all":
+        lff = lff.filter(pl.col("sousTraitanceDeclaree") == sous_traitance_declaree)
+
+    if techniques:
+        lff = lff.filter(
+            pl.col("techniques")
+            .str.split(", ")
+            .list.set_intersection(techniques)
+            .list.len()
+            > 0
+        )
+
+    if considerations_sociales:
+        lff = lff.filter(
+            pl.col("considerationsSociales")
+            .str.split(", ")
+            .list.set_intersection(considerations_sociales)
+            .list.len()
+            > 0
+        )
+
+    if considerations_environnementales:
+        lff = lff.filter(
+            pl.col("considerationsEnvironnementales")
+            .str.split(", ")
+            .list.set_intersection(considerations_environnementales)
+            .list.len()
+            > 0
+        )
+
+    if montant_min is not None:
+        lff = lff.filter(pl.col("montant") >= montant_min)
+
+    if montant_max is not None:
+        lff = lff.filter(pl.col("montant") <= montant_max)
+
+    return lff
 
 
 def get_button_properties(height):
