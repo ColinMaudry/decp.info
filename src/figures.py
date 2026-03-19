@@ -626,6 +626,7 @@ def get_distance_histogram(lff: pl.LazyFrame) -> dcc.Graph:
         )
         fig.update_layout(bargap=0)
 
+    fig.update_layout(margin=dict(r=10))
     fig.update_xaxes(
         tickvals=[0, 1, 2, 3, 4],
         ticktext=["1", "10", "100", "1 000", "10 000"],
