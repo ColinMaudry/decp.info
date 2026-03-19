@@ -51,9 +51,13 @@ for year in reversed(range(2017, datetime.now().year + 1)):
     year = str(year)
     options_years[year] = year
 
-options_departements = {}
-for code, obj in departements.items():
-    options_departements[code] = f"{obj['departement']} ({code})"
+options_departements = {
+    code: f"{departements[code]['departement']} ({code})"
+    for code in sorted(
+        departements,
+        key=lambda c: 20.1 if c == "2A" else (20.2 if c == "2B" else float(c)),
+    )
+}
 
 
 def _apply_filters(
