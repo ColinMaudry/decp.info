@@ -640,6 +640,7 @@ def get_dashboard_summary_table(dff, dff_per_uid, nb_marches):
     nb_acheteurs = dff.select("acheteur_id").n_unique()
     nb_titulaires = dff.select("titulaire_id", "titulaire_typeIdentifiant").n_unique()
     total_montant = int(dff_per_uid.select(pl.col("montant").sum()).item())
+    median_distance = dff.select(pl.median("titulaire_distance")).item()
 
     summary_table = [
         html.P(["Nombre de marchés : ", html.Strong(str(format_number(nb_marches)))]),
@@ -665,6 +666,12 @@ def get_dashboard_summary_table(dff, dff_per_uid, nb_marches):
                 ),
                 ") : ",
                 html.Strong(format_number(total_montant) + " €"),
+            ]
+        ),
+        html.P(
+            [
+                "Distance acheteur-titulaire médiane : ",
+                html.Strong(format_number(median_distance) + " km"),
             ]
         ),
     ]
@@ -715,14 +722,14 @@ def make_donut(
     lff = lff.with_columns(pl.col(title).replace(None, pl.lit(nulls)))
     dff = lff.collect(engine="streaming")
     nb_names = dff[title].n_unique()
-    if nb_names > 5:
-        sum_values = dff["Nombre"].sum()
-        dff = dff.with_columns(
-            pl.when((pl.col("Nombre") / sum_values) < 0.01)
-            .then(pl.lit("Autres"))
-            .otherwise(pl.col(title))
-            .alias(title)
-        )
+
+    sum_values = dff["Nombre"].sum()
+    dff = dff.with_columns(
+        pl.when((pl.col("Nombre") / sum_values) < 0.01)
+        .then(pl.lit("Autres"))
+        .otherwise(pl.col(title))
+        .alias(title)
+    )
 
     dff = dff.with_columns(
         pl.col("Nombre")
