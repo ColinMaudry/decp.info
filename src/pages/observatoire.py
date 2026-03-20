@@ -18,6 +18,7 @@ from dash import (
 )
 
 from src.figures import (
+    DataTable,
     get_barchart_sources,
     get_dashboard_summary_table,
     get_distance_histogram,
@@ -25,14 +26,17 @@ from src.figures import (
     get_geographic_maps,
     get_top_org_table,
     make_card,
+    make_column_picker,
     make_donut,
 )
 from src.utils import (
+    data_schema,
     departements,
     df,
     df_acheteurs,
     df_titulaires,
     get_enum_values_as_dict,
+    logger,
     meta_content,
     prepare_dashboard_data,
 )
@@ -60,6 +64,27 @@ for code in departements.keys():
         "value": code,
     }
     options_departements.append(departement)
+
+OBSERVATOIRE_COLUMNS = [
+    col
+    for col in df.columns
+    if col.startswith("acheteur")
+    or col.startswith("titulaire")
+    or col
+    in [
+        "uid",
+        "dateNotification",
+        "montant",
+        "considerationsSociales",
+        "considerationsEnvironnementales",
+        "marcheInnovant",
+        "sousTraitanceDeclaree",
+        "techniques",
+        "sourceDataset",
+        "type",
+        "codeCPV",
+    ]
+]
 
 layout = [
     dcc.Location(id="dashboard_url", refresh="callback-nav"),
@@ -372,10 +397,16 @@ Alors, on fait comment ?
                                     ),
                                     dcc.Download(id="download-observatoire"),
                                     dbc.Button(
-                                        "Télécharger au format Excel",
-                                        id="btn-download-observatoire",
-                                        disabled=True,
+                                        "Prévisualiser les données",
+                                        id="btn-observatoire-preview",
                                         className="mt-2",
+                                        color="primary",
+                                        outline=True,
+                                    ),
+                                    dcc.Input(
+                                        id="observatoire-share-url",
+                                        readOnly=True,
+                                        style={"display": "none"},
                                     ),
                                     dcc.Input(
                                         id="observatoire-share-url",
@@ -395,6 +426,83 @@ Alors, on fait comment ?
                         ]
                     )
                 ],
+            ),
+        ],
+    ),
+    dbc.Offcanvas(
+        id="observatoire-preview",
+        title="Prévisualisation des données",
+        placement="bottom",
+        is_open=False,
+        scrollable=True,
+        style={"height": "75vh"},
+        children=[
+            # Header row: title + "Colonnes affichées" button
+            dbc.Row(
+                [
+                    dbc.Col(
+                        html.Div(
+                            className="table-menu",
+                            children=[
+                                dbc.Button(
+                                    "Colonnes affichées",
+                                    id="observatoire-preview-columns-open",
+                                    size="sm",
+                                    color="secondary",
+                                    outline=True,
+                                ),
+                                dbc.Button(
+                                    "Télécharger au format Excel",
+                                    id="btn-download-observatoire",
+                                    disabled=True,
+                                    className="mt-2",
+                                    color="primary",
+                                    outline=True,
+                                ),
+                            ],
+                        ),
+                        width="auto",
+                    ),
+                ],
+                className="mb-2 align-items-center",
+            ),
+            # Column picker modal
+            dbc.Modal(
+                [
+                    dbc.ModalHeader(
+                        dbc.ModalTitle("Colonnes affichées dans la prévisualisation")
+                    ),
+                    dbc.ModalBody(
+                        id="observatoire-preview-columns-body",
+                        children=make_column_picker("observatoire_preview"),
+                    ),
+                    dbc.ModalFooter(
+                        dbc.Button(
+                            "Fermer",
+                            id="observatoire-preview-columns-close",
+                            className="ms-auto",
+                            n_clicks=0,
+                        )
+                    ),
+                ],
+                id="observatoire-preview-columns",
+                is_open=False,
+                fullscreen="md-down",
+                scrollable=True,
+                size="xl",
+            ),
+            # DataTable
+            html.Div(
+                className="marches_table",
+                children=DataTable(
+                    dtid="observatoire-preview-table",
+                    page_size=10,
+                    page_action="native",
+                    sort_action="native",
+                    filter_action="native",
+                    hidden_columns=[],
+                    columns=[{"id": col, "name": col} for col in OBSERVATOIRE_COLUMNS],
+                ),
             ),
         ],
     ),
@@ -586,6 +694,9 @@ def udpate_dashboard_cards(
 
     # Génération des métriques
     dff = lff.collect(engine="streaming")
+
+    logger.debug("Filter data: " + str(dff.height))
+
     df_per_uid = (
         dff.select("uid", "montant").group_by("uid").agg(pl.col("montant").first())
     )
@@ -795,3 +906,96 @@ def add_organization_name_in_title(acheteur_id, titulaire_id):
                 html.Small(nom, className="text-muted d-block fw-normal fs-5"),
             ]
     return name
+
+
+@callback(
+    Output("observatoire-preview", "is_open"),
+    Input("btn-observatoire-preview", "n_clicks"),
+    State("observatoire-preview", "is_open"),
+    prevent_initial_call=True,
+)
+def toggle_observatoire_preview(n_clicks, is_open):
+    return not is_open
+
+
+@callback(
+    Output("observatoire-preview-table", "data"),
+    Output("observatoire-preview-table", "columns"),
+    Input("observatoire-preview", "is_open"),
+    State("dashboard_year", "value"),
+    State("dashboard_acheteur_id", "value"),
+    State("dashboard_acheteur_categorie", "value"),
+    State("dashboard_acheteur_departement_code", "value"),
+    State("dashboard_titulaire_id", "value"),
+    State("dashboard_titulaire_categorie", "value"),
+    State("dashboard_titulaire_departement_code", "value"),
+    State("dashboard_marche_type", "value"),
+    State("dashboard_marche_objet", "value"),
+    State("dashboard_marche_code_cpv", "value"),
+    State("dashboard_montant_min", "value"),
+    State("dashboard_montant_max", "value"),
+    State("dashboard_marche_techniques", "value"),
+    State("dashboard_marche_innovant", "value"),
+    State("dashboard_marche_sousTraitanceDeclaree", "value"),
+    State("dashboard_marche_considerationsSociales", "value"),
+    State("dashboard_marche_considerationsEnvironnementales", "value"),
+    prevent_initial_call=True,
+)
+def populate_preview_table(
+    is_open,
+    dashboard_year,
+    dashboard_acheteur_id,
+    dashboard_acheteur_categorie,
+    dashboard_acheteur_departement_code,
+    dashboard_titulaire_id,
+    dashboard_titulaire_categorie,
+    dashboard_titulaire_departement_code,
+    dashboard_marche_type,
+    dashboard_marche_objet,
+    dashboard_marche_code_cpv,
+    dashboard_montant_min,
+    dashboard_montant_max,
+    dashboard_marche_techniques,
+    dashboard_marche_innovant,
+    dashboard_marche_sous_traitance_declaree,
+    dashboard_marche_considerations_sociales,
+    dashboard_marche_considerations_environnementales,
+):
+    if not is_open:
+        return no_update, no_update
+
+    available_in_df = [col for col in OBSERVATOIRE_COLUMNS if col in df.columns]
+    lff = prepare_dashboard_data(
+        lff=df.lazy().select(available_in_df),
+        year=dashboard_year,
+        acheteur_id=dashboard_acheteur_id,
+        acheteur_categorie=dashboard_acheteur_categorie,
+        acheteur_departement_code=dashboard_acheteur_departement_code,
+        titulaire_id=dashboard_titulaire_id,
+        titulaire_categorie=dashboard_titulaire_categorie,
+        titulaire_departement_code=dashboard_titulaire_departement_code,
+        type=dashboard_marche_type,
+        objet=dashboard_marche_objet,
+        code_cpv=dashboard_marche_code_cpv,
+        considerations_sociales=dashboard_marche_considerations_sociales,
+        considerations_environnementales=dashboard_marche_considerations_environnementales,
+        montant_min=dashboard_montant_min,
+        montant_max=dashboard_montant_max,
+        techniques=dashboard_marche_techniques,
+        marche_innovant=dashboard_marche_innovant,
+        sous_traitance_declaree=dashboard_marche_sous_traitance_declaree,
+    )
+
+    dff = lff.collect(engine="streaming")
+
+    table_data = dff.to_dicts()
+    table_columns = [
+        {
+            "name": data_schema.get(col, {}).get("title", col),
+            "id": col,
+            "type": "text",
+            "format": {"nully": "N/A"},
+        }
+        for col in available_in_df
+    ]
+    return table_data, table_columns

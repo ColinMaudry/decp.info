@@ -751,10 +751,10 @@ def prepare_dashboard_data(
     if code_cpv:
         lff = lff.filter(pl.col("codeCPV").str.starts_with(code_cpv))
 
-    if marche_innovant != "all":
+    if marche_innovant and marche_innovant != "all":
         lff = lff.filter(pl.col("marcheInnovant") == marche_innovant)
 
-    if sous_traitance_declaree != "all":
+    if sous_traitance_declaree and sous_traitance_declaree != "all":
         lff = lff.filter(pl.col("sousTraitanceDeclaree") == sous_traitance_declaree)
 
     if techniques:
