@@ -594,7 +594,7 @@ def get_distance_histogram(lff: pl.LazyFrame) -> dcc.Graph:
 
     fig = go.Figure()
     if len(log_distances) > 0:
-        counts, bin_edges = np.histogram(log_distances, bins=50)
+        counts, bin_edges = np.histogram(log_distances, bins=25)
         bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
         bin_widths = bin_edges[1:] - bin_edges[:-1]
         bin_edges_km = 10.0**bin_edges
