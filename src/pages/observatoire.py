@@ -399,7 +399,7 @@ Alors, on fait comment ?
                                     dbc.Button(
                                         "Prévisualiser les données",
                                         id="btn-observatoire-preview",
-                                        className="mt-2",
+                                        className="btn btn-primary",
                                         color="primary",
                                         outline=True,
                                     ),
@@ -447,16 +447,13 @@ Alors, on fait comment ?
                                 dbc.Button(
                                     "Colonnes affichées",
                                     id="observatoire-preview-columns-open",
-                                    size="sm",
-                                    color="secondary",
-                                    outline=True,
+                                    className="btn btn-primary",
                                 ),
                                 dbc.Button(
                                     "Télécharger au format Excel",
                                     id="btn-download-observatoire",
                                     disabled=True,
-                                    className="mt-2",
-                                    color="primary",
+                                    className="btn btn-primary",
                                     outline=True,
                                 ),
                             ],
