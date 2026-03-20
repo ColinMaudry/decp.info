@@ -19,6 +19,7 @@ from dash import (
 
 from src.figures import (
     get_barchart_sources,
+    get_dashboard_summary_table,
     get_distance_histogram,
     get_duplicate_matrix,
     get_geographic_maps,
@@ -30,7 +31,6 @@ from src.utils import (
     df,
     df_acheteurs,
     df_titulaires,
-    format_number,
     get_enum_values_as_dict,
     meta_content,
     prepare_dashboard_data,
@@ -532,16 +532,9 @@ def udpate_dashboard_cards(
 
     # Génération des métriques
     dff = lff.collect(engine="streaming")
-
-    # À transformer en fonction
-    nb_acheteurs = dff.select("acheteur_id").n_unique()
-    nb_titulaires = dff.select("titulaire_id", "titulaire_typeIdentifiant").n_unique()
-
     df_per_uid = (
         dff.select("uid", "montant").group_by("uid").agg(pl.col("montant").first())
     )
-
-    total_montant = int(df_per_uid.select(pl.col("montant").sum()).item())
     nb_marches = df_per_uid.height
 
     if nb_marches == 0:
@@ -553,29 +546,9 @@ def udpate_dashboard_cards(
 
     cards = []
 
-    card_basic_counts = [
-        html.P(["Nombre de marchés : ", html.Strong(str(format_number(nb_marches)))]),
-        html.P(
-            ["Nombre d'acheteurs : ", html.Strong(str(format_number(nb_acheteurs)))]
-        ),
-        html.P(
-            ["Nombre de titulaires : ", html.Strong(str(format_number(nb_titulaires)))]
-        ),
-        html.P(
-            [
-                "Montant total (",
-                html.Span(
-                    "?",
-                    id={"type": "modal-trigger", "index": "montant"},
-                    style={"cursor": "pointer", "textDecoration": "underline dotted"},
-                ),
-                ") : ",
-                html.Strong(format_number(total_montant) + " €"),
-            ]
-        ),
-    ]
+    card_summary_table = get_dashboard_summary_table(dff, df_per_uid, nb_marches)
 
-    cards.append(make_card(title="Résumé", paragraphs=card_basic_counts))
+    cards.append(make_card(title="Résumé", paragraphs=card_summary_table))
 
     donut_acheteur_categorie, nb_acheteur_categories = make_donut(
         lff,

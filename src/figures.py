@@ -1,10 +1,10 @@
 from typing import Literal
 from urllib.error import HTTPError, URLError
 
-import numpy as np
 import dash_bootstrap_components as dbc
 import dash_leaflet as dl
 import dash_leaflet.express as dlx
+import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import polars as pl
@@ -597,7 +597,7 @@ def get_distance_histogram(lff: pl.LazyFrame) -> dcc.Graph:
         counts, bin_edges = np.histogram(log_distances, bins=50)
         bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
         bin_widths = bin_edges[1:] - bin_edges[:-1]
-        bin_edges_km = 10.0 ** bin_edges
+        bin_edges_km = 10.0**bin_edges
 
         def fmt_km(km):
             if km < 10:
@@ -634,6 +634,42 @@ def get_distance_histogram(lff: pl.LazyFrame) -> dcc.Graph:
     )
     fig.update_yaxes(title_text="Nombre de marchés")
     return dcc.Graph(figure=fig)
+
+
+def get_dashboard_summary_table(dff, dff_per_uid, nb_marches):
+    nb_acheteurs = dff.select("acheteur_id").n_unique()
+    nb_titulaires = dff.select("titulaire_id", "titulaire_typeIdentifiant").n_unique()
+    total_montant = int(dff_per_uid.select(pl.col("montant").sum()).item())
+
+    summary_table = [
+        html.P(["Nombre de marchés : ", html.Strong(str(format_number(nb_marches)))]),
+        html.P(
+            [
+                "Nombre d'acheteurs uniques : ",
+                html.Strong(str(format_number(nb_acheteurs))),
+            ]
+        ),
+        html.P(
+            [
+                "Nombre de titulaires uniques : ",
+                html.Strong(str(format_number(nb_titulaires))),
+            ]
+        ),
+        html.P(
+            [
+                "Montant total (",
+                html.Span(
+                    "?",
+                    id={"type": "modal-trigger", "index": "montant"},
+                    style={"cursor": "pointer", "textDecoration": "underline dotted"},
+                ),
+                ") : ",
+                html.Strong(format_number(total_montant) + " €"),
+            ]
+        ),
+    ]
+
+    return summary_table
 
 
 def make_card(
