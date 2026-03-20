@@ -715,6 +715,15 @@ def make_donut(
     lff = lff.with_columns(pl.col(title).replace(None, pl.lit(nulls)))
     dff = lff.collect(engine="streaming")
     nb_names = dff[title].n_unique()
+    if nb_names > 5:
+        sum_values = dff["Nombre"].sum()
+        dff = dff.with_columns(
+            pl.when((pl.col("Nombre") / sum_values) < 0.01)
+            .then(pl.lit("Autres"))
+            .otherwise(pl.col(title))
+            .alias(title)
+        )
+
     dff = dff.with_columns(
         pl.col("Nombre")
         .map_elements(format_number, return_dtype=pl.String)
