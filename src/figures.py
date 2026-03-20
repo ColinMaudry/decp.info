@@ -11,7 +11,14 @@ import polars as pl
 from dash import dash_table, dcc, html
 from dash_extensions.javascript import Namespace
 
-from src.utils import data_schema, departements_geojson, df, format_number
+from src.utils import (
+    add_links,
+    data_schema,
+    departements_geojson,
+    df,
+    format_number,
+    setup_table_columns,
+)
 
 
 def get_yearly_statistics(statistics, today_str) -> html.Div:
@@ -356,15 +363,15 @@ def get_duplicate_matrix() -> dcc.Graph:
 
 def get_geographic_maps(dff: pl.DataFrame) -> list | None:
     """
-    Génère les cartes géographiques pour la métropole et les DOM-TOM.
+    Génère les cartes géographiques pour l'hexagone et les DOM-TOM.
     """
 
     regions: dict = {
-        "Métropole": {
+        "Hexagone": {
             "coordinates": [46.6, 2.2],
             "zoom_leaflet": 5,
             "zoom_chloropleth": 1,
-            "name": "Métropole",
+            "name": "Hexagone",
         },
         "971": {
             "coordinates": [16.23, -61.55],
@@ -400,7 +407,7 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
 
     def make_map_data(region_code: str) -> tuple[list, str or None]:
         lff: pl.LazyFrame = dff.lazy()
-        if region_code == "Métropole":
+        if region_code == "Hexagone":
             lff = lff.filter(
                 (pl.col("acheteur_departement_code").str.len_chars() == 2)
                 & (pl.col("titulaire_departement_code").str.len_chars() == 2)
@@ -418,8 +425,8 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
 
         dfs = []
 
-        if (code == "Métropole" and nb_marches > 30000) or (
-            code != "Métropole" and nb_marches > 10000
+        if (code == "Hexagone" and nb_marches > 30000) or (
+            code != "Hexagone" and nb_marches > 10000
         ):
             _map_type: str = "chloropleth"
 
@@ -490,7 +497,7 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
         else:
             raise ValueError(f"Map type '{map_type}' not recognised")
 
-        lg, xl = (12, 8) if code == "Métropole" else (6, 4)
+        lg, xl = (12, 8) if code == "Hexagone" else (6, 4)
 
         col = make_card(regions[code]["name"], fig=map_graph, lg=lg, xl=xl)
         cols.append(col)
@@ -573,7 +580,7 @@ def make_clusters_map(region: dict) -> dl.Map:
         zoom=zoom,
         style={
             "width": "100%",
-            "height": "400px" if name == "Métropole" else "300px",
+            "height": "400px" if name == "Hexagone" else "300px",
         },
         id=f"map-{region_id}",
     )
@@ -626,7 +633,7 @@ def get_distance_histogram(lff: pl.LazyFrame) -> dcc.Graph:
         )
         fig.update_layout(bargap=0)
 
-    fig.update_layout(margin=dict(r=10))
+    fig.update_layout(margin=dict(r=10, t=10))
     fig.update_xaxes(
         tickvals=[0, 1, 2, 3, 4],
         ticktext=["1", "10", "100", "1 000", "10 000"],
@@ -807,3 +814,44 @@ def make_column_picker(page: str):
     )
 
     return table
+
+
+def get_top_org_table(data, org_type: str, extra_columns: list, filters: bool = True):
+    if isinstance(data, pl.LazyFrame):
+        lff = data
+    else:
+        lff = pl.LazyFrame(data, strict=False, infer_schema_length=5000)
+
+    if org_type == "titulaire":
+        extra_columns.append("titulaire_typeIdentifiant")
+    columns = ["uid", f"{org_type}_id", f"{org_type}_nom"] + extra_columns
+
+    lff = lff.select(columns)
+    lff = lff.group_by([f"{org_type}_id", f"{org_type}_nom"] + extra_columns).agg(
+        pl.len().alias("Attributions")
+    )
+    lff = lff.sort(by="Attributions", descending=True, nulls_last=True)
+    lff = lff.cast(pl.String)
+    lff = lff.fill_null("")
+
+    dff: pl.DataFrame = lff.collect(engine="streaming")
+
+    if dff.height == 0:
+        return html.Div()
+
+    columns, tooltip = setup_table_columns(
+        dff, hideable=False, exclude=[f"{org_type}_id"], new_columns=["Attributions"]
+    )
+    dff = add_links(dff)
+    data = dff.to_dicts()
+    # data = add_links_in_dict(data, f"{org_type}")
+
+    return DataTable(
+        dtid=f"top10_{org_type}",
+        data=data,
+        page_action="native",
+        page_size=10,
+        columns=columns,
+        tooltip_header=tooltip,
+        filter_action="native" if filters else "none",
+    )

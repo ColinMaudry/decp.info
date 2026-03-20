@@ -15,10 +15,10 @@ from dash import (
     register_page,
 )
 
-from src.callbacks import get_top_org_table
 from src.figures import (
     DataTable,
     get_distance_histogram,
+    get_top_org_table,
     make_column_picker,
     point_on_map,
 )
@@ -395,7 +395,7 @@ def get_last_marches_data(
     Input(component_id="titulaire_data", component_property="data"),
 )
 def get_top_acheteurs(data):
-    return get_top_org_table(data, "acheteur", ["titulaire_distance", "montant"])
+    return get_top_org_table(data, "acheteur", ["titulaire_distance"])
 
 
 @callback(

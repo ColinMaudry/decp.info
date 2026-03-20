@@ -23,6 +23,7 @@ from src.figures import (
     get_distance_histogram,
     get_duplicate_matrix,
     get_geographic_maps,
+    get_top_org_table,
     make_card,
     make_donut,
 )
@@ -648,6 +649,16 @@ def udpate_dashboard_cards(
             fig=distance_histogram,
         )
     )
+
+    top_acheteurs = get_top_org_table(
+        lff, org_type="acheteur", filters=False, extra_columns=[]
+    )
+    cards.append(make_card(title="Top acheteurs", fig=top_acheteurs, lg=12, xl=8))
+
+    top_titulaires = get_top_org_table(
+        lff, org_type="titulaire", filters=False, extra_columns=[]
+    )
+    cards.append(make_card(title="Top titulaires", fig=top_titulaires, lg=12, xl=8))
 
     geographic_maps: list[dbc.Col] = get_geographic_maps(dff)
 
