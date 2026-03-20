@@ -52,14 +52,13 @@ for year in reversed(range(2017, datetime.now().year + 1)):
     year = str(year)
     options_years[year] = year
 
-options_departements = {
-    code: f"{departements[code]['departement']} ({code})"
-    for code in sorted(
-        departements,
-        key=lambda c: 20.1 if c == "2A" else (20.2 if c == "2B" else float(c)),
-    )
-}
-
+options_departements = []
+for code in departements.keys():
+    departement = {
+        "label": f"{departements[code]['departement']} ({code})",
+        "value": code,
+    }
+    options_departements.append(departement)
 
 layout = [
     dcc.Location(id="dashboard_url", refresh="callback-nav"),
