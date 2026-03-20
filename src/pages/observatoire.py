@@ -205,6 +205,41 @@ Alors, on fait comment ?
                                         ),
                                     ),
                                     dbc.Row(
+                                        dbc.Col(
+                                            dcc.Input(
+                                                id="dashboard_marche_objet",
+                                                placeholder="Objet",
+                                                debounce=True,
+                                                style={"width": "100%"},
+                                                persistence=True,
+                                                persistence_type="local",
+                                            ),
+                                        ),
+                                    ),
+                                    dbc.Row(
+                                        [
+                                            dbc.Col(
+                                                dcc.Input(
+                                                    id="dashboard_marche_code_cpv",
+                                                    placeholder="Code CPV (début)",
+                                                    debounce=True,
+                                                    style={"width": "100%"},
+                                                    persistence=True,
+                                                    persistence_type="local",
+                                                ),
+                                                lg=8,
+                                            ),
+                                            dbc.Col(
+                                                html.A(
+                                                    "liste des codes",
+                                                    href="https://cpvcodes.eu/fr",
+                                                    target="_blank",
+                                                ),
+                                                lg=4,
+                                            ),
+                                        ]
+                                    ),
+                                    dbc.Row(
                                         [
                                             dbc.Col(
                                                 dcc.Input(
@@ -374,6 +409,8 @@ Alors, on fait comment ?
     Output("dashboard_titulaire_categorie", "value"),
     Output("dashboard_titulaire_departement_code", "value"),
     Output("dashboard_marche_type", "value"),
+    Output("dashboard_marche_objet", "value"),
+    Output("dashboard_marche_code_cpv", "value"),
     Output("dashboard_montant_min", "value"),
     Output("dashboard_montant_max", "value"),
     Output("dashboard_marche_techniques", "value"),
@@ -407,8 +444,10 @@ def restore_filters(search, _pathname, stored_filters):
                 None,
                 None,
                 None,
+                None,
+                None,
             )
-    return (no_update,) * 15
+    return (no_update,) * 17
 
 
 @callback(
@@ -470,6 +509,8 @@ def sync_observatoire_share_url(acheteur_id, titulaire_id, href):
     Input("dashboard_titulaire_categorie", "value"),
     Input("dashboard_titulaire_departement_code", "value"),
     Input("dashboard_marche_type", "value"),
+    Input("dashboard_marche_objet", "value"),
+    Input("dashboard_marche_code_cpv", "value"),
     Input("dashboard_montant_min", "value"),
     Input("dashboard_montant_max", "value"),
     Input("dashboard_marche_techniques", "value"),
@@ -487,6 +528,8 @@ def udpate_dashboard_cards(
     dashboard_titulaire_categorie,
     dashboard_titulaire_departement_code,
     dashboard_marche_type,
+    dashboard_marche_objet,
+    dashboard_marche_code_cpv,
     dashboard_montant_min,
     dashboard_montant_max,
     dashboard_marche_techniques,
@@ -496,7 +539,8 @@ def udpate_dashboard_cards(
     dashboard_marche_considerations_environnementales,
 ):
     lff: pl.LazyFrame = df.lazy()
-    lff = lff.select(
+
+    columns = [
         "uid",
         cs.starts_with("acheteur"),
         cs.starts_with("titulaire"),
@@ -509,7 +553,15 @@ def udpate_dashboard_cards(
         "techniques",
         "sourceDataset",
         "type",
-    )
+        "codeCPV",
+    ]
+
+    if dashboard_marche_objet:
+        columns.append("objet")
+
+    lff = lff.select(columns)
+
+    # Filtrage des données
     lff = prepare_dashboard_data(
         lff=lff,
         year=dashboard_year,
@@ -520,6 +572,8 @@ def udpate_dashboard_cards(
         titulaire_categorie=dashboard_titulaire_categorie,
         titulaire_departement_code=dashboard_titulaire_departement_code,
         type=dashboard_marche_type,
+        objet=dashboard_marche_objet,
+        code_cpv=dashboard_marche_code_cpv,
         considerations_sociales=dashboard_marche_considerations_sociales,
         considerations_environnementales=dashboard_marche_considerations_environnementales,
         montant_min=dashboard_montant_min,
@@ -635,6 +689,8 @@ def udpate_dashboard_cards(
     State("dashboard_titulaire_categorie", "value"),
     State("dashboard_titulaire_departement_code", "value"),
     State("dashboard_marche_type", "value"),
+    State("dashboard_marche_objet", "value"),
+    State("dashboard_marche_code_cpv", "value"),
     State("dashboard_montant_min", "value"),
     State("dashboard_montant_max", "value"),
     State("dashboard_marche_techniques", "value"),
@@ -654,6 +710,8 @@ def download_observatoire(
     dashboard_titulaire_categorie,
     dashboard_titulaire_departement_code,
     dashboard_marche_type,
+    dashboard_marche_objet,
+    dashboard_marche_code_cpv,
     dashboard_montant_min,
     dashboard_montant_max,
     dashboard_marche_techniques,
@@ -672,6 +730,8 @@ def download_observatoire(
         titulaire_categorie=dashboard_titulaire_categorie,
         titulaire_departement_code=dashboard_titulaire_departement_code,
         type=dashboard_marche_type,
+        objet=dashboard_marche_objet,
+        code_cpv=dashboard_marche_code_cpv,
         considerations_sociales=dashboard_considerations_sociales,
         considerations_environnementales=dashboard_considerations_environnementales,
         montant_min=dashboard_montant_min,

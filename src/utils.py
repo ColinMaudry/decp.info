@@ -705,6 +705,8 @@ def prepare_dashboard_data(
     titulaire_categorie,
     titulaire_departement_code,
     type,
+    objet,
+    code_cpv,
     considerations_sociales,
     considerations_environnementales,
     techniques,
@@ -742,6 +744,12 @@ def prepare_dashboard_data(
 
     if type:
         lff = lff.filter(pl.col("type") == type)
+
+    if objet:
+        lff = lff.filter(pl.col("objet").str.contains(f"(?i){objet}"))
+
+    if code_cpv:
+        lff = lff.filter(pl.col("codeCPV").str.starts_with(code_cpv))
 
     if marche_innovant != "all":
         lff = lff.filter(pl.col("marcheInnovant") == marche_innovant)
