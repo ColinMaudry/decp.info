@@ -585,22 +585,29 @@ def restore_filters(search, _pathname, stored_filters):
 @callback(
     Output("observatoire-share-url", "value"),
     Output("observatoire-copy-container", "children"),
-    Input("dashboard_acheteur_id", "value"),
-    Input("dashboard_titulaire_id", "value"),
+    *[Input(fp[0], "value") for fp in FILTER_PARAMS],
     State("dashboard_url", "href"),
     prevent_initial_call=True,
 )
-def sync_observatoire_share_url(acheteur_id, titulaire_id, href):
+def sync_observatoire_share_url(*args):
+    # Last arg is href (State), rest are filter values
+    filter_values = args[:-1]
+    href = args[-1]
+
     if not href:
         return no_update, no_update
 
     base_url = href.split("?")[0]
 
-    params = {}
-    if acheteur_id:
-        params["acheteur_id"] = acheteur_id
-    if titulaire_id:
-        params["titulaire_id"] = titulaire_id
+    params = []
+    for (_, url_key, is_multi, default), value in zip(FILTER_PARAMS, filter_values):
+        if value is None or value == default or value == [] or value == "":
+            continue
+        if is_multi and isinstance(value, list):
+            for v in value:
+                params.append((url_key, v))
+        else:
+            params.append((url_key, value))
 
     query_string = urllib.parse.urlencode(params)
     full_url = f"{base_url}?{query_string}" if query_string else base_url
