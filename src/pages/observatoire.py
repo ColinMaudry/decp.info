@@ -29,10 +29,12 @@ from src.figures import (
     make_donut,
 )
 from src.utils import (
+    columns,
     departements,
     df,
     df_acheteurs,
     df_titulaires,
+    get_default_hidden_columns,
     get_enum_values_as_dict,
     logger,
     meta_content,
@@ -90,6 +92,7 @@ DF_FILTERED: pl.DataFrame = pl.DataFrame()
 layout = [
     dcc.Location(id="dashboard_url", refresh="callback-nav"),
     dcc.Store(id="observatoire-filters", storage_type="local"),
+    dcc.Store(id="observatoire-hidden-columns", storage_type="local"),
     dcc.Store(
         id="filter-cleanup-trigger-observatoire-preview"
     ),  # utilisé juste pour ne pas avoir à adapter les données retournées de prepare_table data
@@ -487,7 +490,7 @@ Alors, on fait comment ?
                         )
                     ),
                 ],
-                id="observatoire-preview-columns",
+                id="observatoire-preview-columns-modal",
                 is_open=False,
                 fullscreen="md-down",
                 scrollable=True,
@@ -904,7 +907,7 @@ def toggle_observatoire_preview(n_clicks, is_open):
     Output("btn-download-observatoire", "title"),
     Output("filter-cleanup-trigger-observatoire-preview", "data", allow_duplicate=True),
     Input("observatoire-preview", "is_open"),
-    Input("observano_updatetoire-preview-table", "filter_query"),
+    Input("observatoire-preview-table", "filter_query"),
     Input("observatoire-preview-table", "page_current"),
     Input("observatoire-preview-table", "page_size"),
     Input("observatoire-preview-table", "sort_by"),
@@ -929,3 +932,55 @@ def populate_preview_table(
         sort_by,
         "observatoire-preview",
     )
+
+
+@callback(
+    Output("observatoire-hidden-columns", "data", allow_duplicate=True),
+    Input("observatoire_preview_column_list", "selected_rows"),
+    prevent_initial_call=True,
+)
+def update_hidden_columns_from_checkboxes(selected_columns):
+    if selected_columns:
+        selected_columns = [columns[i] for i in selected_columns]
+        hidden_columns = [col for col in columns if col not in selected_columns]
+        return hidden_columns
+    else:
+        return []
+
+
+@callback(
+    Output("observatoire-preview-table", "hidden_columns"),
+    Input(
+        "observatoire-hidden-columns",
+        "data",
+    ),
+)
+def store_hidden_columns(hidden_columns):
+    return hidden_columns
+
+
+@callback(
+    Output("observatoire_preview_column_list", "selected_rows"),
+    Input("observatoire-preview-table", "hidden_columns"),
+    State(
+        "observatoire_preview_column_list", "selected_rows"
+    ),  # pour éviter la boucle infinie
+)
+def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
+    hidden_cols = hidden_cols or get_default_hidden_columns("tableau")
+
+    # Show all columns that are NOT hidden
+    visible_cols = [columns.index(col) for col in columns if col not in hidden_cols]
+    return visible_cols
+
+
+@callback(
+    Output("observatoire-preview-columns-modal", "is_open"),
+    Input("observatoire-preview-columns-open", "n_clicks"),
+    Input("observatoire-preview-columns-close", "n_clicks"),
+    State("observatoire-preview-columns-modal", "is_open"),
+)
+def toggle_tableau_columns(click_open, click_close, is_open):
+    if click_open or click_close:
+        return not is_open
+    return is_open
