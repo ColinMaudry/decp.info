@@ -3,7 +3,6 @@ from datetime import datetime
 
 import dash_bootstrap_components as dbc
 import polars as pl
-import polars.selectors as cs
 from dash import (
     ALL,
     Input,
@@ -18,6 +17,7 @@ from dash import (
 )
 
 from src.figures import (
+    DataTable,
     get_barchart_sources,
     get_dashboard_summary_table,
     get_distance_histogram,
@@ -25,16 +25,21 @@ from src.figures import (
     get_geographic_maps,
     get_top_org_table,
     make_card,
+    make_column_picker,
     make_donut,
 )
 from src.utils import (
+    columns,
     departements,
     df,
     df_acheteurs,
     df_titulaires,
+    get_default_hidden_columns,
     get_enum_values_as_dict,
+    logger,
     meta_content,
     prepare_dashboard_data,
+    prepare_table_data,
 )
 
 name = "Observatoire"
@@ -61,9 +66,36 @@ for code in departements.keys():
     }
     options_departements.append(departement)
 
+OBSERVATOIRE_COLUMNS = [
+    col
+    for col in df.columns
+    if col.startswith("acheteur")
+    or col.startswith("titulaire")
+    or col
+    in [
+        "uid",
+        "dateNotification",
+        "montant",
+        "considerationsSociales",
+        "considerationsEnvironnementales",
+        "marcheInnovant",
+        "sousTraitanceDeclaree",
+        "techniques",
+        "sourceDataset",
+        "type",
+        "codeCPV",
+    ]
+]
+
+DF_FILTERED: pl.DataFrame = pl.DataFrame()
+
 layout = [
     dcc.Location(id="dashboard_url", refresh="callback-nav"),
     dcc.Store(id="observatoire-filters", storage_type="local"),
+    dcc.Store(id="observatoire-hidden-columns", storage_type="local"),
+    dcc.Store(
+        id="filter-cleanup-trigger-observatoire-preview"
+    ),  # utilisé juste pour ne pas avoir à adapter les données retournées de prepare_table data
     dbc.Modal(
         [
             dbc.ModalHeader(dbc.ModalTitle("Montants")),
@@ -372,10 +404,16 @@ Alors, on fait comment ?
                                     ),
                                     dcc.Download(id="download-observatoire"),
                                     dbc.Button(
-                                        "Télécharger au format Excel",
-                                        id="btn-download-observatoire",
-                                        disabled=True,
-                                        className="mt-2",
+                                        "Prévisualiser les données",
+                                        id="btn-observatoire-preview",
+                                        className="btn btn-primary",
+                                        color="primary",
+                                        outline=True,
+                                    ),
+                                    dcc.Input(
+                                        id="observatoire-share-url",
+                                        readOnly=True,
+                                        style={"display": "none"},
                                     ),
                                     dcc.Input(
                                         id="observatoire-share-url",
@@ -395,6 +433,81 @@ Alors, on fait comment ?
                         ]
                     )
                 ],
+            ),
+        ],
+    ),
+    dbc.Offcanvas(
+        id="observatoire-preview",
+        title="Prévisualisation des données",
+        placement="bottom",
+        is_open=False,
+        scrollable=True,
+        style={"height": "75vh"},
+        children=[
+            # Header row: title + "Colonnes affichées" button
+            dbc.Row(
+                [
+                    dbc.Col(
+                        html.Div(
+                            className="table-menu",
+                            children=[
+                                dbc.Button(
+                                    "Choisir les colonnes",
+                                    id="observatoire-preview-columns-open",
+                                    className="btn btn-primary",
+                                ),
+                                html.P(id="nb_rows_observatoire"),
+                                dbc.Button(
+                                    "Télécharger au format Excel",
+                                    id="btn-download-observatoire",
+                                    disabled=True,
+                                    className="btn btn-primary",
+                                    outline=True,
+                                ),
+                            ],
+                        ),
+                        width="auto",
+                    ),
+                ],
+                className="mb-2 align-items-center",
+            ),
+            # Column picker modal
+            dbc.Modal(
+                [
+                    dbc.ModalHeader(
+                        dbc.ModalTitle("Colonnes affichées dans la prévisualisation")
+                    ),
+                    dbc.ModalBody(
+                        id="observatoire-preview-columns-body",
+                        children=make_column_picker("observatoire_preview"),
+                    ),
+                    dbc.ModalFooter(
+                        dbc.Button(
+                            "Fermer",
+                            id="observatoire-preview-columns-close",
+                            className="ms-auto",
+                            n_clicks=0,
+                        )
+                    ),
+                ],
+                id="observatoire-preview-columns-modal",
+                is_open=False,
+                fullscreen="md-down",
+                scrollable=True,
+                size="xl",
+            ),
+            # DataTable
+            html.Div(
+                className="marches_table",
+                children=DataTable(
+                    dtid="observatoire-preview-table",
+                    page_size=5,
+                    page_action="custom",
+                    sort_action="custom",
+                    filter_action="custom",
+                    hidden_columns=[],
+                    columns=[{"id": col, "name": col} for col in OBSERVATOIRE_COLUMNS],
+                ),
             ),
         ],
     ),
@@ -500,8 +613,6 @@ def sync_observatoire_share_url(acheteur_id, titulaire_id, href):
 
 @callback(
     Output("cards", "children"),
-    Output("btn-download-observatoire", "disabled"),
-    Output("btn-download-observatoire", "children"),
     Input("dashboard_year", "value"),
     Input("dashboard_acheteur_id", "value"),
     Input("dashboard_acheteur_categorie", "value"),
@@ -541,27 +652,6 @@ def udpate_dashboard_cards(
 ):
     lff: pl.LazyFrame = df.lazy()
 
-    columns = [
-        "uid",
-        cs.starts_with("acheteur"),
-        cs.starts_with("titulaire"),
-        "dateNotification",
-        "montant",
-        "considerationsSociales",
-        "considerationsEnvironnementales",
-        "marcheInnovant",
-        "sousTraitanceDeclaree",
-        "techniques",
-        "sourceDataset",
-        "type",
-        "codeCPV",
-    ]
-
-    if dashboard_marche_objet:
-        columns.append("objet")
-
-    lff = lff.select(columns)
-
     # Filtrage des données
     lff = prepare_dashboard_data(
         lff=lff,
@@ -586,17 +676,16 @@ def udpate_dashboard_cards(
 
     # Génération des métriques
     dff = lff.collect(engine="streaming")
+
+    global DF_FILTERED
+    DF_FILTERED = dff
+
+    logger.debug("Filter data: " + str(dff.height))
+
     df_per_uid = (
         dff.select("uid", "montant").group_by("uid").agg(pl.col("montant").first())
     )
     nb_marches = df_per_uid.height
-
-    if nb_marches == 0:
-        dl_disabled, dl_text = True, "Pas de données à télécharger"
-    elif nb_marches > 65000:
-        dl_disabled, dl_text = True, "Téléchargement désactivé au-delà de 65 000 lignes"
-    else:
-        dl_disabled, dl_text = False, "Télécharger au format Excel"
 
     cards = []
 
@@ -686,7 +775,7 @@ def udpate_dashboard_cards(
         )
     )
 
-    return dbc.Row(children=cards + geographic_maps + other_cards), dl_disabled, dl_text
+    return dbc.Row(children=cards + geographic_maps + other_cards)
 
 
 @callback(
@@ -709,6 +798,7 @@ def udpate_dashboard_cards(
     State("dashboard_marche_sousTraitanceDeclaree", "value"),
     State("dashboard_marche_considerationsSociales", "value"),
     State("dashboard_marche_considerationsEnvironnementales", "value"),
+    State("observatoire-hidden-columns", "data"),
     prevent_initial_call=True,
 )
 def download_observatoire(
@@ -730,6 +820,7 @@ def download_observatoire(
     dashboard_marche_sous_traitance_declaree,
     dashboard_considerations_sociales,
     dashboard_considerations_environnementales,
+    hidden_columns,
 ):
     lff = prepare_dashboard_data(
         lff=df.lazy(),
@@ -751,6 +842,9 @@ def download_observatoire(
         marche_innovant=dashboard_marche_innovant,
         sous_traitance_declaree=dashboard_marche_sous_traitance_declaree,
     )
+
+    if hidden_columns:
+        lff = lff.drop(hidden_columns)
 
     def to_bytes(buffer):
         lff.collect(engine="streaming").write_excel(buffer, worksheet="DECP")
@@ -795,3 +889,103 @@ def add_organization_name_in_title(acheteur_id, titulaire_id):
                 html.Small(nom, className="text-muted d-block fw-normal fs-5"),
             ]
     return name
+
+
+@callback(
+    Output("observatoire-preview", "is_open"),
+    Input("btn-observatoire-preview", "n_clicks"),
+    State("observatoire-preview", "is_open"),
+    prevent_initial_call=True,
+)
+def toggle_observatoire_preview(n_clicks, is_open):
+    return not is_open
+
+
+@callback(
+    Output("observatoire-preview-table", "data"),
+    Output("observatoire-preview-table", "columns"),
+    Output("observatoire-preview-table", "tooltip_header"),
+    Output("observatoire-preview-table", "data_timestamp"),
+    Output("nb_rows_observatoire", "children"),
+    Output("btn-download-observatoire", "disabled"),
+    Output("btn-download-observatoire", "children"),
+    Output("btn-download-observatoire", "title"),
+    Output("filter-cleanup-trigger-observatoire-preview", "data", allow_duplicate=True),
+    Input("observatoire-preview", "is_open"),
+    Input("observatoire-preview-table", "filter_query"),
+    Input("observatoire-preview-table", "page_current"),
+    Input("observatoire-preview-table", "page_size"),
+    Input("observatoire-preview-table", "sort_by"),
+    State("observatoire-preview-table", "data_timestamp"),
+    prevent_initial_call=True,
+)
+def populate_preview_table(
+    is_open, filter_query, page_current, page_size, sort_by, data_timestamp
+):
+    if not is_open:
+        return (no_update,) * 9
+
+    global DF_FILTERED
+    lff = DF_FILTERED.lazy()
+
+    return prepare_table_data(
+        lff,
+        data_timestamp,
+        filter_query,
+        page_current,
+        page_size,
+        sort_by,
+        "observatoire-preview",
+    )
+
+
+@callback(
+    Output("observatoire-hidden-columns", "data", allow_duplicate=True),
+    Input("observatoire_preview_column_list", "selected_rows"),
+    prevent_initial_call=True,
+)
+def update_hidden_columns_from_checkboxes(selected_columns):
+    if selected_columns:
+        selected_columns = [columns[i] for i in selected_columns]
+        hidden_columns = [col for col in columns if col not in selected_columns]
+        return hidden_columns
+    else:
+        return []
+
+
+@callback(
+    Output("observatoire-preview-table", "hidden_columns"),
+    Input(
+        "observatoire-hidden-columns",
+        "data",
+    ),
+)
+def store_hidden_columns(hidden_columns):
+    return hidden_columns
+
+
+@callback(
+    Output("observatoire_preview_column_list", "selected_rows"),
+    Input("observatoire-preview-table", "hidden_columns"),
+    State(
+        "observatoire_preview_column_list", "selected_rows"
+    ),  # pour éviter la boucle infinie
+)
+def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
+    hidden_cols = hidden_cols or get_default_hidden_columns("tableau")
+
+    # Show all columns that are NOT hidden
+    visible_cols = [columns.index(col) for col in columns if col not in hidden_cols]
+    return visible_cols
+
+
+@callback(
+    Output("observatoire-preview-columns-modal", "is_open"),
+    Input("observatoire-preview-columns-open", "n_clicks"),
+    Input("observatoire-preview-columns-close", "n_clicks"),
+    State("observatoire-preview-columns-modal", "is_open"),
+)
+def toggle_tableau_columns(click_open, click_close, is_open):
+    if click_open or click_close:
+        return not is_open
+    return is_open
