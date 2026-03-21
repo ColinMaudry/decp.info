@@ -514,6 +514,28 @@ Alors, on fait comment ?
 ]
 
 
+FILTER_PARAMS = [
+    # (component_id, url_key, is_multi, default_value)
+    ("dashboard_year", "annee", False, None),
+    ("dashboard_acheteur_id", "acheteur_id", False, None),
+    ("dashboard_acheteur_categorie", "acheteur_cat", False, None),
+    ("dashboard_acheteur_departement_code", "acheteur_dept", True, None),
+    ("dashboard_titulaire_id", "titulaire_id", False, None),
+    ("dashboard_titulaire_categorie", "titulaire_cat", False, None),
+    ("dashboard_titulaire_departement_code", "titulaire_dept", True, None),
+    ("dashboard_marche_type", "type", False, None),
+    ("dashboard_marche_objet", "objet", False, None),
+    ("dashboard_marche_code_cpv", "cpv", False, None),
+    ("dashboard_montant_min", "montant_min", False, None),
+    ("dashboard_montant_max", "montant_max", False, None),
+    ("dashboard_marche_techniques", "techniques", True, None),
+    ("dashboard_marche_innovant", "innovant", False, "all"),
+    ("dashboard_marche_sousTraitanceDeclaree", "sous_traitance", False, "all"),
+    ("dashboard_marche_considerationsSociales", "social", True, None),
+    ("dashboard_marche_considerationsEnvironnementales", "env", True, None),
+]
+
+
 @callback(
     Output("dashboard_year", "value"),
     Output("dashboard_acheteur_id", "value"),
@@ -539,28 +561,24 @@ Alors, on fait comment ?
 def restore_filters(search, _pathname, stored_filters):
     if search:
         params = urllib.parse.parse_qs(search.lstrip("?"))
-        acheteur_id = (params.get("acheteur_id") or [None])[0] or None
-        titulaire_id = (params.get("titulaire_id") or [None])[0] or None
-        if acheteur_id or titulaire_id:
-            return (
-                None,
-                acheteur_id,
-                None,
-                None,
-                titulaire_id,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-            )
+        known_keys = {fp[1] for fp in FILTER_PARAMS}
+        if any(k in params for k in known_keys):
+            values = []
+            for _comp_id, url_key, is_multi, default in FILTER_PARAMS:
+                if url_key in params:
+                    if is_multi:
+                        values.append(params[url_key])
+                    else:
+                        raw = params[url_key][0]
+                        if url_key in ("montant_min", "montant_max"):
+                            try:
+                                raw = float(raw)
+                            except (ValueError, TypeError):
+                                raw = None
+                        values.append(raw)
+                else:
+                    values.append(default)
+            return tuple(values)
     return (no_update,) * 17
 
 
