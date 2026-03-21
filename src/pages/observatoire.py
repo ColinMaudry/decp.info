@@ -798,6 +798,7 @@ def udpate_dashboard_cards(
     State("dashboard_marche_sousTraitanceDeclaree", "value"),
     State("dashboard_marche_considerationsSociales", "value"),
     State("dashboard_marche_considerationsEnvironnementales", "value"),
+    State("observatoire-hidden-columns", "data"),
     prevent_initial_call=True,
 )
 def download_observatoire(
@@ -819,6 +820,7 @@ def download_observatoire(
     dashboard_marche_sous_traitance_declaree,
     dashboard_considerations_sociales,
     dashboard_considerations_environnementales,
+    hidden_columns,
 ):
     lff = prepare_dashboard_data(
         lff=df.lazy(),
@@ -840,6 +842,9 @@ def download_observatoire(
         marche_innovant=dashboard_marche_innovant,
         sous_traitance_declaree=dashboard_marche_sous_traitance_declaree,
     )
+
+    if hidden_columns:
+        lff = lff.drop(hidden_columns)
 
     def to_bytes(buffer):
         lff.collect(engine="streaming").write_excel(buffer, worksheet="DECP")
