@@ -401,8 +401,10 @@ Alors, on fait comment ?
                                                 persistence_type="local",
                                             ),
                                         ),
-                                    ),
-                                    dcc.Download(id="download-observatoire"),
+                                    ), 
+dbc.Row(
+                                        [dbc.Col([
+				dcc.Download(id="download-observatoire"),
                                     dbc.Button(
                                         "Prévisualiser les données",
                                         id="btn-observatoire-preview",
@@ -414,8 +416,10 @@ Alors, on fait comment ?
                                         id="observatoire-share-url",
                                         readOnly=True,
                                         style={"display": "none"},
-                                    ),
-                                    html.Div(id="observatoire-copy-container"),
+                                    )], lg=12, xl=7)]),
+dbc.Row(
+dbc.Col(
+                                    html.Div(id="observatoire-copy-container"), lg=12, xl=5))
                                 ],
                             ),
                             dbc.Col(
@@ -620,10 +624,9 @@ def sync_observatoire_share_url(*args):
         className="fa fa-link",
         children=[
             dbc.Button(
-                "Partager",
+                "Partager cette vue",
                 className="btn btn-primary mt-2",
                 title="Copier l'adresse de cette vue filtrée pour la partager.",
-                style={"display": "none"},
             )
         ],
     )
