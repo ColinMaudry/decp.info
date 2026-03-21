@@ -306,6 +306,36 @@ def test_009_observatoire_filter_persistence(dash_duo: DashComposite):
     )
 
 
+def test_011_observatoire_multi_param_url(dash_duo: DashComposite):
+    import time
+
+    from src.app import app
+
+    dash_duo.start_server(app)
+    dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
+
+    # Navigate with multiple filter params
+    dash_duo.wait_for_page(
+        f"{dash_duo.server_url}/observatoire?annee=2024&acheteur_id=12345678901234&montant_min=10000"
+    )
+    dash_duo.wait_for_element("#dashboard_acheteur_id", timeout=4)
+
+    time.sleep(1)  # Allow callback chain to complete
+
+    # Verify acheteur_id input
+    acheteur_input = dash_duo.find_element("#dashboard_acheteur_id")
+    assert acheteur_input.get_attribute("value") == "12345678901234", (
+        "acheteur_id input should be populated from URL param"
+    )
+
+    # Verify montant_min input
+    montant_input = dash_duo.find_element("#dashboard_montant_min")
+    montant_value = montant_input.get_attribute("value")
+    assert montant_value in ("10000", "10000.0"), (
+        f"montant_min input should be populated from URL param, got: {montant_value}"
+    )
+
+
 def test_get_distance_histogram_returns_graph():
     import polars as pl
     from dash import dcc
