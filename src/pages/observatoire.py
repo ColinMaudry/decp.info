@@ -415,11 +415,6 @@ Alors, on fait comment ?
                                         readOnly=True,
                                         style={"display": "none"},
                                     ),
-                                    dcc.Input(
-                                        id="observatoire-share-url",
-                                        readOnly=True,
-                                        style={"display": "none"},
-                                    ),
                                     html.Div(id="observatoire-copy-container"),
                                 ],
                             ),
