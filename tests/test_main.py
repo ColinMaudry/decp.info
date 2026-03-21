@@ -221,10 +221,7 @@ def test_010_observatoire_montant_filter():
 
     import polars as pl
 
-    from pages.observatoire import _apply_filters
-    from src.app import (
-        app,  # noqa: F401 – instantiates the Dash app before register_page() calls
-    )
+    from src.utils import prepare_dashboard_data
 
     data = pl.DataFrame(
         {
@@ -235,7 +232,7 @@ def test_010_observatoire_montant_filter():
     )
 
     def apply(min_val=None, max_val=None):
-        return _apply_filters(
+        return prepare_dashboard_data(
             data.lazy(),
             year="2025",
             acheteur_id=None,
@@ -244,9 +241,14 @@ def test_010_observatoire_montant_filter():
             titulaire_id=None,
             titulaire_categorie=None,
             titulaire_departement_code=None,
-            marche_type=None,
+            type=None,
+            objet=None,
+            code_cpv=None,
             considerations_sociales=None,
             considerations_environnementales=None,
+            techniques=None,
+            marche_innovant=None,
+            sous_traitance_declaree=None,
             montant_min=min_val,
             montant_max=max_val,
         ).collect()
