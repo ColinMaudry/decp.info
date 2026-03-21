@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal
 from urllib.error import HTTPError, URLError
 
@@ -66,6 +67,8 @@ def get_barchart_sources(lff: pl.LazyFrame, type_date: str):
         "datePublicationDonnees": "publication des données",
     }
 
+    now_year = datetime.now().year
+
     lff = lff.select("uid", type_date, "sourceDataset")
 
     lff = lff.unique("uid")
@@ -88,7 +91,7 @@ def get_barchart_sources(lff: pl.LazyFrame, type_date: str):
 
     lff = lff.with_columns(pl.col(type_date).dt.year().alias("annee"))
     lff = lff.filter(
-        pl.col(type_date).is_not_null() & pl.col("annee").is_between(2019, 2025)
+        pl.col(type_date).is_not_null() & pl.col("annee").is_between(2019, now_year)
     )
     lff = lff.with_columns(pl.col(type_date).cast(pl.String).str.head(7))
     lff = (
@@ -98,6 +101,7 @@ def get_barchart_sources(lff: pl.LazyFrame, type_date: str):
     )
 
     lff = lff.sort(by=["sourceDataset"], descending=False)
+
     dff: pl.DataFrame = lff.collect(engine="streaming")
 
     fig = px.bar(

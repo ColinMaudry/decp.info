@@ -425,16 +425,12 @@ Alors, on fait comment ?
                                                         style={"display": "none"},
                                                     ),
                                                 ],
-                                                lg=12,
-                                                xl=7,
                                             )
                                         ]
                                     ),
                                     dbc.Row(
                                         dbc.Col(
                                             html.Div(id="observatoire-copy-container"),
-                                            lg=12,
-                                            xl=5,
                                         )
                                     ),
                                 ],
