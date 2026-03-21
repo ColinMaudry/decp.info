@@ -3,7 +3,6 @@ from datetime import datetime
 
 import dash_bootstrap_components as dbc
 import polars as pl
-import polars.selectors as cs
 from dash import (
     ALL,
     Input,
@@ -30,7 +29,6 @@ from src.figures import (
     make_donut,
 )
 from src.utils import (
-    data_schema,
     departements,
     df,
     df_acheteurs,
@@ -39,6 +37,7 @@ from src.utils import (
     logger,
     meta_content,
     prepare_dashboard_data,
+    prepare_table_data,
 )
 
 name = "Observatoire"
@@ -86,9 +85,14 @@ OBSERVATOIRE_COLUMNS = [
     ]
 ]
 
+DF_FILTERED: pl.DataFrame = pl.DataFrame()
+
 layout = [
     dcc.Location(id="dashboard_url", refresh="callback-nav"),
     dcc.Store(id="observatoire-filters", storage_type="local"),
+    dcc.Store(
+        id="filter-cleanup-trigger-observatoire-preview"
+    ),  # utilisé juste pour ne pas avoir à adapter les données retournées de prepare_table data
     dbc.Modal(
         [
             dbc.ModalHeader(dbc.ModalTitle("Montants")),
@@ -445,10 +449,11 @@ Alors, on fait comment ?
                             className="table-menu",
                             children=[
                                 dbc.Button(
-                                    "Colonnes affichées",
+                                    "Choisir les colonnes",
                                     id="observatoire-preview-columns-open",
                                     className="btn btn-primary",
                                 ),
+                                html.P(id="nb_rows_observatoire"),
                                 dbc.Button(
                                     "Télécharger au format Excel",
                                     id="btn-download-observatoire",
@@ -493,10 +498,10 @@ Alors, on fait comment ?
                 className="marches_table",
                 children=DataTable(
                     dtid="observatoire-preview-table",
-                    page_size=10,
-                    page_action="native",
-                    sort_action="native",
-                    filter_action="native",
+                    page_size=5,
+                    page_action="custom",
+                    sort_action="custom",
+                    filter_action="custom",
                     hidden_columns=[],
                     columns=[{"id": col, "name": col} for col in OBSERVATOIRE_COLUMNS],
                 ),
@@ -605,8 +610,6 @@ def sync_observatoire_share_url(acheteur_id, titulaire_id, href):
 
 @callback(
     Output("cards", "children"),
-    Output("btn-download-observatoire", "disabled"),
-    Output("btn-download-observatoire", "children"),
     Input("dashboard_year", "value"),
     Input("dashboard_acheteur_id", "value"),
     Input("dashboard_acheteur_categorie", "value"),
@@ -646,27 +649,6 @@ def udpate_dashboard_cards(
 ):
     lff: pl.LazyFrame = df.lazy()
 
-    columns = [
-        "uid",
-        cs.starts_with("acheteur"),
-        cs.starts_with("titulaire"),
-        "dateNotification",
-        "montant",
-        "considerationsSociales",
-        "considerationsEnvironnementales",
-        "marcheInnovant",
-        "sousTraitanceDeclaree",
-        "techniques",
-        "sourceDataset",
-        "type",
-        "codeCPV",
-    ]
-
-    if dashboard_marche_objet:
-        columns.append("objet")
-
-    lff = lff.select(columns)
-
     # Filtrage des données
     lff = prepare_dashboard_data(
         lff=lff,
@@ -692,19 +674,15 @@ def udpate_dashboard_cards(
     # Génération des métriques
     dff = lff.collect(engine="streaming")
 
+    global DF_FILTERED
+    DF_FILTERED = dff
+
     logger.debug("Filter data: " + str(dff.height))
 
     df_per_uid = (
         dff.select("uid", "montant").group_by("uid").agg(pl.col("montant").first())
     )
     nb_marches = df_per_uid.height
-
-    if nb_marches == 0:
-        dl_disabled, dl_text = True, "Pas de données à télécharger"
-    elif nb_marches > 65000:
-        dl_disabled, dl_text = True, "Téléchargement désactivé au-delà de 65 000 lignes"
-    else:
-        dl_disabled, dl_text = False, "Télécharger au format Excel"
 
     cards = []
 
@@ -794,7 +772,7 @@ def udpate_dashboard_cards(
         )
     )
 
-    return dbc.Row(children=cards + geographic_maps + other_cards), dl_disabled, dl_text
+    return dbc.Row(children=cards + geographic_maps + other_cards)
 
 
 @callback(
@@ -918,81 +896,36 @@ def toggle_observatoire_preview(n_clicks, is_open):
 @callback(
     Output("observatoire-preview-table", "data"),
     Output("observatoire-preview-table", "columns"),
+    Output("observatoire-preview-table", "tooltip_header"),
+    Output("observatoire-preview-table", "data_timestamp"),
+    Output("nb_rows_observatoire", "children"),
+    Output("btn-download-observatoire", "disabled"),
+    Output("btn-download-observatoire", "children"),
+    Output("btn-download-observatoire", "title"),
+    Output("filter-cleanup-trigger-observatoire-preview", "data", allow_duplicate=True),
     Input("observatoire-preview", "is_open"),
-    State("dashboard_year", "value"),
-    State("dashboard_acheteur_id", "value"),
-    State("dashboard_acheteur_categorie", "value"),
-    State("dashboard_acheteur_departement_code", "value"),
-    State("dashboard_titulaire_id", "value"),
-    State("dashboard_titulaire_categorie", "value"),
-    State("dashboard_titulaire_departement_code", "value"),
-    State("dashboard_marche_type", "value"),
-    State("dashboard_marche_objet", "value"),
-    State("dashboard_marche_code_cpv", "value"),
-    State("dashboard_montant_min", "value"),
-    State("dashboard_montant_max", "value"),
-    State("dashboard_marche_techniques", "value"),
-    State("dashboard_marche_innovant", "value"),
-    State("dashboard_marche_sousTraitanceDeclaree", "value"),
-    State("dashboard_marche_considerationsSociales", "value"),
-    State("dashboard_marche_considerationsEnvironnementales", "value"),
+    Input("observano_updatetoire-preview-table", "filter_query"),
+    Input("observatoire-preview-table", "page_current"),
+    Input("observatoire-preview-table", "page_size"),
+    Input("observatoire-preview-table", "sort_by"),
+    State("observatoire-preview-table", "data_timestamp"),
     prevent_initial_call=True,
 )
 def populate_preview_table(
-    is_open,
-    dashboard_year,
-    dashboard_acheteur_id,
-    dashboard_acheteur_categorie,
-    dashboard_acheteur_departement_code,
-    dashboard_titulaire_id,
-    dashboard_titulaire_categorie,
-    dashboard_titulaire_departement_code,
-    dashboard_marche_type,
-    dashboard_marche_objet,
-    dashboard_marche_code_cpv,
-    dashboard_montant_min,
-    dashboard_montant_max,
-    dashboard_marche_techniques,
-    dashboard_marche_innovant,
-    dashboard_marche_sous_traitance_declaree,
-    dashboard_marche_considerations_sociales,
-    dashboard_marche_considerations_environnementales,
+    is_open, filter_query, page_current, page_size, sort_by, data_timestamp
 ):
     if not is_open:
-        return no_update, no_update
+        return (no_update,) * 9
 
-    available_in_df = [col for col in OBSERVATOIRE_COLUMNS if col in df.columns]
-    lff = prepare_dashboard_data(
-        lff=df.lazy().select(available_in_df),
-        year=dashboard_year,
-        acheteur_id=dashboard_acheteur_id,
-        acheteur_categorie=dashboard_acheteur_categorie,
-        acheteur_departement_code=dashboard_acheteur_departement_code,
-        titulaire_id=dashboard_titulaire_id,
-        titulaire_categorie=dashboard_titulaire_categorie,
-        titulaire_departement_code=dashboard_titulaire_departement_code,
-        type=dashboard_marche_type,
-        objet=dashboard_marche_objet,
-        code_cpv=dashboard_marche_code_cpv,
-        considerations_sociales=dashboard_marche_considerations_sociales,
-        considerations_environnementales=dashboard_marche_considerations_environnementales,
-        montant_min=dashboard_montant_min,
-        montant_max=dashboard_montant_max,
-        techniques=dashboard_marche_techniques,
-        marche_innovant=dashboard_marche_innovant,
-        sous_traitance_declaree=dashboard_marche_sous_traitance_declaree,
+    global DF_FILTERED
+    lff = DF_FILTERED.lazy()
+
+    return prepare_table_data(
+        lff,
+        data_timestamp,
+        filter_query,
+        page_current,
+        page_size,
+        sort_by,
+        "observatoire-preview",
     )
-
-    dff = lff.collect(engine="streaming")
-
-    table_data = dff.to_dicts()
-    table_columns = [
-        {
-            "name": data_schema.get(col, {}).get("title", col),
-            "id": col,
-            "type": "text",
-            "format": {"nully": "N/A"},
-        }
-        for col in available_in_df
-    ]
-    return table_data, table_columns
