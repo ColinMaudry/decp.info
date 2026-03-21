@@ -28,9 +28,9 @@ from src.utils import (
     invert_columns,
     logger,
     meta_content,
+    prepare_table_data,
     schema,
     sort_table_data,
-    prepare_table_data,
 )
 
 update_date_timestamp = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
@@ -439,7 +439,7 @@ def sync_url_and_reset_button(filter_query, sort_by, hidden_columns, href):
         className="fa fa-link",
         children=[
             dbc.Button(
-                "Partager",
+                "Partager la vue",
                 className="btn btn-primary",
                 title="Copier l'adresse de cette vue (filtres, tris, choix de colonnes) pour la partager.",
             )

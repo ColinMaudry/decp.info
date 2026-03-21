@@ -53,10 +53,13 @@ register_page(
     image_url=meta_content["image_url"],
     order=3,
 )
-options_years = {}
+options_years = []
 for year in reversed(range(2017, datetime.now().year + 1)):
-    year = str(year)
-    options_years[year] = year
+    option_year = {
+        "label": str(year),
+        "value": year,
+    }
+    options_years.append(option_year)
 
 options_departements = []
 for code in departements.keys():
@@ -401,25 +404,39 @@ Alors, on fait comment ?
                                                 persistence_type="local",
                                             ),
                                         ),
-                                    ), 
-dbc.Row(
-                                        [dbc.Col([
-				dcc.Download(id="download-observatoire"),
-                                    dbc.Button(
-                                        "Prévisualiser les données",
-                                        id="btn-observatoire-preview",
-                                        className="btn btn-primary",
-                                        color="primary",
-                                        outline=True,
                                     ),
-                                    dcc.Input(
-                                        id="observatoire-share-url",
-                                        readOnly=True,
-                                        style={"display": "none"},
-                                    )], lg=12, xl=7)]),
-dbc.Row(
-dbc.Col(
-                                    html.Div(id="observatoire-copy-container"), lg=12, xl=5))
+                                    dbc.Row(
+                                        [
+                                            dbc.Col(
+                                                [
+                                                    dcc.Download(
+                                                        id="download-observatoire"
+                                                    ),
+                                                    dbc.Button(
+                                                        "Prévisualiser les données",
+                                                        id="btn-observatoire-preview",
+                                                        className="btn btn-primary",
+                                                        color="primary",
+                                                        outline=True,
+                                                    ),
+                                                    dcc.Input(
+                                                        id="observatoire-share-url",
+                                                        readOnly=True,
+                                                        style={"display": "none"},
+                                                    ),
+                                                ],
+                                                lg=12,
+                                                xl=7,
+                                            )
+                                        ]
+                                    ),
+                                    dbc.Row(
+                                        dbc.Col(
+                                            html.Div(id="observatoire-copy-container"),
+                                            lg=12,
+                                            xl=5,
+                                        )
+                                    ),
                                 ],
                             ),
                             dbc.Col(
@@ -585,8 +602,7 @@ def restore_filters(search, _pathname, stored_filters):
     Output("observatoire-share-url", "value"),
     Output("observatoire-copy-container", "children"),
     *[Input(fp[0], "value") for fp in FILTER_PARAMS],
-    State("dashboard_url", "href"),
-    prevent_initial_call=True,
+    Input("dashboard_url", "href"),
 )
 def sync_observatoire_share_url(*args):
     # Last arg is href (State), rest are filter values
@@ -625,6 +641,7 @@ def sync_observatoire_share_url(*args):
         children=[
             dbc.Button(
                 "Partager cette vue",
+                id="btn-copy-observatoire",
                 className="btn btn-primary mt-2",
                 title="Copier l'adresse de cette vue filtrée pour la partager.",
             )
@@ -632,6 +649,20 @@ def sync_observatoire_share_url(*args):
     )
 
     return full_url, copy_button
+
+
+@callback(
+    Output("observatoire-copy-container", "children", allow_duplicate=True),
+    Input("btn-copy-observatoire", "n_clicks", allow_optional=True),
+    prevent_initial_call=True,
+)
+def show_confirmation(n_clicks):
+    if n_clicks:
+        return html.Span(
+            "Adresse de la vue copiée",
+            style={"color": "green", "fontWeight": "bold", "marginLeft": "10px"},
+        )
+    return no_update
 
 
 @callback(
