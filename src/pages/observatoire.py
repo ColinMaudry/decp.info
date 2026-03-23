@@ -659,12 +659,13 @@ def udpate_dashboard_cards(*filter_values):
     lff: pl.LazyFrame = df.lazy()
 
     # Filtrage des données
-
     filter_params = {}
-    for (input_id, url_key, is_multi, default), value in zip(FILTER_PARAMS, filter_values):
-        if value is None or value == default or value == [] or value == "":
-            continue
+    for (input_id, url_key, is_multi, default), value in zip(
+        FILTER_PARAMS, filter_values
+    ):
         filter_params[input_id] = value
+
+    print(filter_params)
 
     lff = prepare_dashboard_data(lff=lff, **filter_params)
 
@@ -857,7 +858,13 @@ def toggle_observatoire_preview(n_clicks, is_open):
     prevent_initial_call=True,
 )
 def populate_preview_table(
-    is_open, filter_query, page_current, page_size, sort_by, data_timestamp, filter_params
+    is_open,
+    filter_query,
+    page_current,
+    page_size,
+    sort_by,
+    data_timestamp,
+    filter_params,
 ):
     if not is_open:
         return (no_update,) * 9
