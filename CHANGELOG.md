@@ -1,3 +1,10 @@
+#### 2.7.0 (23 mars 2026)
+
+- Remplacement de la page Statistiques par l'observatoire
+- Généralisation de la grille dash (`dbc.Row`, `dbc.Col`)
+- Ajout de l'histogramme de distances aux pages acheteur et titulaire
+- Ajout de la colonne `acheteur_categorie` (commune, État, etc.)
+
 ##### 2.6.2 (22 février 2026)
 
 - Correction du téléchargemnent buggé dans /tableau
