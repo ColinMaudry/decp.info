@@ -413,9 +413,9 @@ Alors, on fait comment ?
                                                         id="download-observatoire"
                                                     ),
                                                     dbc.Button(
-                                                        "Prévisualiser les données",
+                                                        "Voir les données",
                                                         id="btn-observatoire-preview",
-                                                        className="btn btn-primary",
+                                                        className="btn btn-primary mt-2",
                                                         color="primary",
                                                         outline=True,
                                                     ),
@@ -425,13 +425,15 @@ Alors, on fait comment ?
                                                         style={"display": "none"},
                                                     ),
                                                 ],
-                                            )
+                                                lg=12,
+                                                xl=6,
+                                            ),
+                                            dbc.Col(
+                                                id="observatoire-copy-container",
+                                                lg=12,
+                                                xl=6,
+                                            ),
                                         ]
-                                    ),
-                                    dbc.Row(
-                                        dbc.Col(
-                                            html.Div(id="observatoire-copy-container"),
-                                        )
                                     ),
                                 ],
                             ),
@@ -606,6 +608,7 @@ def sync_observatoire_share_url(*args):
     href = args[-1]
 
     if not href:
+        print("no update")
         return no_update, no_update
 
     base_url = href.split("?")[0]
@@ -622,27 +625,31 @@ def sync_observatoire_share_url(*args):
 
     query_string = urllib.parse.urlencode(params)
     full_url = f"{base_url}?{query_string}" if query_string else base_url
+    print("query", query_string)
 
-    copy_button = dcc.Clipboard(
-        id="btn-copy-observatoire-url",
-        target_id="observatoire-share-url",
-        title="Copier l'URL de cette vue",
-        style={
-            "display": "inline-block",
-            "fontSize": 20,
-            "verticalAlign": "top",
-            "cursor": "pointer",
-        },
-        className="fa fa-link",
-        children=[
-            dbc.Button(
-                "Partager cette vue",
-                id="btn-copy-observatoire",
-                className="btn btn-primary mt-2",
-                title="Copier l'adresse de cette vue filtrée pour la partager.",
-            )
-        ],
-    )
+    if params:
+        copy_button = dcc.Clipboard(
+            id="btn-copy-observatoire-url",
+            target_id="observatoire-share-url",
+            title="Copier l'URL de cette vue",
+            style={
+                "display": "inline-block",
+                "fontSize": 20,
+                "verticalAlign": "top",
+                "cursor": "pointer",
+            },
+            className="fa fa-link",
+            children=[
+                dbc.Button(
+                    "Partager cette vue",
+                    id="btn-copy-observatoire",
+                    className="btn btn-primary mt-2",
+                    title="Copier l'adresse de cette vue filtrée pour la partager.",
+                )
+            ],
+        )
+    else:
+        copy_button = html.Div()
 
     return full_url, copy_button
 
