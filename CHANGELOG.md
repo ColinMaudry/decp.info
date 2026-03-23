@@ -1,3 +1,7 @@
+#### 2.7.1 (23 mars 2026)
+
+- Correction du partage de données filtrées entre dashboard et vue des données
+
 #### 2.7.0 (23 mars 2026)
 
 - Remplacement de la page Statistiques par l'observatoire

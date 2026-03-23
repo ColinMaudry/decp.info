@@ -699,98 +699,98 @@ def prepare_table_data(
 
 def prepare_dashboard_data(
     lff: pl.LazyFrame,
-    year,
-    acheteur_id,
-    acheteur_categorie,
-    acheteur_departement_code,
-    titulaire_id,
-    titulaire_categorie,
-    titulaire_departement_code,
-    type,
-    objet,
-    code_cpv,
-    considerations_sociales,
-    considerations_environnementales,
-    techniques,
-    marche_innovant,
-    sous_traitance_declaree,
-    montant_min=None,
-    montant_max=None,
+    dashboard_year,
+    dashboard_acheteur_id,
+    dashboard_acheteur_categorie,
+    dashboard_acheteur_departement_code,
+    dashboard_titulaire_id,
+    dashboard_titulaire_categorie,
+    dashboard_titulaire_departement_code,
+    dashboard_marche_type,
+    dashboard_marche_objet,
+    dashboard_marche_code_cpv,
+    dashboard_marche_considerations_sociales,
+    dashboard_marche_considerations_environnementales,
+    dashboard_marche_techniques,
+    dashboard_marche_innovant,
+    dashboard_marche_sous_traitance_declaree,
+    dashboard_montant_min=None,
+    dashboard_montant_max=None,
 ) -> pl.LazyFrame:
-    if year:
-        lff = lff.filter(pl.col("dateNotification").dt.year() == int(year))
+    if dashboard_year:
+        lff = lff.filter(pl.col("dateNotification").dt.year() == int(dashboard_year))
     else:
         lff = lff.filter(
             pl.col("dateNotification") > (datetime.now() - timedelta(days=365))
         )
 
-    if acheteur_id:
-        lff = lff.filter(pl.col("acheteur_id").str.contains(acheteur_id))
+    if dashboard_acheteur_id:
+        lff = lff.filter(pl.col("acheteur_id").str.contains(dashboard_acheteur_id))
     else:
-        if acheteur_categorie:
-            lff = lff.filter(pl.col("acheteur_categorie") == acheteur_categorie)
-        if acheteur_departement_code:
+        if dashboard_acheteur_categorie:
+            lff = lff.filter(pl.col("acheteur_categorie") == dashboard_acheteur_categorie)
+        if dashboard_acheteur_departement_code:
             lff = lff.filter(
-                pl.col("acheteur_departement_code").is_in(acheteur_departement_code)
+                pl.col("acheteur_departement_code").is_in(dashboard_acheteur_departement_code)
             )
 
-    if titulaire_id:
-        lff = lff.filter(pl.col("titulaire_id").str.contains(titulaire_id))
+    if dashboard_titulaire_id:
+        lff = lff.filter(pl.col("titulaire_id").str.contains(dashboard_titulaire_id))
     else:
-        if titulaire_categorie:
-            lff = lff.filter(pl.col("titulaire_categorie") == titulaire_categorie)
-        if titulaire_departement_code:
+        if dashboard_titulaire_categorie:
+            lff = lff.filter(pl.col("titulaire_categorie") == dashboard_titulaire_categorie)
+        if dashboard_titulaire_departement_code:
             lff = lff.filter(
-                pl.col("titulaire_departement_code").is_in(titulaire_departement_code)
+                pl.col("titulaire_departement_code").is_in(dashboard_titulaire_departement_code)
             )
 
-    if type:
-        lff = lff.filter(pl.col("type") == type)
+    if dashboard_marche_type:
+        lff = lff.filter(pl.col("type") == dashboard_marche_type)
 
-    if objet:
-        lff = lff.filter(pl.col("objet").str.contains(f"(?i){objet}"))
+    if dashboard_marche_objet:
+        lff = lff.filter(pl.col("objet").str.contains(f"(?i){dashboard_marche_objet}"))
 
-    if code_cpv:
-        lff = lff.filter(pl.col("codeCPV").str.starts_with(code_cpv))
+    if dashboard_marche_code_cpv:
+        lff = lff.filter(pl.col("codeCPV").str.starts_with(dashboard_marche_code_cpv))
 
-    if marche_innovant and marche_innovant != "all":
-        lff = lff.filter(pl.col("marcheInnovant") == marche_innovant)
+    if dashboard_marche_innovant and dashboard_marche_innovant != "all":
+        lff = lff.filter(pl.col("marcheInnovant") == dashboard_marche_innovant)
 
-    if sous_traitance_declaree and sous_traitance_declaree != "all":
-        lff = lff.filter(pl.col("sousTraitanceDeclaree") == sous_traitance_declaree)
+    if dashboard_marche_sous_traitance_declaree and dashboard_marche_sous_traitance_declaree != "all":
+        lff = lff.filter(pl.col("sousTraitanceDeclaree") == dashboard_marche_sous_traitance_declaree)
 
-    if techniques:
+    if dashboard_marche_techniques:
         lff = lff.filter(
             pl.col("techniques")
             .str.split(", ")
-            .list.set_intersection(techniques)
+            .list.set_intersection(dashboard_marche_techniques)
             .list.len()
             > 0
         )
 
-    if considerations_sociales:
+    if dashboard_marche_considerations_sociales:
         lff = lff.filter(
             pl.col("considerationsSociales")
             .str.split(", ")
-            .list.set_intersection(considerations_sociales)
+            .list.set_intersection(dashboard_marche_considerations_sociales)
             .list.len()
             > 0
         )
 
-    if considerations_environnementales:
+    if dashboard_marche_considerations_environnementales:
         lff = lff.filter(
             pl.col("considerationsEnvironnementales")
             .str.split(", ")
-            .list.set_intersection(considerations_environnementales)
+            .list.set_intersection(dashboard_marche_considerations_environnementales)
             .list.len()
             > 0
         )
 
-    if montant_min is not None:
-        lff = lff.filter(pl.col("montant") >= montant_min)
+    if dashboard_montant_min is not None:
+        lff = lff.filter(pl.col("montant") >= dashboard_montant_min)
 
-    if montant_max is not None:
-        lff = lff.filter(pl.col("montant") <= montant_max)
+    if dashboard_montant_max is not None:
+        lff = lff.filter(pl.col("montant") <= dashboard_montant_max)
 
     return lff
 
