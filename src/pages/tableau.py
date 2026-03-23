@@ -19,8 +19,7 @@ from dash import (
     register_page,
 )
 
-from figures import make_column_picker
-from src.figures import DataTable
+from src.figures import DataTable, make_column_picker
 from src.utils import (
     columns,
     df,
@@ -29,10 +28,10 @@ from src.utils import (
     invert_columns,
     logger,
     meta_content,
+    prepare_table_data,
     schema,
     sort_table_data,
 )
-from utils import prepare_table_data
 
 update_date_timestamp = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
 update_date = datetime.fromtimestamp(update_date_timestamp).strftime("%d/%m/%Y")
@@ -440,7 +439,7 @@ def sync_url_and_reset_button(filter_query, sort_by, hidden_columns, href):
         className="fa fa-link",
         children=[
             dbc.Button(
-                "Partager",
+                "Partager la vue",
                 className="btn btn-primary",
                 title="Copier l'adresse de cette vue (filtres, tris, choix de colonnes) pour la partager.",
             )

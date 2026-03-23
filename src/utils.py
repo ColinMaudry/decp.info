@@ -3,6 +3,7 @@ import logging
 import os
 import uuid
 from collections import OrderedDict
+from datetime import datetime, timedelta
 from time import localtime, sleep
 
 import polars as pl
@@ -62,6 +63,20 @@ def add_links(dff: pl.DataFrame):
     for col in ["uid", "acheteur_nom", "titulaire_nom", "acheteur_id", "titulaire_id"]:
         if col in dff.columns:
             if col.startswith("titulaire_"):
+                detail_link = (
+                    '<a href = "/titulaires/'
+                    + pl.col("titulaire_id")
+                    + '">'
+                    + pl.col(col)
+                    + "</a>"
+                )
+                if col == "titulaire_nom":
+                    detail_link = (
+                        detail_link
+                        + ' <a href="/observatoire?titulaire_id='
+                        + pl.col("titulaire_id")
+                        + '" title="Voir dans l\'observatoire">📊</a>'
+                    )
                 dff = dff.with_columns(
                     pl.when(
                         pl.Expr.or_(
@@ -69,26 +84,26 @@ def add_links(dff: pl.DataFrame):
                             pl.col("titulaire_typeIdentifiant") == "SIRET",
                         )
                     )
-                    .then(
-                        '<a href = "/titulaires/'
-                        + pl.col("titulaire_id")
-                        + '">'
-                        + pl.col(col)
-                        + "</a>"
-                    )
+                    .then(detail_link)
                     .otherwise(pl.col(col))
                     .alias(col)
                 )
             if col.startswith("acheteur_"):
-                dff = dff.with_columns(
-                    (
-                        '<a href = "/acheteurs/'
-                        + pl.col("acheteur_id")
-                        + '">'
-                        + pl.col(col)
-                        + "</a>"
-                    ).alias(col)
+                detail_link = (
+                    '<a href = "/acheteurs/'
+                    + pl.col("acheteur_id")
+                    + '">'
+                    + pl.col(col)
+                    + "</a>"
                 )
+                if col == "acheteur_nom":
+                    detail_link = (
+                        detail_link
+                        + ' <a href="/observatoire?acheteur_id='
+                        + pl.col("acheteur_id")
+                        + '" title="Voir dans l\'observatoire">📊</a>'
+                    )
+                dff = dff.with_columns(detail_link.alias(col))
             if col == "uid":
                 dff = dff.with_columns(
                     (
@@ -284,6 +299,17 @@ def get_departements() -> dict:
     with open("data/departements.json", "rb") as f:
         data = json.load(f)
         return data
+
+
+def get_departements_geojson() -> dict:
+    with open("./data/departements-1000m.geojson") as f:
+        geojson = json.load(f)
+
+    # Ajout de feature.id
+    for f in geojson["features"]:
+        f["id"] = f["properties"]["code"]
+
+    return geojson
 
 
 def get_departement_region(code_postal):
@@ -605,6 +631,8 @@ def prepare_table_data(
     # Récupération des données
     if isinstance(data, list):
         lff: pl.LazyFrame = pl.LazyFrame(data, strict=False, infer_schema_length=5000)
+    elif isinstance(data, pl.LazyFrame):
+        lff = data
     else:
         lff: pl.LazyFrame = df.lazy()  # start from the original data
 
@@ -637,7 +665,7 @@ def prepare_table_data(
     # Remplace les strings null par "", mais pas les numeric null
     dff = dff.fill_null("")
 
-    # Ajout des liens vers l'annuaire des entreprises
+    # Ajout des liens vers les pages de détails
     dff = add_links(dff)
 
     # Ajout des liens vers les fichiers Open Data
@@ -669,6 +697,104 @@ def prepare_table_data(
     )
 
 
+def prepare_dashboard_data(
+    lff: pl.LazyFrame,
+    year,
+    acheteur_id,
+    acheteur_categorie,
+    acheteur_departement_code,
+    titulaire_id,
+    titulaire_categorie,
+    titulaire_departement_code,
+    type,
+    objet,
+    code_cpv,
+    considerations_sociales,
+    considerations_environnementales,
+    techniques,
+    marche_innovant,
+    sous_traitance_declaree,
+    montant_min=None,
+    montant_max=None,
+) -> pl.LazyFrame:
+    if year:
+        lff = lff.filter(pl.col("dateNotification").dt.year() == int(year))
+    else:
+        lff = lff.filter(
+            pl.col("dateNotification") > (datetime.now() - timedelta(days=365))
+        )
+
+    if acheteur_id:
+        lff = lff.filter(pl.col("acheteur_id").str.contains(acheteur_id))
+    else:
+        if acheteur_categorie:
+            lff = lff.filter(pl.col("acheteur_categorie") == acheteur_categorie)
+        if acheteur_departement_code:
+            lff = lff.filter(
+                pl.col("acheteur_departement_code").is_in(acheteur_departement_code)
+            )
+
+    if titulaire_id:
+        lff = lff.filter(pl.col("titulaire_id").str.contains(titulaire_id))
+    else:
+        if titulaire_categorie:
+            lff = lff.filter(pl.col("titulaire_categorie") == titulaire_categorie)
+        if titulaire_departement_code:
+            lff = lff.filter(
+                pl.col("titulaire_departement_code").is_in(titulaire_departement_code)
+            )
+
+    if type:
+        lff = lff.filter(pl.col("type") == type)
+
+    if objet:
+        lff = lff.filter(pl.col("objet").str.contains(f"(?i){objet}"))
+
+    if code_cpv:
+        lff = lff.filter(pl.col("codeCPV").str.starts_with(code_cpv))
+
+    if marche_innovant and marche_innovant != "all":
+        lff = lff.filter(pl.col("marcheInnovant") == marche_innovant)
+
+    if sous_traitance_declaree and sous_traitance_declaree != "all":
+        lff = lff.filter(pl.col("sousTraitanceDeclaree") == sous_traitance_declaree)
+
+    if techniques:
+        lff = lff.filter(
+            pl.col("techniques")
+            .str.split(", ")
+            .list.set_intersection(techniques)
+            .list.len()
+            > 0
+        )
+
+    if considerations_sociales:
+        lff = lff.filter(
+            pl.col("considerationsSociales")
+            .str.split(", ")
+            .list.set_intersection(considerations_sociales)
+            .list.len()
+            > 0
+        )
+
+    if considerations_environnementales:
+        lff = lff.filter(
+            pl.col("considerationsEnvironnementales")
+            .str.split(", ")
+            .list.set_intersection(considerations_environnementales)
+            .list.len()
+            > 0
+        )
+
+    if montant_min is not None:
+        lff = lff.filter(pl.col("montant") >= montant_min)
+
+    if montant_max is not None:
+        lff = lff.filter(pl.col("montant") <= montant_max)
+
+    return lff
+
+
 def get_button_properties(height):
     if height > 65000:
         download_disabled = True
@@ -683,6 +809,16 @@ def get_button_properties(height):
         download_text = "Télécharger au format Excel"
         download_title = "Télécharger les données telles qu'affichées au format Excel"
     return download_disabled, download_text, download_title
+
+
+def get_enum_values_as_dict(column_name):
+    try:
+        options = {}
+        for value in data_schema[column_name]["enum"]:
+            options[value] = value
+        return options
+    except KeyError:
+        return {"not_found": "not found"}
 
 
 def invert_columns(columns):
@@ -764,6 +900,7 @@ df_titulaires_marches: pl.DataFrame = (
 )
 
 departements = get_departements()
+departements_geojson = get_departements_geojson()
 domain_name = (
     "test.decp.info" if os.getenv("DEVELOPMENT").lower() == "true" else "decp.info"
 )

@@ -1,62 +1,25 @@
-import json
+from datetime import datetime
 from typing import Literal
+from urllib.error import HTTPError, URLError
 
+import dash_bootstrap_components as dbc
+import dash_leaflet as dl
+import dash_leaflet.express as dlx
+import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import polars as pl
 from dash import dash_table, dcc, html
+from dash_extensions.javascript import Namespace
 
-from src.utils import data_schema, df, format_number
-
-
-def get_map_count_marches():
-    lf = df.lazy()
-    lf = lf.with_columns(
-        pl.col("lieuExecution_code").str.head(2).str.zfill(2).alias("Département")
-    )
-    lf = (
-        lf.select(["uid", "Département"])
-        .drop_nulls()
-        .unique(subset="uid")
-        .group_by("Département")
-        .len("uid")
-    )
-    # Suppression des infos pour les DOM/TOM pour l'instant
-    lf = lf.remove(pl.col("Département").is_in(["97", "98"]))
-
-    with open("./data/departements-1000m.geojson") as f:
-        departements = json.load(f)
-
-    # Ajout de feature.id
-    for f in departements["features"]:
-        f["id"] = f["properties"]["code"]
-
-    df_map = lf.collect(engine="streaming")
-
-    fig = px.choropleth(
-        df_map,
-        geojson=departements,
-        locations="Département",
-        color="uid",
-        color_continuous_scale="Reds",
-        title="Nombres de marchés attribués par département (lieu d'exécution)",
-        range_color=(df_map["uid"].min(), df_map["uid"].max()),
-        labels={"uid": "Marchés attribués"},
-        scope="europe",
-        width=900,
-        height=700,
-    )
-
-    fig.update_geos(fitbounds="locations", visible=False)
-    fig.update_layout(
-        mapbox={
-            "style": "carto-positron",
-            "center": {"lon": 10, "lat": 10},
-            "zoom": 1,
-            "domain": {"x": [0, 1], "y": [0, 1]},
-        }
-    )
-    return fig
+from src.utils import (
+    add_links,
+    data_schema,
+    departements_geojson,
+    df,
+    format_number,
+    setup_table_columns,
+)
 
 
 def get_yearly_statistics(statistics, today_str) -> html.Div:
@@ -77,11 +40,11 @@ def get_yearly_statistics(statistics, today_str) -> html.Div:
             }
         )
 
-    df = pl.DataFrame(data)
+    dff = pl.DataFrame(data)
 
     # Create Dash DataTable
     table = dash_table.DataTable(
-        data=df.to_dicts(),
+        data=dff.to_dicts(),
         columns=[
             {"name": "Année", "id": "Année"},
             {"name": "Marchés et accord-cadres", "id": "Marchés et accord-cadres"},
@@ -98,19 +61,20 @@ def get_yearly_statistics(statistics, today_str) -> html.Div:
     return html.Div(children=table, className="marches_table")
 
 
-def get_barchart_sources(df_source: pl.DataFrame, type_date: str):
-    lf = df_source.lazy()
+def get_barchart_sources(lff: pl.LazyFrame, type_date: str):
     labels = {
         "dateNotification": "notification",
         "datePublicationDonnees": "publication des données",
     }
 
-    lf = lf.select("uid", type_date, "sourceDataset")
+    now_year = datetime.now().year
 
-    lf = lf.unique("uid")
+    lff = lff.select("uid", type_date, "sourceDataset")
+
+    lff = lff.unique("uid")
 
     # Rassemblement des datasets Atexo pour ne pas surcharger le graphique
-    lf = lf.with_columns(
+    lff = lff.with_columns(
         pl.when(pl.col("sourceDataset").str.starts_with("atexo"))
         .then(pl.lit("plateformes atexo"))
         .otherwise(pl.col("sourceDataset"))
@@ -118,38 +82,33 @@ def get_barchart_sources(df_source: pl.DataFrame, type_date: str):
     )
 
     # Rassemblement des datasets AWS pour ne pas surcharger le graphique
-    lf = lf.with_columns(
+    lff = lff.with_columns(
         pl.when(pl.col("sourceDataset").str.contains(r"aws|marches\-publics.info"))
         .then(pl.lit("aws"))
         .otherwise(pl.col("sourceDataset"))
         .alias("sourceDataset")
     )
 
-    lf = lf.with_columns(pl.col(type_date).dt.year().alias("annee"))
-    lf = lf.filter(
-        pl.col(type_date).is_not_null() & pl.col("annee").is_between(2019, 2025)
+    lff = lff.with_columns(pl.col(type_date).dt.year().alias("annee"))
+    lff = lff.filter(
+        pl.col(type_date).is_not_null() & pl.col("annee").is_between(2019, now_year)
     )
-    lf = lf.with_columns(pl.col(type_date).cast(pl.String).str.head(7))
-    lf = (
-        lf.group_by([type_date, "sourceDataset"])
+    lff = lff.with_columns(pl.col(type_date).cast(pl.String).str.head(7))
+    lff = (
+        lff.group_by([type_date, "sourceDataset"])
         .len()
         .sort(by=[type_date, "len"], descending=True)
     )
 
-    # lf = lf.with_columns(
-    #     pl.when(pl.col("sourceDataset").is_null()).then(
-    #         pl.lit("Source inconnue")).alias("sourceDataset")
-    #     )
+    lff = lff.sort(by=["sourceDataset"], descending=False)
 
-    lf = lf.sort(by=["sourceDataset"], descending=False)
-    df: pl.DataFrame = lf.collect(engine="streaming")
+    dff: pl.DataFrame = lff.collect(engine="streaming")
 
     fig = px.bar(
-        df,
+        dff,
         x=type_date,
         y="len",
         color="sourceDataset",
-        title=f"Nombre de marchés attribués par date de {labels[type_date]} et source de données",
         labels={
             "len": "Nombre de marchés",
             type_date: f"Mois de {labels[type_date]}",
@@ -157,12 +116,17 @@ def get_barchart_sources(df_source: pl.DataFrame, type_date: str):
         },
     )
 
-    return fig
+    graph = dcc.Graph(figure=fig)
+
+    return graph
 
 
 def get_sources_tables(source_path) -> html.Div:
-    df = pl.read_csv(source_path)
-    df = df.with_columns(
+    try:
+        dff = pl.read_csv(source_path)
+    except (URLError, HTTPError):
+        return html.Div("Erreur de connexion")
+    dff = dff.with_columns(
         (
             pl.lit('<a href = "')
             + pl.col("url")
@@ -171,8 +135,8 @@ def get_sources_tables(source_path) -> html.Div:
             + pl.lit("</a>")
         ).alias("nom")
     )
-    df = df.drop("url", "unique")
-    df = df.sort(by=["nb_marchés"], descending=True)
+    dff = dff.drop("url", "unique")
+    dff = dff.sort(by=["nb_marchés"], descending=True)
 
     columns = {
         "nom": "Nom de la source",
@@ -184,7 +148,7 @@ def get_sources_tables(source_path) -> html.Div:
 
     datatable = dash_table.DataTable(
         id="source_table",
-        data=df.to_dicts(),
+        data=dff.to_dicts(),
         columns=[
             {
                 "name": columns[i],
@@ -193,7 +157,7 @@ def get_sources_tables(source_path) -> html.Div:
                 "type": "text",
                 "format": {"nully": "N/A"},
             }
-            for i in df.schema.names()
+            for i in dff.schema.names()
         ],
         style_cell_conditional=[
             {
@@ -344,33 +308,24 @@ class DataTable(dash_table.DataTable):
         )
 
 
-def get_duplicate_matrix() -> html.Div:
+def get_duplicate_matrix() -> dcc.Graph:
     """
     Fonction développée avec l'aide de la LLM Euria d'Infomaniak.
     :return:
     """
-    result_df = pl.read_parquet(
+    lff = pl.scan_parquet(
         "https://www.data.gouv.fr/api/1/datasets/r/a545bf6c-8b24-46ed-b49f-a32bf02eaffa"
     ).sort("sourceDataset")
-    result_df = result_df.select(
-        ["sourceDataset", "unique"] + sorted(result_df.columns[2:])
+    lff = lff.select(
+        ["sourceDataset", "unique"] + sorted(lff.collect_schema().names()[2:])
     )
 
-    description = dcc.Markdown("""
-    Ce graphique illustre les doublons de marchés publics entre sources, c'est-à-dire la proportion de marchés publiés par plus d'une source. Il s'appuie sur les identifiants `uid` qui sont pour chaque marché la concaténation du SIRET de l'acheteur et de l'identifiant interne du marché.
-
-    **Comment lire ce graphique ?**
-
-    On part des codes de sources de données en ordonnée. Ces jeux de données sont documentés dans [À propos](/a-propos#sources).
-
-    La première colonne (**unique**) représente le pourcentage de marchés fournis par cette source qui sont uniquement disponibles dans cette source. Plus le rouge est foncé, plus important est le pourcentage. Donc, à l'inverse, plus le rouge est clair dans la première colonne, plus la source en ordonnée a des marchés en commun avec d'autres sources, et donc plus on trouvera sur la même ligne d'autres cases plus ou moins foncées qui indiqueront avec quelles autres sources cette source partage des marchés.
-
-    Passez votre souris sur une case pour avoir les pourcentages exacts. À noter que ces statistiques sont produites avant le dédoublonnement qui a lieu avant la publication en Open Data et sur ce site.""")
+    dff = lff.collect()
 
     # Extract data
-    z_data = result_df.select(pl.all().exclude("sourceDataset")).fill_null(0).to_numpy()
-    x_labels = result_df.columns[1:]  # columns after "sourceDataset"
-    y_labels = result_df["sourceDataset"].to_list()
+    z_data = dff.select(pl.all().exclude("sourceDataset")).fill_null(0).to_numpy()
+    x_labels = dff.columns[1:]  # columns after "sourceDataset"
+    y_labels = dff["sourceDataset"].to_list()
 
     # Create heatmap
     fig = go.Figure(
@@ -388,7 +343,7 @@ def get_duplicate_matrix() -> html.Div:
             hoverongaps=False,
             showscale=True,
             hovertemplate=(
-                "<b>%{z:.0%}</b> des marchés de <b>%{y}</b> sont également présents dans <b>%{x}</b>"
+                "<b>%{z:.0%}</b> des marchés présents dans <b>%{y}</b> sont également présents dans <b>%{x}</b>"
             ),
         )
     )
@@ -407,13 +362,408 @@ def get_duplicate_matrix() -> html.Div:
         margin=dict(l=100, r=50, t=80, b=100),  # Add margin for labels
     )
 
-    return html.Div(
-        children=[
-            html.H3("Doublons de marchés entre les sources"),
-            description,
-            dcc.Graph(figure=fig),
-        ]
+    return dcc.Graph(figure=fig)
+
+
+def get_geographic_maps(dff: pl.DataFrame) -> list | None:
+    """
+    Génère les cartes géographiques pour l'hexagone et les DOM-TOM.
+    """
+
+    regions: dict = {
+        "Hexagone": {
+            "coordinates": [46.6, 2.2],
+            "zoom_leaflet": 5,
+            "zoom_chloropleth": 1,
+            "name": "Hexagone",
+        },
+        "971": {
+            "coordinates": [16.23, -61.55],
+            "zoom_leaflet": 9,
+            "zoom_chloropleth": 1,
+            "name": "Guadeloupe",
+        },
+        "972": {
+            "coordinates": [14.64, -61.02],
+            "zoom_leaflet": 10,
+            "zoom_chloropleth": 1,
+            "name": "Martinique",
+        },
+        "973": {
+            "coordinates": [3.93, -53.12],
+            "zoom_leaflet": 7,
+            "zoom_chloropleth": 1,
+            "name": "Guyane",
+        },
+        "974": {
+            "coordinates": [-21.11, 55.53],
+            "zoom_leaflet": 9,
+            "zoom_chloropleth": 1,
+            "name": "La Réunion",
+        },
+        "976": {
+            "coordinates": [-12.82, 45.16],
+            "zoom_leaflet": 10,
+            "zoom_chloropleth": 1,
+            "name": "Mayotte",
+        },
+    }
+
+    def make_map_data(region_code: str) -> tuple[list, str or None]:
+        lff: pl.LazyFrame = dff.lazy()
+        if region_code == "Hexagone":
+            lff = lff.filter(
+                (pl.col("acheteur_departement_code").str.len_chars() == 2)
+                & (pl.col("titulaire_departement_code").str.len_chars() == 2)
+            )
+        else:
+            lff = lff.filter(
+                (pl.col("acheteur_departement_code") == code)
+                | (pl.col("titulaire_departement_code") == code)
+            )
+
+        nb_marches = lff.select("uid").collect()["uid"].n_unique()
+
+        if nb_marches == 0:
+            return [], None
+
+        dfs = []
+
+        if (code == "Hexagone" and nb_marches > 30000) or (
+            code != "Hexagone" and nb_marches > 10000
+        ):
+            _map_type: str = "chloropleth"
+
+            lff = lff.rename({"acheteur_departement_code": "Département"})
+            lff = (
+                lff.select(["uid", "Département"])
+                .drop_nulls()
+                .group_by("uid")
+                .agg(pl.col("Département").first())
+                .group_by("Département")
+                .len("uid")
+            )
+            dfs.append(lff.collect())
+        else:
+            _map_type: str = "clusters"
+            for org_type in ["acheteur", "titulaire"]:
+                lff_org = (
+                    lff.select(
+                        "uid",
+                        f"{org_type}_longitude",
+                        f"{org_type}_latitude",
+                        f"{org_type}_nom",
+                    )
+                    .group_by(
+                        f"{org_type}_longitude",
+                        f"{org_type}_latitude",
+                        f"{org_type}_nom",
+                    )
+                    .len("nb_marches")
+                    .filter(
+                        pl.col(f"{org_type}_latitude").is_not_null()
+                        & pl.col(f"{org_type}_longitude").is_not_null()
+                    )
+                )
+
+                markers = []
+
+                # Couleurs accessibles (Okabe-Ito)
+                colors = {
+                    "acheteur": "#E69F00",  # orange
+                    "titulaire": "#56B4E9",  # bleu ciel
+                }
+
+                for row in lff_org.collect().to_dicts():
+                    markers.append(
+                        {
+                            "lat": row[f"{org_type}_latitude"],
+                            "lon": row[f"{org_type}_longitude"],
+                            "tooltip": f"{row[f'{org_type}_nom']} ({row['nb_marches']} marchés)",
+                            "marker_color": colors[org_type],
+                        }
+                    )
+                dfs.append(markers)
+
+        return dfs, _map_type
+
+    cols = []
+
+    for code in regions.keys():
+        regions[code]["data"], map_type = make_map_data(code)
+
+        if map_type == "chloropleth":
+            map_graph = make_chloropleth_map(regions[code])
+        elif map_type == "clusters":
+            map_graph = make_clusters_map(regions[code])
+        elif map_type is None:
+            continue
+        else:
+            raise ValueError(f"Map type '{map_type}' not recognised")
+
+        lg, xl = (12, 8) if code == "Hexagone" else (6, 4)
+
+        col = make_card(regions[code]["name"], fig=map_graph, lg=lg, xl=xl)
+        cols.append(col)
+
+    return cols
+
+
+def make_chloropleth_map(region: dict) -> dcc.Graph:
+    df_map = region["data"][0]
+
+    fig = px.choropleth(
+        df_map,
+        geojson=departements_geojson,
+        locations="Département",
+        color="uid",
+        color_continuous_scale="Reds",
+        range_color=(df_map["uid"].min(), df_map["uid"].max()),
+        labels={"uid": "Marchés attribués"},
+        scope="europe",
     )
+
+    fig.update_geos(fitbounds="locations", visible=False)
+    fig.update_layout(
+        mapbox={
+            "style": "carto-positron",
+            "center": {"lon": 10, "lat": 10},
+            "zoom": 8,
+            "domain": {"x": [0, 1], "y": [0, 1]},
+        }
+    )
+
+    graph = dcc.Graph(figure=fig, config={"displayModeBar": False})
+    return graph
+
+
+def make_clusters_map(region: dict) -> dl.Map:
+    # JavaScript functions for styling
+    ns = Namespace("dash_clientside", "leaflet")
+    point_to_layer = ns("pointToLayer")
+    cluster_to_layer = ns("clusterToLayer")
+
+    name = region["name"]
+
+    # Données de la région
+    region_acheteurs = region["data"][0]
+    region_titulaires = region["data"][1]
+
+    # Couleurs
+    color_acheteur = region_acheteurs[0]["marker_color"]
+    color_titulaire = region_titulaires[0]["marker_color"]
+
+    acheteurs_geojson_data = dlx.dicts_to_geojson(region_acheteurs)
+    titulaires_geojson_data = dlx.dicts_to_geojson(region_titulaires)
+
+    center, zoom = region["coordinates"], region["zoom_leaflet"]
+    region_id = name.lower().replace(" ", "-")
+    leaflet_map = dl.Map(
+        [
+            dl.TileLayer(),
+            dl.GeoJSON(
+                data=titulaires_geojson_data,
+                cluster=True,
+                zoomToBoundsOnClick=True,
+                pointToLayer=point_to_layer,
+                clusterToLayer=cluster_to_layer,
+                id=f"geojson-{region_id}-titulaires",
+                options={"fillColor": color_titulaire},
+            ),
+            dl.GeoJSON(
+                data=acheteurs_geojson_data,
+                cluster=True,
+                zoomToBoundsOnClick=True,
+                pointToLayer=point_to_layer,
+                clusterToLayer=cluster_to_layer,
+                id=f"geojson-{region_id}-acheteurs",
+                options={"fillColor": color_acheteur},
+            ),
+        ],
+        center=center,
+        zoom=zoom,
+        style={
+            "width": "100%",
+            "height": "400px" if name == "Hexagone" else "300px",
+        },
+        id=f"map-{region_id}",
+    )
+    return leaflet_map
+
+
+def get_distance_histogram(lff: pl.LazyFrame) -> dcc.Graph:
+    if "titulaire_distance" not in lff.collect_schema().names():
+        dff = pl.DataFrame({"titulaire_distance": pl.Series([], dtype=pl.Float64)})
+    else:
+        dff = (
+            lff.select("titulaire_distance")
+            .drop_nulls()
+            .filter(pl.col("titulaire_distance") > 0)
+            .collect(engine="streaming")
+        )
+    log_distances = dff["titulaire_distance"].log(10).to_numpy()
+
+    fig = go.Figure()
+    if len(log_distances) > 0:
+        counts, bin_edges = np.histogram(log_distances, bins=25)
+        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+        bin_widths = bin_edges[1:] - bin_edges[:-1]
+        bin_edges_km = 10.0**bin_edges
+
+        def fmt_km(km):
+            if km < 10:
+                return f"{km:.1f}"
+            elif km < 1000:
+                return f"{round(km)}"
+            else:
+                return f"{round(km):,}".replace(",", " ")
+
+        hover_texts = []
+        for i in range(len(counts)):
+            nb = f"{counts[i]:,}".replace(",", " ")
+            hover_texts.append(
+                f"Distance : {fmt_km(bin_edges_km[i])} – {fmt_km(bin_edges_km[i + 1])} km"
+                f"<br>Nombre de marchés : {nb}"
+            )
+
+        fig.add_trace(
+            go.Bar(
+                x=bin_centers,
+                y=counts,
+                width=bin_widths,
+                hovertext=hover_texts,
+                hoverinfo="text",
+            )
+        )
+        fig.update_layout(bargap=0)
+
+    fig.update_layout(margin=dict(r=10, t=10))
+    fig.update_xaxes(
+        tickvals=[0, 1, 2, 3, 4],
+        ticktext=["1", "10", "100", "1 000", "10 000"],
+        title_text="Distance (km)",
+    )
+    fig.update_yaxes(title_text="Nombre de marchés")
+    return dcc.Graph(figure=fig)
+
+
+def get_dashboard_summary_table(dff, dff_per_uid, nb_marches):
+    nb_acheteurs = dff.select("acheteur_id").n_unique()
+    nb_titulaires = dff.select("titulaire_id", "titulaire_typeIdentifiant").n_unique()
+    total_montant = int(dff_per_uid.select(pl.col("montant").sum()).item())
+    median_distance = dff.select(pl.median("titulaire_distance")).item()
+
+    summary_table = [
+        html.P(["Nombre de marchés : ", html.Strong(str(format_number(nb_marches)))]),
+        html.P(
+            [
+                "Nombre d'acheteurs uniques : ",
+                html.Strong(str(format_number(nb_acheteurs))),
+            ]
+        ),
+        html.P(
+            [
+                "Nombre de titulaires uniques : ",
+                html.Strong(str(format_number(nb_titulaires))),
+            ]
+        ),
+        html.P(
+            [
+                "Montant total (",
+                html.Span(
+                    "?",
+                    id={"type": "modal-trigger", "index": "montant"},
+                    style={"cursor": "pointer", "textDecoration": "underline dotted"},
+                ),
+                ") : ",
+                html.Strong(format_number(total_montant) + " €"),
+            ]
+        ),
+        html.P(
+            [
+                "Distance acheteur-titulaire médiane : ",
+                html.Strong(format_number(median_distance) + " km"),
+            ]
+        ),
+    ]
+
+    return summary_table
+
+
+def make_card(
+    title: str, subtitle=None, fig=None, paragraphs=None, lg=6, xl=4
+) -> dbc.Col:
+    children = []
+    if title:
+        children.append(html.H5(title, className="card-title"))
+    if subtitle:
+        children.append(html.H6(subtitle, className="card-subtitle mb-2 text-muted"))
+    if fig is not None:
+        children.append(fig)
+    if paragraphs:
+        for p in paragraphs:
+            p.className = "card-text"
+            children.append(p)
+
+    card = dbc.Col(
+        html.Div(html.Div(className="card-body", children=children), className="card"),
+        lg=lg,
+        xl=xl,
+        # width=width,
+        # className="mb-4",
+    )
+    return card
+
+
+def make_donut(
+    lff: pl.LazyFrame,
+    names_col,
+    per_uid: bool,
+    nulls="?",
+    potentially_many_names: bool = False,
+):
+    title = data_schema[names_col]["title"]
+    lff = lff.rename({names_col: title})
+    lff = lff.select("uid", title)
+
+    if per_uid:
+        lff = lff.group_by("uid").first()
+
+    lff = lff.group_by(title).len("Nombre")
+    lff = lff.with_columns(pl.col(title).replace(None, pl.lit(nulls)))
+    dff = lff.collect(engine="streaming")
+    nb_names = dff[title].n_unique()
+
+    sum_values = dff["Nombre"].sum()
+    dff = dff.with_columns(
+        pl.when((pl.col("Nombre") / sum_values) < 0.01)
+        .then(pl.lit("Autres"))
+        .otherwise(pl.col(title))
+        .alias(title)
+    )
+
+    dff = dff.with_columns(
+        pl.col("Nombre")
+        .map_elements(format_number, return_dtype=pl.String)
+        .alias("Nombre_fmt")
+    )
+    fig = px.pie(
+        dff,
+        values="Nombre",
+        names=title,
+        hole=0.4,
+        color_discrete_sequence=px.colors.qualitative.Safe,
+        custom_data=["Nombre_fmt"],
+    )
+    fig = fig.update_traces(
+        texttemplate="<b>%{label}</b><br><b>%{percent}</b>",
+        hovertemplate="<b>%{label}</b><br>%{customdata[0]}<extra></extra>",
+    )
+    fig = fig.update_layout(showlegend=False, font=dict(size=14))
+    graph = dcc.Graph(figure=fig)
+    if potentially_many_names:
+        return graph, nb_names
+    return graph
 
 
 def make_column_picker(page: str):
@@ -468,3 +818,44 @@ def make_column_picker(page: str):
     )
 
     return table
+
+
+def get_top_org_table(data, org_type: str, extra_columns: list, filters: bool = True):
+    if isinstance(data, pl.LazyFrame):
+        lff = data
+    else:
+        lff = pl.LazyFrame(data, strict=False, infer_schema_length=5000)
+
+    if org_type == "titulaire":
+        extra_columns.append("titulaire_typeIdentifiant")
+    columns = ["uid", f"{org_type}_id", f"{org_type}_nom"] + extra_columns
+
+    lff = lff.select(columns)
+    lff = lff.group_by([f"{org_type}_id", f"{org_type}_nom"] + extra_columns).agg(
+        pl.len().alias("Attributions")
+    )
+    lff = lff.sort(by="Attributions", descending=True, nulls_last=True)
+    lff = lff.cast(pl.String)
+    lff = lff.fill_null("")
+
+    dff: pl.DataFrame = lff.collect(engine="streaming")
+
+    if dff.height == 0:
+        return html.Div()
+
+    columns, tooltip = setup_table_columns(
+        dff, hideable=False, exclude=[f"{org_type}_id"], new_columns=["Attributions"]
+    )
+    dff = add_links(dff)
+    data = dff.to_dicts()
+    # data = add_links_in_dict(data, f"{org_type}")
+
+    return DataTable(
+        dtid=f"top10_{org_type}",
+        data=data,
+        page_action="native",
+        page_size=10,
+        columns=columns,
+        tooltip_header=tooltip,
+        filter_action="native" if filters else "none",
+    )

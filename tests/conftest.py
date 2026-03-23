@@ -13,9 +13,9 @@ def test_data():
             "uid": "1",
             "id": "1",
             "acheteur_nom": "ACHETEUR 1",
-            "acheteur_id": "a1",
+            "acheteur_id": "123",
             "titulaire_nom": "TITULAIRE 1",
-            "titulaire_id": "t1",
+            "titulaire_id": "345",
             "montant": 10,
             "dateNotification": datetime.date(2025, 1, 1),
             "codeCPV": "71600000",
@@ -34,6 +34,11 @@ def test_data():
             "sourceFile": "test.xml",
             "sourceDataset": "test_dataset",
             "datePublicationDonnees": datetime.date(2025, 1, 1),
+            "considerationsSociales": "",
+            "considerationsEnvironnementales": "",
+            "type": "Marché",
+            "acheteur_categorie": "Collectivité",
+            "titulaire_categorie": "PME",
         }
     ]
     path = "tests/test.parquet"
@@ -42,10 +47,6 @@ def test_data():
 
     pl.DataFrame(data).write_parquet("tests/test.parquet")
     yield path
-
-    if os.path.exists(path):
-        os.unlink(path)
-        print(path, "deleted")
 
 
 def pytest_setup_options():
