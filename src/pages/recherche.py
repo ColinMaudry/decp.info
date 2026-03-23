@@ -78,7 +78,7 @@ layout = html.Div(
         #     className="search_options",
         #     children=[dcc.RadioItems(options=["Acheteur(s)"])],
         # ),
-        html.Div(id="search_results"),
+        dbc.Row(id="search_results"),
     ],
 )
 
@@ -110,8 +110,8 @@ def update_search_results(n_submit, n_clicks, query):
             # Format output
             columns, tooltip = setup_table_columns(results, hideable=False)
 
-            col_content = (
-                html.Div(
+            col = (
+                dbc.Col(
                     children=[
                         html.H3(f"{org_type.title()}s : {count}"),
                         DataTable(
@@ -123,12 +123,13 @@ def update_search_results(n_submit, n_clicks, query):
                             filter_action="none",
                         ),
                     ],
+                    md=6,
                 )
                 if count > 0
                 else html.P(f"Aucun {org_type} trouvé.")
             )
-            cols.append(dbc.Col(col_content, width=6))
+            cols.append(col)
 
         style = {"textAlign": "center", "display": "none"}
-        return dbc.Row(cols), style
+        return cols, style
     return html.P(""), {"textAlign": "center"}
