@@ -90,8 +90,6 @@ OBSERVATOIRE_COLUMNS = [
     ]
 ]
 
-DF_FILTERED: pl.DataFrame = pl.DataFrame()
-
 layout = [
     dcc.Location(id="dashboard_url", refresh="callback-nav"),
     dcc.Store(id="observatoire-filters", storage_type="local"),
@@ -324,7 +322,7 @@ Alors, on fait comment ?
                                             dbc.Col("Sous-traitance :", lg=5),
                                             dbc.Col(
                                                 dbc.RadioItems(
-                                                    id="dashboard_marche_sousTraitanceDeclaree",
+                                                    id="dashboard_marche_sous_traitance_declaree",
                                                     options=[
                                                         {
                                                             "label": "Tous",
@@ -380,7 +378,7 @@ Alors, on fait comment ?
                                     dbc.Row(
                                         dbc.Col(
                                             dcc.Dropdown(
-                                                id="dashboard_marche_considerationsSociales",
+                                                id="dashboard_marche_considerations_sociales",
                                                 placeholder="Considérations sociales",
                                                 options=get_enum_values_as_dict(
                                                     "considerationsSociales"
@@ -394,7 +392,7 @@ Alors, on fait comment ?
                                     dbc.Row(
                                         dbc.Col(
                                             dcc.Dropdown(
-                                                id="dashboard_marche_considerationsEnvironnementales",
+                                                id="dashboard_marche_considerations_environnementales",
                                                 placeholder="Considérations environnementales",
                                                 multi=True,
                                                 options=get_enum_values_as_dict(
@@ -544,30 +542,14 @@ FILTER_PARAMS = [
     ("dashboard_montant_max", "montant_max", False, None),
     ("dashboard_marche_techniques", "techniques", True, None),
     ("dashboard_marche_innovant", "innovant", False, "all"),
-    ("dashboard_marche_sousTraitanceDeclaree", "sous_traitance", False, "all"),
-    ("dashboard_marche_considerationsSociales", "social", True, None),
-    ("dashboard_marche_considerationsEnvironnementales", "env", True, None),
+    ("dashboard_marche_sous_traitance_declaree", "sous_traitance", False, "all"),
+    ("dashboard_marche_considerations_sociales", "social", True, None),
+    ("dashboard_marche_considerations_environnementales", "env", True, None),
 ]
 
 
 @callback(
-    Output("dashboard_year", "value"),
-    Output("dashboard_acheteur_id", "value"),
-    Output("dashboard_acheteur_categorie", "value"),
-    Output("dashboard_acheteur_departement_code", "value"),
-    Output("dashboard_titulaire_id", "value"),
-    Output("dashboard_titulaire_categorie", "value"),
-    Output("dashboard_titulaire_departement_code", "value"),
-    Output("dashboard_marche_type", "value"),
-    Output("dashboard_marche_objet", "value"),
-    Output("dashboard_marche_code_cpv", "value"),
-    Output("dashboard_montant_min", "value"),
-    Output("dashboard_montant_max", "value"),
-    Output("dashboard_marche_techniques", "value"),
-    Output("dashboard_marche_innovant", "value"),
-    Output("dashboard_marche_sousTraitanceDeclaree", "value"),
-    Output("dashboard_marche_considerationsSociales", "value"),
-    Output("dashboard_marche_considerationsEnvironnementales", "value"),
+    *[Output(fp[0], "value") for fp in FILTER_PARAMS],
     Input("dashboard_url", "search"),
     Input("dashboard_url", "pathname"),
     State("observatoire-filters", "data"),
@@ -670,72 +652,24 @@ def show_confirmation(n_clicks):
 
 @callback(
     Output("cards", "children"),
-    Input("dashboard_year", "value"),
-    Input("dashboard_acheteur_id", "value"),
-    Input("dashboard_acheteur_categorie", "value"),
-    Input("dashboard_acheteur_departement_code", "value"),
-    Input("dashboard_titulaire_id", "value"),
-    Input("dashboard_titulaire_categorie", "value"),
-    Input("dashboard_titulaire_departement_code", "value"),
-    Input("dashboard_marche_type", "value"),
-    Input("dashboard_marche_objet", "value"),
-    Input("dashboard_marche_code_cpv", "value"),
-    Input("dashboard_montant_min", "value"),
-    Input("dashboard_montant_max", "value"),
-    Input("dashboard_marche_techniques", "value"),
-    Input("dashboard_marche_innovant", "value"),
-    Input("dashboard_marche_sousTraitanceDeclaree", "value"),
-    Input("dashboard_marche_considerationsSociales", "value"),
-    Input("dashboard_marche_considerationsEnvironnementales", "value"),
+    Output("observatoire-filters", "data"),
+    *[Input(fp[0], "value") for fp in FILTER_PARAMS],
 )
-def udpate_dashboard_cards(
-    dashboard_year,
-    dashboard_acheteur_id,
-    dashboard_acheteur_categorie,
-    dashboard_acheteur_departement_code,
-    dashboard_titulaire_id,
-    dashboard_titulaire_categorie,
-    dashboard_titulaire_departement_code,
-    dashboard_marche_type,
-    dashboard_marche_objet,
-    dashboard_marche_code_cpv,
-    dashboard_montant_min,
-    dashboard_montant_max,
-    dashboard_marche_techniques,
-    dashboard_marche_innovant,
-    dashboard_marche_sous_traitance_declaree,
-    dashboard_marche_considerations_sociales,
-    dashboard_marche_considerations_environnementales,
-):
+def udpate_dashboard_cards(*filter_values):
     lff: pl.LazyFrame = df.lazy()
 
     # Filtrage des données
-    lff = prepare_dashboard_data(
-        lff=lff,
-        year=dashboard_year,
-        acheteur_id=dashboard_acheteur_id,
-        acheteur_categorie=dashboard_acheteur_categorie,
-        acheteur_departement_code=dashboard_acheteur_departement_code,
-        titulaire_id=dashboard_titulaire_id,
-        titulaire_categorie=dashboard_titulaire_categorie,
-        titulaire_departement_code=dashboard_titulaire_departement_code,
-        type=dashboard_marche_type,
-        objet=dashboard_marche_objet,
-        code_cpv=dashboard_marche_code_cpv,
-        considerations_sociales=dashboard_marche_considerations_sociales,
-        considerations_environnementales=dashboard_marche_considerations_environnementales,
-        montant_min=dashboard_montant_min,
-        montant_max=dashboard_montant_max,
-        techniques=dashboard_marche_techniques,
-        marche_innovant=dashboard_marche_innovant,
-        sous_traitance_declaree=dashboard_marche_sous_traitance_declaree,
-    )
+
+    filter_params = {}
+    for (input_id, url_key, is_multi, default), value in zip(FILTER_PARAMS, filter_values):
+        if value is None or value == default or value == [] or value == "":
+            continue
+        filter_params[input_id] = value
+
+    lff = prepare_dashboard_data(lff=lff, **filter_params)
 
     # Génération des métriques
     dff = lff.collect(engine="streaming")
-
-    global DF_FILTERED
-    DF_FILTERED = dff
 
     logger.debug("Filter data: " + str(dff.height))
 
@@ -832,73 +766,18 @@ def udpate_dashboard_cards(
         )
     )
 
-    return dbc.Row(children=cards + geographic_maps + other_cards)
+    return dbc.Row(children=cards + geographic_maps + other_cards), filter_params
 
 
 @callback(
     Output("download-observatoire", "data"),
     Input("btn-download-observatoire", "n_clicks"),
-    State("dashboard_year", "value"),
-    State("dashboard_acheteur_id", "value"),
-    State("dashboard_acheteur_categorie", "value"),
-    State("dashboard_acheteur_departement_code", "value"),
-    State("dashboard_titulaire_id", "value"),
-    State("dashboard_titulaire_categorie", "value"),
-    State("dashboard_titulaire_departement_code", "value"),
-    State("dashboard_marche_type", "value"),
-    State("dashboard_marche_objet", "value"),
-    State("dashboard_marche_code_cpv", "value"),
-    State("dashboard_montant_min", "value"),
-    State("dashboard_montant_max", "value"),
-    State("dashboard_marche_techniques", "value"),
-    State("dashboard_marche_innovant", "value"),
-    State("dashboard_marche_sousTraitanceDeclaree", "value"),
-    State("dashboard_marche_considerationsSociales", "value"),
-    State("dashboard_marche_considerationsEnvironnementales", "value"),
+    State("observatoire-filters", "data"),
     State("observatoire-hidden-columns", "data"),
     prevent_initial_call=True,
 )
-def download_observatoire(
-    _n_clicks,
-    dashboard_year,
-    dashboard_acheteur_id,
-    dashboard_acheteur_categorie,
-    dashboard_acheteur_departement_code,
-    dashboard_titulaire_id,
-    dashboard_titulaire_categorie,
-    dashboard_titulaire_departement_code,
-    dashboard_marche_type,
-    dashboard_marche_objet,
-    dashboard_marche_code_cpv,
-    dashboard_montant_min,
-    dashboard_montant_max,
-    dashboard_marche_techniques,
-    dashboard_marche_innovant,
-    dashboard_marche_sous_traitance_declaree,
-    dashboard_considerations_sociales,
-    dashboard_considerations_environnementales,
-    hidden_columns,
-):
-    lff = prepare_dashboard_data(
-        lff=df.lazy(),
-        year=dashboard_year,
-        acheteur_id=dashboard_acheteur_id,
-        acheteur_categorie=dashboard_acheteur_categorie,
-        acheteur_departement_code=dashboard_acheteur_departement_code,
-        titulaire_id=dashboard_titulaire_id,
-        titulaire_categorie=dashboard_titulaire_categorie,
-        titulaire_departement_code=dashboard_titulaire_departement_code,
-        type=dashboard_marche_type,
-        objet=dashboard_marche_objet,
-        code_cpv=dashboard_marche_code_cpv,
-        considerations_sociales=dashboard_considerations_sociales,
-        considerations_environnementales=dashboard_considerations_environnementales,
-        montant_min=dashboard_montant_min,
-        montant_max=dashboard_montant_max,
-        techniques=dashboard_marche_techniques,
-        marche_innovant=dashboard_marche_innovant,
-        sous_traitance_declaree=dashboard_marche_sous_traitance_declaree,
-    )
+def download_observatoire(_n_clicks, filter_params, hidden_columns):
+    lff = prepare_dashboard_data(lff=df.lazy(), **(filter_params or {}))
 
     if hidden_columns:
         lff = lff.drop(hidden_columns)
@@ -974,16 +853,16 @@ def toggle_observatoire_preview(n_clicks, is_open):
     Input("observatoire-preview-table", "page_size"),
     Input("observatoire-preview-table", "sort_by"),
     State("observatoire-preview-table", "data_timestamp"),
+    State("observatoire-filters", "data"),
     prevent_initial_call=True,
 )
 def populate_preview_table(
-    is_open, filter_query, page_current, page_size, sort_by, data_timestamp
+    is_open, filter_query, page_current, page_size, sort_by, data_timestamp, filter_params
 ):
     if not is_open:
         return (no_update,) * 9
 
-    global DF_FILTERED
-    lff = DF_FILTERED.lazy()
+    lff = prepare_dashboard_data(lff=df.lazy(), **(filter_params or {}))
 
     return prepare_table_data(
         lff,
