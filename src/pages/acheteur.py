@@ -39,7 +39,7 @@ from src.utils import (
 )
 
 
-def get_title(acheteur_id: str = None) -> str:
+def get_title(acheteur_id: str | None = None) -> str:
     acheteur_nom = df_acheteurs.filter(pl.col("acheteur_id") == acheteur_id).select(
         "acheteur_nom"
     )
@@ -326,13 +326,13 @@ def update_acheteur_stats(data):
     Input(component_id="acheteur_url", component_property="pathname"),
     Input(component_id="acheteur_year", component_property="value"),
 )
-def get_acheteur_marches_data(url, acheteur_year: str) -> tuple:
+def get_acheteur_marches_data(url, ach_year: str) -> tuple:
     acheteur_siret = url.split("/")[-1]
     lff = df.lazy()
     lff = lff.filter(pl.col("acheteur_id") == acheteur_siret)
-    if acheteur_year and acheteur_year != "Toutes les années":
-        acheteur_year = int(acheteur_year)
-        lff = lff.filter(pl.col("dateNotification").dt.year() == acheteur_year)
+    if ach_year and ach_year != "Toutes les années":
+        ach_year: int = int(ach_year)
+        lff = lff.filter(pl.col("dateNotification").dt.year() == ach_year)
     lff = lff.sort(["dateNotification", "uid"], descending=True, nulls_last=True)
     dff: pl.DataFrame = lff.collect(engine="streaming")
     download_disabled, download_text, download_title = get_button_properties(dff.height)
@@ -412,7 +412,12 @@ def download_acheteur_data(
     prevent_initial_call=True,
 )
 def download_filtered_acheteur_data(
-    data, n_clicks, acheteur_nom, filter_query, sort_by, hidden_columns: list = None
+    data,
+    n_clicks,
+    acheteur_nom,
+    filter_query,
+    sort_by,
+    hidden_columns: list | None = None,
 ):
     lff: pl.LazyFrame = pl.LazyFrame(
         data

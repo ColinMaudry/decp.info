@@ -13,7 +13,7 @@ load_dotenv()
 #     os.environ["DATA_FILE_PARQUET_PATH"]
 
 
-development = os.getenv("DEVELOPMENT").lower() == "true"
+development = os.getenv("DEVELOPMENT", "").lower() == "true"
 
 meta_tags = [
     {"name": "viewport", "content": "width=device-width, initial-scale=1"},

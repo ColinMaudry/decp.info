@@ -699,21 +699,21 @@ def prepare_table_data(
 
 def prepare_dashboard_data(
     lff: pl.LazyFrame,
-    dashboard_year,
-    dashboard_acheteur_id,
-    dashboard_acheteur_categorie,
-    dashboard_acheteur_departement_code,
-    dashboard_titulaire_id,
-    dashboard_titulaire_categorie,
-    dashboard_titulaire_departement_code,
-    dashboard_marche_type,
-    dashboard_marche_objet,
-    dashboard_marche_code_cpv,
-    dashboard_marche_considerations_sociales,
-    dashboard_marche_considerations_environnementales,
-    dashboard_marche_techniques,
-    dashboard_marche_innovant,
-    dashboard_marche_sous_traitance_declaree,
+    dashboard_year=None,
+    dashboard_acheteur_id=None,
+    dashboard_acheteur_categorie=None,
+    dashboard_acheteur_departement_code=None,
+    dashboard_titulaire_id=None,
+    dashboard_titulaire_categorie=None,
+    dashboard_titulaire_departement_code=None,
+    dashboard_marche_type=None,
+    dashboard_marche_objet=None,
+    dashboard_marche_code_cpv=None,
+    dashboard_marche_considerations_sociales=None,
+    dashboard_marche_considerations_environnementales=None,
+    dashboard_marche_techniques=None,
+    dashboard_marche_innovant=None,
+    dashboard_marche_sous_traitance_declaree=None,
     dashboard_montant_min=None,
     dashboard_montant_max=None,
 ) -> pl.LazyFrame:
@@ -728,20 +728,28 @@ def prepare_dashboard_data(
         lff = lff.filter(pl.col("acheteur_id").str.contains(dashboard_acheteur_id))
     else:
         if dashboard_acheteur_categorie:
-            lff = lff.filter(pl.col("acheteur_categorie") == dashboard_acheteur_categorie)
+            lff = lff.filter(
+                pl.col("acheteur_categorie") == dashboard_acheteur_categorie
+            )
         if dashboard_acheteur_departement_code:
             lff = lff.filter(
-                pl.col("acheteur_departement_code").is_in(dashboard_acheteur_departement_code)
+                pl.col("acheteur_departement_code").is_in(
+                    dashboard_acheteur_departement_code
+                )
             )
 
     if dashboard_titulaire_id:
         lff = lff.filter(pl.col("titulaire_id").str.contains(dashboard_titulaire_id))
     else:
         if dashboard_titulaire_categorie:
-            lff = lff.filter(pl.col("titulaire_categorie") == dashboard_titulaire_categorie)
+            lff = lff.filter(
+                pl.col("titulaire_categorie") == dashboard_titulaire_categorie
+            )
         if dashboard_titulaire_departement_code:
             lff = lff.filter(
-                pl.col("titulaire_departement_code").is_in(dashboard_titulaire_departement_code)
+                pl.col("titulaire_departement_code").is_in(
+                    dashboard_titulaire_departement_code
+                )
             )
 
     if dashboard_marche_type:
@@ -756,8 +764,13 @@ def prepare_dashboard_data(
     if dashboard_marche_innovant and dashboard_marche_innovant != "all":
         lff = lff.filter(pl.col("marcheInnovant") == dashboard_marche_innovant)
 
-    if dashboard_marche_sous_traitance_declaree and dashboard_marche_sous_traitance_declaree != "all":
-        lff = lff.filter(pl.col("sousTraitanceDeclaree") == dashboard_marche_sous_traitance_declaree)
+    if (
+        dashboard_marche_sous_traitance_declaree
+        and dashboard_marche_sous_traitance_declaree != "all"
+    ):
+        lff = lff.filter(
+            pl.col("sousTraitanceDeclaree") == dashboard_marche_sous_traitance_declaree
+        )
 
     if dashboard_marche_techniques:
         lff = lff.filter(
