@@ -496,6 +496,8 @@ def update_hidden_columns_from_checkboxes(selected_columns):
     ),
 )
 def store_hidden_columns(hidden_columns):
+    if hidden_columns is None:
+        hidden_columns = get_default_hidden_columns("tableau")
     return hidden_columns
 
 
