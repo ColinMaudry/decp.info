@@ -470,14 +470,15 @@ def update_hidden_columns_from_checkboxes(selected_columns):
 
 
 @callback(
-    Output("acheteur_datatable", "hidden_columns", allow_duplicate=True),
+    Output("acheteur_datatable", "hidden_columns"),
     Input(
         "acheteur-hidden-columns",
         "data",
     ),
-    prevent_initial_call=True,
 )
 def store_hidden_columns(hidden_columns):
+    if hidden_columns is None:
+        hidden_columns = get_default_hidden_columns("acheteur")
     return hidden_columns
 
 
