@@ -7,6 +7,8 @@ from dash import Dash, Input, Output, State, dcc, html, page_container, page_reg
 from dotenv import load_dotenv
 from flask import Response
 
+from src.cache import cache
+
 load_dotenv()
 
 # if os.getenv("PYTEST_CURRENT_TEST"):
@@ -33,10 +35,17 @@ app: Dash = Dash(
     meta_tags=meta_tags,
 )
 
-# COSMO (belle font, blue),
-# UNITED (rouge, ubuntu font),
-# LUMEN (gros séparateur, blue clair),
-# SIMPLEX (rouge, séparateur)
+cache.init_app(
+    app.server,
+    config={
+        "CACHE_TYPE": "FileSystemCache",
+        "CACHE_DIR": os.getenv("CACHE_DIR", "/tmp/decp-cache"),
+        "CACHE_DEFAULT_TIMEOUT": int(
+            os.getenv("CACHE_DEFAULT_TIMEOUT", 3600 * 20)
+        ),  # 20h par défaut
+        "CACHE_THRESHOLD": 500,
+    },
+)
 
 
 # robots.txt

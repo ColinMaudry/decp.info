@@ -16,6 +16,7 @@ from dash import (
     register_page,
 )
 
+from src.cache import cache
 from src.figures import (
     DataTable,
     get_barchart_sources,
@@ -650,28 +651,24 @@ def show_confirmation(n_clicks):
     return no_update
 
 
-@callback(
-    Output("cards", "children"),
-    Output("observatoire-filters", "data"),
-    *[Input(fp[0], "value") for fp in FILTER_PARAMS],
-)
-def udpate_dashboard_cards(*filter_values):
+def _normalize_filter_params(filter_params: dict) -> tuple:
+    """Produce a deterministic, hashable key for caching."""
+    return tuple(
+        sorted(
+            (k, tuple(v) if isinstance(v, list) else v)
+            for k, v in filter_params.items()
+        )
+    )
+
+
+@cache.memoize(timeout=3600)
+def _compute_dashboard_children(cache_key: tuple):
+    filter_params = {k: (list(v) if isinstance(v, tuple) else v) for k, v in cache_key}
+
     lff: pl.LazyFrame = df.lazy()
-
-    # Filtrage des données
-    filter_params = {}
-    for (input_id, url_key, is_multi, default), value in zip(
-        FILTER_PARAMS, filter_values
-    ):
-        filter_params[input_id] = value
-
-    print(filter_params)
-
     lff = prepare_dashboard_data(lff=lff, **filter_params)
 
-    # Génération des métriques
     dff = lff.collect(engine="streaming")
-
     logger.debug("Filter data: " + str(dff.height))
 
     df_per_uid = (
@@ -680,9 +677,7 @@ def udpate_dashboard_cards(*filter_values):
     nb_marches = df_per_uid.height
 
     cards = []
-
     card_summary_table = get_dashboard_summary_table(dff, df_per_uid, nb_marches)
-
     cards.append(make_card(title="Résumé", paragraphs=card_summary_table))
 
     donut_acheteur_categorie, nb_acheteur_categories = make_donut(
@@ -744,7 +739,6 @@ def udpate_dashboard_cards(*filter_values):
     geographic_maps: list[dbc.Col] = get_geographic_maps(dff)
 
     other_cards = []
-
     sources_barchart = get_barchart_sources(lff, type_date="dateNotification")
     other_cards.append(
         make_card(
@@ -767,7 +761,25 @@ def udpate_dashboard_cards(*filter_values):
         )
     )
 
-    return dbc.Row(children=cards + geographic_maps + other_cards), filter_params
+    return cards + geographic_maps + other_cards
+
+
+@callback(
+    Output("cards", "children"),
+    Output("observatoire-filters", "data"),
+    *[Input(fp[0], "value") for fp in FILTER_PARAMS],
+)
+def update_dashboard_cards(*filter_values):
+    filter_params = {}
+    for (input_id, _url_key, _is_multi, _default), value in zip(
+        FILTER_PARAMS, filter_values
+    ):
+        filter_params[input_id] = value
+
+    cache_key = _normalize_filter_params(filter_params)
+    children = _compute_dashboard_children(cache_key)
+
+    return dbc.Row(children=children), filter_params
 
 
 @callback(
