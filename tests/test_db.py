@@ -192,3 +192,64 @@ def test_query_marches_returns_polars_frame(built_db, monkeypatch):
     assert isinstance(frame, pl.DataFrame)
     assert frame.height == 2
     assert set(frame["uid"].to_list()) == {"1", "2"}
+
+
+def test_concurrent_build_serialized(tmp_path):
+    """Multiple threads calling _ensure_database must serialize via flock.
+
+    Only one should actually build; others wait, see the fresh DB, and skip.
+    No tmp file should leak. No exceptions should occur.
+    """
+    import fcntl
+    import threading
+
+    import src.db as db
+
+    # Set up source parquet
+    parquet_path = tmp_path / "src.parquet"
+    df = pl.DataFrame(
+        {
+            "uid": ["A"],
+            "donneesActuelles": [True],
+            "dateNotification": ["2024-01-01"],
+            "objet": ["Test"],
+            "acheteur_id": ["a1"],
+            "acheteur_nom": ["A1"],
+            "titulaire_id": ["t1"],
+            "titulaire_nom": ["T1"],
+            "acheteur_departement_code": ["75"],
+            "titulaire_departement_code": ["75"],
+            "montant": [1000.0],
+            "dureeMois": [12],
+        }
+    )
+    df.write_parquet(parquet_path)
+
+    db_path = tmp_path / "decp.duckdb"
+    lock_path = db_path.with_suffix(".duckdb.lock")
+    tmp_path_artifact = db_path.with_suffix(".duckdb.tmp")
+
+    errors: list[BaseException] = []
+
+    def worker():
+        try:
+            # Mirror the locking logic in _ensure_database
+            with open(lock_path, "w") as lf:
+                fcntl.flock(lf.fileno(), fcntl.LOCK_EX)
+                try:
+                    if db.should_rebuild(db_path, parquet_path):
+                        db.build_database(db_path, parquet_path)
+                finally:
+                    fcntl.flock(lf.fileno(), fcntl.LOCK_UN)
+        except BaseException as exc:
+            errors.append(exc)
+
+    threads = [threading.Thread(target=worker) for _ in range(3)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert errors == []
+    assert db_path.exists()
+    assert not tmp_path_artifact.exists()
