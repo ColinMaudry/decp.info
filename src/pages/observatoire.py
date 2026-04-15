@@ -591,7 +591,6 @@ def sync_observatoire_share_url(*args):
     href = args[-1]
 
     if not href:
-        print("no update")
         return no_update, no_update
 
     base_url = href.split("?")[0]
@@ -608,7 +607,6 @@ def sync_observatoire_share_url(*args):
 
     query_string = urllib.parse.urlencode(params)
     full_url = f"{base_url}?{query_string}" if query_string else base_url
-    print("query", query_string)
 
     if params:
         copy_button = dcc.Clipboard(
