@@ -1,6 +1,8 @@
+import datetime
 import os
 import time
 
+import polars as pl
 import pytest
 
 from src.db import should_rebuild
@@ -65,3 +67,129 @@ def test_should_rebuild_dev_when_rebuild_forced(parquet_and_db, monkeypatch):
     monkeypatch.setenv("DEVELOPMENT", "true")
     monkeypatch.setenv("REBUILD_DUCKDB", "true")
     assert should_rebuild(db, parquet) is True
+
+
+@pytest.fixture
+def built_db(tmp_path, monkeypatch):
+    """Build a DuckDB from a small Polars frame written as parquet."""
+    parquet_path = tmp_path / "source.parquet"
+    db_path = tmp_path / "decp.duckdb"
+
+    data = pl.DataFrame(
+        [
+            {
+                "uid": "1",
+                "id": "1",
+                "objet": "Travaux",
+                "acheteur_id": "A1",
+                "acheteur_nom": "Mairie",
+                "acheteur_departement_code": "75",
+                "titulaire_id": "T1",
+                "titulaire_nom": "Entreprise",
+                "titulaire_departement_code": "35",
+                "titulaire_typeIdentifiant": "SIRET",
+                "montant": 1000.0,
+                "dateNotification": datetime.date(2025, 1, 1),
+                "donneesActuelles": True,
+                "marcheInnovant": True,
+            },
+            {
+                "uid": "2",
+                "id": "2",
+                "objet": "Études",
+                "acheteur_id": "A1",
+                "acheteur_nom": "Mairie",
+                "acheteur_departement_code": "75",
+                "titulaire_id": "T2",
+                "titulaire_nom": None,
+                "titulaire_departement_code": "75",
+                "titulaire_typeIdentifiant": "SIRET",
+                "montant": 500.0,
+                "dateNotification": datetime.date(2024, 6, 1),
+                "donneesActuelles": True,
+                "marcheInnovant": False,
+            },
+            {
+                "uid": "3",
+                "id": "3",
+                "objet": "Ancien",
+                "acheteur_id": "A2",
+                "acheteur_nom": None,
+                "acheteur_departement_code": "13",
+                "titulaire_id": "T3",
+                "titulaire_nom": "Autre",
+                "titulaire_departement_code": "13",
+                "titulaire_typeIdentifiant": "SIRET",
+                "montant": 100.0,
+                "dateNotification": datetime.date(2023, 1, 1),
+                "donneesActuelles": False,  # must be filtered out
+                "marcheInnovant": False,
+            },
+        ]
+    )
+    data.write_parquet(parquet_path)
+    monkeypatch.setenv("DATA_FILE_PARQUET_PATH", str(parquet_path))
+
+    from src.db import build_database
+
+    build_database(db_path, parquet_path)
+    return db_path
+
+
+def test_build_filters_donnees_actuelles(built_db):
+    import duckdb
+
+    with duckdb.connect(str(built_db), read_only=True) as c:
+        rows = c.execute("SELECT uid FROM decp ORDER BY uid").fetchall()
+    assert [r[0] for r in rows] == ["1", "2"]
+
+
+def test_build_converts_booleans_to_oui_non(built_db):
+    import duckdb
+
+    with duckdb.connect(str(built_db), read_only=True) as c:
+        values = c.execute("SELECT marcheInnovant FROM decp ORDER BY uid").fetchall()
+    assert [v[0] for v in values] == ["oui", "non"]
+
+
+def test_build_replaces_null_org_names(built_db):
+    import duckdb
+
+    with duckdb.connect(str(built_db), read_only=True) as c:
+        titulaire_2 = c.execute(
+            "SELECT titulaire_nom FROM decp WHERE uid = '2'"
+        ).fetchone()
+    assert titulaire_2[0] == "[Identifiant non reconnu dans la base INSEE]"
+
+
+def test_build_creates_derived_tables(built_db):
+    import duckdb
+
+    with duckdb.connect(str(built_db), read_only=True) as c:
+        tables = {r[0] for r in c.execute("SHOW TABLES").fetchall()}
+    assert {
+        "decp",
+        "acheteurs_marches",
+        "titulaires_marches",
+        "acheteurs_departement",
+        "titulaires_departement",
+    } <= tables
+
+
+@pytest.mark.skip(reason="implemented in Task 6")
+def test_query_marches_returns_polars_frame(built_db, monkeypatch):
+    monkeypatch.setenv(
+        "DATA_FILE_PARQUET_PATH", str(built_db.parent / "source.parquet")
+    )
+    # Force src.db to load pointing at this test DB.
+    import importlib
+
+    import src.db
+
+    importlib.reload(src.db)
+    from src.db import query_marches
+
+    frame = query_marches("acheteur_id = ?", ("A1",))
+    assert isinstance(frame, pl.DataFrame)
+    assert frame.height == 2
+    assert set(frame["uid"].to_list()) == {"1", "2"}
