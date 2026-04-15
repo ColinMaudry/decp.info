@@ -176,7 +176,6 @@ def test_build_creates_derived_tables(built_db):
     } <= tables
 
 
-@pytest.mark.skip(reason="implemented in Task 6")
 def test_query_marches_returns_polars_frame(built_db, monkeypatch):
     monkeypatch.setenv(
         "DATA_FILE_PARQUET_PATH", str(built_db.parent / "source.parquet")

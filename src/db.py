@@ -1,3 +1,4 @@
+import fcntl
 import logging
 import os
 from pathlib import Path
@@ -107,3 +108,54 @@ def build_database(db_path: Path, parquet_path: Path) -> None:
 
     os.replace(tmp_path, db_path)
     logger.info(f"Base DuckDB construite : {db_path}")
+
+
+def _resolve_db_path() -> Path:
+    parquet = os.getenv("DATA_FILE_PARQUET_PATH")
+    if not parquet:
+        raise RuntimeError("DATA_FILE_PARQUET_PATH is not set")
+    return Path(parquet).parent / "decp.duckdb"
+
+
+def _ensure_database() -> Path:
+    db_path = _resolve_db_path()
+    parquet_path = Path(os.getenv("DATA_FILE_PARQUET_PATH"))
+    lock_path = db_path.with_suffix(".duckdb.lock")
+
+    with open(lock_path, "w") as lock_fd:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+        if should_rebuild(db_path, parquet_path):
+            build_database(db_path, parquet_path)
+    return db_path
+
+
+DB_PATH = _ensure_database()
+conn: duckdb.DuckDBPyConnection = duckdb.connect(str(DB_PATH), read_only=True)
+schema: pl.Schema = conn.execute("SELECT * FROM decp LIMIT 0").pl().schema
+
+
+def get_cursor() -> duckdb.DuckDBPyConnection:
+    """Return a per-request cursor that shares the process-wide connection."""
+    return conn.cursor()
+
+
+def query_marches(
+    where_sql: str = "TRUE",
+    params: tuple = (),
+    columns: list[str] | None = None,
+    order_by: str | None = None,
+    limit: int | None = None,
+) -> pl.DataFrame:
+    """Run a parameterized SELECT against the decp table and return Polars.
+
+    `where_sql` and `order_by` are trusted SQL fragments (callers are internal
+    code, never user input). `params` values are passed through DuckDB's
+    parameter binding.
+    """
+    cols = ", ".join(columns) if columns else "*"
+    sql = f"SELECT {cols} FROM decp WHERE {where_sql}"
+    if order_by:
+        sql += f" ORDER BY {order_by}"
+    if limit is not None:
+        sql += f" LIMIT {int(limit)}"
+    return get_cursor().execute(sql, list(params)).pl()
