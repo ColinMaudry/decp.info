@@ -4,13 +4,12 @@ import os
 import uuid
 from collections import OrderedDict
 from datetime import datetime, timedelta
-from time import localtime, sleep
+from time import localtime
 
 import polars as pl
 import polars.selectors as cs
 from dash import no_update
 from httpx import HTTPError, get, post
-from polars.exceptions import ComputeError
 from unidecode import unidecode
 
 from src.db import conn as duckdb_conn  # noqa: F401  (exposed for convenience)
@@ -232,59 +231,6 @@ def get_annuaire_data(siret: str) -> dict:
         response = None
         logger.warning("Could not fetch data from recherche-entreprises.api.")
     return response
-
-
-def get_decp_data() -> pl.DataFrame:
-    # Chargement du fichier parquet
-    # Le fichier est chargé en mémoire, ce qui est plus rapide qu'une base de données pour le moment.
-    # On utilise polars pour la rapidité et la facilité de manipulation des données.
-
-    try:
-        logger.info(
-            f"Lecture du fichier parquet ({os.getenv('DATA_FILE_PARQUET_PATH')})..."
-        )
-        lff: pl.LazyFrame = pl.scan_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
-    except ComputeError:
-        # Le fichier est probablement en cours de mise à jour
-        logger.info("Échec, nouvelle tentative dans 10s...")
-        sleep(10)
-        lff: pl.LazyFrame = pl.scan_parquet(os.getenv("DATA_FILE_PARQUET_PATH"))
-
-    # Tri des marchés par date de notification
-    lff = lff.sort(by=["dateNotification", "uid"], descending=True, nulls_last=True)
-
-    # Uniquement les données actuelles, pas les anciennes versions de marchés
-    lff = lff.filter(pl.col("donneesActuelles")).drop("donneesActuelles")
-
-    # Convertir les colonnes booléennes en chaînes de caractères
-    lff = booleans_to_strings(lff)
-
-    # Mention pour les org dont on a pas le nom
-    for col in ["acheteur_nom", "titulaire_nom"]:
-        lff = lff.with_columns(
-            pl.when(pl.col(col).is_null())
-            .then(pl.lit("[Identifiant non reconnu dans la base INSEE]"))
-            .otherwise(pl.col(col))
-            .name.keep()
-        )
-
-    # Bizarrement je ne peux pas faire lff = lff.fill_null("") ici
-    # ça génère une erreur dans la page acheteur (acheteur_data.table) :
-    # AttributeError: partially initialized module 'pandas' has no attribute 'NaT' (most likely due to a circular import)
-
-    return lff.collect()
-
-
-def get_org_data(dff: pl.DataFrame, org_type: str) -> pl.DataFrame:
-    lff = dff.lazy()
-    lff = lff.select(
-        "uid",
-        cs.starts_with(org_type).exclude(
-            f"{org_type}_latitude", f"{org_type}_longitude"
-        ),
-    )
-    lff = lff.group_by(cs.starts_with(org_type)).len("Marchés")
-    return lff.collect()
 
 
 def get_statistics() -> dict:
@@ -637,7 +583,7 @@ def prepare_table_data(
     elif isinstance(data, pl.LazyFrame):
         lff = data
     else:
-        lff: pl.LazyFrame = df.lazy()  # start from the original data
+        lff: pl.LazyFrame = query_marches().lazy()
 
     # Application des filtres
     if filter_query:
@@ -891,32 +837,27 @@ def make_org_jsonld(org_id, org_type, org_name=None, type_org_id="SIRET") -> dic
     return jsonld
 
 
-df: pl.DataFrame = get_decp_data()
-# schema and columns now come from src.db; overwrite in case any local code
-# still reads them directly from utils.
-schema = schema  # re-exported from src.db
-columns = schema.names()
+# df_acheteurs / df_titulaires sont conservés en mémoire pour alimenter
+# la recherche sur la page d'accueil (autocomplétion, filtrage par sous-chaîne
+# à chaque frappe). Les colonnes reproduisent la sortie historique de
+# get_org_data(df, org_type).
+def _build_org_frame(org_type: str) -> pl.DataFrame:
+    org_cols = [
+        c
+        for c in schema.names()
+        if c.startswith(f"{org_type}_")
+        and c not in (f"{org_type}_latitude", f"{org_type}_longitude")
+    ]
+    select_list = ", ".join(org_cols)
+    group_list = ", ".join(org_cols)
+    sql = f'SELECT {select_list}, COUNT(*) AS "Marchés" FROM decp GROUP BY {group_list}'
+    return get_cursor().execute(sql).pl()
 
-df_acheteurs = get_org_data(df, "acheteur")
-df_titulaires = get_org_data(df, "titulaire")
-df_acheteurs_departement: pl.DataFrame = (
-    df_acheteurs.select(["acheteur_id", "acheteur_nom", "acheteur_departement_code"])
-    .unique()
-    .sort("acheteur_nom")
-)
-df_titulaires_departement: pl.DataFrame = (
-    df_titulaires.select(
-        ["titulaire_id", "titulaire_nom", "titulaire_departement_code"]
-    )
-    .unique()
-    .sort("titulaire_nom")
-)
-df_acheteurs_marches: pl.DataFrame = (
-    df.select("uid", "objet", "acheteur_id").unique().sort("acheteur_id")
-)
-df_titulaires_marches: pl.DataFrame = (
-    df.select("uid", "objet", "titulaire_id").unique().sort("titulaire_id")
-)
+
+df_acheteurs = _build_org_frame("acheteur")
+df_titulaires = _build_org_frame("titulaire")
+
+columns = schema.names()
 
 departements = get_departements()
 departements_geojson = get_departements_geojson()
@@ -932,4 +873,3 @@ meta_content = {
     ),
 }
 data_schema = get_data_schema()
-columns = df.columns
