@@ -178,3 +178,19 @@ Incremental — `df` global coexists with `src/db.py` until every page is migrat
 | `schema` shape change breaks `acheteur.py:303`                                | `schema` stays a `pl.Schema` object, not a list. One call site (`collect_schema()` → module `schema`) updated.                   |
 | Test runs inherit a stale DuckDB from a previous run with a different parquet | Tests force `REBUILD_DUCKDB=true` on cold runs; test DB added to `.gitignore`.                                                   |
 | Read-only connection opened before build finishes in another worker           | Lock held across build + rename; read-only `connect` happens after lock release. Atomic `os.replace` guarantees a complete file. |
+
+## Outcome
+
+### Memory impact
+
+Memory measurement against the production parquet (`decp_prod.parquet`, ~1.5M rows) requires a running gunicorn process with access to the production data file. The measurement was deferred to the post-merge smoke test on the staging server (test.decp.info).
+
+**Expected reduction:** The removed globals (`df`, `df_acheteurs_departement`, `df_titulaires_departement`, `df_acheteurs_marches`, `df_titulaires_marches`) previously materialised the full 1.5M-row Parquet in memory as multiple Polars frames. At ~300 bytes/row × 5 frames, steady-state RSS reduction is estimated at **1–2 GB per worker**. The retained `df_acheteurs` and `df_titulaires` (autocomplete search) represent only the distinct-organisation subset (~tens of thousands of rows) and are negligible.
+
+**What remains in memory:**
+
+- `df_acheteurs` — distinct acheteurs with Marchés count (populated from DuckDB at startup)
+- `df_titulaires` — same for titulaires
+- DuckDB's own page cache (disk-backed, grows under load, evicted by OS)
+
+All per-request data is fetched from DuckDB and discarded after the callback returns.
