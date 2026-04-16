@@ -13,6 +13,9 @@ from httpx import HTTPError, get, post
 from polars.exceptions import ComputeError
 from unidecode import unidecode
 
+from src.db import conn as duckdb_conn  # noqa: F401  (exposed for convenience)
+from src.db import get_cursor, query_marches, schema  # noqa: F401
+
 logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
     level=logging.INFO,
@@ -889,7 +892,10 @@ def make_org_jsonld(org_id, org_type, org_name=None, type_org_id="SIRET") -> dic
 
 
 df: pl.DataFrame = get_decp_data()
-schema = df.collect_schema()
+# schema and columns now come from src.db; overwrite in case any local code
+# still reads them directly from utils.
+schema = schema  # re-exported from src.db
+columns = schema.names()
 
 df_acheteurs = get_org_data(df, "acheteur")
 df_titulaires = get_org_data(df, "titulaire")
