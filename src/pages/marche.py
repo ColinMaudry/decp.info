@@ -2,13 +2,12 @@ import json
 from datetime import datetime
 
 import dash_bootstrap_components as dbc
-import polars as pl
 from dash import Input, Output, callback, dcc, html, register_page
 from polars import selectors as cs
 
+from src.db import query_marches
 from src.utils import (
     data_schema,
-    df,
     format_values,
     make_org_jsonld,
     meta_content,
@@ -88,19 +87,17 @@ layout = [
 def get_marche_data(url) -> tuple[dict, list]:
     marche_uid = url.split("/")[-1]
 
-    # Récupération des données du marché à partir du df global
+    # Filtre SQL côté DuckDB, puis Polars pour le post-traitement
+    dff_marche = query_marches("uid = ?", (marche_uid,))
+    if dff_marche.height == 0:
+        return {}, []
 
-    lff = df.lazy()
-    lff = lff.filter(pl.col("uid") == pl.lit(marche_uid))
-
-    # Données des titulaires du marché
+    lff = dff_marche.lazy()
     dff_titulaires = lff.select(cs.starts_with("titulaire")).collect(engine="streaming")
+    dff_marche_unique = lff.unique("uid").collect(engine="streaming")
+    dff_marche_unique = format_values(dff_marche_unique)
 
-    # Données du marché
-    dff_marche = lff.unique("uid").collect(engine="streaming")
-    dff_marche = format_values(dff_marche)
-
-    return dff_marche.to_dicts()[0], dff_titulaires.to_dicts()
+    return dff_marche_unique.to_dicts()[0], dff_titulaires.to_dicts()
 
 
 @callback(
