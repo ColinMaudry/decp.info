@@ -15,6 +15,7 @@ from dash import (
     register_page,
 )
 
+from src.db import query_marches, schema
 from src.figures import (
     DataTable,
     get_distance_histogram,
@@ -24,7 +25,6 @@ from src.figures import (
 )
 from src.utils import (
     columns,
-    df,
     df_titulaires,
     filter_table_data,
     format_number,
@@ -69,7 +69,7 @@ datatable = html.Div(
         sort_action="custom",
         page_size=10,
         hidden_columns=[],
-        columns=[{"id": col, "name": col} for col in df.columns],
+        columns=[{"id": col, "name": col} for col in schema.names()],
     ),
 )
 
@@ -339,21 +339,18 @@ def update_titulaire_stats(data):
 )
 def get_titulaire_marches_data(url, titulaire_year: str) -> tuple:
     titulaire_siret = url.split("/")[-1]
-    lff = df.lazy()
-    lff = lff.filter(
-        (pl.col("titulaire_id") == titulaire_siret)
-        & (pl.col("titulaire_typeIdentifiant") == "SIRET")
-    )
+    lff = query_marches(
+        "titulaire_id = ? AND titulaire_typeIdentifiant = 'SIRET'",
+        (titulaire_siret,),
+    ).lazy()
     if titulaire_year and titulaire_year != "Toutes les années":
         lff = lff.filter(
             pl.col("dateNotification").cast(pl.String).str.starts_with(titulaire_year)
         )
     lff = lff.sort(["dateNotification", "uid"], descending=True, nulls_last=True)
     lff = lff.fill_null("")
-
     dff: pl.DataFrame = lff.collect(engine="streaming")
     download_disabled, download_text, download_title = get_button_properties(dff.height)
-
     data = dff.to_dicts()
     return data, download_disabled, download_text, download_title
 
