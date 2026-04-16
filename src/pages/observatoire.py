@@ -17,6 +17,7 @@ from dash import (
 )
 
 from src.cache import cache
+from src.db import query_marches, schema
 from src.figures import (
     DataTable,
     get_barchart_sources,
@@ -32,7 +33,6 @@ from src.figures import (
 from src.utils import (
     columns,
     departements,
-    df,
     df_acheteurs,
     df_titulaires,
     get_default_hidden_columns,
@@ -72,7 +72,7 @@ for code in departements.keys():
 
 OBSERVATOIRE_COLUMNS = [
     col
-    for col in df.columns
+    for col in schema.names()
     if col.startswith("acheteur")
     or col.startswith("titulaire")
     or col
@@ -665,7 +665,7 @@ def _normalize_filter_params(filter_params: dict) -> tuple:
 def _compute_dashboard_children(cache_key: tuple):
     filter_params = {k: (list(v) if isinstance(v, tuple) else v) for k, v in cache_key}
 
-    lff: pl.LazyFrame = df.lazy()
+    lff: pl.LazyFrame = query_marches().lazy()
     lff = prepare_dashboard_data(lff=lff, **filter_params)
 
     dff = lff.collect(engine="streaming")
@@ -790,7 +790,7 @@ def update_dashboard_cards(*filter_values):
     prevent_initial_call=True,
 )
 def download_observatoire(_n_clicks, filter_params, hidden_columns):
-    lff = prepare_dashboard_data(lff=df.lazy(), **(filter_params or {}))
+    lff = prepare_dashboard_data(lff=query_marches().lazy(), **(filter_params or {}))
 
     if hidden_columns:
         lff = lff.drop(hidden_columns)
@@ -881,7 +881,7 @@ def populate_preview_table(
     if not is_open:
         return (no_update,) * 9
 
-    lff = prepare_dashboard_data(lff=df.lazy(), **(filter_params or {}))
+    lff = prepare_dashboard_data(lff=query_marches().lazy(), **(filter_params or {}))
 
     return prepare_table_data(
         lff,
