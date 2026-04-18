@@ -732,7 +732,7 @@ def _compute_dashboard_children(cache_key: tuple):
     )
     cards.append(make_card(title="Top titulaires", fig=top_titulaires, lg=12, xl=8))
 
-    geographic_maps: list[dbc.Col] = get_geographic_maps(dff)
+    geographic_maps: list[dbc.Col] | None = get_geographic_maps(dff)
 
     other_cards = []
     sources_barchart = get_barchart_sources(lff, type_date="dateNotification")

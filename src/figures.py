@@ -360,7 +360,7 @@ def get_duplicate_matrix() -> dcc.Graph:
     return dcc.Graph(figure=fig)
 
 
-def get_geographic_maps(dff: pl.DataFrame) -> list | None:
+def get_geographic_maps(dff: pl.DataFrame) -> list[dbc.Col] | list:
     """
     Génère les cartes géographiques pour l'hexagone et les DOM-TOM.
     """
@@ -404,7 +404,7 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
         },
     }
 
-    def make_map_data(region_code: str) -> tuple[list, str or None]:
+    def make_map_data(region_code: str) -> tuple[list, str | None]:
         lff: pl.LazyFrame = dff.lazy()
         if region_code == "Hexagone":
             lff = lff.filter(
