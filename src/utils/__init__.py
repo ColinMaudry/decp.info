@@ -13,5 +13,7 @@ if DEVELOPMENT:
     logger.setLevel(logging.DEBUG)
 
 DOMAIN_NAME = (
-    "test.decp.info" if os.getenv("DEVELOPMENT").lower() == "true" else "decp.info"
+    "test.decp.info"
+    if os.getenv("DEVELOPMENT", "False").lower() == "true"
+    else "decp.info"
 )

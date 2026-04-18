@@ -1,4 +1,3 @@
-import logging
 import os
 
 import dash_bootstrap_components as dbc
@@ -8,14 +7,12 @@ from dotenv import load_dotenv
 from flask import Response
 
 from src.cache import cache
+from src.utils import DEVELOPMENT
 
 load_dotenv()
 
 # if os.getenv("PYTEST_CURRENT_TEST"):
 #     os.environ["DATA_FILE_PARQUET_PATH"]
-
-# TODO: Importer LOGGER et DEVELOPMENT depuis utils.init
-DEVELOPMENT = os.getenv("DEVELOPMENT", "").lower() == "true"
 
 META_TAGS = [
     {"name": "viewport", "content": "width=device-width, initial-scale=1"},
@@ -75,13 +72,6 @@ def sitemap():
     xml += "</urlset>"
     return Response(xml, mimetype="text/xml")
 
-
-logger = logging.getLogger("decp.info")
-logging.basicConfig(
-    format="%(asctime)s %(levelname)-8s %(message)s",
-    level=logging.INFO,
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
 
 with open("./pyproject.toml", "rb") as f:
     pyproject = tomllib.load(f)

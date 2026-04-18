@@ -1,5 +1,4 @@
 import fcntl
-import logging
 import os
 from pathlib import Path
 from time import sleep
@@ -9,8 +8,7 @@ import polars as pl
 import polars.selectors as cs
 from polars.exceptions import ComputeError
 
-# TODO: Importer le logger depuis utils
-LOGGER = logging.getLogger("decp.info")
+from src.utils import logger
 
 
 def should_rebuild(db_path: Path, parquet_path: Path) -> bool:
@@ -34,7 +32,7 @@ def _load_source_frame(parquet_path: Path) -> pl.DataFrame:
     try:
         lff: pl.LazyFrame = pl.scan_parquet(str(parquet_path))
     except ComputeError:
-        LOGGER.info("Lecture du parquet échouée, nouvelle tentative dans 10s...")
+        logger.info("Lecture du parquet échouée, nouvelle tentative dans 10s...")
         sleep(10)
         lff = pl.scan_parquet(str(parquet_path))
 
@@ -72,7 +70,7 @@ def build_database(db_path: Path, parquet_path: Path) -> None:
     if tmp_path.exists():
         tmp_path.unlink()
 
-    LOGGER.info(f"Construction de la base DuckDB à partir de {parquet_path}...")
+    logger.info(f"Construction de la base DuckDB à partir de {parquet_path}...")
     frame = _load_source_frame(parquet_path)
 
     # Write transformed frame as parquet so DuckDB can read it natively
@@ -108,7 +106,7 @@ def build_database(db_path: Path, parquet_path: Path) -> None:
             staging_parquet.unlink()
 
     os.replace(tmp_path, db_path)
-    LOGGER.info(f"Base DuckDB construite : {db_path}")
+    logger.info(f"Base DuckDB construite : {db_path}")
 
 
 def _resolve_db_path() -> Path:
@@ -127,6 +125,8 @@ def _ensure_database() -> Path:
         fcntl.flock(lock_fd, fcntl.LOCK_EX)
         if should_rebuild(db_path, parquet_path):
             build_database(db_path, parquet_path)
+        else:
+            logger.info("Base de données déjà disponible et à jour.")
     return db_path
 
 
