@@ -81,11 +81,15 @@ def built_db(tmp_path, monkeypatch):
                 "uid": "1",
                 "id": "1",
                 "objet": "Travaux",
-                "acheteur_id": "A1",
-                "acheteur_nom": "Mairie",
+                "acheteur_id": "123",
+                "acheteur_nom": "ACHETEUR 1",
                 "acheteur_departement_code": "75",
-                "titulaire_id": "T1",
-                "titulaire_nom": "Entreprise",
+                "acheteur_departement_nom": "Paris",
+                "acheteur_commune_nom": "Paris",
+                "titulaire_commune_nom": "Paris",
+                "titulaire_departement_nom": "Paris",
+                "titulaire_id": "345",
+                "titulaire_nom": "TITULAIRE 1",
                 "titulaire_departement_code": "35",
                 "titulaire_typeIdentifiant": "SIRET",
                 "montant": 1000.0,
@@ -97,10 +101,14 @@ def built_db(tmp_path, monkeypatch):
                 "uid": "2",
                 "id": "2",
                 "objet": "Études",
-                "acheteur_id": "A1",
-                "acheteur_nom": "Mairie",
+                "acheteur_id": "123",
+                "acheteur_nom": "ACHETEUR 1",
                 "acheteur_departement_code": "75",
-                "titulaire_id": "T2",
+                "acheteur_departement_nom": "Paris",
+                "acheteur_commune_nom": "Paris",
+                "titulaire_commune_nom": "Paris",
+                "titulaire_departement_nom": "Paris",
+                "titulaire_id": "567",
                 "titulaire_nom": None,
                 "titulaire_departement_code": "75",
                 "titulaire_typeIdentifiant": "SIRET",
@@ -116,6 +124,10 @@ def built_db(tmp_path, monkeypatch):
                 "acheteur_id": "A2",
                 "acheteur_nom": None,
                 "acheteur_departement_code": "13",
+                "acheteur_departement_nom": "Paris",
+                "acheteur_commune_nom": "Paris",
+                "titulaire_commune_nom": "Paris",
+                "titulaire_departement_nom": "Paris",
                 "titulaire_id": "T3",
                 "titulaire_nom": "Autre",
                 "titulaire_departement_code": "13",
@@ -188,7 +200,7 @@ def test_query_marches_returns_polars_frame(built_db, monkeypatch):
     importlib.reload(src.db)
     from src.db import query_marches
 
-    frame = query_marches("acheteur_id = ?", ("A1",))
+    frame = query_marches("acheteur_id = ?", ("123",))
     assert isinstance(frame, pl.DataFrame)
     assert frame.height == 2
     assert set(frame["uid"].to_list()) == {"1", "2"}
