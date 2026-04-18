@@ -21,13 +21,13 @@ from dash import (
 
 from src.db import query_marches, schema
 from src.figures import DataTable, make_column_picker
-from src.old_utils import (
+from src.utils import logger
+from src.utils.seo import META_CONTENT
+from src.utils.table import (
     COLUMNS,
-    META_CONTENT,
     filter_table_data,
     get_default_hidden_columns,
     invert_columns,
-    logger,
     prepare_table_data,
     sort_table_data,
 )

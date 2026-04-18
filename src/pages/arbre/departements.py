@@ -1,6 +1,6 @@
 from dash import dcc, html, register_page
 
-from src.old_utils import DEPARTEMENTS
+from src.utils.data import DEPARTEMENTS
 
 NAME = "Départements"
 

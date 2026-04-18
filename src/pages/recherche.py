@@ -2,13 +2,10 @@ import dash_bootstrap_components as dbc
 from dash import Input, Output, State, callback, dcc, html, register_page
 
 from src.figures import DataTable
-from src.old_utils import (
-    DF_ACHETEURS,
-    DF_TITULAIRES,
-    META_CONTENT,
-    search_org,
-    setup_table_columns,
-)
+from src.utils.data import DF_ACHETEURS, DF_TITULAIRES
+from src.utils.search import search_org
+from src.utils.seo import META_CONTENT
+from src.utils.table import setup_table_columns
 
 NAME = "Recherche"
 

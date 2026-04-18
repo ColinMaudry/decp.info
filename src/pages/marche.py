@@ -6,13 +6,9 @@ from dash import Input, Output, callback, dcc, html, register_page
 from polars import selectors as cs
 
 from src.db import query_marches
-from src.old_utils import (
-    DATA_SCHEMA,
-    META_CONTENT,
-    format_values,
-    make_org_jsonld,
-    unformat_montant,
-)
+from src.utils.data import DATA_SCHEMA
+from src.utils.seo import META_CONTENT, make_org_jsonld
+from src.utils.table import format_values, unformat_montant
 
 
 def get_title(uid: str = None) -> str:

@@ -23,16 +23,14 @@ from src.figures import (
     make_column_picker,
     point_on_map,
 )
-from src.old_utils import (
+from src.utils.data import DF_TITULAIRES, get_annuaire_data, get_departement_region
+from src.utils.frontend import get_button_properties
+from src.utils.seo import META_CONTENT
+from src.utils.table import (
     COLUMNS,
-    DF_TITULAIRES,
-    META_CONTENT,
     filter_table_data,
     format_number,
-    get_annuaire_data,
-    get_button_properties,
     get_default_hidden_columns,
-    get_departement_region,
     prepare_table_data,
     sort_table_data,
 )

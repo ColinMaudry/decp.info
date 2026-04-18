@@ -30,18 +30,16 @@ from src.figures import (
     make_column_picker,
     make_donut,
 )
-from src.old_utils import (
-    COLUMNS,
+from src.utils import logger
+from src.utils.data import (
     DEPARTEMENTS,
     DF_ACHETEURS,
     DF_TITULAIRES,
-    META_CONTENT,
-    get_default_hidden_columns,
-    get_enum_values_as_dict,
-    logger,
     prepare_dashboard_data,
-    prepare_table_data,
 )
+from src.utils.frontend import get_enum_values_as_dict
+from src.utils.seo import META_CONTENT
+from src.utils.table import COLUMNS, get_default_hidden_columns, prepare_table_data
 
 NAME = "Observatoire"
 

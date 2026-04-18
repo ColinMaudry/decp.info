@@ -2,7 +2,7 @@ import polars as pl
 from dash import Input, Output, callback, dcc, html, register_page
 
 from src.db import get_cursor
-from src.old_utils import DF_ACHETEURS, DF_TITULAIRES
+from src.utils.data import DF_ACHETEURS, DF_TITULAIRES
 
 NAME = "Liste des marchés publics"
 

@@ -13,13 +13,8 @@ from dash import dash_table, dcc, html
 from dash_extensions.javascript import Namespace
 
 from src.db import schema
-from src.old_utils import (
-    DATA_SCHEMA,
-    DEPARTEMENTS_GEOJSON,
-    add_links,
-    format_number,
-    setup_table_columns,
-)
+from src.utils.data import DATA_SCHEMA, DEPARTEMENTS_GEOJSON
+from src.utils.table import add_links, format_number, setup_table_columns
 
 
 def get_yearly_statistics(statistics, today_str) -> html.Div:

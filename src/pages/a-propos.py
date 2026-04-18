@@ -3,7 +3,7 @@ import os
 from dash import dcc, html, register_page
 
 from src.figures import get_sources_tables
-from src.old_utils import META_CONTENT
+from src.utils.seo import META_CONTENT
 
 NAME = "À propos"
 

@@ -1,7 +1,7 @@
 from dash import Input, Output, callback, dcc, html, register_page
 
 from src.db import get_cursor
-from src.old_utils import DEPARTEMENTS
+from src.utils.data import DEPARTEMENTS
 
 NAME = "Département"
 
