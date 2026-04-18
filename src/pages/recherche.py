@@ -2,23 +2,23 @@ import dash_bootstrap_components as dbc
 from dash import Input, Output, State, callback, dcc, html, register_page
 
 from src.figures import DataTable
-from src.utils import (
-    df_acheteurs,
-    df_titulaires,
-    meta_content,
+from src.old_utils import (
+    DF_ACHETEURS,
+    DF_TITULAIRES,
+    META_CONTENT,
     search_org,
     setup_table_columns,
 )
 
-name = "Recherche"
+NAME = "Recherche"
 
 register_page(
     __name__,
     path="/",
     title="Recherche de marchés publics | decp.info",
-    name=name,
+    name=NAME,
     description="Explorez et analysez les données des marchés publics français avec cet outil libre et gratuit. Pour une commande publique accessible à toutes et tous.",
-    image_url=meta_content["image_url"],
+    image_url=META_CONTENT["image_url"],
     order=0,
 )
 
@@ -97,9 +97,9 @@ def update_search_results(n_submit, n_clicks, query):
 
         for org_type in ["acheteur", "titulaire"]:
             if org_type == "acheteur":
-                dff = df_acheteurs
+                dff = DF_ACHETEURS
             elif org_type == "titulaire":
-                dff = df_titulaires
+                dff = DF_TITULAIRES
             else:
                 raise ValueError(f"{org_type} is not supported")
 

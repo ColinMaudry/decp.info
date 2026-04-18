@@ -23,23 +23,23 @@ from src.figures import (
     make_column_picker,
     point_on_map,
 )
-from src.utils import (
-    columns,
-    df_titulaires,
+from src.old_utils import (
+    COLUMNS,
+    DF_TITULAIRES,
+    META_CONTENT,
     filter_table_data,
     format_number,
     get_annuaire_data,
     get_button_properties,
     get_default_hidden_columns,
     get_departement_region,
-    meta_content,
     prepare_table_data,
     sort_table_data,
 )
 
 
 def get_title(titulaire_id: str = None) -> str:
-    titulaire_nom = df_titulaires.filter(pl.col("titulaire_id") == titulaire_id).select(
+    titulaire_nom = DF_TITULAIRES.filter(pl.col("titulaire_id") == titulaire_id).select(
         "titulaire_nom"
     )
     if titulaire_nom.height > 0:
@@ -53,11 +53,11 @@ register_page(
     title=get_title,
     name="Titulaire",
     description="Consultez les marchés publics remportés par ce titulaire.",
-    image_url=meta_content["image_url"],
+    image_url=META_CONTENT["image_url"],
     order=5,
 )
 
-datatable = html.Div(
+DATATABLE = html.Div(
     className="marches_table",
     children=DataTable(
         dtid="titulaire_datatable",
@@ -239,7 +239,7 @@ layout = [
                         scrollable=True,
                         size="xl",
                     ),
-                    datatable,
+                    DATATABLE,
                 ],
             ),
         ],
@@ -476,8 +476,8 @@ clientside_callback(
 )
 def update_hidden_columns_from_checkboxes(selected_columns):
     if selected_columns:
-        selected_columns = [columns[i] for i in selected_columns]
-        hidden_columns = [col for col in columns if col not in selected_columns]
+        selected_columns = [COLUMNS[i] for i in selected_columns]
+        hidden_columns = [col for col in COLUMNS if col not in selected_columns]
         return hidden_columns
     else:
         return []
@@ -505,7 +505,7 @@ def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
     hidden_cols = hidden_cols or get_default_hidden_columns("titulaire")
 
     # Show all columns that are NOT hidden
-    visible_cols = [columns.index(col) for col in columns if col not in hidden_cols]
+    visible_cols = [COLUMNS.index(col) for col in COLUMNS if col not in hidden_cols]
     return visible_cols
 
 

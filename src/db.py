@@ -9,7 +9,8 @@ import polars as pl
 import polars.selectors as cs
 from polars.exceptions import ComputeError
 
-logger = logging.getLogger("decp.info")
+# TODO: Importer le logger depuis utils
+LOGGER = logging.getLogger("decp.info")
 
 
 def should_rebuild(db_path: Path, parquet_path: Path) -> bool:
@@ -33,7 +34,7 @@ def _load_source_frame(parquet_path: Path) -> pl.DataFrame:
     try:
         lff: pl.LazyFrame = pl.scan_parquet(str(parquet_path))
     except ComputeError:
-        logger.info("Lecture du parquet échouée, nouvelle tentative dans 10s...")
+        LOGGER.info("Lecture du parquet échouée, nouvelle tentative dans 10s...")
         sleep(10)
         lff = pl.scan_parquet(str(parquet_path))
 
@@ -71,7 +72,7 @@ def build_database(db_path: Path, parquet_path: Path) -> None:
     if tmp_path.exists():
         tmp_path.unlink()
 
-    logger.info(f"Construction de la base DuckDB à partir de {parquet_path}...")
+    LOGGER.info(f"Construction de la base DuckDB à partir de {parquet_path}...")
     frame = _load_source_frame(parquet_path)
 
     # Write transformed frame as parquet so DuckDB can read it natively
@@ -107,7 +108,7 @@ def build_database(db_path: Path, parquet_path: Path) -> None:
             staging_parquet.unlink()
 
     os.replace(tmp_path, db_path)
-    logger.info(f"Base DuckDB construite : {db_path}")
+    LOGGER.info(f"Base DuckDB construite : {db_path}")
 
 
 def _resolve_db_path() -> Path:

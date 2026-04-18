@@ -1,17 +1,17 @@
 from dash import Input, Output, callback, dcc, html, register_page
 
 from src.db import get_cursor
-from src.utils import departements
+from src.old_utils import DEPARTEMENTS
 
-name = "Département"
+NAME = "Département"
 
 
 def get_title(code):
-    return f"Marchés publics de {departements[code]['departement']} | decp.info"
+    return f"Marchés publics de {DEPARTEMENTS[code]['departement']} | decp.info"
 
 
 def get_description(code):
-    return f"Marchés publics passés dans le département {departements[code]['departement']} | decp.info"
+    return f"Marchés publics passés dans le département {DEPARTEMENTS[code]['departement']} | decp.info"
 
 
 register_page(
@@ -20,7 +20,7 @@ register_page(
     title=get_title,
     description=get_description,
     order=50,
-    name=name,
+    name=NAME,
 )
 
 layout = html.Div(

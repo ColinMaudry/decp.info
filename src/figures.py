@@ -13,10 +13,10 @@ from dash import dash_table, dcc, html
 from dash_extensions.javascript import Namespace
 
 from src.db import schema
-from src.utils import (
+from src.old_utils import (
+    DATA_SCHEMA,
+    DEPARTEMENTS_GEOJSON,
     add_links,
-    data_schema,
-    departements_geojson,
     format_number,
     setup_table_columns,
 )
@@ -260,8 +260,8 @@ class DataTable(dash_table.DataTable):
 
         style_cell_common = {"fontFamily": "Inter", "fontSize": "16px"}
 
-        for key in data_schema.keys():
-            field = data_schema[key]
+        for key in DATA_SCHEMA.keys():
+            field = DATA_SCHEMA[key]
             if field["type"] in ["number", "integer"]:
                 rule = {
                     "if": {"column_id": field["name"]},
@@ -514,7 +514,7 @@ def make_chloropleth_map(region: dict) -> dcc.Graph:
 
     fig = px.choropleth(
         df_map,
-        geojson=departements_geojson,
+        geojson=DEPARTEMENTS_GEOJSON,
         locations="Département",
         color="uid",
         color_continuous_scale="Reds",
@@ -722,7 +722,7 @@ def make_donut(
     nulls="?",
     potentially_many_names: bool = False,
 ):
-    title = data_schema[names_col]["title"]
+    title = DATA_SCHEMA[names_col]["title"]
     lff = lff.rename({names_col: title})
     lff = lff.select("uid", title)
 
@@ -771,8 +771,8 @@ def make_column_picker(page: str):
     table_columns = [
         {
             "id": col,
-            "name": data_schema[col]["title"],
-            "description": data_schema[col]["description"],
+            "name": DATA_SCHEMA[col]["title"],
+            "description": DATA_SCHEMA[col]["description"],
         }
         for col in schema.names()
     ]
@@ -780,7 +780,7 @@ def make_column_picker(page: str):
         new_column = {
             "id": column["id"],
             "name": column["name"],
-            "description": data_schema[column["id"]]["description"],
+            "description": DATA_SCHEMA[column["id"]]["description"],
         }
         table_data.append(new_column)
 

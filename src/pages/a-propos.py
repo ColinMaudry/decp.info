@@ -3,9 +3,9 @@ import os
 from dash import dcc, html, register_page
 
 from src.figures import get_sources_tables
-from src.utils import meta_content
+from src.old_utils import META_CONTENT
 
-name = "À propos"
+NAME = "À propos"
 
 register_page(
     __name__,
@@ -13,14 +13,14 @@ register_page(
     title="À propos | decp.info",
     name="À propos",
     description="En savoir plus sur decp.info, l'outil d'exploration des données essentielles de la commande publique.",
-    image_url=meta_content["image_url"],
+    image_url=META_CONTENT["image_url"],
     order=5,
 )
 
 layout = html.Div(
     className="container",
     children=[
-        html.H2(name),
+        html.H2(NAME),
         html.Div(
             className="a-propos-container",
             children=[

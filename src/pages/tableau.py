@@ -21,13 +21,13 @@ from dash import (
 
 from src.db import query_marches, schema
 from src.figures import DataTable, make_column_picker
-from src.utils import (
-    columns,
+from src.old_utils import (
+    COLUMNS,
+    META_CONTENT,
     filter_table_data,
     get_default_hidden_columns,
     invert_columns,
     logger,
-    meta_content,
     prepare_table_data,
     sort_table_data,
 )
@@ -37,18 +37,18 @@ update_date = datetime.fromtimestamp(update_date_timestamp).strftime("%d/%m/%Y")
 update_date_iso = datetime.fromtimestamp(update_date_timestamp).isoformat()
 
 
-name = "Tableau"
+NAME = "Tableau"
 register_page(
     __name__,
     path="/tableau",
     title="Tableau des marchés publics | decp.info",
-    name=name,
+    name=NAME,
     description="Consultez, filtrez et exportez les données essentielles de la commande publique sous forme de tableau.",
-    image_url=meta_content["image_url"],
+    image_url=META_CONTENT["image_url"],
     order=1,
 )
 
-datatable = html.Div(
+DATATABLE = html.Div(
     className="marches_table",
     children=DataTable(
         dtid="tableau_datatable",
@@ -272,7 +272,7 @@ layout = [
                 scrollable=True,
                 size="xl",
             ),
-            datatable,
+            DATATABLE,
         ],
     ),
 ]
@@ -480,8 +480,8 @@ def toggle_tableau_help(click_open, click_close, is_open):
 )
 def update_hidden_columns_from_checkboxes(selected_columns):
     if selected_columns:
-        selected_columns = [columns[i] for i in selected_columns]
-        hidden_columns = [col for col in columns if col not in selected_columns]
+        selected_columns = [COLUMNS[i] for i in selected_columns]
+        hidden_columns = [col for col in COLUMNS if col not in selected_columns]
         return hidden_columns
     else:
         return []
@@ -509,7 +509,7 @@ def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
     hidden_cols = hidden_cols or get_default_hidden_columns("tableau")
 
     # Show all columns that are NOT hidden
-    visible_cols = [columns.index(col) for col in columns if col not in hidden_cols]
+    visible_cols = [COLUMNS.index(col) for col in COLUMNS if col not in hidden_cols]
     return visible_cols
 
 

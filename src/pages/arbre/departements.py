@@ -1,8 +1,8 @@
 from dash import dcc, html, register_page
 
-from src.utils import departements
+from src.old_utils import DEPARTEMENTS
 
-name = "Départements"
+NAME = "Départements"
 
 register_page(
     __name__,
@@ -18,7 +18,7 @@ layout = html.Div(
         html.Ul(
             [
                 html.Li(dcc.Link(d["departement"], href=f"/departements/{k}"))
-                for k, d in departements.items()
+                for k, d in DEPARTEMENTS.items()
             ]
         ),
     ]

@@ -6,11 +6,11 @@ from dash import Input, Output, callback, dcc, html, register_page
 from polars import selectors as cs
 
 from src.db import query_marches
-from src.utils import (
-    data_schema,
+from src.old_utils import (
+    DATA_SCHEMA,
+    META_CONTENT,
     format_values,
     make_org_jsonld,
-    meta_content,
     unformat_montant,
 )
 
@@ -25,7 +25,7 @@ register_page(
     title=get_title,
     name="Marché",
     description="Consultez les détails de ce marché public : montant, acheteur, titulaires, modifications, etc.",
-    image_url=meta_content["image_url"],
+    image_url=META_CONTENT["image_url"],
     order=7,
 )
 
@@ -110,7 +110,7 @@ def get_marche_data(url) -> tuple[dict, list]:
 )
 def update_marche_info(marche, titulaires):
     def make_parameter(col, bold=True):
-        column_object = data_schema.get(col)
+        column_object = DATA_SCHEMA.get(col)
         column_name = column_object.get("title") if column_object else col
 
         if marche[col]:

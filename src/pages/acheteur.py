@@ -24,23 +24,23 @@ from src.figures import (
     make_column_picker,
     point_on_map,
 )
-from src.utils import (
-    columns,
-    df_acheteurs,
+from src.old_utils import (
+    COLUMNS,
+    DF_ACHETEURS,
+    META_CONTENT,
     filter_table_data,
     format_number,
     get_annuaire_data,
     get_button_properties,
     get_default_hidden_columns,
     get_departement_region,
-    meta_content,
     prepare_table_data,
     sort_table_data,
 )
 
 
 def get_title(acheteur_id: str | None = None) -> str:
-    acheteur_nom = df_acheteurs.filter(pl.col("acheteur_id") == acheteur_id).select(
+    acheteur_nom = DF_ACHETEURS.filter(pl.col("acheteur_id") == acheteur_id).select(
         "acheteur_nom"
     )
     if acheteur_nom.height > 0:
@@ -54,11 +54,11 @@ register_page(
     title=get_title,
     name="Acheteur",
     description="Consultez les marchés publics attribués par cet acheteur.",
-    image_url=meta_content["image_url"],
+    image_url=META_CONTENT["image_url"],
     order=5,
 )
 
-datatable = html.Div(
+DATATABLE = html.Div(
     className="marches_table",
     children=DataTable(
         dtid="acheteur_datatable",
@@ -229,7 +229,7 @@ layout = [
                         scrollable=True,
                         size="xl",
                     ),
-                    datatable,
+                    DATATABLE,
                 ],
             ),
         ],
@@ -460,8 +460,8 @@ clientside_callback(
 )
 def update_hidden_columns_from_checkboxes(selected_columns):
     if selected_columns:
-        selected_columns = [columns[i] for i in selected_columns]
-        hidden_columns = [col for col in columns if col not in selected_columns]
+        selected_columns = [COLUMNS[i] for i in selected_columns]
+        hidden_columns = [col for col in COLUMNS if col not in selected_columns]
         return hidden_columns
     else:
         return []
@@ -489,7 +489,7 @@ def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
     hidden_cols = hidden_cols or get_default_hidden_columns("acheteur")
 
     # Show all columns that are NOT hidden
-    visible_cols = [columns.index(col) for col in columns if col not in hidden_cols]
+    visible_cols = [COLUMNS.index(col) for col in COLUMNS if col not in hidden_cols]
     return visible_cols
 
 

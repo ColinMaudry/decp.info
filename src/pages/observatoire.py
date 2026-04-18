@@ -30,45 +30,45 @@ from src.figures import (
     make_column_picker,
     make_donut,
 )
-from src.utils import (
-    columns,
-    departements,
-    df_acheteurs,
-    df_titulaires,
+from src.old_utils import (
+    COLUMNS,
+    DEPARTEMENTS,
+    DF_ACHETEURS,
+    DF_TITULAIRES,
+    META_CONTENT,
     get_default_hidden_columns,
     get_enum_values_as_dict,
     logger,
-    meta_content,
     prepare_dashboard_data,
     prepare_table_data,
 )
 
-name = "Observatoire"
+NAME = "Observatoire"
 
 register_page(
     __name__,
     path="/observatoire",
     title="Observatoire | decp.info",
-    name=name,
+    name=NAME,
     description="Visualisez l'état de la publication des données essentielles des marchés publics en France.",
-    image_url=meta_content["image_url"],
+    image_url=META_CONTENT["image_url"],
     order=3,
 )
-options_years = []
+OPTIONS_YEARS = []
 for year in reversed(range(2017, datetime.now().year + 1)):
     option_year = {
         "label": str(year),
         "value": year,
     }
-    options_years.append(option_year)
+    OPTIONS_YEARS.append(option_year)
 
-options_departements = []
-for code in departements.keys():
+OPTIONS_DEPARTEMENTS = []
+for code in DEPARTEMENTS.keys():
     departement = {
-        "label": f"{departements[code]['departement']} ({code})",
+        "label": f"{DEPARTEMENTS[code]['departement']} ({code})",
         "value": code,
     }
-    options_departements.append(departement)
+    OPTIONS_DEPARTEMENTS.append(departement)
 
 OBSERVATOIRE_COLUMNS = [
     col
@@ -124,7 +124,7 @@ Alors, on fait comment ?
     html.Div(
         className="container-fluid",
         children=[
-            html.H2(children=[name], id="page_title"),
+            html.H2(children=[NAME], id="page_title"),
             dcc.Loading(
                 overlay_style={"visibility": "visible", "filter": "blur(2px)"},
                 id="loading-statistques",
@@ -142,7 +142,7 @@ Alors, on fait comment ?
                                         dbc.Col(
                                             dcc.Dropdown(
                                                 id="dashboard_year",
-                                                options=options_years,
+                                                options=OPTIONS_YEARS,
                                                 placeholder="12 derniers mois",
                                                 persistence=True,
                                                 persistence_type="local",
@@ -182,7 +182,7 @@ Alors, on fait comment ?
                                                 searchable=True,
                                                 multi=True,
                                                 placeholder="Département",
-                                                options=options_departements,
+                                                options=OPTIONS_DEPARTEMENTS,
                                                 persistence=True,
                                                 persistence_type="local",
                                             ),
@@ -221,7 +221,7 @@ Alors, on fait comment ?
                                                 searchable=True,
                                                 multi=True,
                                                 placeholder="Département",
-                                                options=options_departements,
+                                                options=OPTIONS_DEPARTEMENTS,
                                                 persistence=True,
                                                 persistence_type="local",
                                             ),
@@ -822,20 +822,20 @@ def add_organization_name_in_title(acheteur_id, titulaire_id):
         return match[nom_col].item(0) if match.height >= 1 else None
 
     if acheteur_id and len(acheteur_id) == 14:
-        if nom := lookup_nom(df_acheteurs, "acheteur_id", "acheteur_nom", acheteur_id):
+        if nom := lookup_nom(DF_ACHETEURS, "acheteur_id", "acheteur_nom", acheteur_id):
             return [
-                name,
+                NAME,
                 html.Small(nom, className="text-muted d-block fw-normal fs-5"),
             ]
     elif titulaire_id and len(titulaire_id) == 14:
         if nom := lookup_nom(
-            df_titulaires, "titulaire_id", "titulaire_nom", titulaire_id
+            DF_TITULAIRES, "titulaire_id", "titulaire_nom", titulaire_id
         ):
             return [
-                name,
+                NAME,
                 html.Small(nom, className="text-muted d-block fw-normal fs-5"),
             ]
-    return name
+    return NAME
 
 
 @callback(
@@ -899,8 +899,8 @@ def populate_preview_table(
 )
 def update_hidden_columns_from_checkboxes(selected_columns):
     if selected_columns:
-        selected_columns = [columns[i] for i in selected_columns]
-        hidden_columns = [col for col in columns if col not in selected_columns]
+        selected_columns = [COLUMNS[i] for i in selected_columns]
+        hidden_columns = [col for col in COLUMNS if col not in selected_columns]
         return hidden_columns
     else:
         return []
@@ -928,7 +928,7 @@ def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
     hidden_cols = hidden_cols or get_default_hidden_columns("tableau")
 
     # Show all columns that are NOT hidden
-    visible_cols = [columns.index(col) for col in columns if col not in hidden_cols]
+    visible_cols = [COLUMNS.index(col) for col in COLUMNS if col not in hidden_cols]
     return visible_cols
 
 

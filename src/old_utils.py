@@ -21,8 +21,8 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger("decp.info")
-development = os.getenv("DEVELOPMENT", "False").lower() == "true"
-if development:
+DEVELOPMENT = os.getenv("DEVELOPMENT", "False").lower() == "true"
+if DEVELOPMENT:
     logger.setLevel(logging.DEBUG)
 
 logging.getLogger("httpx").setLevel("WARNING")
@@ -266,8 +266,8 @@ def get_departement_region(code_postal):
         code_departement = code_postal[:3]
     else:
         code_departement = code_postal[:2]
-    nom_departement = departements[code_departement]["departement"]
-    nom_region = departements[code_departement]["region"]
+    nom_departement = DEPARTEMENTS[code_departement]["departement"]
+    nom_region = DEPARTEMENTS[code_departement]["region"]
     return code_departement, nom_departement, nom_region
 
 
@@ -358,7 +358,7 @@ def setup_table_columns(
     for column_id in dff.columns:
         if exclude and column_id in exclude:
             continue
-        column_object = data_schema.get(column_id)
+        column_object = DATA_SCHEMA.get(column_id)
         if column_object:
             column_name = column_object.get("title")
         else:
@@ -455,7 +455,7 @@ def get_data_schema() -> dict:
 
 
 def track_search(query, category):
-    if len(query) >= 4 and not development and os.getenv("MATOMO_DOMAIN"):
+    if len(query) >= 4 and not DEVELOPMENT and os.getenv("MATOMO_DOMAIN"):
         url = "https://decp.info"
         params = {
             "idsite": os.getenv("MATOMO_ID_SITE"),
@@ -776,7 +776,7 @@ def get_button_properties(height):
 def get_enum_values_as_dict(column_name):
     try:
         options = {}
-        for value in data_schema[column_name]["enum"]:
+        for value in DATA_SCHEMA[column_name]["enum"]:
             options[value] = value
         return options
     except KeyError:
@@ -854,22 +854,22 @@ def _build_org_frame(org_type: str) -> pl.DataFrame:
     return get_cursor().execute(sql).pl()
 
 
-df_acheteurs = _build_org_frame("acheteur")
-df_titulaires = _build_org_frame("titulaire")
+DF_ACHETEURS = _build_org_frame("acheteur")
+DF_TITULAIRES = _build_org_frame("titulaire")
 
-columns = schema.names()
+COLUMNS = schema.names()
 
-departements = get_departements()
-departements_geojson = get_departements_geojson()
-domain_name = (
+DEPARTEMENTS = get_departements()
+DEPARTEMENTS_GEOJSON = get_departements_geojson()
+DOMAIN_NAME = (
     "test.decp.info" if os.getenv("DEVELOPMENT").lower() == "true" else "decp.info"
 )
-meta_content = {
-    "image_url": f"https://{domain_name}/assets/decp.info.png",
+META_CONTENT = {
+    "image_url": f"https://{DOMAIN_NAME}/assets/decp.info.png",
     "title": "decp.info - exploration des marchés publics français",
     "description": (
         "Explorez et analysez les données des marchés publics français avec cet outil libre et gratuit. "
         "Pour une commande publique accessible à toutes et tous."
     ),
 }
-data_schema = get_data_schema()
+DATA_SCHEMA = get_data_schema()

@@ -14,10 +14,10 @@ load_dotenv()
 # if os.getenv("PYTEST_CURRENT_TEST"):
 #     os.environ["DATA_FILE_PARQUET_PATH"]
 
+# TODO: Importer LOGGER et DEVELOPMENT depuis utils.init
+DEVELOPMENT = os.getenv("DEVELOPMENT", "").lower() == "true"
 
-development = os.getenv("DEVELOPMENT", "").lower() == "true"
-
-meta_tags = [
+META_TAGS = [
     {"name": "viewport", "content": "width=device-width, initial-scale=1"},
     {
         "name": "keywords",
@@ -25,14 +25,14 @@ meta_tags = [
     },
 ]
 
-if development:
-    meta_tags.append({"name": "robots", "content": "noindex"})
+if DEVELOPMENT:
+    META_TAGS.append({"name": "robots", "content": "noindex"})
 
 app: Dash = Dash(
     title="decp.info",
     use_pages=True,
     compress=True,
-    meta_tags=meta_tags,
+    meta_tags=META_TAGS,
 )
 
 cache.init_app(

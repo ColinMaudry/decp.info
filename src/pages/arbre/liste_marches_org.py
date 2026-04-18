@@ -2,17 +2,17 @@ import polars as pl
 from dash import Input, Output, callback, dcc, html, register_page
 
 from src.db import get_cursor
-from src.utils import df_acheteurs, df_titulaires
+from src.old_utils import DF_ACHETEURS, DF_TITULAIRES
 
-name = "Liste des marchés publics"
+NAME = "Liste des marchés publics"
 
 
 def make_org_nom_verbe(org_type, org_id) -> tuple:
     if org_type == "titulaire":
-        df = df_titulaires
+        df = DF_TITULAIRES
         verbe = "remportés"
     elif org_type == "acheteur":
-        df = df_acheteurs
+        df = DF_ACHETEURS
         verbe = "attribués"
     else:
         raise ValueError
@@ -44,7 +44,7 @@ register_page(
     title=get_title,
     description=get_description,
     order=40,
-    name=name,
+    name=NAME,
 )
 
 layout = html.Div(
