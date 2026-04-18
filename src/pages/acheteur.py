@@ -15,6 +15,7 @@ from dash import (
     register_page,
 )
 
+from src.db import query_marches, schema
 from src.figures import (
     DataTable,
     get_distance_histogram,
@@ -25,7 +26,6 @@ from src.figures import (
 )
 from src.utils import (
     columns,
-    df,
     df_acheteurs,
     filter_table_data,
     format_number,
@@ -70,7 +70,7 @@ datatable = html.Div(
         sort_action="custom",
         page_size=10,
         hidden_columns=[],
-        columns=[{"id": col, "name": col} for col in df.columns],
+        columns=[{"id": col, "name": col} for col in schema.names()],
     ),
 )
 
@@ -300,7 +300,7 @@ def update_acheteur_infos(url):
 def update_acheteur_stats(data):
     dff = pl.DataFrame(data, strict=False, infer_schema_length=5000)
     if dff.height == 0:
-        dff = pl.DataFrame(schema=df.collect_schema())
+        dff = pl.DataFrame(schema=schema)
     df_marches = dff.unique("id")
     nb_marches = format_number(df_marches.height)
     # somme_marches = format_number(int(df_marches.select(pl.sum("montant")).item()))
@@ -328,15 +328,13 @@ def update_acheteur_stats(data):
 )
 def get_acheteur_marches_data(url, ach_year: str) -> tuple:
     acheteur_siret = url.split("/")[-1]
-    lff = df.lazy()
-    lff = lff.filter(pl.col("acheteur_id") == acheteur_siret)
+    lff = query_marches("acheteur_id = ?", (acheteur_siret,)).lazy()
     if ach_year and ach_year != "Toutes les années":
-        ach_year: int = int(ach_year)
+        ach_year = int(ach_year)
         lff = lff.filter(pl.col("dateNotification").dt.year() == ach_year)
     lff = lff.sort(["dateNotification", "uid"], descending=True, nulls_last=True)
     dff: pl.DataFrame = lff.collect(engine="streaming")
     download_disabled, download_text, download_title = get_button_properties(dff.height)
-
     data = dff.to_dicts()
     return data, download_disabled, download_text, download_title
 

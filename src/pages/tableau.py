@@ -19,17 +19,16 @@ from dash import (
     register_page,
 )
 
+from src.db import query_marches, schema
 from src.figures import DataTable, make_column_picker
 from src.utils import (
     columns,
-    df,
     filter_table_data,
     get_default_hidden_columns,
     invert_columns,
     logger,
     meta_content,
     prepare_table_data,
-    schema,
     sort_table_data,
 )
 
@@ -61,7 +60,7 @@ datatable = html.Div(
         filter_action="custom",
         sort_action="custom",
         hidden_columns=[],
-        columns=[{"id": col, "name": col} for col in df.columns],
+        columns=[{"id": col, "name": col} for col in schema.names()],
     ),
 )
 
@@ -128,7 +127,7 @@ layout = [
         ],
     ),
     dcc.Markdown(
-        f"Ce tableau contient tous les marchés attribués en France. Il vous permet d'appliquer un filtre sur une ou plusieurs colonnes, et ainsi produire la liste de marchés dont vous avez besoin (exemples : [marchés de voirie < 40 k€ en 2025](/tableau?filtres=%7Bacheteur_id%7D+icontains+24350013900189+%26%26+%7BdateNotification%7D+icontains+2025%2A+%26%26+%7Bmontant%7D+i%3C+40000+%26%26+%7Bobjet%7D+icontains+voirie&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2Cacheteur_departement_code%2CsourceDataset), [marchés > 500 k€ avec clause sociale attribués à des PME à plus de 100 km dans le Var](/tableau?filtres=%7Btitulaire_categorie%7D+icontains+PME+%26%26+%7Btitulaire_distance%7D+i%3E+100+%26%26+%7Bmontant%7D+i%3E+500000+%26%26+%7Bacheteur_departement_code%7D+icontains+83+%26%26+%7BconsiderationsSociales%7D+icontains+clause&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2CconsiderationsSociales%2Ctitulaire_distance%2Cacheteur_departement_code%2Ctitulaire_categorie%2CsourceDataset)). Par défaut seules quelques colonnes sont affichées, mais vous pouvez en afficher jusqu'à {str(df.width)} en cliquant sur le bouton **Choisir les colonnes**. Cet outil est assez puissant, je vous recommande de lire le mode d'emploi pour en tirer pleinement partie.",
+        f"Ce tableau contient tous les marchés attribués en France. Il vous permet d'appliquer un filtre sur une ou plusieurs colonnes, et ainsi produire la liste de marchés dont vous avez besoin (exemples : [marchés de voirie < 40 k€ en 2025](/tableau?filtres=%7Bacheteur_id%7D+icontains+24350013900189+%26%26+%7BdateNotification%7D+icontains+2025%2A+%26%26+%7Bmontant%7D+i%3C+40000+%26%26+%7Bobjet%7D+icontains+voirie&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2Cacheteur_departement_code%2CsourceDataset), [marchés > 500 k€ avec clause sociale attribués à des PME à plus de 100 km dans le Var](/tableau?filtres=%7Btitulaire_categorie%7D+icontains+PME+%26%26+%7Btitulaire_distance%7D+i%3E+100+%26%26+%7Bmontant%7D+i%3E+500000+%26%26+%7Bacheteur_departement_code%7D+icontains+83+%26%26+%7BconsiderationsSociales%7D+icontains+clause&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2CconsiderationsSociales%2Ctitulaire_distance%2Cacheteur_departement_code%2Ctitulaire_categorie%2CsourceDataset)). Par défaut seules quelques colonnes sont affichées, mais vous pouvez en afficher jusqu'à {len(schema.names())} en cliquant sur le bouton **Choisir les colonnes**. Cet outil est assez puissant, je vous recommande de lire le mode d'emploi pour en tirer pleinement partie.",
         style={"maxWidth": "1000px"},
     ),
     html.Div(
@@ -188,7 +187,7 @@ layout = [
 
             ##### Afficher plus de colonnes
 
-            Par défaut, un nombre réduit de colonnes est affiché pour ne pas surcharger la page. Mais vous avez le choix parmi {str(df.width)} colonnes, ce serait dommage de vous limiter !
+            Par défaut, un nombre réduit de colonnes est affiché pour ne pas surcharger la page. Mais vous avez le choix parmi {len(schema.names())} colonnes, ce serait dommage de vous limiter !
 
             Pour afficher plus de colonnes, cliquez sur le bouton **Choisir les colonnes** et cochez les colonnes pour les afficher.
 
@@ -316,7 +315,7 @@ def update_table(href, page_current, page_size, filter_query, sort_by, data_time
     prevent_initial_call=True,
 )
 def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
-    lff: pl.LazyFrame = df.lazy()  # start from the original data
+    lff: pl.LazyFrame = query_marches().lazy()
 
     # Les colonnes masquées sont supprimées
     if hidden_columns:

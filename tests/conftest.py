@@ -1,5 +1,6 @@
 import datetime
 import os
+from pathlib import Path
 
 import polars as pl
 import pytest
@@ -41,12 +42,19 @@ def test_data():
             "titulaire_categorie": "PME",
         }
     ]
-    path = "tests/test.parquet"
-    path = os.path.abspath(path)
-    print(f"Writing test data to: {path}")  # <-- This will show you the real path
+    parquet_path = Path(os.path.abspath("tests/test.parquet"))
+    db_path = parquet_path.parent / "decp.duckdb"
+    print(f"Writing test data to: {parquet_path}")
 
-    pl.DataFrame(data).write_parquet("tests/test.parquet")
-    yield path
+    pl.DataFrame(data).write_parquet(parquet_path)
+
+    # Remove any stale DuckDB from a previous run so src.db rebuilds from
+    # the freshly-written parquet at import time.
+    for artifact in (db_path, db_path.with_suffix(".duckdb.tmp")):
+        if artifact.exists():
+            artifact.unlink()
+
+    yield str(parquet_path)
 
 
 def pytest_setup_options():

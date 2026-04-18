@@ -12,11 +12,11 @@ import polars as pl
 from dash import dash_table, dcc, html
 from dash_extensions.javascript import Namespace
 
+from src.db import schema
 from src.utils import (
     add_links,
     data_schema,
     departements_geojson,
-    df,
     format_number,
     setup_table_columns,
 )
@@ -774,7 +774,7 @@ def make_column_picker(page: str):
             "name": data_schema[col]["title"],
             "description": data_schema[col]["description"],
         }
-        for col in df.columns
+        for col in schema.names()
     ]
     for column in table_columns:
         new_column = {
