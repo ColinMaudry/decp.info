@@ -1,4 +1,5 @@
 import os
+from shutil import rmtree
 
 import dash_bootstrap_components as dbc
 import tomllib
@@ -32,15 +33,17 @@ app: Dash = Dash(
     meta_tags=META_TAGS,
 )
 
+rmtree(os.getenv("CACHE_DIR", "/tmp/decp-cache"))
+
 cache.init_app(
     app.server,
     config={
         "CACHE_TYPE": "FileSystemCache",
         "CACHE_DIR": os.getenv("CACHE_DIR", "/tmp/decp-cache"),
         "CACHE_DEFAULT_TIMEOUT": int(
-            os.getenv("CACHE_DEFAULT_TIMEOUT", 3600 * 20)
-        ),  # 20h par défaut
-        "CACHE_THRESHOLD": 500,
+            os.getenv("CACHE_DEFAULT_TIMEOUT", 3600 * 24)
+        ),  # 24h par défaut
+        "CACHE_THRESHOLD": 300,
     },
 )
 
