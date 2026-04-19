@@ -7,10 +7,10 @@ from polars import selectors as cs
 
 from src.db import query_marches, schema
 from src.utils import logger
+from src.utils.cache import cache
 from src.utils.data import DATA_SCHEMA
 from src.utils.frontend import get_button_properties
 from src.utils.tracking import track_search
-from utils.cache import cache
 
 
 def split_filter_part(filter_part):

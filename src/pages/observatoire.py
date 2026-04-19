@@ -30,6 +30,7 @@ from src.figures import (
     make_donut,
 )
 from src.utils import logger
+from src.utils.cache import cache
 from src.utils.data import (
     DEPARTEMENTS,
     DF_ACHETEURS,
@@ -39,7 +40,6 @@ from src.utils.data import (
 from src.utils.frontend import get_enum_values_as_dict
 from src.utils.seo import META_CONTENT
 from src.utils.table import COLUMNS, get_default_hidden_columns, prepare_table_data
-from utils.cache import cache
 
 NAME = "Observatoire"
 

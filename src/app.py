@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from flask import Response
 
 from src.utils import DEVELOPMENT
-from utils.cache import cache
+from src.utils.cache import cache
 
 load_dotenv()
 
