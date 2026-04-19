@@ -315,7 +315,7 @@ def update_table(href, page_current, page_size, filter_query, sort_by, data_time
     State("tableau_datatable", "hidden_columns"),
     prevent_initial_call=True,
 )
-def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
+def download_data(n_clicks, filter_query, sort_by, hidden_columns: list | None = None):
     lff: pl.LazyFrame = query_marches().lazy()
 
     # Les colonnes masquées sont supprimées
@@ -324,7 +324,7 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
 
     if filter_query:
         track_search(filter_query, "tab download")
-        lff = filter_table_data(lff, filter_query, "tab download")
+        lff = filter_table_data(lff, filter_query)
 
     if sort_by and len(sort_by) > 0:
         lff = sort_table_data(lff, sort_by)

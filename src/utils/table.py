@@ -150,7 +150,7 @@ def dates_to_strings(lff: pl.LazyFrame, column: str) -> pl.LazyFrame:
 def normalize_sort_by(sort_by) -> tuple:
     if not sort_by:
         return ()
-    return tuple(sorted((entry["column_id"], entry["direction"]) for entry in sort_by))
+    return tuple((entry["column_id"], entry["direction"]) for entry in sort_by)
 
 
 def format_number(number) -> str:

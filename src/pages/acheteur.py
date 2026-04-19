@@ -426,7 +426,7 @@ def download_filtered_acheteur_data(
 
     if filter_query:
         track_search(filter_query, "ach download")
-        lff = filter_table_data(lff, filter_query, "ach download")
+        lff = filter_table_data(lff, filter_query)
 
     if len(sort_by) > 0:
         lff = sort_table_data(lff, sort_by)

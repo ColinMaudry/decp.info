@@ -430,7 +430,12 @@ def download_titulaire_data(
     prevent_initial_call=True,
 )
 def download_filtered_titulaire_data(
-    data, n_clicks, titulaire_nom, filter_query, sort_by, hidden_columns: list = None
+    data,
+    n_clicks,
+    titulaire_nom,
+    filter_query,
+    sort_by,
+    hidden_columns: list | None = None,
 ):
     lff: pl.LazyFrame = pl.LazyFrame(
         data
@@ -442,7 +447,7 @@ def download_filtered_titulaire_data(
 
     if filter_query:
         track_search(filter_query, "titu download")
-        lff = filter_table_data(lff, filter_query, "titu download")
+        lff = filter_table_data(lff, filter_query)
 
     if len(sort_by) > 0:
         lff = sort_table_data(lff, sort_by)

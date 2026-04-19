@@ -38,9 +38,7 @@ def test_filter_table_data_does_not_call_track_search(monkeypatch, sample_lff):
     calls = []
     monkeypatch.setattr(table, "track_search", lambda *a, **kw: calls.append(a))
 
-    result = table.filter_table_data(
-        sample_lff, "{objet} icontains travaux", "tableau"
-    ).collect()
+    result = table.filter_table_data(sample_lff, "{objet} icontains travaux").collect()
 
     assert calls == []
     assert result.height == 1
