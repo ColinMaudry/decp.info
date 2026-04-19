@@ -31,8 +31,8 @@ gunicorn app:server
 ### Tests
 
 ```bash
-uv run pytest                  # run all tests (Selenium-based integration tests)
-uv run pytest tests/test_main.py::test_001_logo_and_search   # run a single test
+uv rtk run pytest                  # run all tests (Selenium-based integration tests)
+uv rtk run pytest tests/test_main.py::test_001_logo_and_search   # run a single test
 ```
 
 Tests require a running Chrome/Chromium browser. They use `DashComposite` from `dash[testing]` with Selenium WebDriver.
