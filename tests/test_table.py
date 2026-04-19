@@ -30,3 +30,17 @@ def test_table_module_imports():
     from src.utils import table
 
     assert hasattr(table, "prepare_table_data")
+
+
+def test_filter_table_data_does_not_call_track_search(monkeypatch, sample_lff):
+    from src.utils import table
+
+    calls = []
+    monkeypatch.setattr(table, "track_search", lambda *a, **kw: calls.append(a))
+
+    result = table.filter_table_data(
+        sample_lff, "{objet} icontains travaux", "tableau"
+    ).collect()
+
+    assert calls == []
+    assert result.height == 1

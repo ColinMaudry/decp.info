@@ -31,6 +31,7 @@ from src.utils.table import (
     prepare_table_data,
     sort_table_data,
 )
+from src.utils.tracking import track_search
 
 update_date_timestamp = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
 update_date = datetime.fromtimestamp(update_date_timestamp).strftime("%d/%m/%Y")
@@ -322,6 +323,7 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
         lff = lff.drop(hidden_columns)
 
     if filter_query:
+        track_search(filter_query, "tab download")
         lff = filter_table_data(lff, filter_query, "tab download")
 
     if sort_by and len(sort_by) > 0:

@@ -34,6 +34,7 @@ from src.utils.table import (
     prepare_table_data,
     sort_table_data,
 )
+from src.utils.tracking import track_search
 
 
 def get_title(titulaire_id: str = None) -> str:
@@ -440,6 +441,7 @@ def download_filtered_titulaire_data(
         lff = lff.drop(hidden_columns)
 
     if filter_query:
+        track_search(filter_query, "titu download")
         lff = filter_table_data(lff, filter_query, "titu download")
 
     if len(sort_by) > 0:

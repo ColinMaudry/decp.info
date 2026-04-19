@@ -35,6 +35,7 @@ from src.utils.table import (
     prepare_table_data,
     sort_table_data,
 )
+from src.utils.tracking import track_search
 
 
 def get_title(acheteur_id: str | None = None) -> str:
@@ -424,6 +425,7 @@ def download_filtered_acheteur_data(
         lff = lff.drop(hidden_columns)
 
     if filter_query:
+        track_search(filter_query, "ach download")
         lff = filter_table_data(lff, filter_query, "ach download")
 
     if len(sort_by) > 0:
