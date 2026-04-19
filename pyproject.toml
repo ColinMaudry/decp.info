@@ -23,7 +23,7 @@ dependencies = [
   "pyarrow>=23.0.1",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
   "pytest",
   "pytest-env",
