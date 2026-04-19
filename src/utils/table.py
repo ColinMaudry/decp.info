@@ -5,12 +5,12 @@ import polars as pl
 from dash import no_update
 from polars import selectors as cs
 
-from src.cache import cache
 from src.db import query_marches, schema
 from src.utils import logger
 from src.utils.data import DATA_SCHEMA
 from src.utils.frontend import get_button_properties
 from src.utils.tracking import track_search
+from utils.cache import cache
 
 
 def split_filter_part(filter_part):
@@ -150,7 +150,7 @@ def dates_to_strings(lff: pl.LazyFrame, column: str) -> pl.LazyFrame:
 def normalize_sort_by(sort_by) -> tuple:
     if not sort_by:
         return ()
-    return tuple((entry["column_id"], entry["direction"]) for entry in sort_by)
+    return tuple(sorted((entry["column_id"], entry["direction"]) for entry in sort_by))
 
 
 def format_number(number) -> str:
@@ -167,7 +167,7 @@ def unformat_montant(number: str) -> float:
 
 
 def format_values(dff: pl.DataFrame) -> pl.DataFrame:
-    def format_montant(expr, scale=None):
+    def format_montant(expr):
         # https://stackoverflow.com/a/78636786
         expr = expr.cast(pl.String)
         expr = expr.str.splitn(".", 2)

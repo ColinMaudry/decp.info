@@ -16,7 +16,6 @@ from dash import (
     register_page,
 )
 
-from src.cache import cache
 from src.db import query_marches, schema
 from src.figures import (
     DataTable,
@@ -40,6 +39,7 @@ from src.utils.data import (
 from src.utils.frontend import get_enum_values_as_dict
 from src.utils.seo import META_CONTENT
 from src.utils.table import COLUMNS, get_default_hidden_columns, prepare_table_data
+from utils.cache import cache
 
 NAME = "Observatoire"
 
@@ -658,9 +658,11 @@ def _normalize_filter_params(filter_params: dict) -> tuple:
 
 
 @cache.memoize()
-def _compute_dashboard_children(cache_key: tuple):
+def _compute_dashboard_children(filter_params_normalized: tuple):
     logger.debug("Cache miss — computing dashboard")
-    filter_params = {k: (list(v) if isinstance(v, tuple) else v) for k, v in cache_key}
+    filter_params = {
+        k: (list(v) if isinstance(v, tuple) else v) for k, v in filter_params_normalized
+    }
 
     lff: pl.LazyFrame = query_marches().lazy()
     lff = prepare_dashboard_data(lff=lff, **filter_params)
@@ -772,8 +774,8 @@ def update_dashboard_cards(*filter_values):
     ):
         filter_params[input_id] = value
 
-    cache_key = _normalize_filter_params(filter_params)
-    children = _compute_dashboard_children(cache_key)
+    filter_params_normalized = _normalize_filter_params(filter_params)
+    children = _compute_dashboard_children(filter_params_normalized)
 
     return dbc.Row(children=children), filter_params
 
