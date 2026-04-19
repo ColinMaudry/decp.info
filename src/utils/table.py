@@ -213,13 +213,13 @@ def format_values(dff: pl.DataFrame) -> pl.DataFrame:
     return dff
 
 
-def filter_table_data(
-    lff: pl.LazyFrame, filter_query: str, filter_source: str
-) -> pl.LazyFrame:
+def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
     _schema = lff.collect_schema()
     filtering_expressions = filter_query.split(" && ")
     for filter_part in filtering_expressions:
         col_name, operator, filter_value = split_filter_part(filter_part)
+        if not isinstance(col_name, str) or not isinstance(filter_value, str):
+            continue
         col_type = str(_schema[col_name])
         # logger.debug("filter_value:", filter_value)
         # logger.debug("filter_value_type:", type(filter_value))
@@ -252,7 +252,7 @@ def filter_table_data(
             elif operator == "<=":
                 lff = lff.filter(pl.col(col_name) <= filter_value)
             elif operator == "contains":
-                if col_type in ["String", "Date"]:
+                if col_type in ["String", "Date"] and isinstance(filter_value, str):
                     filter_value = filter_value.strip('"')
                     if filter_value.endswith("*"):
                         lff = lff.filter(
@@ -290,7 +290,9 @@ def sort_table_data(lff: pl.LazyFrame, sort_by: list) -> pl.LazyFrame:
 
 
 def setup_table_columns(
-    dff, hideable: bool = True, exclude: list = None, new_columns: list = None
+    dff,
+    hideable: bool = True,
+    exclude: list | None = None,
 ) -> tuple:
     # Liste finale de colonnes
     markdown_exceptions = ["montant", "titulaire_distance", "distance", "dureeMois"]
@@ -383,7 +385,7 @@ def _load_filter_sort_postprocess(filter_query, sort_by_key):
     lff: pl.LazyFrame = query_marches().lazy()
 
     if filter_query:
-        lff = filter_table_data(lff, filter_query, "tableau")
+        lff = filter_table_data(lff, filter_query)
 
     if sort_by_key:
         sort_by = [
@@ -443,7 +445,7 @@ def prepare_table_data(
             lff = query_marches().lazy()
 
         if filter_query:
-            lff = filter_table_data(lff, filter_query, source_table)
+            lff = filter_table_data(lff, filter_query)
 
         if sort_by and len(sort_by) > 0:
             lff = sort_table_data(lff, sort_by)
