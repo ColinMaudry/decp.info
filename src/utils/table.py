@@ -10,7 +10,7 @@ from src.db import query_marches, schema
 from src.utils import logger
 from src.utils.data import DATA_SCHEMA
 from src.utils.frontend import get_button_properties
-from src.utils.tracking import track_search  # noqa: F401
+from src.utils.tracking import track_search
 
 
 def split_filter_part(filter_part):
@@ -420,66 +420,60 @@ def prepare_table_data(
     :param source_table:
     :return:
     """
+    logger.debug(" + + + + + + + + + + + + + + + + + + ")
 
-    if os.getenv("DEVELOPMENT").lower() == "true":
-        logger.debug(" + + + + + + + + + + + + + + + + + + ")
-
-    trigger_cleanup = no_update
-
-    # Récupération des données
-    if isinstance(data, list):
-        lff: pl.LazyFrame = pl.LazyFrame(data, strict=False, infer_schema_length=5000)
-    elif isinstance(data, pl.LazyFrame):
-        lff = data
-    else:
-        lff: pl.LazyFrame = query_marches().lazy()
-
-    # Application des filtres
     if filter_query:
-        lff = filter_table_data(lff, filter_query, source_table)
-        trigger_cleanup = no_update if source_table == "tableau" else str(uuid.uuid4())
+        track_search(filter_query, source_table)
 
-    # Application des tris
-    if sort_by and len(sort_by) > 0:
-        lff = sort_table_data(lff, sort_by)
+    trigger_cleanup = no_update if source_table == "tableau" else str(uuid.uuid4())
 
-    # Matérialisation des filtres
-    dff: pl.DataFrame = lff.collect()
+    if data is None:
+        sort_by_key = normalize_sort_by(sort_by)
+        dff: pl.DataFrame = _load_filter_sort_postprocess(
+            filter_query=filter_query, sort_by_key=sort_by_key
+        )
+    else:
+        if isinstance(data, list):
+            lff: pl.LazyFrame = pl.LazyFrame(
+                data, strict=False, infer_schema_length=5000
+            )
+        elif isinstance(data, pl.LazyFrame):
+            lff = data
+        else:
+            lff = query_marches().lazy()
+
+        if filter_query:
+            lff = filter_table_data(lff, filter_query, source_table)
+
+        if sort_by and len(sort_by) > 0:
+            lff = sort_table_data(lff, sort_by)
+
+        dff = lff.collect()
+        dff = dff.cast(pl.String)
+        dff = dff.fill_null("")
+        dff = add_links(dff)
+        if "sourceFile" in dff.columns:
+            dff = add_resource_link(dff)
+        if dff.height > 0:
+            dff = format_values(dff)
+
     height = dff.height
 
     if height > 0:
-        nb_rows = f"{format_number(height)} lignes ({format_number(dff.select('uid').unique().height)} marchés)"
+        nb_rows = (
+            f"{format_number(height)} lignes "
+            f"({format_number(dff.select('uid').unique().height)} marchés)"
+        )
     else:
         nb_rows = "0 lignes (0 marchés)"
 
-    # Pagination des données
     start_row = page_current * page_size
-    # end_row = (page_current + 1) * page_size
     dff = dff.slice(start_row, page_size)
 
-    # Tout devient string
-    dff = dff.cast(pl.String)
-
-    # Remplace les strings null par "", mais pas les numeric null
-    dff = dff.fill_null("")
-
-    # Ajout des liens vers les pages de détails
-    dff = add_links(dff)
-
-    # Ajout des liens vers les fichiers Open Data
-    if "sourceFile" in dff.columns:
-        dff = add_resource_link(dff)
-
-    # Formatage des montants
-    if height > 0:
-        dff = format_values(dff)
-
-    # Récupération des colonnes et tooltip
     table_columns, tooltip = setup_table_columns(dff)
 
     dicts = dff.to_dicts()
 
-    # Propriétés du bouton de téléchargement
     download_disabled, download_text, download_title = get_button_properties(height)
 
     return (

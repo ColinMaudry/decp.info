@@ -155,3 +155,153 @@ def test_load_filter_sort_postprocess_adds_links(flask_app, monkeypatch, sample_
     assert "<a href" in df["uid"][0]
     assert "<a href" in df["acheteur_nom"][0]
     assert "<a href" in df["titulaire_nom"][0]
+
+
+def test_prepare_table_data_returns_expected_tuple(monkeypatch, flask_app, sample_lff):
+    from src.utils import table
+
+    monkeypatch.setattr(table, "query_marches", lambda: sample_lff.collect())
+
+    with flask_app.app_context():
+        result = table.prepare_table_data(
+            data=None,
+            data_timestamp=5,
+            filter_query=None,
+            page_current=0,
+            page_size=20,
+            sort_by=[],
+            source_table="tableau",
+        )
+
+    # Same arity as before: 9 outputs
+    assert len(result) == 9
+    dicts, columns, tooltip, ts, nb_rows, dl_disabled, dl_text, dl_title, cleanup = (
+        result
+    )
+    assert isinstance(dicts, list)
+    assert ts == 6  # data_timestamp + 1 must still increment
+    assert "1 lignes" in nb_rows
+
+
+def test_prepare_table_data_calls_track_search_on_filter(
+    monkeypatch, flask_app, sample_lff
+):
+    from src.utils import table
+
+    calls = []
+    monkeypatch.setattr(table, "query_marches", lambda: sample_lff.collect())
+    monkeypatch.setattr(table, "track_search", lambda *a, **kw: calls.append(a))
+
+    with flask_app.app_context():
+        table.prepare_table_data(
+            data=None,
+            data_timestamp=0,
+            filter_query="{objet} icontains travaux",
+            page_current=0,
+            page_size=20,
+            sort_by=[],
+            source_table="tableau",
+        )
+
+    assert calls == [("{objet} icontains travaux", "tableau")]
+
+
+def test_prepare_table_data_paginates_without_recomputing(
+    monkeypatch, flask_app, sample_lff
+):
+    """Two calls with same filter+sort but different pages must invoke
+    the inner heavy work only once."""
+    from src.utils import table
+
+    call_count = {"n": 0}
+    real_query = sample_lff.collect()
+
+    def counting_query():
+        call_count["n"] += 1
+        return real_query
+
+    monkeypatch.setattr(table, "query_marches", counting_query)
+
+    with flask_app.app_context():
+        # First call: cache miss
+        table.prepare_table_data(
+            data=None,
+            data_timestamp=0,
+            filter_query=None,
+            page_current=0,
+            page_size=10,
+            sort_by=[],
+            source_table="tableau",
+        )
+        first_count = call_count["n"]
+
+        # Second call, different page: cache hit, query_marches must NOT fire again
+        table.prepare_table_data(
+            data=None,
+            data_timestamp=0,
+            filter_query=None,
+            page_current=1,
+            page_size=10,
+            sort_by=[],
+            source_table="tableau",
+        )
+
+    assert call_count["n"] == first_count, (
+        "query_marches was called again — pagination triggered cache miss"
+    )
+
+
+def test_prepare_table_data_cleanup_trigger_for_non_tableau(
+    monkeypatch, flask_app, sample_lff
+):
+    """Non-tableau pages still get a fresh uuid trigger, not no_update."""
+    from dash import no_update
+
+    from src.utils import table
+
+    monkeypatch.setattr(table, "query_marches", lambda: sample_lff.collect())
+
+    with flask_app.app_context():
+        result = table.prepare_table_data(
+            data=None,
+            data_timestamp=0,
+            filter_query="{objet} icontains travaux",
+            page_current=0,
+            page_size=20,
+            sort_by=[],
+            source_table="acheteur",
+        )
+
+    cleanup = result[8]
+    assert cleanup is not no_update
+    assert isinstance(cleanup, str)
+    assert len(cleanup) >= 32  # uuid4 hex string
+
+
+def test_prepare_table_data_with_external_data_does_not_use_cache(
+    monkeypatch, flask_app, sample_lff
+):
+    """When a caller passes data (acheteur/titulaire/observatoire path),
+    bypass the memoized helper entirely."""
+    from src.utils import table
+
+    sentinel = {"called": False}
+
+    def should_not_be_called(*a, **kw):
+        sentinel["called"] = True
+        raise AssertionError("Memoized helper must not be called when data is provided")
+
+    monkeypatch.setattr(table, "_load_filter_sort_postprocess", should_not_be_called)
+
+    with flask_app.app_context():
+        table.prepare_table_data(
+            data=sample_lff,  # external LazyFrame
+            data_timestamp=0,
+            filter_query=None,
+            page_current=0,
+            page_size=20,
+            sort_by=[],
+            source_table="acheteur",
+        )
+
+    assert sentinel["called"] is False
