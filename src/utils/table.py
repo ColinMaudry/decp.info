@@ -5,6 +5,7 @@ import polars as pl
 from dash import no_update
 from polars import selectors as cs
 
+from src.cache import cache
 from src.db import query_marches, schema
 from src.utils import logger
 from src.utils.data import DATA_SCHEMA
@@ -371,6 +372,37 @@ def get_default_hidden_columns(page):
         else:
             hidden_columns.append(col)
     return hidden_columns
+
+
+@cache.memoize()
+def _load_filter_sort_postprocess(filter_query, sort_by_key):
+    logger.debug(
+        f"Cache miss — recomputing for filter={filter_query!r} sort={sort_by_key!r}"
+    )
+
+    lff: pl.LazyFrame = query_marches().lazy()
+
+    if filter_query:
+        lff = filter_table_data(lff, filter_query, "tableau")
+
+    if sort_by_key:
+        sort_by = [
+            {"column_id": col, "direction": direction} for col, direction in sort_by_key
+        ]
+        lff = sort_table_data(lff, sort_by)
+
+    lff = lff.cast(pl.String)
+    lff = lff.fill_null("")
+
+    dff: pl.DataFrame = lff.collect()
+
+    dff = add_links(dff)
+    if "sourceFile" in dff.columns:
+        dff = add_resource_link(dff)
+    if dff.height > 0:
+        dff = format_values(dff)
+
+    return dff
 
 
 def prepare_table_data(
