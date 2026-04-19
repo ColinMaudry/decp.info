@@ -126,7 +126,7 @@ def _ensure_database() -> Path:
         if should_rebuild(db_path, parquet_path):
             build_database(db_path, parquet_path)
         else:
-            logger.info("Base de données déjà disponible et à jour.")
+            logger.debug("Base de données déjà disponible et à jour.")
     return db_path
 
 

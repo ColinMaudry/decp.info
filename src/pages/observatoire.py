@@ -657,15 +657,15 @@ def _normalize_filter_params(filter_params: dict) -> tuple:
     )
 
 
-@cache.memoize(timeout=3600)
+@cache.memoize()
 def _compute_dashboard_children(cache_key: tuple):
+    logger.debug("Cache miss — computing dashboard")
     filter_params = {k: (list(v) if isinstance(v, tuple) else v) for k, v in cache_key}
 
     lff: pl.LazyFrame = query_marches().lazy()
     lff = prepare_dashboard_data(lff=lff, **filter_params)
 
     dff = lff.collect(engine="streaming")
-    logger.debug("Filter data: " + str(dff.height))
 
     df_per_uid = (
         dff.select("uid", "montant").group_by("uid").agg(pl.col("montant").first())
