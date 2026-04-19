@@ -393,17 +393,20 @@ def _load_filter_sort_postprocess(filter_query, sort_by_key):
         ]
         lff = sort_table_data(lff, sort_by)
 
+    dff = table_postprocess(lff)
+
+    return dff
+
+
+def table_postprocess(lff) -> pl.DataFrame:
     lff = lff.cast(pl.String)
     lff = lff.fill_null("")
-
     dff: pl.DataFrame = lff.collect()
-
     dff = add_links(dff)
     if "sourceFile" in dff.columns:
         dff = add_resource_link(dff)
     if dff.height > 0:
         dff = format_values(dff)
-
     return dff
 
 
@@ -450,14 +453,7 @@ def prepare_table_data(
         if sort_by and len(sort_by) > 0:
             lff = sort_table_data(lff, sort_by)
 
-        dff = lff.collect()
-        dff = dff.cast(pl.String)
-        dff = dff.fill_null("")
-        dff = add_links(dff)
-        if "sourceFile" in dff.columns:
-            dff = add_resource_link(dff)
-        if dff.height > 0:
-            dff = format_values(dff)
+        dff: pl.DataFrame = table_postprocess(lff)
 
     height = dff.height
 
