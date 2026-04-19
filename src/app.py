@@ -33,13 +33,16 @@ app: Dash = Dash(
     meta_tags=META_TAGS,
 )
 
-rmtree(os.getenv("CACHE_DIR", "/tmp/decp-cache"))
+cache_dir = os.getenv("CACHE_DIR", "/tmp/decp-cache")
+
+if os.path.exists(cache_dir):
+    rmtree(cache_dir)
 
 cache.init_app(
     app.server,
     config={
         "CACHE_TYPE": "FileSystemCache",
-        "CACHE_DIR": os.getenv("CACHE_DIR", "/tmp/decp-cache"),
+        "CACHE_DIR": cache_dir,
         "CACHE_DEFAULT_TIMEOUT": int(
             os.getenv("CACHE_DEFAULT_TIMEOUT", 3600 * 24)
         ),  # 24h par défaut
