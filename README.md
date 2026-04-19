@@ -1,6 +1,6 @@
 # decp.info
 
-> v2.7.1
+> v2.7.2
 > Outil d'exploration et de téléchargement des données essentielles de la commande publique.
 
 => [decp.info](https://decp.info)
