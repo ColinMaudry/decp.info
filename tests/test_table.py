@@ -44,3 +44,37 @@ def test_filter_table_data_does_not_call_track_search(monkeypatch, sample_lff):
 
     assert calls == []
     assert result.height == 1
+
+
+def test_normalize_sort_by_handles_empty():
+    from src.utils.table import normalize_sort_by
+
+    assert normalize_sort_by(None) == ()
+    assert normalize_sort_by([]) == ()
+
+
+def test_normalize_sort_by_returns_hashable_tuple():
+    from src.utils.table import normalize_sort_by
+
+    sort_by = [
+        {"column_id": "montant", "direction": "desc"},
+        {"column_id": "dateNotification", "direction": "asc"},
+    ]
+    key = normalize_sort_by(sort_by)
+
+    assert key == (("montant", "desc"), ("dateNotification", "asc"))
+    # Must be hashable so that flask-caching can build a cache key from it
+    hash(key)
+
+
+def test_normalize_sort_by_preserves_order():
+    """Order matters for sort: [A, B] != [B, A]."""
+    from src.utils.table import normalize_sort_by
+
+    a_then_b = normalize_sort_by(
+        [{"column_id": "a", "direction": "asc"}, {"column_id": "b", "direction": "asc"}]
+    )
+    b_then_a = normalize_sort_by(
+        [{"column_id": "b", "direction": "asc"}, {"column_id": "a", "direction": "asc"}]
+    )
+    assert a_then_b != b_then_a

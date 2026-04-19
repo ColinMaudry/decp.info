@@ -146,6 +146,12 @@ def dates_to_strings(lff: pl.LazyFrame, column: str) -> pl.LazyFrame:
     return lff
 
 
+def normalize_sort_by(sort_by) -> tuple:
+    if not sort_by:
+        return ()
+    return tuple((entry["column_id"], entry["direction"]) for entry in sort_by)
+
+
 def format_number(number) -> str:
     number = "{:,}".format(number).replace(",", " ")
     return number
