@@ -12,14 +12,9 @@ import polars as pl
 from dash import dash_table, dcc, html
 from dash_extensions.javascript import Namespace
 
-from src.utils import (
-    add_links,
-    data_schema,
-    departements_geojson,
-    df,
-    format_number,
-    setup_table_columns,
-)
+from src.db import schema
+from src.utils.data import DATA_SCHEMA, DEPARTEMENTS_GEOJSON
+from src.utils.table import add_links, format_number, setup_table_columns
 
 
 def get_yearly_statistics(statistics, today_str) -> html.Div:
@@ -260,8 +255,8 @@ class DataTable(dash_table.DataTable):
 
         style_cell_common = {"fontFamily": "Inter", "fontSize": "16px"}
 
-        for key in data_schema.keys():
-            field = data_schema[key]
+        for key in DATA_SCHEMA.keys():
+            field = DATA_SCHEMA[key]
             if field["type"] in ["number", "integer"]:
                 rule = {
                     "if": {"column_id": field["name"]},
@@ -365,7 +360,7 @@ def get_duplicate_matrix() -> dcc.Graph:
     return dcc.Graph(figure=fig)
 
 
-def get_geographic_maps(dff: pl.DataFrame) -> list | None:
+def get_geographic_maps(dff: pl.DataFrame) -> list[dbc.Col] | list:
     """
     Génère les cartes géographiques pour l'hexagone et les DOM-TOM.
     """
@@ -409,7 +404,7 @@ def get_geographic_maps(dff: pl.DataFrame) -> list | None:
         },
     }
 
-    def make_map_data(region_code: str) -> tuple[list, str or None]:
+    def make_map_data(region_code: str) -> tuple[list, str | None]:
         lff: pl.LazyFrame = dff.lazy()
         if region_code == "Hexagone":
             lff = lff.filter(
@@ -514,7 +509,7 @@ def make_chloropleth_map(region: dict) -> dcc.Graph:
 
     fig = px.choropleth(
         df_map,
-        geojson=departements_geojson,
+        geojson=DEPARTEMENTS_GEOJSON,
         locations="Département",
         color="uid",
         color_continuous_scale="Reds",
@@ -722,7 +717,7 @@ def make_donut(
     nulls="?",
     potentially_many_names: bool = False,
 ):
-    title = data_schema[names_col]["title"]
+    title = DATA_SCHEMA[names_col]["title"]
     lff = lff.rename({names_col: title})
     lff = lff.select("uid", title)
 
@@ -771,16 +766,16 @@ def make_column_picker(page: str):
     table_columns = [
         {
             "id": col,
-            "name": data_schema[col]["title"],
-            "description": data_schema[col]["description"],
+            "name": DATA_SCHEMA[col]["title"],
+            "description": DATA_SCHEMA[col]["description"],
         }
-        for col in df.columns
+        for col in schema.names()
     ]
     for column in table_columns:
         new_column = {
             "id": column["id"],
             "name": column["name"],
-            "description": data_schema[column["id"]]["description"],
+            "description": DATA_SCHEMA[column["id"]]["description"],
         }
         table_data.append(new_column)
 

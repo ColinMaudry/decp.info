@@ -2,18 +2,13 @@ import json
 from datetime import datetime
 
 import dash_bootstrap_components as dbc
-import polars as pl
 from dash import Input, Output, callback, dcc, html, register_page
 from polars import selectors as cs
 
-from src.utils import (
-    data_schema,
-    df,
-    format_values,
-    make_org_jsonld,
-    meta_content,
-    unformat_montant,
-)
+from src.db import query_marches
+from src.utils.data import DATA_SCHEMA
+from src.utils.seo import META_CONTENT, make_org_jsonld
+from src.utils.table import format_values, unformat_montant
 
 
 def get_title(uid: str = None) -> str:
@@ -26,7 +21,7 @@ register_page(
     title=get_title,
     name="Marché",
     description="Consultez les détails de ce marché public : montant, acheteur, titulaires, modifications, etc.",
-    image_url=meta_content["image_url"],
+    image_url=META_CONTENT["image_url"],
     order=7,
 )
 
@@ -88,19 +83,17 @@ layout = [
 def get_marche_data(url) -> tuple[dict, list]:
     marche_uid = url.split("/")[-1]
 
-    # Récupération des données du marché à partir du df global
+    # Filtre SQL côté DuckDB, puis Polars pour le post-traitement
+    dff_marche = query_marches("uid = ?", (marche_uid,))
+    if dff_marche.height == 0:
+        return {}, []
 
-    lff = df.lazy()
-    lff = lff.filter(pl.col("uid") == pl.lit(marche_uid))
-
-    # Données des titulaires du marché
+    lff = dff_marche.lazy()
     dff_titulaires = lff.select(cs.starts_with("titulaire")).collect(engine="streaming")
+    dff_marche_unique = lff.unique("uid").collect(engine="streaming")
+    dff_marche_unique = format_values(dff_marche_unique)
 
-    # Données du marché
-    dff_marche = lff.unique("uid").collect(engine="streaming")
-    dff_marche = format_values(dff_marche)
-
-    return dff_marche.to_dicts()[0], dff_titulaires.to_dicts()
+    return dff_marche_unique.to_dicts()[0], dff_titulaires.to_dicts()
 
 
 @callback(
@@ -113,7 +106,7 @@ def get_marche_data(url) -> tuple[dict, list]:
 )
 def update_marche_info(marche, titulaires):
     def make_parameter(col, bold=True):
-        column_object = data_schema.get(col)
+        column_object = DATA_SCHEMA.get(col)
         column_name = column_object.get("title") if column_object else col
 
         if marche[col]:

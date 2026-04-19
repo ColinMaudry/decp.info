@@ -1,22 +1,18 @@
 import polars as pl
 from dash import Input, Output, callback, dcc, html, register_page
 
-from src.utils import (
-    df_acheteurs,
-    df_acheteurs_marches,
-    df_titulaires,
-    df_titulaires_marches,
-)
+from src.db import get_cursor
+from src.utils.data import DF_ACHETEURS, DF_TITULAIRES
 
-name = "Liste des marchés publics"
+NAME = "Liste des marchés publics"
 
 
 def make_org_nom_verbe(org_type, org_id) -> tuple:
     if org_type == "titulaire":
-        df = df_titulaires
+        df = DF_TITULAIRES
         verbe = "remportés"
     elif org_type == "acheteur":
-        df = df_acheteurs
+        df = DF_ACHETEURS
         verbe = "attribués"
     else:
         raise ValueError
@@ -48,7 +44,7 @@ register_page(
     title=get_title,
     description=get_description,
     order=40,
-    name=name,
+    name=NAME,
 )
 
 layout = html.Div(
@@ -68,28 +64,34 @@ def liste_marches(url):
     org_id = url.split("/")[-1]
 
     def make_link_list() -> list:
-        link_list = []
-        if org_type == "acheteur":
-            df = df_acheteurs_marches
-        elif org_type == "titulaire":
-            df = df_titulaires_marches
-        else:
+        table = (
+            "acheteurs_marches"
+            if org_type == "acheteur"
+            else "titulaires_marches"
+            if org_type == "titulaire"
+            else None
+        )
+        if table is None:
             raise ValueError
-
-        df = df.filter(pl.col(f"{org_type}_id") == org_id)
-
-        for row in df.iter_rows(named=True):
-            li = html.Li(
-                [
-                    dcc.Link(
-                        row["objet"],
-                        href=f"/marches/{row['uid']}",
-                        title=f"Marchés public attribué : {row['objet']}",
-                    )
-                ]
+        rows = (
+            get_cursor()
+            .execute(
+                f"SELECT uid, objet FROM {table} WHERE {org_type}_id = ?",
+                [org_id],
             )
-            link_list.append(li)
-        return link_list
+            .fetchall()
+        )
+
+        return [
+            html.Li(
+                dcc.Link(
+                    objet,
+                    href=f"/marches/{uid}",
+                    title=f"Marchés public attribué : {objet}",
+                )
+            )
+            for uid, objet in rows
+        ]
 
     nom, verbe = make_org_nom_verbe(org_type, org_id)
 

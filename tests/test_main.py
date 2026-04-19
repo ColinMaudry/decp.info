@@ -52,7 +52,6 @@ def test_002_filter_persistence(dash_duo: DashComposite):
         return _filter_input
 
     for page in ["tableau", "acheteurs/123", "titulaires/345"]:
-        print("page:", page)
         filter_input = open_page_and_check_filter_input()
         filter_input.send_keys("11")  # a UID that doesn't exist
         filter_input.send_keys(Keys.ENTER)
@@ -91,7 +90,7 @@ def test_003_tableau_download(dash_duo: DashComposite):
 def test_004_add_links_observatoire_acheteur():
     import polars as pl
 
-    from src.utils import add_links
+    from src.utils.table import add_links
 
     dff = pl.DataFrame(
         {
@@ -116,7 +115,7 @@ def test_004_add_links_observatoire_acheteur():
 def test_005_add_links_observatoire_titulaire():
     import polars as pl
 
-    from src.utils import add_links
+    from src.utils.table import add_links
 
     dff = pl.DataFrame(
         {
@@ -219,9 +218,7 @@ def test_008_search_to_observatoire(dash_duo: DashComposite):
 def test_010_observatoire_montant_filter():
     import datetime
 
-    import polars as pl
-
-    from src.utils import prepare_dashboard_data
+    from src.utils.data import prepare_dashboard_data
 
     data = pl.DataFrame(
         {

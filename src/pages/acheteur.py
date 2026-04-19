@@ -15,6 +15,7 @@ from dash import (
     register_page,
 )
 
+from src.db import query_marches, schema
 from src.figures import (
     DataTable,
     get_distance_histogram,
@@ -23,24 +24,21 @@ from src.figures import (
     make_column_picker,
     point_on_map,
 )
-from src.utils import (
-    columns,
-    df,
-    df_acheteurs,
+from src.utils.data import DF_ACHETEURS, get_annuaire_data, get_departement_region
+from src.utils.frontend import get_button_properties
+from src.utils.seo import META_CONTENT
+from src.utils.table import (
+    COLUMNS,
     filter_table_data,
     format_number,
-    get_annuaire_data,
-    get_button_properties,
     get_default_hidden_columns,
-    get_departement_region,
-    meta_content,
     prepare_table_data,
     sort_table_data,
 )
 
 
-def get_title(acheteur_id: str = None) -> str:
-    acheteur_nom = df_acheteurs.filter(pl.col("acheteur_id") == acheteur_id).select(
+def get_title(acheteur_id: str | None = None) -> str:
+    acheteur_nom = DF_ACHETEURS.filter(pl.col("acheteur_id") == acheteur_id).select(
         "acheteur_nom"
     )
     if acheteur_nom.height > 0:
@@ -54,11 +52,11 @@ register_page(
     title=get_title,
     name="Acheteur",
     description="Consultez les marchés publics attribués par cet acheteur.",
-    image_url=meta_content["image_url"],
+    image_url=META_CONTENT["image_url"],
     order=5,
 )
 
-datatable = html.Div(
+DATATABLE = html.Div(
     className="marches_table",
     children=DataTable(
         dtid="acheteur_datatable",
@@ -70,7 +68,7 @@ datatable = html.Div(
         sort_action="custom",
         page_size=10,
         hidden_columns=[],
-        columns=[{"id": col, "name": col} for col in df.columns],
+        columns=[{"id": col, "name": col} for col in schema.names()],
     ),
 )
 
@@ -229,7 +227,7 @@ layout = [
                         scrollable=True,
                         size="xl",
                     ),
-                    datatable,
+                    DATATABLE,
                 ],
             ),
         ],
@@ -300,7 +298,7 @@ def update_acheteur_infos(url):
 def update_acheteur_stats(data):
     dff = pl.DataFrame(data, strict=False, infer_schema_length=5000)
     if dff.height == 0:
-        dff = pl.DataFrame(schema=df.collect_schema())
+        dff = pl.DataFrame(schema=schema)
     df_marches = dff.unique("id")
     nb_marches = format_number(df_marches.height)
     # somme_marches = format_number(int(df_marches.select(pl.sum("montant")).item()))
@@ -326,17 +324,15 @@ def update_acheteur_stats(data):
     Input(component_id="acheteur_url", component_property="pathname"),
     Input(component_id="acheteur_year", component_property="value"),
 )
-def get_acheteur_marches_data(url, acheteur_year: str) -> tuple:
+def get_acheteur_marches_data(url, ach_year: str) -> tuple:
     acheteur_siret = url.split("/")[-1]
-    lff = df.lazy()
-    lff = lff.filter(pl.col("acheteur_id") == acheteur_siret)
-    if acheteur_year and acheteur_year != "Toutes les années":
-        acheteur_year = int(acheteur_year)
-        lff = lff.filter(pl.col("dateNotification").dt.year() == acheteur_year)
+    lff = query_marches("acheteur_id = ?", (acheteur_siret,)).lazy()
+    if ach_year and ach_year != "Toutes les années":
+        ach_year = int(ach_year)
+        lff = lff.filter(pl.col("dateNotification").dt.year() == ach_year)
     lff = lff.sort(["dateNotification", "uid"], descending=True, nulls_last=True)
     dff: pl.DataFrame = lff.collect(engine="streaming")
     download_disabled, download_text, download_title = get_button_properties(dff.height)
-
     data = dff.to_dicts()
     return data, download_disabled, download_text, download_title
 
@@ -412,7 +408,12 @@ def download_acheteur_data(
     prevent_initial_call=True,
 )
 def download_filtered_acheteur_data(
-    data, n_clicks, acheteur_nom, filter_query, sort_by, hidden_columns: list = None
+    data,
+    n_clicks,
+    acheteur_nom,
+    filter_query,
+    sort_by,
+    hidden_columns: list | None = None,
 ):
     lff: pl.LazyFrame = pl.LazyFrame(
         data
@@ -457,22 +458,23 @@ clientside_callback(
 )
 def update_hidden_columns_from_checkboxes(selected_columns):
     if selected_columns:
-        selected_columns = [columns[i] for i in selected_columns]
-        hidden_columns = [col for col in columns if col not in selected_columns]
+        selected_columns = [COLUMNS[i] for i in selected_columns]
+        hidden_columns = [col for col in COLUMNS if col not in selected_columns]
         return hidden_columns
     else:
         return []
 
 
 @callback(
-    Output("acheteur_datatable", "hidden_columns", allow_duplicate=True),
+    Output("acheteur_datatable", "hidden_columns"),
     Input(
         "acheteur-hidden-columns",
         "data",
     ),
-    prevent_initial_call=True,
 )
 def store_hidden_columns(hidden_columns):
+    if hidden_columns is None:
+        hidden_columns = get_default_hidden_columns("acheteur")
     return hidden_columns
 
 
@@ -485,7 +487,7 @@ def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
     hidden_cols = hidden_cols or get_default_hidden_columns("acheteur")
 
     # Show all columns that are NOT hidden
-    visible_cols = [columns.index(col) for col in columns if col not in hidden_cols]
+    visible_cols = [COLUMNS.index(col) for col in COLUMNS if col not in hidden_cols]
     return visible_cols
 
 

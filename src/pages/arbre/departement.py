@@ -1,17 +1,17 @@
-import polars as pl
 from dash import Input, Output, callback, dcc, html, register_page
 
-from src.utils import departements, df_acheteurs_departement, df_titulaires_departement
+from src.db import get_cursor
+from src.utils.data import DEPARTEMENTS
 
-name = "Département"
+NAME = "Département"
 
 
 def get_title(code):
-    return f"Marchés publics de {departements[code]['departement']} | decp.info"
+    return f"Marchés publics de {DEPARTEMENTS[code]['departement']} | decp.info"
 
 
 def get_description(code):
-    return f"Marchés publics passés dans le département {departements[code]['departement']} | decp.info"
+    return f"Marchés publics passés dans le département {DEPARTEMENTS[code]['departement']} | decp.info"
 
 
 register_page(
@@ -20,7 +20,7 @@ register_page(
     title=get_title,
     description=get_description,
     order=50,
-    name=name,
+    name=NAME,
 )
 
 layout = html.Div(
@@ -39,29 +39,42 @@ def departement_marches(url):
     departement = url.split("/")[-1]
 
     def make_link_list(org_type) -> list:
-        link_list = []
-        if org_type == "acheteur":
-            df = df_acheteurs_departement
-        elif org_type == "titulaire":
-            df = df_titulaires_departement
-        else:
+        table = (
+            "acheteurs_departement"
+            if org_type == "acheteur"
+            else "titulaires_departement"
+            if org_type == "titulaire"
+            else None
+        )
+        if table is None:
             raise ValueError
+        col_prefix = org_type
+        rows = (
+            get_cursor()
+            .execute(
+                f"SELECT {col_prefix}_id, {col_prefix}_nom "
+                f"FROM {table} "
+                f"WHERE {col_prefix}_departement_code = ? "
+                f"ORDER BY {col_prefix}_nom",
+                [departement],
+            )
+            .fetchall()
+        )
 
-        df = df.filter(pl.col(f"{org_type}_departement_code") == departement)
-
-        for row in df.iter_rows(named=True):
+        link_list = []
+        for org_id, org_nom in rows:
             li = html.Li(
                 [
                     dcc.Link(
-                        row[f"{org_type}_nom"],
-                        href=url + f"/{org_type}/{row[f'{org_type}_id']}",
-                        title=f"Marchés publics de {row[f'{org_type}_nom']}",
+                        org_nom,
+                        href=url + f"/{org_type}/{org_id}",
+                        title=f"Marchés publics de {org_nom}",
                     ),
                     " ",
                     dcc.Link(
                         "(page dédiée)",
-                        href=f"/{org_type}s/{row[f'{org_type}_id']}",
-                        title=f"Page dédiée aux marchés publics de {row[f'{org_type}_nom']}",
+                        href=f"/{org_type}s/{org_id}",
+                        title=f"Page dédiée aux marchés publics de {org_nom}",
                     ),
                 ]
             )

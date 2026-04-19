@@ -15,6 +15,7 @@ from dash import (
     register_page,
 )
 
+from src.db import query_marches, schema
 from src.figures import (
     DataTable,
     get_distance_histogram,
@@ -22,24 +23,21 @@ from src.figures import (
     make_column_picker,
     point_on_map,
 )
-from src.utils import (
-    columns,
-    df,
-    df_titulaires,
+from src.utils.data import DF_TITULAIRES, get_annuaire_data, get_departement_region
+from src.utils.frontend import get_button_properties
+from src.utils.seo import META_CONTENT
+from src.utils.table import (
+    COLUMNS,
     filter_table_data,
     format_number,
-    get_annuaire_data,
-    get_button_properties,
     get_default_hidden_columns,
-    get_departement_region,
-    meta_content,
     prepare_table_data,
     sort_table_data,
 )
 
 
 def get_title(titulaire_id: str = None) -> str:
-    titulaire_nom = df_titulaires.filter(pl.col("titulaire_id") == titulaire_id).select(
+    titulaire_nom = DF_TITULAIRES.filter(pl.col("titulaire_id") == titulaire_id).select(
         "titulaire_nom"
     )
     if titulaire_nom.height > 0:
@@ -53,11 +51,11 @@ register_page(
     title=get_title,
     name="Titulaire",
     description="Consultez les marchés publics remportés par ce titulaire.",
-    image_url=meta_content["image_url"],
+    image_url=META_CONTENT["image_url"],
     order=5,
 )
 
-datatable = html.Div(
+DATATABLE = html.Div(
     className="marches_table",
     children=DataTable(
         dtid="titulaire_datatable",
@@ -69,7 +67,7 @@ datatable = html.Div(
         sort_action="custom",
         page_size=10,
         hidden_columns=[],
-        columns=[{"id": col, "name": col} for col in df.columns],
+        columns=[{"id": col, "name": col} for col in schema.names()],
     ),
 )
 
@@ -239,7 +237,7 @@ layout = [
                         scrollable=True,
                         size="xl",
                     ),
-                    datatable,
+                    DATATABLE,
                 ],
             ),
         ],
@@ -339,21 +337,18 @@ def update_titulaire_stats(data):
 )
 def get_titulaire_marches_data(url, titulaire_year: str) -> tuple:
     titulaire_siret = url.split("/")[-1]
-    lff = df.lazy()
-    lff = lff.filter(
-        (pl.col("titulaire_id") == titulaire_siret)
-        & (pl.col("titulaire_typeIdentifiant") == "SIRET")
-    )
+    lff = query_marches(
+        "titulaire_id = ? AND titulaire_typeIdentifiant = 'SIRET'",
+        (titulaire_siret,),
+    ).lazy()
     if titulaire_year and titulaire_year != "Toutes les années":
         lff = lff.filter(
             pl.col("dateNotification").cast(pl.String).str.starts_with(titulaire_year)
         )
     lff = lff.sort(["dateNotification", "uid"], descending=True, nulls_last=True)
     lff = lff.fill_null("")
-
     dff: pl.DataFrame = lff.collect(engine="streaming")
     download_disabled, download_text, download_title = get_button_properties(dff.height)
-
     data = dff.to_dicts()
     return data, download_disabled, download_text, download_title
 
@@ -479,22 +474,23 @@ clientside_callback(
 )
 def update_hidden_columns_from_checkboxes(selected_columns):
     if selected_columns:
-        selected_columns = [columns[i] for i in selected_columns]
-        hidden_columns = [col for col in columns if col not in selected_columns]
+        selected_columns = [COLUMNS[i] for i in selected_columns]
+        hidden_columns = [col for col in COLUMNS if col not in selected_columns]
         return hidden_columns
     else:
         return []
 
 
 @callback(
-    Output("titulaire_datatable", "hidden_columns", allow_duplicate=True),
+    Output("titulaire_datatable", "hidden_columns"),
     Input(
         "titulaire-hidden-columns",
         "data",
     ),
-    prevent_initial_call=True,
 )
 def store_hidden_columns(hidden_columns):
+    if hidden_columns is None:
+        hidden_columns = get_default_hidden_columns("titulaire")
     return hidden_columns
 
 
@@ -507,7 +503,7 @@ def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
     hidden_cols = hidden_cols or get_default_hidden_columns("titulaire")
 
     # Show all columns that are NOT hidden
-    visible_cols = [columns.index(col) for col in columns if col not in hidden_cols]
+    visible_cols = [COLUMNS.index(col) for col in COLUMNS if col not in hidden_cols]
     return visible_cols
 
 

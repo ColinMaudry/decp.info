@@ -3,5 +3,11 @@
 __pycache__
 .idea
 .venv
+.worktrees
 build
 .env
+
+# DuckDB runtime artifacts (regenerated from decp_prod.parquet at startup)
+**/decp.duckdb
+**/decp.duckdb.tmp
+**/decp.duckdb.lock

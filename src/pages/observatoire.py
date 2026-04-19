@@ -16,6 +16,8 @@ from dash import (
     register_page,
 )
 
+from src.cache import cache
+from src.db import query_marches, schema
 from src.figures import (
     DataTable,
     get_barchart_sources,
@@ -28,50 +30,47 @@ from src.figures import (
     make_column_picker,
     make_donut,
 )
-from src.utils import (
-    columns,
-    departements,
-    df,
-    df_acheteurs,
-    df_titulaires,
-    get_default_hidden_columns,
-    get_enum_values_as_dict,
-    logger,
-    meta_content,
+from src.utils import logger
+from src.utils.data import (
+    DEPARTEMENTS,
+    DF_ACHETEURS,
+    DF_TITULAIRES,
     prepare_dashboard_data,
-    prepare_table_data,
 )
+from src.utils.frontend import get_enum_values_as_dict
+from src.utils.seo import META_CONTENT
+from src.utils.table import COLUMNS, get_default_hidden_columns, prepare_table_data
 
-name = "Observatoire"
+NAME = "Observatoire"
 
 register_page(
     __name__,
     path="/observatoire",
     title="Observatoire | decp.info",
-    name=name,
+    name=NAME,
     description="Visualisez l'état de la publication des données essentielles des marchés publics en France.",
-    image_url=meta_content["image_url"],
+    image_url=META_CONTENT["image_url"],
     order=3,
 )
-options_years = []
+OPTIONS_YEARS = []
 for year in reversed(range(2017, datetime.now().year + 1)):
     option_year = {
         "label": str(year),
         "value": year,
     }
-    options_years.append(option_year)
+    OPTIONS_YEARS.append(option_year)
 
-options_departements = []
-for code in departements.keys():
+OPTIONS_DEPARTEMENTS = []
+for code in DEPARTEMENTS.keys():
     departement = {
-        "label": f"{departements[code]['departement']} ({code})",
+        "label": f"{DEPARTEMENTS[code]['departement']} ({code})",
         "value": code,
     }
-    options_departements.append(departement)
+    OPTIONS_DEPARTEMENTS.append(departement)
 
 OBSERVATOIRE_COLUMNS = [
     col
-    for col in df.columns
+    for col in schema.names()
     if col.startswith("acheteur")
     or col.startswith("titulaire")
     or col
@@ -123,7 +122,7 @@ Alors, on fait comment ?
     html.Div(
         className="container-fluid",
         children=[
-            html.H2(children=[name], id="page_title"),
+            html.H2(children=[NAME], id="page_title"),
             dcc.Loading(
                 overlay_style={"visibility": "visible", "filter": "blur(2px)"},
                 id="loading-statistques",
@@ -141,7 +140,7 @@ Alors, on fait comment ?
                                         dbc.Col(
                                             dcc.Dropdown(
                                                 id="dashboard_year",
-                                                options=options_years,
+                                                options=OPTIONS_YEARS,
                                                 placeholder="12 derniers mois",
                                                 persistence=True,
                                                 persistence_type="local",
@@ -181,7 +180,7 @@ Alors, on fait comment ?
                                                 searchable=True,
                                                 multi=True,
                                                 placeholder="Département",
-                                                options=options_departements,
+                                                options=OPTIONS_DEPARTEMENTS,
                                                 persistence=True,
                                                 persistence_type="local",
                                             ),
@@ -220,7 +219,7 @@ Alors, on fait comment ?
                                                 searchable=True,
                                                 multi=True,
                                                 placeholder="Département",
-                                                options=options_departements,
+                                                options=OPTIONS_DEPARTEMENTS,
                                                 persistence=True,
                                                 persistence_type="local",
                                             ),
@@ -590,7 +589,6 @@ def sync_observatoire_share_url(*args):
     href = args[-1]
 
     if not href:
-        print("no update")
         return no_update, no_update
 
     base_url = href.split("?")[0]
@@ -607,7 +605,6 @@ def sync_observatoire_share_url(*args):
 
     query_string = urllib.parse.urlencode(params)
     full_url = f"{base_url}?{query_string}" if query_string else base_url
-    print("query", query_string)
 
     if params:
         copy_button = dcc.Clipboard(
@@ -650,29 +647,25 @@ def show_confirmation(n_clicks):
     return no_update
 
 
-@callback(
-    Output("cards", "children"),
-    Output("observatoire-filters", "data"),
-    *[Input(fp[0], "value") for fp in FILTER_PARAMS],
-)
-def udpate_dashboard_cards(*filter_values):
-    lff: pl.LazyFrame = df.lazy()
+def _normalize_filter_params(filter_params: dict) -> tuple:
+    """Produce a deterministic, hashable key for caching."""
+    return tuple(
+        sorted(
+            (k, tuple(v) if isinstance(v, list) else v)
+            for k, v in filter_params.items()
+        )
+    )
 
-    # Filtrage des données
-    filter_params = {}
-    for (input_id, url_key, is_multi, default), value in zip(
-        FILTER_PARAMS, filter_values
-    ):
-        filter_params[input_id] = value
 
-    print(filter_params)
+@cache.memoize()
+def _compute_dashboard_children(cache_key: tuple):
+    logger.debug("Cache miss — computing dashboard")
+    filter_params = {k: (list(v) if isinstance(v, tuple) else v) for k, v in cache_key}
 
+    lff: pl.LazyFrame = query_marches().lazy()
     lff = prepare_dashboard_data(lff=lff, **filter_params)
 
-    # Génération des métriques
     dff = lff.collect(engine="streaming")
-
-    logger.debug("Filter data: " + str(dff.height))
 
     df_per_uid = (
         dff.select("uid", "montant").group_by("uid").agg(pl.col("montant").first())
@@ -680,9 +673,7 @@ def udpate_dashboard_cards(*filter_values):
     nb_marches = df_per_uid.height
 
     cards = []
-
     card_summary_table = get_dashboard_summary_table(dff, df_per_uid, nb_marches)
-
     cards.append(make_card(title="Résumé", paragraphs=card_summary_table))
 
     donut_acheteur_categorie, nb_acheteur_categories = make_donut(
@@ -741,10 +732,9 @@ def udpate_dashboard_cards(*filter_values):
     )
     cards.append(make_card(title="Top titulaires", fig=top_titulaires, lg=12, xl=8))
 
-    geographic_maps: list[dbc.Col] = get_geographic_maps(dff)
+    geographic_maps: list[dbc.Col] | None = get_geographic_maps(dff)
 
     other_cards = []
-
     sources_barchart = get_barchart_sources(lff, type_date="dateNotification")
     other_cards.append(
         make_card(
@@ -767,7 +757,25 @@ def udpate_dashboard_cards(*filter_values):
         )
     )
 
-    return dbc.Row(children=cards + geographic_maps + other_cards), filter_params
+    return cards + geographic_maps + other_cards
+
+
+@callback(
+    Output("cards", "children"),
+    Output("observatoire-filters", "data"),
+    *[Input(fp[0], "value") for fp in FILTER_PARAMS],
+)
+def update_dashboard_cards(*filter_values):
+    filter_params = {}
+    for (input_id, _url_key, _is_multi, _default), value in zip(
+        FILTER_PARAMS, filter_values
+    ):
+        filter_params[input_id] = value
+
+    cache_key = _normalize_filter_params(filter_params)
+    children = _compute_dashboard_children(cache_key)
+
+    return dbc.Row(children=children), filter_params
 
 
 @callback(
@@ -778,7 +786,7 @@ def udpate_dashboard_cards(*filter_values):
     prevent_initial_call=True,
 )
 def download_observatoire(_n_clicks, filter_params, hidden_columns):
-    lff = prepare_dashboard_data(lff=df.lazy(), **(filter_params or {}))
+    lff = prepare_dashboard_data(lff=query_marches().lazy(), **(filter_params or {}))
 
     if hidden_columns:
         lff = lff.drop(hidden_columns)
@@ -812,20 +820,20 @@ def add_organization_name_in_title(acheteur_id, titulaire_id):
         return match[nom_col].item(0) if match.height >= 1 else None
 
     if acheteur_id and len(acheteur_id) == 14:
-        if nom := lookup_nom(df_acheteurs, "acheteur_id", "acheteur_nom", acheteur_id):
+        if nom := lookup_nom(DF_ACHETEURS, "acheteur_id", "acheteur_nom", acheteur_id):
             return [
-                name,
+                NAME,
                 html.Small(nom, className="text-muted d-block fw-normal fs-5"),
             ]
     elif titulaire_id and len(titulaire_id) == 14:
         if nom := lookup_nom(
-            df_titulaires, "titulaire_id", "titulaire_nom", titulaire_id
+            DF_TITULAIRES, "titulaire_id", "titulaire_nom", titulaire_id
         ):
             return [
-                name,
+                NAME,
                 html.Small(nom, className="text-muted d-block fw-normal fs-5"),
             ]
-    return name
+    return NAME
 
 
 @callback(
@@ -869,7 +877,7 @@ def populate_preview_table(
     if not is_open:
         return (no_update,) * 9
 
-    lff = prepare_dashboard_data(lff=df.lazy(), **(filter_params or {}))
+    lff = prepare_dashboard_data(lff=query_marches().lazy(), **(filter_params or {}))
 
     return prepare_table_data(
         lff,
@@ -889,8 +897,8 @@ def populate_preview_table(
 )
 def update_hidden_columns_from_checkboxes(selected_columns):
     if selected_columns:
-        selected_columns = [columns[i] for i in selected_columns]
-        hidden_columns = [col for col in columns if col not in selected_columns]
+        selected_columns = [COLUMNS[i] for i in selected_columns]
+        hidden_columns = [col for col in COLUMNS if col not in selected_columns]
         return hidden_columns
     else:
         return []
@@ -918,7 +926,7 @@ def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
     hidden_cols = hidden_cols or get_default_hidden_columns("tableau")
 
     # Show all columns that are NOT hidden
-    visible_cols = [columns.index(col) for col in columns if col not in hidden_cols]
+    visible_cols = [COLUMNS.index(col) for col in COLUMNS if col not in hidden_cols]
     return visible_cols
 
 

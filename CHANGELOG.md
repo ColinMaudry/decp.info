@@ -1,3 +1,11 @@
+#### 2.7.2 (19 avril 2026)
+
+- Chargement des données depuis une base DuckDB plutôt qu'en mémoire (plus de stabilité) ([#71](https://github.com/ColinMaudry/decp.info/issues/71))
+- Mise en cache des vue sur l'observatoire pour un chargement plus rapide (remise à zéro quotidienne)
+- Correction de bug : la liste de colonnes par défaut est bien appliquée plutôt qu'afficher toutes les colonnes
+- Quelques corrections de bugs d'affichage
+- Refactorisation des fonctions utilitaires (`utils.py` approchait des 1 000 lignes)
+
 #### 2.7.1 (23 mars 2026)
 
 - Correction du partage de données filtrées entre dashboard et vue des données
@@ -182,7 +190,7 @@
 
 ### 1.0.0
 
-- publication sur https://decp.info
+- publication sur <https://decp.info>
 - ajout d'une vue équivalente au format DECP réglementaire
 - personnalisation de datasette
 - script de conversion quotidien basé sur [dataflows](https://github.com/datahq/dataflows)

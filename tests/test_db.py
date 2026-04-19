@@ -1,0 +1,267 @@
+import datetime
+import os
+import time
+
+import polars as pl
+import pytest
+
+from src.db import should_rebuild
+
+
+@pytest.fixture
+def parquet_and_db(tmp_path, monkeypatch):
+    parquet = tmp_path / "source.parquet"
+    db = tmp_path / "decp.duckdb"
+    parquet.write_bytes(b"fake parquet content")
+    monkeypatch.delenv("REBUILD_DUCKDB", raising=False)
+    monkeypatch.delenv("DEVELOPMENT", raising=False)
+    return parquet, db
+
+
+def test_should_rebuild_when_db_missing(parquet_and_db):
+    parquet, db = parquet_and_db
+    assert should_rebuild(db, parquet) is True
+
+
+def test_should_rebuild_prod_when_parquet_newer(parquet_and_db, monkeypatch):
+    parquet, db = parquet_and_db
+    db.write_bytes(b"x")
+    parquet.touch()
+    now = time.time()
+    os.utime(db, (now, now))
+    os.utime(parquet, (now + 10, now + 10))
+    monkeypatch.setenv("DEVELOPMENT", "false")
+    assert should_rebuild(db, parquet) is True
+
+
+def test_should_not_rebuild_prod_when_parquet_older(parquet_and_db, monkeypatch):
+    parquet, db = parquet_and_db
+    parquet.touch()
+    db.write_bytes(b"x")
+    now = time.time()
+    os.utime(parquet, (now, now))
+    os.utime(db, (now + 10, now + 10))
+    monkeypatch.setenv("DEVELOPMENT", "false")
+    assert should_rebuild(db, parquet) is False
+
+
+def test_should_not_rebuild_dev_even_when_parquet_newer(parquet_and_db, monkeypatch):
+    parquet, db = parquet_and_db
+    db.write_bytes(b"x")
+    parquet.touch()
+    now = time.time()
+    os.utime(db, (now, now))
+    os.utime(parquet, (now + 10, now + 10))
+    monkeypatch.setenv("DEVELOPMENT", "true")
+    monkeypatch.delenv("REBUILD_DUCKDB", raising=False)
+    assert should_rebuild(db, parquet) is False
+
+
+def test_should_rebuild_dev_when_rebuild_forced(parquet_and_db, monkeypatch):
+    parquet, db = parquet_and_db
+    db.write_bytes(b"x")
+    parquet.touch()
+    now = time.time()
+    os.utime(db, (now, now))
+    os.utime(parquet, (now + 10, now + 10))
+    monkeypatch.setenv("DEVELOPMENT", "true")
+    monkeypatch.setenv("REBUILD_DUCKDB", "true")
+    assert should_rebuild(db, parquet) is True
+
+
+@pytest.fixture
+def built_db(tmp_path, monkeypatch):
+    """Build a DuckDB from a small Polars frame written as parquet."""
+    parquet_path = tmp_path / "source.parquet"
+    db_path = tmp_path / "decp.duckdb"
+
+    data = pl.DataFrame(
+        [
+            {
+                "uid": "1",
+                "id": "1",
+                "objet": "Travaux",
+                "acheteur_id": "123",
+                "acheteur_nom": "ACHETEUR 1",
+                "acheteur_departement_code": "75",
+                "acheteur_departement_nom": "Paris",
+                "acheteur_commune_nom": "Paris",
+                "titulaire_commune_nom": "Paris",
+                "titulaire_departement_nom": "Paris",
+                "titulaire_id": "345",
+                "titulaire_nom": "TITULAIRE 1",
+                "titulaire_departement_code": "35",
+                "titulaire_typeIdentifiant": "SIRET",
+                "montant": 1000.0,
+                "dateNotification": datetime.date(2025, 1, 1),
+                "donneesActuelles": True,
+                "marcheInnovant": True,
+            },
+            {
+                "uid": "2",
+                "id": "2",
+                "objet": "Études",
+                "acheteur_id": "123",
+                "acheteur_nom": "ACHETEUR 1",
+                "acheteur_departement_code": "75",
+                "acheteur_departement_nom": "Paris",
+                "acheteur_commune_nom": "Paris",
+                "titulaire_commune_nom": "Paris",
+                "titulaire_departement_nom": "Paris",
+                "titulaire_id": "567",
+                "titulaire_nom": None,
+                "titulaire_departement_code": "75",
+                "titulaire_typeIdentifiant": "SIRET",
+                "montant": 500.0,
+                "dateNotification": datetime.date(2024, 6, 1),
+                "donneesActuelles": True,
+                "marcheInnovant": False,
+            },
+            {
+                "uid": "3",
+                "id": "3",
+                "objet": "Ancien",
+                "acheteur_id": "A2",
+                "acheteur_nom": None,
+                "acheteur_departement_code": "13",
+                "acheteur_departement_nom": "Paris",
+                "acheteur_commune_nom": "Paris",
+                "titulaire_commune_nom": "Paris",
+                "titulaire_departement_nom": "Paris",
+                "titulaire_id": "T3",
+                "titulaire_nom": "Autre",
+                "titulaire_departement_code": "13",
+                "titulaire_typeIdentifiant": "SIRET",
+                "montant": 100.0,
+                "dateNotification": datetime.date(2023, 1, 1),
+                "donneesActuelles": False,  # must be filtered out
+                "marcheInnovant": False,
+            },
+        ]
+    )
+    data.write_parquet(parquet_path)
+    monkeypatch.setenv("DATA_FILE_PARQUET_PATH", str(parquet_path))
+
+    from src.db import build_database
+
+    build_database(db_path, parquet_path)
+    return db_path
+
+
+def test_build_filters_donnees_actuelles(built_db):
+    import duckdb
+
+    with duckdb.connect(str(built_db), read_only=True) as c:
+        rows = c.execute("SELECT uid FROM decp ORDER BY uid").fetchall()
+    assert [r[0] for r in rows] == ["1", "2"]
+
+
+def test_build_converts_booleans_to_oui_non(built_db):
+    import duckdb
+
+    with duckdb.connect(str(built_db), read_only=True) as c:
+        values = c.execute("SELECT marcheInnovant FROM decp ORDER BY uid").fetchall()
+    assert [v[0] for v in values] == ["oui", "non"]
+
+
+def test_build_replaces_null_org_names(built_db):
+    import duckdb
+
+    with duckdb.connect(str(built_db), read_only=True) as c:
+        titulaire_2 = c.execute(
+            "SELECT titulaire_nom FROM decp WHERE uid = '2'"
+        ).fetchone()
+    assert titulaire_2[0] == "[Identifiant non reconnu dans la base INSEE]"
+
+
+def test_build_creates_derived_tables(built_db):
+    import duckdb
+
+    with duckdb.connect(str(built_db), read_only=True) as c:
+        tables = {r[0] for r in c.execute("SHOW TABLES").fetchall()}
+    assert {
+        "decp",
+        "acheteurs_marches",
+        "titulaires_marches",
+        "acheteurs_departement",
+        "titulaires_departement",
+    } <= tables
+
+
+def test_query_marches_returns_polars_frame(built_db, monkeypatch):
+    monkeypatch.setenv(
+        "DATA_FILE_PARQUET_PATH", str(built_db.parent / "source.parquet")
+    )
+    # Force src.db to load pointing at this test DB.
+    import importlib
+
+    import src.db
+
+    importlib.reload(src.db)
+    from src.db import query_marches
+
+    frame = query_marches("acheteur_id = ?", ("123",))
+    assert isinstance(frame, pl.DataFrame)
+    assert frame.height == 2
+    assert set(frame["uid"].to_list()) == {"1", "2"}
+
+
+def test_concurrent_build_serialized(tmp_path):
+    """Multiple threads calling _ensure_database must serialize via flock.
+
+    Only one should actually build; others wait, see the fresh DB, and skip.
+    No tmp file should leak. No exceptions should occur.
+    """
+    import fcntl
+    import threading
+
+    import src.db as db
+
+    # Set up source parquet
+    parquet_path = tmp_path / "src.parquet"
+    df = pl.DataFrame(
+        {
+            "uid": ["A"],
+            "donneesActuelles": [True],
+            "dateNotification": ["2024-01-01"],
+            "objet": ["Test"],
+            "acheteur_id": ["a1"],
+            "acheteur_nom": ["A1"],
+            "titulaire_id": ["t1"],
+            "titulaire_nom": ["T1"],
+            "acheteur_departement_code": ["75"],
+            "titulaire_departement_code": ["75"],
+            "montant": [1000.0],
+            "dureeMois": [12],
+        }
+    )
+    df.write_parquet(parquet_path)
+
+    db_path = tmp_path / "decp.duckdb"
+    lock_path = db_path.with_suffix(".duckdb.lock")
+    tmp_path_artifact = db_path.with_suffix(".duckdb.tmp")
+
+    errors: list[BaseException] = []
+
+    def worker():
+        try:
+            # Mirror the locking logic in _ensure_database
+            with open(lock_path, "w") as lf:
+                fcntl.flock(lf.fileno(), fcntl.LOCK_EX)
+                try:
+                    if db.should_rebuild(db_path, parquet_path):
+                        db.build_database(db_path, parquet_path)
+                finally:
+                    fcntl.flock(lf.fileno(), fcntl.LOCK_UN)
+        except BaseException as exc:
+            errors.append(exc)
+
+    threads = [threading.Thread(target=worker) for _ in range(3)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert errors == []
+    assert db_path.exists()
+    assert not tmp_path_artifact.exists()

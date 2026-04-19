@@ -1,5 +1,5 @@
-import logging
 import os
+from shutil import rmtree
 
 import dash_bootstrap_components as dbc
 import tomllib
@@ -7,15 +7,15 @@ from dash import Dash, Input, Output, State, dcc, html, page_container, page_reg
 from dotenv import load_dotenv
 from flask import Response
 
+from src.cache import cache
+from src.utils import DEVELOPMENT
+
 load_dotenv()
 
 # if os.getenv("PYTEST_CURRENT_TEST"):
 #     os.environ["DATA_FILE_PARQUET_PATH"]
 
-
-development = os.getenv("DEVELOPMENT").lower() == "true"
-
-meta_tags = [
+META_TAGS = [
     {"name": "viewport", "content": "width=device-width, initial-scale=1"},
     {
         "name": "keywords",
@@ -23,20 +23,29 @@ meta_tags = [
     },
 ]
 
-if development:
-    meta_tags.append({"name": "robots", "content": "noindex"})
+if DEVELOPMENT:
+    META_TAGS.append({"name": "robots", "content": "noindex"})
 
 app: Dash = Dash(
     title="decp.info",
     use_pages=True,
     compress=True,
-    meta_tags=meta_tags,
+    meta_tags=META_TAGS,
 )
 
-# COSMO (belle font, blue),
-# UNITED (rouge, ubuntu font),
-# LUMEN (gros séparateur, blue clair),
-# SIMPLEX (rouge, séparateur)
+rmtree(os.getenv("CACHE_DIR", "/tmp/decp-cache"))
+
+cache.init_app(
+    app.server,
+    config={
+        "CACHE_TYPE": "FileSystemCache",
+        "CACHE_DIR": os.getenv("CACHE_DIR", "/tmp/decp-cache"),
+        "CACHE_DEFAULT_TIMEOUT": int(
+            os.getenv("CACHE_DEFAULT_TIMEOUT", 3600 * 24)
+        ),  # 24h par défaut
+        "CACHE_THRESHOLD": 300,
+    },
+)
 
 
 # robots.txt
@@ -66,13 +75,6 @@ def sitemap():
     xml += "</urlset>"
     return Response(xml, mimetype="text/xml")
 
-
-logger = logging.getLogger("decp.info")
-logging.basicConfig(
-    format="%(asctime)s %(levelname)-8s %(message)s",
-    level=logging.INFO,
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
 
 with open("./pyproject.toml", "rb") as f:
     pyproject = tomllib.load(f)
