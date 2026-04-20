@@ -64,6 +64,18 @@ cache.init_app(
 
 init_auth(app.server)
 
+# Exempter les routes internes de Dash de la protection CSRF.
+# Dash enregistre ses routes directement sur le serveur Flask (pas via blueprint),
+# donc on itère la url_map après init_auth pour cibler les bons endpoints.
+from src.auth.setup import _csrf as _auth_csrf  # noqa: E402
+
+if _auth_csrf is not None:
+    for _rule in app.server.url_map.iter_rules():
+        if _rule.rule.startswith("/_dash") or _rule.rule.startswith("/_reload"):
+            _vf = app.server.view_functions.get(_rule.endpoint)
+            if _vf is not None:
+                _auth_csrf.exempt(_vf)
+
 
 # robots.txt
 @app.server.route("/robots.txt")
