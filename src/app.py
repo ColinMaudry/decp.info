@@ -7,6 +7,7 @@ from dash import Dash, Input, Output, State, dcc, html, page_container, page_reg
 from dotenv import load_dotenv
 from flask import Response
 
+from src.auth.setup import init_auth
 from src.utils import DEVELOPMENT
 from src.utils.cache import cache
 
@@ -49,6 +50,8 @@ cache.init_app(
         "CACHE_THRESHOLD": 300,
     },
 )
+
+init_auth(app.server)
 
 
 # robots.txt
