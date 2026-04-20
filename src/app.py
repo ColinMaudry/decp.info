@@ -3,9 +3,20 @@ from shutil import rmtree
 
 import dash_bootstrap_components as dbc
 import tomllib
-from dash import Dash, Input, Output, State, dcc, html, page_container, page_registry
+from dash import (
+    Dash,
+    Input,
+    Output,
+    State,
+    callback,
+    dcc,
+    html,
+    page_container,
+    page_registry,
+)
 from dotenv import load_dotenv
 from flask import Response
+from flask_login import current_user
 
 from src.auth.setup import init_auth
 from src.utils import DEVELOPMENT
@@ -169,7 +180,8 @@ navbar = dbc.Navbar(
                         for page in page_registry.values()
                         if page["name"]
                         in ["Recherche", "À propos", "Tableau", "Observatoire"]
-                    ],
+                    ]
+                    + [html.Div(id="auth-nav-slot")],
                     className="ms-auto",
                     navbar=True,
                 ),
@@ -206,3 +218,55 @@ def toggle_navbar_collapse(n, is_open):
     if n:
         return not is_open
     return is_open
+
+
+@callback(
+    Output("auth-nav-slot", "children"),
+    Input("auth-nav-slot", "id"),
+)
+def _auth_nav(_):
+    if current_user.is_authenticated:
+        email = current_user.email
+        display = email if len(email) <= 30 else email[:27] + "..."
+        return dbc.DropdownMenu(
+            label=display,
+            nav=True,
+            in_navbar=True,
+            children=[
+                dbc.DropdownMenuItem("Mon compte", href="/compte"),
+                dbc.DropdownMenuItem(
+                    html.Form(
+                        method="POST",
+                        action="/auth/logout",
+                        style={"display": "inline"},
+                        children=[
+                            dcc.Input(
+                                type="hidden",
+                                id="csrf-navbar-logout",
+                                name="csrf_token",
+                            ),
+                            html.Button(
+                                "D\u00e9connexion",
+                                type="submit",
+                                className="btn btn-link p-0",
+                                style={
+                                    "textDecoration": "none",
+                                    "color": "inherit",
+                                },
+                            ),
+                        ],
+                    )
+                ),
+            ],
+        )
+    return dbc.NavItem(dbc.NavLink("Connexion", href="/connexion"))
+
+
+@callback(
+    Output("csrf-navbar-logout", "value"),
+    Input("csrf-navbar-logout", "id"),
+)
+def _csrf_navbar_logout(_):
+    from flask_wtf.csrf import generate_csrf
+
+    return generate_csrf()
