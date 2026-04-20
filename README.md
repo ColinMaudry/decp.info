@@ -1,6 +1,6 @@
 # decp.info
 
-> v2.7.2
+> v2.7.3
 > Outil d'exploration et de téléchargement des données essentielles de la commande publique.
 
 => [decp.info](https://decp.info)
@@ -8,19 +8,15 @@
 ## Installation et lancement
 
 ```shell
-python -m venv .venv
-source .venv/bin/activate
-pip install .
-
 # Copie et personnalisation du .env
 cp template.env .env
 nano .env
 
 # Pour la production
-gunicorn app:server
+uv run gunicorn app:server
 
 # Pour avoir le debuggage et le hot reload
-python run.py
+uv run run.py
 ```
 
 ## Déploiement

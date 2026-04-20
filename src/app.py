@@ -7,8 +7,8 @@ from dash import Dash, Input, Output, State, dcc, html, page_container, page_reg
 from dotenv import load_dotenv
 from flask import Response
 
-from src.cache import cache
 from src.utils import DEVELOPMENT
+from src.utils.cache import cache
 
 load_dotenv()
 

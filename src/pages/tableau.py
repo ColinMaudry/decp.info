@@ -31,6 +31,7 @@ from src.utils.table import (
     prepare_table_data,
     sort_table_data,
 )
+from src.utils.tracking import track_search
 
 update_date_timestamp = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
 update_date = datetime.fromtimestamp(update_date_timestamp).strftime("%d/%m/%Y")
@@ -314,7 +315,7 @@ def update_table(href, page_current, page_size, filter_query, sort_by, data_time
     State("tableau_datatable", "hidden_columns"),
     prevent_initial_call=True,
 )
-def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
+def download_data(n_clicks, filter_query, sort_by, hidden_columns: list | None = None):
     lff: pl.LazyFrame = query_marches().lazy()
 
     # Les colonnes masquées sont supprimées
@@ -322,7 +323,8 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list = None):
         lff = lff.drop(hidden_columns)
 
     if filter_query:
-        lff = filter_table_data(lff, filter_query, "tab download")
+        track_search(filter_query, "tab download")
+        lff = filter_table_data(lff, filter_query)
 
     if sort_by and len(sort_by) > 0:
         lff = sort_table_data(lff, sort_by)

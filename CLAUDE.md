@@ -11,8 +11,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Setup
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install ".[dev]"
 cp template.env .env   # then customize .env
 ```
 
@@ -25,14 +23,14 @@ uv run run.py         # starts Dash with debug=True and hot reload
 ### Production
 
 ```bash
-gunicorn app:server
+uv run gunicorn app:server
 ```
 
 ### Tests
 
 ```bash
-uv run pytest                  # run all tests (Selenium-based integration tests)
-uv run pytest tests/test_main.py::test_001_logo_and_search   # run a single test
+rtk uv run pytest                  # run all tests (Selenium-based integration tests)
+rtk uv run pytest tests/test_main.py::test_001_logo_and_search   # run a single test
 ```
 
 Tests require a running Chrome/Chromium browser. They use `DashComposite` from `dash[testing]` with Selenium WebDriver.

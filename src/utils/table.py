@@ -7,6 +7,7 @@ from polars import selectors as cs
 
 from src.db import query_marches, schema
 from src.utils import logger
+from src.utils.cache import cache
 from src.utils.data import DATA_SCHEMA
 from src.utils.frontend import get_button_properties
 from src.utils.tracking import track_search
@@ -146,6 +147,12 @@ def dates_to_strings(lff: pl.LazyFrame, column: str) -> pl.LazyFrame:
     return lff
 
 
+def normalize_sort_by(sort_by) -> tuple:
+    if not sort_by:
+        return ()
+    return tuple((entry["column_id"], entry["direction"]) for entry in sort_by)
+
+
 def format_number(number) -> str:
     number = "{:,}".format(number).replace(",", " ")
     return number
@@ -160,7 +167,7 @@ def unformat_montant(number: str) -> float:
 
 
 def format_values(dff: pl.DataFrame) -> pl.DataFrame:
-    def format_montant(expr, scale=None):
+    def format_montant(expr):
         # https://stackoverflow.com/a/78636786
         expr = expr.cast(pl.String)
         expr = expr.str.splitn(".", 2)
@@ -206,14 +213,13 @@ def format_values(dff: pl.DataFrame) -> pl.DataFrame:
     return dff
 
 
-def filter_table_data(
-    lff: pl.LazyFrame, filter_query: str, filter_source: str
-) -> pl.LazyFrame:
+def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
     _schema = lff.collect_schema()
-    track_search(filter_query, filter_source)
     filtering_expressions = filter_query.split(" && ")
     for filter_part in filtering_expressions:
         col_name, operator, filter_value = split_filter_part(filter_part)
+        if not isinstance(col_name, str) or not isinstance(filter_value, str):
+            continue
         col_type = str(_schema[col_name])
         # logger.debug("filter_value:", filter_value)
         # logger.debug("filter_value_type:", type(filter_value))
@@ -246,7 +252,7 @@ def filter_table_data(
             elif operator == "<=":
                 lff = lff.filter(pl.col(col_name) <= filter_value)
             elif operator == "contains":
-                if col_type in ["String", "Date"]:
+                if col_type in ["String", "Date"] and isinstance(filter_value, str):
                     filter_value = filter_value.strip('"')
                     if filter_value.endswith("*"):
                         lff = lff.filter(
@@ -284,7 +290,9 @@ def sort_table_data(lff: pl.LazyFrame, sort_by: list) -> pl.LazyFrame:
 
 
 def setup_table_columns(
-    dff, hideable: bool = True, exclude: list = None, new_columns: list = None
+    dff,
+    hideable: bool = True,
+    exclude: list | None = None,
 ) -> tuple:
     # Liste finale de colonnes
     markdown_exceptions = ["montant", "titulaire_distance", "distance", "dureeMois"]
@@ -368,6 +376,40 @@ def get_default_hidden_columns(page):
     return hidden_columns
 
 
+@cache.memoize()
+def _load_filter_sort_postprocess(filter_query, sort_by_key):
+    logger.debug(
+        f"Cache miss — recomputing for filter={filter_query!r} sort={sort_by_key!r}"
+    )
+
+    lff: pl.LazyFrame = query_marches().lazy()
+
+    if filter_query:
+        lff = filter_table_data(lff, filter_query)
+
+    if sort_by_key:
+        sort_by = [
+            {"column_id": col, "direction": direction} for col, direction in sort_by_key
+        ]
+        lff = sort_table_data(lff, sort_by)
+
+    dff = table_postprocess(lff)
+
+    return dff
+
+
+def table_postprocess(lff) -> pl.DataFrame:
+    lff = lff.cast(pl.String)
+    lff = lff.fill_null("")
+    dff: pl.DataFrame = lff.collect()
+    dff = add_links(dff)
+    if "sourceFile" in dff.columns:
+        dff = add_resource_link(dff)
+    if dff.height > 0:
+        dff = format_values(dff)
+    return dff
+
+
 def prepare_table_data(
     data, data_timestamp, filter_query, page_current, page_size, sort_by, source_table
 ):
@@ -383,66 +425,53 @@ def prepare_table_data(
     :param source_table:
     :return:
     """
+    logger.debug(" + + + + + + + + + + + + + + + + + + ")
 
-    if os.getenv("DEVELOPMENT").lower() == "true":
-        logger.debug(" + + + + + + + + + + + + + + + + + + ")
-
-    trigger_cleanup = no_update
-
-    # Récupération des données
-    if isinstance(data, list):
-        lff: pl.LazyFrame = pl.LazyFrame(data, strict=False, infer_schema_length=5000)
-    elif isinstance(data, pl.LazyFrame):
-        lff = data
-    else:
-        lff: pl.LazyFrame = query_marches().lazy()
-
-    # Application des filtres
     if filter_query:
-        lff = filter_table_data(lff, filter_query, source_table)
-        trigger_cleanup = no_update if source_table == "tableau" else str(uuid.uuid4())
+        track_search(filter_query, source_table)
 
-    # Application des tris
-    if sort_by and len(sort_by) > 0:
-        lff = sort_table_data(lff, sort_by)
+    trigger_cleanup = no_update if source_table == "tableau" else str(uuid.uuid4())
 
-    # Matérialisation des filtres
-    dff: pl.DataFrame = lff.collect()
+    if data is None:
+        sort_by_key = normalize_sort_by(sort_by)
+        dff: pl.DataFrame = _load_filter_sort_postprocess(
+            filter_query=filter_query, sort_by_key=sort_by_key
+        )
+    else:
+        if isinstance(data, list):
+            lff: pl.LazyFrame = pl.LazyFrame(
+                data, strict=False, infer_schema_length=5000
+            )
+        elif isinstance(data, pl.LazyFrame):
+            lff = data
+        else:
+            lff = query_marches().lazy()
+
+        if filter_query:
+            lff = filter_table_data(lff, filter_query)
+
+        if sort_by and len(sort_by) > 0:
+            lff = sort_table_data(lff, sort_by)
+
+        dff: pl.DataFrame = table_postprocess(lff)
+
     height = dff.height
 
     if height > 0:
-        nb_rows = f"{format_number(height)} lignes ({format_number(dff.select('uid').unique().height)} marchés)"
+        nb_rows = (
+            f"{format_number(height)} lignes "
+            f"({format_number(dff.select('uid').unique().height)} marchés)"
+        )
     else:
         nb_rows = "0 lignes (0 marchés)"
 
-    # Pagination des données
     start_row = page_current * page_size
-    # end_row = (page_current + 1) * page_size
     dff = dff.slice(start_row, page_size)
 
-    # Tout devient string
-    dff = dff.cast(pl.String)
-
-    # Remplace les strings null par "", mais pas les numeric null
-    dff = dff.fill_null("")
-
-    # Ajout des liens vers les pages de détails
-    dff = add_links(dff)
-
-    # Ajout des liens vers les fichiers Open Data
-    if "sourceFile" in dff.columns:
-        dff = add_resource_link(dff)
-
-    # Formatage des montants
-    if height > 0:
-        dff = format_values(dff)
-
-    # Récupération des colonnes et tooltip
     table_columns, tooltip = setup_table_columns(dff)
 
     dicts = dff.to_dicts()
 
-    # Propriétés du bouton de téléchargement
     download_disabled, download_text, download_title = get_button_properties(height)
 
     return (

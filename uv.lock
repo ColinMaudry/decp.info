@@ -783,7 +783,7 @@ dependencies = [
     { name = "xlsxwriter" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 dev = [
     { name = "dash", extra = ["testing"] },
     { name = "fastexcel" },
@@ -798,29 +798,32 @@ dev = [
 requires-dist = [
     { name = "dash", specifier = "==3.4.0" },
     { name = "dash", extras = ["compress"] },
-    { name = "dash", extras = ["testing"], marker = "extra == 'dev'" },
     { name = "dash-bootstrap-components" },
     { name = "dash-extensions" },
     { name = "dash-leaflet" },
     { name = "duckdb" },
-    { name = "fastexcel", marker = "extra == 'dev'" },
     { name = "flask-caching" },
     { name = "gunicorn" },
     { name = "httpx" },
     { name = "pandas" },
     { name = "plotly", extras = ["express"] },
     { name = "polars" },
-    { name = "pre-commit", marker = "extra == 'dev'" },
     { name = "pyarrow", specifier = ">=23.0.1" },
-    { name = "pytest", marker = "extra == 'dev'" },
-    { name = "pytest-env", marker = "extra == 'dev'" },
     { name = "python-dotenv" },
-    { name = "selenium", marker = "extra == 'dev'" },
     { name = "unidecode" },
-    { name = "webdriver-manager", marker = "extra == 'dev'" },
     { name = "xlsxwriter" },
 ]
-provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "dash", extras = ["testing"] },
+    { name = "fastexcel" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-env" },
+    { name = "selenium" },
+    { name = "webdriver-manager" },
+]
 
 [[package]]
 name = "dill"
