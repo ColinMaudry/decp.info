@@ -1,4 +1,9 @@
-#### 2.7.2 (19 avril 2026)
+##### 2.7.3 (20 avril 2026)
+
+- Mise en cache des vues tableau par ensemble de filtres et de tris
+- Résolution du bug d'écriture du fichier de vérouillage de la base de données
+
+##### 2.7.2 (19 avril 2026)
 
 - Chargement des données depuis une base DuckDB plutôt qu'en mémoire (plus de stabilité) ([#71](https://github.com/ColinMaudry/decp.info/issues/71))
 - Mise en cache des vue sur l'observatoire pour un chargement plus rapide (remise à zéro quotidienne)
@@ -6,7 +11,7 @@
 - Quelques corrections de bugs d'affichage
 - Refactorisation des fonctions utilitaires (`utils.py` approchait des 1 000 lignes)
 
-#### 2.7.1 (23 mars 2026)
+##### 2.7.1 (23 mars 2026)
 
 - Correction du partage de données filtrées entre dashboard et vue des données
 
