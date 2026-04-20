@@ -110,3 +110,64 @@ def update_password_hash(user_id: int, password_hash: str) -> None:
 
 def delete_user(user_id: int) -> None:
     get_conn().execute("DELETE FROM users WHERE id = ?", (user_id,))
+
+
+def create_email_verification_token(
+    token_hash: str, user_id: int, expires_at: str
+) -> None:
+    get_conn().execute(
+        "INSERT INTO email_verification_tokens (token_hash, user_id, expires_at, created_at) "
+        "VALUES (?, ?, ?, ?)",
+        (token_hash, user_id, expires_at, _now()),
+    )
+
+
+def find_email_verification_token(token_hash: str) -> sqlite3.Row | None:
+    return (
+        get_conn()
+        .execute(
+            "SELECT * FROM email_verification_tokens "
+            "WHERE token_hash = ? AND expires_at > ?",
+            (token_hash, _now()),
+        )
+        .fetchone()
+    )
+
+
+def delete_email_verification_tokens_for_user(user_id: int) -> None:
+    get_conn().execute(
+        "DELETE FROM email_verification_tokens WHERE user_id = ?", (user_id,)
+    )
+
+
+def create_password_reset_token(token_hash: str, user_id: int, expires_at: str) -> None:
+    get_conn().execute(
+        "INSERT INTO password_reset_tokens (token_hash, user_id, expires_at, created_at) "
+        "VALUES (?, ?, ?, ?)",
+        (token_hash, user_id, expires_at, _now()),
+    )
+
+
+def find_password_reset_token(token_hash: str) -> sqlite3.Row | None:
+    return (
+        get_conn()
+        .execute(
+            "SELECT * FROM password_reset_tokens "
+            "WHERE token_hash = ? AND expires_at > ?",
+            (token_hash, _now()),
+        )
+        .fetchone()
+    )
+
+
+def delete_password_reset_tokens_for_user(user_id: int) -> None:
+    get_conn().execute(
+        "DELETE FROM password_reset_tokens WHERE user_id = ?", (user_id,)
+    )
+
+
+def purge_expired_tokens() -> None:
+    now = _now()
+    conn = get_conn()
+    conn.execute("DELETE FROM email_verification_tokens WHERE expires_at <= ?", (now,))
+    conn.execute("DELETE FROM password_reset_tokens WHERE expires_at <= ?", (now,))

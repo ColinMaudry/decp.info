@@ -1,11 +1,21 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
 from src.auth.db import (
+    create_email_verification_token,
+    create_password_reset_token,
     create_user,
+    delete_email_verification_tokens_for_user,
+    delete_password_reset_tokens_for_user,
+    delete_user,
+    find_email_verification_token,
+    find_password_reset_token,
     get_conn,
     get_user_by_email,
     get_user_by_id,
     init_schema,
+    purge_expired_tokens,
     set_email_verified,
     update_password_hash,
 )
@@ -89,3 +99,69 @@ def test_update_password_hash(users_db_path):
     uid = create_user("a@b.c", "old")
     update_password_hash(uid, "new")
     assert get_user_by_id(uid)["password_hash"] == "new"
+
+
+def _future(hours: int = 1) -> str:
+    return (datetime.now(timezone.utc) + timedelta(hours=hours)).isoformat()
+
+
+def _past(hours: int = 1) -> str:
+    return (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+
+
+def test_email_verification_token_roundtrip(users_db_path):
+    init_schema()
+    uid = create_user("a@b.c", "h")
+    create_email_verification_token("hashed-token", uid, _future(24))
+    row = find_email_verification_token("hashed-token")
+    assert row is not None
+    assert row["user_id"] == uid
+
+
+def test_password_reset_token_roundtrip(users_db_path):
+    init_schema()
+    uid = create_user("a@b.c", "h")
+    create_password_reset_token("reset-hash", uid, _future(1))
+    row = find_password_reset_token("reset-hash")
+    assert row is not None
+    assert row["user_id"] == uid
+
+
+def test_delete_tokens_for_user(users_db_path):
+    init_schema()
+    uid = create_user("a@b.c", "h")
+    create_email_verification_token("t1", uid, _future(1))
+    create_email_verification_token("t2", uid, _future(1))
+    delete_email_verification_tokens_for_user(uid)
+    assert find_email_verification_token("t1") is None
+    assert find_email_verification_token("t2") is None
+
+
+def test_delete_password_reset_tokens_for_user(users_db_path):
+    init_schema()
+    uid = create_user("a@b.c", "h")
+    create_password_reset_token("r1", uid, _future(1))
+    delete_password_reset_tokens_for_user(uid)
+    assert find_password_reset_token("r1") is None
+
+
+def test_purge_expired_tokens(users_db_path):
+    init_schema()
+    uid = create_user("a@b.c", "h")
+    create_email_verification_token("live", uid, _future(1))
+    create_email_verification_token("expired", uid, _past(1))
+    create_password_reset_token("live-r", uid, _future(1))
+    create_password_reset_token("expired-r", uid, _past(1))
+    purge_expired_tokens()
+    assert find_email_verification_token("live") is not None
+    assert find_email_verification_token("expired") is None
+    assert find_password_reset_token("live-r") is not None
+    assert find_password_reset_token("expired-r") is None
+
+
+def test_cascade_delete_on_user_delete(users_db_path):
+    init_schema()
+    uid = create_user("a@b.c", "h")
+    create_email_verification_token("t", uid, _future(1))
+    delete_user(uid)
+    assert find_email_verification_token("t") is None
