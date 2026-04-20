@@ -43,6 +43,10 @@ def init_auth(app: Flask) -> None:
     _login_manager.user_loader(load_user)
     _login_manager.init_app(app)
 
+    from src.auth.routes import auth_bp
+
+    app.register_blueprint(auth_bp)
+
     _csrf = CSRFProtect(app)
 
     if not os.getenv("SMTP_HOST"):
