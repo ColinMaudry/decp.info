@@ -1,6 +1,6 @@
 from email_validator import EmailNotValidError, validate_email
 from flask import Blueprint, redirect, request
-from flask_login import login_user, logout_user
+from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from src.auth import db, mailer, tokens
@@ -145,3 +145,23 @@ def reset_password():
 
     db.update_password_hash(consumed, generate_password_hash(password))
     return redirect("/connexion?password_changed=1")
+
+
+@auth_bp.route("/change-password", methods=["POST"])
+@login_required
+def change_password():
+    current_pw = request.form.get("current_password") or ""
+    password = request.form.get("password") or ""
+    password_confirm = request.form.get("password_confirm") or ""
+
+    row = db.get_user_by_id(current_user.id)
+    if not check_password_hash(row["password_hash"], current_pw):
+        return _redirect_with_error("/compte", "invalid_current_password")
+
+    if len(password) < MIN_PASSWORD_LENGTH:
+        return _redirect_with_error("/compte", "password_too_short")
+    if password != password_confirm:
+        return _redirect_with_error("/compte", "password_mismatch")
+
+    db.update_password_hash(current_user.id, generate_password_hash(password))
+    return redirect("/compte?password_changed=1")
