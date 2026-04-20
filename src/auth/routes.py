@@ -47,3 +47,15 @@ def signup():
         return _redirect_with_error("/inscription", "email_send_failed", email)
 
     return redirect("/connexion?pending_verification=1")
+
+
+@auth_bp.route("/verify-email", methods=["GET"])
+def verify_email():
+    token = request.args.get("token") or ""
+    if not token:
+        return redirect("/verification-email?error=invalid_token")
+    user_id = tokens.consume_verification_token(token)
+    if user_id is None:
+        return redirect("/verification-email?error=invalid_token")
+    db.set_email_verified(user_id)
+    return redirect("/connexion?verified=1")
