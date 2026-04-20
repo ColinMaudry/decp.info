@@ -92,3 +92,56 @@ def login():
 def logout():
     logout_user()
     return redirect("/")
+
+
+@auth_bp.route("/request-password-reset", methods=["POST"])
+def request_password_reset():
+    email = (request.form.get("email") or "").strip().lower()
+    try:
+        valid = validate_email(email, check_deliverability=False)
+        email = valid.normalized.lower()
+    except EmailNotValidError:
+        return redirect("/mot-de-passe-oublie?pending=1")
+
+    row = db.get_user_by_email(email)
+    if row is None:
+        return redirect("/mot-de-passe-oublie?pending=1")
+
+    token = tokens.create_password_reset_token(row["id"])
+    try:
+        mailer.send_reset_email(email, token)
+    except Exception:
+        logger.exception("Échec d'envoi de l'email de réinitialisation")
+        return _redirect_with_error("/mot-de-passe-oublie", "email_send_failed", email)
+    return redirect("/mot-de-passe-oublie?pending=1")
+
+
+@auth_bp.route("/reset-password", methods=["POST"])
+def reset_password():
+    token = request.form.get("token") or ""
+    password = request.form.get("password") or ""
+    password_confirm = request.form.get("password_confirm") or ""
+
+    user_id = tokens.validate_password_reset_token(token)
+    if user_id is None:
+        return redirect(
+            f"/reinitialiser-mot-de-passe?token={token}&error=invalid_token"
+        )
+
+    if len(password) < MIN_PASSWORD_LENGTH:
+        return redirect(
+            f"/reinitialiser-mot-de-passe?token={token}&error=password_too_short"
+        )
+    if password != password_confirm:
+        return redirect(
+            f"/reinitialiser-mot-de-passe?token={token}&error=password_mismatch"
+        )
+
+    consumed = tokens.consume_password_reset_token(token)
+    if consumed is None:
+        return redirect(
+            f"/reinitialiser-mot-de-passe?token={token}&error=invalid_token"
+        )
+
+    db.update_password_hash(consumed, generate_password_hash(password))
+    return redirect("/connexion?password_changed=1")
