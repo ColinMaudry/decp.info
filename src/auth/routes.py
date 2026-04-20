@@ -1,13 +1,19 @@
 from email_validator import EmailNotValidError, validate_email
 from flask import Blueprint, redirect, request
-from werkzeug.security import generate_password_hash
+from flask_login import login_user, logout_user
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from src.auth import db, mailer, tokens
+from src.auth.models import User
+from src.auth.setup import safe_next
 from src.utils import logger
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 MIN_PASSWORD_LENGTH = 8
+
+# Hash bidon pré-calculé pour uniformiser le timing login
+_DUMMY_HASH = generate_password_hash("dummy-password-for-timing")
 
 
 def _redirect_with_error(path: str, error: str, email: str | None = None):
@@ -59,3 +65,30 @@ def verify_email():
         return redirect("/verification-email?error=invalid_token")
     db.set_email_verified(user_id)
     return redirect("/connexion?verified=1")
+
+
+@auth_bp.route("/login", methods=["POST"])
+def login():
+    email = (request.form.get("email") or "").strip().lower()
+    password = request.form.get("password") or ""
+    next_url = safe_next(request.form.get("next"), fallback="/compte")
+
+    row = db.get_user_by_email(email)
+    if row is None:
+        check_password_hash(_DUMMY_HASH, password)  # uniformiser le temps
+        return _redirect_with_error("/connexion", "invalid_credentials", email)
+
+    if not check_password_hash(row["password_hash"], password):
+        return _redirect_with_error("/connexion", "invalid_credentials", email)
+
+    if not row["email_verified"]:
+        return _redirect_with_error("/connexion", "email_not_verified", email)
+
+    login_user(User(row), remember=True)
+    return redirect(next_url)
+
+
+@auth_bp.route("/logout", methods=["POST"])
+def logout():
+    logout_user()
+    return redirect("/")
