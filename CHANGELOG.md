@@ -1,3 +1,8 @@
+##### En cours
+
+- comptes utilisateurs : inscription avec vérification d'email, connexion,
+  réinitialisation de mot de passe, page compte (#73)
+
 ##### 2.7.3 (20 avril 2026)
 
 - Mise en cache des vues tableau par ensemble de filtres et de tris
@@ -9,7 +14,7 @@
 - Mise en cache des vue sur l'observatoire pour un chargement plus rapide (remise à zéro quotidienne)
 - Correction de bug : la liste de colonnes par défaut est bien appliquée plutôt qu'afficher toutes les colonnes
 - Quelques corrections de bugs d'affichage
-- Refactorisation des fonctions utilitaires (`utils.py` approchait des 1 000 lignes)
+- Refactorisation des fonctions utilitaire (`utils.py` approchait des 1 000 lignes)
 
 ##### 2.7.1 (23 mars 2026)
 
