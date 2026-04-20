@@ -109,15 +109,8 @@ def build_database(db_path: Path, parquet_path: Path) -> None:
     logger.info(f"Base DuckDB construite : {db_path}")
 
 
-def _resolve_db_path() -> Path:
-    parquet = os.getenv("DATA_FILE_PARQUET_PATH")
-    if not parquet:
-        raise RuntimeError("DATA_FILE_PARQUET_PATH is not set")
-    return Path(parquet).parent / "decp.duckdb"
-
-
 def _ensure_database() -> Path:
-    db_path = _resolve_db_path()
+    db_path = Path("./decp.duckdb")
     parquet_path = Path(os.getenv("DATA_FILE_PARQUET_PATH"))
     lock_path = db_path.with_suffix(".duckdb.lock")
 
