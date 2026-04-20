@@ -21,6 +21,10 @@ dependencies = [
   "duckdb",
   "flask-caching",
   "pyarrow>=23.0.1",
+  "flask-login",
+  "flask-mail",
+  "flask-wtf",
+  "email-validator",
 ]
 
 [dependency-groups]
@@ -41,5 +45,12 @@ env = [
   "DATA_FILE_PARQUET_PATH=tests/test.parquet",
   "DEVELOPMENT=true",
   "DATA_SCHEMA_PATH=/home/colin/git/decp-processing/dist/schema.json",
+  "USERS_DB_PATH=tests/users.test.sqlite",
+  "SECRET_KEY=test-secret-do-not-use-in-prod",
+  "MAIL_FROM=test@decp.info",
+  "APP_BASE_URL=http://localhost:8050",
+  "SMTP_HOST=localhost",
+  "SMTP_PORT=25",
+  "WTF_CSRF_ENABLED=False",
 ]
 addopts = "-p no:warnings"
