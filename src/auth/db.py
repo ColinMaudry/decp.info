@@ -1,5 +1,6 @@
 import os
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
 
@@ -64,3 +65,48 @@ def reset_conn_for_tests() -> None:
 def init_schema() -> None:
     conn = get_conn()
     conn.executescript(USERS_SCHEMA)
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def create_user(email: str, password_hash: str) -> int:
+    conn = get_conn()
+    now = _now()
+    cur = conn.execute(
+        "INSERT INTO users (email, password_hash, email_verified, created_at, updated_at) "
+        "VALUES (?, ?, 0, ?, ?)",
+        (email.lower(), password_hash, now, now),
+    )
+    return cur.lastrowid
+
+
+def get_user_by_email(email: str) -> sqlite3.Row | None:
+    return (
+        get_conn()
+        .execute("SELECT * FROM users WHERE email = ?", (email.lower(),))
+        .fetchone()
+    )
+
+
+def get_user_by_id(user_id: int) -> sqlite3.Row | None:
+    return get_conn().execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+
+
+def set_email_verified(user_id: int) -> None:
+    get_conn().execute(
+        "UPDATE users SET email_verified = 1, updated_at = ? WHERE id = ?",
+        (_now(), user_id),
+    )
+
+
+def update_password_hash(user_id: int, password_hash: str) -> None:
+    get_conn().execute(
+        "UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?",
+        (password_hash, _now(), user_id),
+    )
+
+
+def delete_user(user_id: int) -> None:
+    get_conn().execute("DELETE FROM users WHERE id = ?", (user_id,))
