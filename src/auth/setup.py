@@ -1,0 +1,52 @@
+import os
+
+from flask import Flask
+from flask_login import LoginManager
+from flask_wtf.csrf import CSRFProtect
+
+from src.auth import db, mailer
+from src.auth.models import load_user
+from src.utils import DEVELOPMENT, logger
+
+_csrf: CSRFProtect | None = None
+_login_manager: LoginManager | None = None
+
+
+def safe_next(url: str | None, fallback: str = "/") -> str:
+    if not url or not url.startswith("/") or url.startswith("//"):
+        return fallback
+    return url
+
+
+def init_auth(app: Flask) -> None:
+    global _csrf, _login_manager
+
+    secret = os.getenv("SECRET_KEY") or app.config.get("SECRET_KEY")
+    if not secret:
+        raise RuntimeError(
+            "SECRET_KEY est obligatoire pour l'authentification. "
+            "Définissez-la dans .env (voir .template.env)."
+        )
+    app.config["SECRET_KEY"] = secret
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_SECURE"] = not DEVELOPMENT
+    app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 24 * 30  # 30 jours
+
+    db.init_schema()
+    db.purge_expired_tokens()
+
+    mailer.init_mailer(app)
+
+    _login_manager = LoginManager()
+    _login_manager.login_view = "/connexion"
+    _login_manager.user_loader(load_user)
+    _login_manager.init_app(app)
+
+    _csrf = CSRFProtect(app)
+
+    if not os.getenv("SMTP_HOST"):
+        logger.warning(
+            "SMTP_HOST non défini : les emails d'auth échoueront. "
+            "Définissez les variables SMTP_* dans .env pour envoyer des emails."
+        )
