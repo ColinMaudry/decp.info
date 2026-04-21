@@ -5,7 +5,7 @@ import polars as pl
 from dash import no_update
 from polars import selectors as cs
 
-from src.db import query_marches, schema
+from src.db import count_marches, count_unique_marches, query_marches, schema
 from src.utils import logger
 from src.utils.cache import cache
 from src.utils.data import DATA_SCHEMA
@@ -376,28 +376,6 @@ def get_default_hidden_columns(page):
     return hidden_columns
 
 
-@cache.memoize()
-def _load_filter_sort_postprocess(filter_query, sort_by_key):
-    logger.debug(
-        f"Cache miss — recomputing for filter={filter_query!r} sort={sort_by_key!r}"
-    )
-
-    lff: pl.LazyFrame = query_marches().lazy()
-
-    if filter_query:
-        lff = filter_table_data(lff, filter_query)
-
-    if sort_by_key:
-        sort_by = [
-            {"column_id": col, "direction": direction} for col, direction in sort_by_key
-        ]
-        lff = sort_table_data(lff, sort_by)
-
-    dff = table_postprocess(lff)
-
-    return dff
-
-
 def table_postprocess(lff) -> pl.DataFrame:
     lff = lff.cast(pl.String)
     lff = lff.fill_null("")
@@ -426,6 +404,48 @@ def postprocess_page(dff: pl.DataFrame) -> pl.DataFrame:
     return dff
 
 
+@cache.memoize()
+def _fetch_page_sql(
+    filter_query: str | None,
+    sort_by_key: tuple,
+    page_current: int,
+    page_size: int,
+) -> tuple[pl.DataFrame, int, int]:
+    """Chemin rapide : filtre/tri/pagine dans DuckDB, post-traite la page seule.
+
+    Retourne (page_dataframe_post_traitée, total_count, total_unique_count).
+    """
+    # Import local pour éviter une dépendance circulaire
+    # (src.utils.table_sql importe split_filter_part depuis src.utils.table).
+    from src.utils.table_sql import filter_query_to_sql, sort_by_to_sql
+
+    logger.debug(
+        f"Cache miss SQL — filter={filter_query!r} sort={sort_by_key!r} "
+        f"page={page_current} size={page_size}"
+    )
+
+    where_sql, params = filter_query_to_sql(filter_query or "", schema)
+
+    sort_by_dash = [
+        {"column_id": col, "direction": direction} for col, direction in sort_by_key
+    ]
+    order_by = sort_by_to_sql(sort_by_dash, schema) or None
+
+    total = count_marches(where_sql, params)
+    total_unique = count_unique_marches(where_sql, params)
+
+    page = query_marches(
+        where_sql=where_sql,
+        params=params,
+        order_by=order_by,
+        limit=page_size,
+        offset=page_current * page_size,
+    )
+
+    page = postprocess_page(page)
+    return page, total, total_unique
+
+
 def prepare_table_data(
     data, data_timestamp, filter_query, page_current, page_size, sort_by, source_table
 ):
@@ -450,10 +470,16 @@ def prepare_table_data(
 
     if data is None:
         sort_by_key = normalize_sort_by(sort_by)
-        dff: pl.DataFrame = _load_filter_sort_postprocess(
-            filter_query=filter_query, sort_by_key=sort_by_key
+        dff, total, total_unique = _fetch_page_sql(
+            filter_query=filter_query,
+            sort_by_key=sort_by_key,
+            page_current=page_current,
+            page_size=page_size,
         )
+        height = total
+        already_paginated = True
     else:
+        already_paginated = False
         if isinstance(data, list):
             lff: pl.LazyFrame = pl.LazyFrame(
                 data, strict=False, infer_schema_length=5000
@@ -470,19 +496,19 @@ def prepare_table_data(
             lff = sort_table_data(lff, sort_by)
 
         dff: pl.DataFrame = table_postprocess(lff)
-
-    height = dff.height
+        height = dff.height
+        total_unique = dff.select("uid").unique().height if "uid" in dff.columns else 0
 
     if height > 0:
         nb_rows = (
-            f"{format_number(height)} lignes "
-            f"({format_number(dff.select('uid').unique().height)} marchés)"
+            f"{format_number(height)} lignes ({format_number(total_unique)} marchés)"
         )
     else:
         nb_rows = "0 lignes (0 marchés)"
 
-    start_row = page_current * page_size
-    dff = dff.slice(start_row, page_size)
+    if not already_paginated:
+        start_row = page_current * page_size
+        dff = dff.slice(start_row, page_size)
 
     table_columns, tooltip = setup_table_columns(dff)
 
