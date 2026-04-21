@@ -303,3 +303,19 @@ def test_prepare_table_data_with_external_data_does_not_use_cache(
         )
 
     assert sentinel["called"] is False
+
+
+def test_postprocess_page_produces_same_result_as_full_then_slice(
+    flask_app, sample_lff
+):
+    """Post-traiter 20 lignes doit donner le même résultat que post-traiter
+    l'ensemble puis slicer."""
+    from src.utils import table
+
+    full = sample_lff.collect()
+    with flask_app.app_context():
+        via_full = table.table_postprocess(full.lazy()).slice(0, 1)
+        via_page = table.postprocess_page(full.slice(0, 1))
+    assert via_full.columns == via_page.columns
+    for col in via_full.columns:
+        assert via_full[col].to_list() == via_page[col].to_list()

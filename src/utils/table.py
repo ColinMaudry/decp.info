@@ -410,6 +410,22 @@ def table_postprocess(lff) -> pl.DataFrame:
     return dff
 
 
+def postprocess_page(dff: pl.DataFrame) -> pl.DataFrame:
+    """Post-traitement à appliquer sur une page déjà paginée.
+
+    Équivalent à table_postprocess mais prend une DataFrame (pas un LazyFrame)
+    et ne matérialise rien de plus. À appeler après que la pagination ait été
+    poussée en SQL.
+    """
+    dff = dff.with_columns(pl.all().cast(pl.String).fill_null(""))
+    dff = add_links(dff)
+    if "sourceFile" in dff.columns:
+        dff = add_resource_link(dff)
+    if dff.height > 0:
+        dff = format_values(dff)
+    return dff
+
+
 def prepare_table_data(
     data, data_timestamp, filter_query, page_current, page_size, sort_by, source_table
 ):
