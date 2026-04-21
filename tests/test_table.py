@@ -83,7 +83,7 @@ def flask_app():
     """Minimal Flask app with SimpleCache so @cache.memoize() works in tests."""
     from flask import Flask
 
-    from utils.cache import cache
+    from src.utils.cache import cache
 
     app = Flask(__name__)
     cache.init_app(app, config={"CACHE_TYPE": "SimpleCache"})
@@ -95,7 +95,7 @@ def reset_cache(flask_app):
     """Ensure the flask-caching backend is empty between tests so that
     cache-hit assertions are meaningful. Falls back to no-op when no
     Flask app context is active (NullCache)."""
-    from utils.cache import cache
+    from src.utils.cache import cache
 
     with flask_app.app_context():
         try:
