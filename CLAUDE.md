@@ -10,27 +10,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Setup
 
+Setting up the virtual environment:
+
 ```bash
-cp template.env .env   # then customize .env
+python -m venv .venv # s'il n'existe pas déjà
+source .venv/bin/activate
+rtk pip install -U pip > /dev/null 2>&1
+rtk pip install -e . --group=dev
+```
+
+Environment variables:
+
+```bash
+cp .template.env .env   # then customize .env
 ```
 
 ### Development
 
 ```bash
-uv run run.py         # starts Dash with debug=True and hot reload
+python run.py         # starts Dash app
 ```
 
 ### Production
 
 ```bash
-uv run gunicorn app:server
+gunicorn app:server
 ```
 
 ### Tests
 
 ```bash
-rtk uv run pytest                  # run all tests (Selenium-based integration tests)
-rtk uv run pytest tests/test_main.py::test_001_logo_and_search   # run a single test
+rtk pytest                  # run all tests (some are Selenium-based integration tests)
+rtk pytest tests/test_main.py::test_001_logo_and_search   # run a single test
 ```
 
 Tests require a running Chrome/Chromium browser. They use `DashComposite` from `dash[testing]` with Selenium WebDriver.
@@ -40,12 +51,12 @@ Tests require a running Chrome/Chromium browser. They use `DashComposite` from `
 ### Multi-page Dash app
 
 - `src/app.py` — creates the Dash app instance, navbar, SEO endpoints (robots.txt, sitemap.xml), Matomo analytics
-- `src/pages/*.py` — each page registers itself with `@register_page()` and owns its own layout and callbacks
+- `src/pages/*.py` — each page registers itself with `@register_page()` and o.wns its own layout and callbacks
 - `run.py` — dev entry point; exports `server` (Flask) for gunicorn
 
 ### Module imports
 
-- always import modules from the app starting with `src.` (e.g. `src.utils.`, `src.pages.recherche`, etc.)
+- always import modules from the app starting with `src.` (e.g. `src.utils.`, `src.pages.recherche`, etc.), NOT `utils.cache` or `pages.observatoire`.
 
 ### Key pages
 
@@ -60,9 +71,9 @@ Tests require a running Chrome/Chromium browser. They use `DashComposite` from `
 
 ### Data layer
 
-- Data is stored as **Parquet** and loaded with **Polars** (fast columnar operations)
+- Data is stored as **Parquet** at rest, possibly in DuckDB, loaded in DuckDB, served from DuckDB for big queries and manipulated with **Polars** for the remaining steps
 - Path set via `DATA_FILE_PARQUET_PATH` env var; tests use `tests/test.parquet`
-- `src/utils.py` — filtering helpers, search (`search_org`), link generation, geographic data loading
+- `src/util/*.py` — helpers shared by other modules, search (`search_org`), link generation, geographic data loading
 - `src/callbacks.py` — shared Dash callbacks (e.g. `get_top_org_table`)
 - `src/figures.py` — chart and map components (Plotly Express, Dash Leaflet with marker clustering)
 - a Parquet file with production data is located at `../decp-processing/decp_prod.parquet` (~ 1,5 million records)
