@@ -135,10 +135,11 @@ def get_cursor() -> duckdb.DuckDBPyConnection:
 
 def query_marches(
     where_sql: str = "TRUE",
-    params: tuple = (),
+    params: tuple | list = (),
     columns: list[str] | None = None,
     order_by: str | None = None,
     limit: int | None = None,
+    offset: int | None = None,
 ) -> pl.DataFrame:
     """Run a parameterized SELECT against the decp table and return Polars.
 
@@ -152,4 +153,20 @@ def query_marches(
         sql += f" ORDER BY {order_by}"
     if limit is not None:
         sql += f" LIMIT {int(limit)}"
+    if offset is not None:
+        sql += f" OFFSET {int(offset)}"
     return get_cursor().execute(sql, list(params)).pl()
+
+
+def count_marches(where_sql: str = "TRUE", params: tuple | list = ()) -> int:
+    """Retourne le nombre de lignes correspondant à where_sql."""
+    sql = f"SELECT COUNT(*) FROM decp WHERE {where_sql}"
+    result = get_cursor().execute(sql, list(params)).fetchone()
+    return int(result[0]) if result else 0
+
+
+def count_unique_marches(where_sql: str = "TRUE", params: tuple | list = ()) -> int:
+    """Retourne le nombre de uid distincts correspondant à where_sql."""
+    sql = f"SELECT COUNT(DISTINCT uid) FROM decp WHERE {where_sql}"
+    result = get_cursor().execute(sql, list(params)).fetchone()
+    return int(result[0]) if result else 0
