@@ -27,14 +27,19 @@ def filter_query_to_sql(filter_query: str, schema: pl.Schema) -> tuple[str, list
             logger.warning(f"Colonne inconnue ignorée : {col_name!r}")
             continue
 
-        col_type = str(schema[col_name])
-        is_numeric = col_type.startswith("Int") or col_type.startswith("Float")
+        col_type = schema[col_name]
+        is_numeric = isinstance(
+            col_type, (pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.Float32, pl.Float64)
+        )
+        col_is_date = col_type == pl.Date
         quoted_col = f'"{col_name}"'
 
         if is_numeric:
             try:
                 value = (
-                    int(raw_value) if col_type.startswith("Int") else float(raw_value)
+                    int(raw_value)
+                    if isinstance(col_type, (pl.Int8, pl.Int16, pl.Int32, pl.Int64))
+                    else float(raw_value)
                 )
             except ValueError:
                 logger.warning(f"Valeur numérique invalide ignorée : {raw_value!r}")
@@ -54,13 +59,14 @@ def filter_query_to_sql(filter_query: str, schema: pl.Schema) -> tuple[str, list
 
         # String / Date : toujours traité comme texte (parité avec Polars)
         value = raw_value.strip('"')
-        col_is_date = col_type == "Date"
 
         if operator == "contains":
             if value.endswith("*") and not value.startswith("*"):
                 like = value[:-1] + "%"
             elif value.startswith("*") and not value.endswith("*"):
                 like = "%" + value[1:]
+            elif value.startswith("*") and value.endswith("*"):
+                like = "%" + value[1:-1] + "%"
             else:
                 like = "%" + value + "%"
             target = f"CAST({quoted_col} AS VARCHAR)" if col_is_date else quoted_col
