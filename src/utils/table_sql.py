@@ -134,4 +134,19 @@ def dashboard_filters_to_sql(
         clauses.append('"dateNotification" > ?')
         params.append(datetime.now() - timedelta(days=365))
 
+    if dashboard_marche_type:
+        clauses.append('"type" = ?')
+        params.append(dashboard_marche_type)
+
+    if dashboard_marche_innovant and dashboard_marche_innovant != "all":
+        clauses.append('"marcheInnovant" = ?')
+        params.append(dashboard_marche_innovant)
+
+    if (
+        dashboard_marche_sous_traitance_declaree
+        and dashboard_marche_sous_traitance_declaree != "all"
+    ):
+        clauses.append('"sousTraitanceDeclaree" = ?')
+        params.append(dashboard_marche_sous_traitance_declaree)
+
     return " AND ".join(clauses), params
