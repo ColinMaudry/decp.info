@@ -52,3 +52,39 @@ def test_sous_traitance_value_non_adds_clause():
     )
     assert where_sql == 'YEAR("dateNotification") = ? AND "sousTraitanceDeclaree" = ?'
     assert params == [2025, "non"]
+
+
+def test_acheteur_id_uses_like_wildcards():
+    where_sql, params = dashboard_filters_to_sql(
+        dashboard_year="2025",
+        dashboard_acheteur_id="12345678900010",
+    )
+    assert where_sql == 'YEAR("dateNotification") = ? AND "acheteur_id" LIKE ?'
+    assert params == [2025, "%12345678900010%"]
+
+
+def test_titulaire_id_uses_like_wildcards():
+    where_sql, params = dashboard_filters_to_sql(
+        dashboard_year="2025",
+        dashboard_titulaire_id="999",
+    )
+    assert where_sql == 'YEAR("dateNotification") = ? AND "titulaire_id" LIKE ?'
+    assert params == [2025, "%999%"]
+
+
+def test_marche_objet_uses_case_insensitive_ilike():
+    where_sql, params = dashboard_filters_to_sql(
+        dashboard_year="2025",
+        dashboard_marche_objet="travaux",
+    )
+    assert where_sql == 'YEAR("dateNotification") = ? AND "objet" ILIKE ?'
+    assert params == [2025, "%travaux%"]
+
+
+def test_code_cpv_uses_prefix_like():
+    where_sql, params = dashboard_filters_to_sql(
+        dashboard_year="2025",
+        dashboard_marche_code_cpv="4521",
+    )
+    assert where_sql == 'YEAR("dateNotification") = ? AND "codeCPV" LIKE ?'
+    assert params == [2025, "4521%"]

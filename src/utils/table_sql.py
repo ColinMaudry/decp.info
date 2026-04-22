@@ -134,9 +134,25 @@ def dashboard_filters_to_sql(
         clauses.append('"dateNotification" > ?')
         params.append(datetime.now() - timedelta(days=365))
 
+    if dashboard_acheteur_id:
+        clauses.append('"acheteur_id" LIKE ?')
+        params.append(f"%{dashboard_acheteur_id}%")
+
+    if dashboard_titulaire_id:
+        clauses.append('"titulaire_id" LIKE ?')
+        params.append(f"%{dashboard_titulaire_id}%")
+
     if dashboard_marche_type:
         clauses.append('"type" = ?')
         params.append(dashboard_marche_type)
+
+    if dashboard_marche_objet:
+        clauses.append('"objet" ILIKE ?')
+        params.append(f"%{dashboard_marche_objet}%")
+
+    if dashboard_marche_code_cpv:
+        clauses.append('"codeCPV" LIKE ?')
+        params.append(f"{dashboard_marche_code_cpv}%")
 
     if dashboard_marche_innovant and dashboard_marche_innovant != "all":
         clauses.append('"marcheInnovant" = ?')
