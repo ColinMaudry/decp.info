@@ -2,12 +2,11 @@ import json
 import logging
 import os
 from collections import OrderedDict
-from datetime import datetime, timedelta
 
 import polars as pl
 from httpx import HTTPError, get
 
-from src.db import get_cursor, schema
+from src.db import get_cursor, query_marches, schema
 from src.utils import logger
 
 logging.getLogger("httpx").setLevel("WARNING")
@@ -83,115 +82,17 @@ def get_data_schema() -> dict:
     return new_schema
 
 
-def prepare_dashboard_data(
-    lff: pl.LazyFrame,
-    dashboard_year=None,
-    dashboard_acheteur_id=None,
-    dashboard_acheteur_categorie=None,
-    dashboard_acheteur_departement_code=None,
-    dashboard_titulaire_id=None,
-    dashboard_titulaire_categorie=None,
-    dashboard_titulaire_departement_code=None,
-    dashboard_marche_type=None,
-    dashboard_marche_objet=None,
-    dashboard_marche_code_cpv=None,
-    dashboard_marche_considerations_sociales=None,
-    dashboard_marche_considerations_environnementales=None,
-    dashboard_marche_techniques=None,
-    dashboard_marche_innovant=None,
-    dashboard_marche_sous_traitance_declaree=None,
-    dashboard_montant_min=None,
-    dashboard_montant_max=None,
-) -> pl.LazyFrame:
-    if dashboard_year:
-        lff = lff.filter(pl.col("dateNotification").dt.year() == int(dashboard_year))
-    else:
-        lff = lff.filter(
-            pl.col("dateNotification") > (datetime.now() - timedelta(days=365))
-        )
+def prepare_dashboard_data(**filter_params) -> pl.DataFrame:
+    """Exécute la requête DuckDB filtrée pour le tableau de bord.
 
-    if dashboard_acheteur_id:
-        lff = lff.filter(pl.col("acheteur_id").str.contains(dashboard_acheteur_id))
-    else:
-        if dashboard_acheteur_categorie:
-            lff = lff.filter(
-                pl.col("acheteur_categorie") == dashboard_acheteur_categorie
-            )
-        if dashboard_acheteur_departement_code:
-            lff = lff.filter(
-                pl.col("acheteur_departement_code").is_in(
-                    dashboard_acheteur_departement_code
-                )
-            )
+    Retourne une pl.DataFrame matérialisée uniquement pour le sous-ensemble
+    correspondant aux filtres. Les appelants qui ont besoin d'une LazyFrame
+    appellent `.lazy()` sur le résultat.
+    """
+    from src.utils.table_sql import dashboard_filters_to_sql
 
-    if dashboard_titulaire_id:
-        lff = lff.filter(pl.col("titulaire_id").str.contains(dashboard_titulaire_id))
-    else:
-        if dashboard_titulaire_categorie:
-            lff = lff.filter(
-                pl.col("titulaire_categorie") == dashboard_titulaire_categorie
-            )
-        if dashboard_titulaire_departement_code:
-            lff = lff.filter(
-                pl.col("titulaire_departement_code").is_in(
-                    dashboard_titulaire_departement_code
-                )
-            )
-
-    if dashboard_marche_type:
-        lff = lff.filter(pl.col("type") == dashboard_marche_type)
-
-    if dashboard_marche_objet:
-        lff = lff.filter(pl.col("objet").str.contains(f"(?i){dashboard_marche_objet}"))
-
-    if dashboard_marche_code_cpv:
-        lff = lff.filter(pl.col("codeCPV").str.starts_with(dashboard_marche_code_cpv))
-
-    if dashboard_marche_innovant and dashboard_marche_innovant != "all":
-        lff = lff.filter(pl.col("marcheInnovant") == dashboard_marche_innovant)
-
-    if (
-        dashboard_marche_sous_traitance_declaree
-        and dashboard_marche_sous_traitance_declaree != "all"
-    ):
-        lff = lff.filter(
-            pl.col("sousTraitanceDeclaree") == dashboard_marche_sous_traitance_declaree
-        )
-
-    if dashboard_marche_techniques:
-        lff = lff.filter(
-            pl.col("techniques")
-            .str.split(", ")
-            .list.set_intersection(dashboard_marche_techniques)
-            .list.len()
-            > 0
-        )
-
-    if dashboard_marche_considerations_sociales:
-        lff = lff.filter(
-            pl.col("considerationsSociales")
-            .str.split(", ")
-            .list.set_intersection(dashboard_marche_considerations_sociales)
-            .list.len()
-            > 0
-        )
-
-    if dashboard_marche_considerations_environnementales:
-        lff = lff.filter(
-            pl.col("considerationsEnvironnementales")
-            .str.split(", ")
-            .list.set_intersection(dashboard_marche_considerations_environnementales)
-            .list.len()
-            > 0
-        )
-
-    if dashboard_montant_min is not None:
-        lff = lff.filter(pl.col("montant") >= dashboard_montant_min)
-
-    if dashboard_montant_max is not None:
-        lff = lff.filter(pl.col("montant") <= dashboard_montant_max)
-
-    return lff
+    where_sql, params = dashboard_filters_to_sql(**filter_params)
+    return query_marches(where_sql=where_sql, params=params)
 
 
 def build_org_frame(org_type: str) -> pl.DataFrame:
