@@ -28,19 +28,13 @@ def filter_query_to_sql(filter_query: str, schema: pl.Schema) -> tuple[str, list
             continue
 
         col_type = schema[col_name]
-        is_numeric = isinstance(
-            col_type, (pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.Float32, pl.Float64)
-        )
+        is_numeric = col_type.is_numeric()
         col_is_date = col_type == pl.Date
         quoted_col = f'"{col_name}"'
 
         if is_numeric:
             try:
-                value = (
-                    int(raw_value)
-                    if isinstance(col_type, (pl.Int8, pl.Int16, pl.Int32, pl.Int64))
-                    else float(raw_value)
-                )
+                value = int(raw_value) if col_type.is_integer() else float(raw_value)
             except ValueError:
                 logger.warning(f"Valeur numérique invalide ignorée : {raw_value!r}")
                 continue
@@ -65,8 +59,6 @@ def filter_query_to_sql(filter_query: str, schema: pl.Schema) -> tuple[str, list
                 like = value[:-1] + "%"
             elif value.startswith("*") and not value.endswith("*"):
                 like = "%" + value[1:]
-            elif value.startswith("*") and value.endswith("*"):
-                like = "%" + value[1:-1] + "%"
             else:
                 like = "%" + value + "%"
             target = f"CAST({quoted_col} AS VARCHAR)" if col_is_date else quoted_col
@@ -103,6 +95,7 @@ def sort_by_to_sql(sort_by: list[dict] | None, schema: pl.Schema) -> str:
             logger.warning(f"Tri sur colonne inconnue ignoré : {col!r}")
             continue
         if direction not in ("asc", "desc"):
+            logger.warning(f"Tri sur direction inconnue ignoré : {direction!r}")
             continue
         fragments.append(f'"{col}" {direction.upper()} NULLS LAST')
 

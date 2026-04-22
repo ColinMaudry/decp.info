@@ -470,13 +470,12 @@ def prepare_table_data(
 
     if data is None:
         sort_by_key = normalize_sort_by(sort_by)
-        dff, total, total_unique = _fetch_page_sql(
+        dff, height, total_unique = _fetch_page_sql(
             filter_query=filter_query,
             sort_by_key=sort_by_key,
             page_current=page_current,
             page_size=page_size,
         )
-        height = total
         already_paginated = True
     else:
         already_paginated = False
