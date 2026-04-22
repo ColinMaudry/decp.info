@@ -376,24 +376,10 @@ def get_default_hidden_columns(page):
     return hidden_columns
 
 
-def table_postprocess(lff) -> pl.DataFrame:
-    lff = lff.cast(pl.String)
-    lff = lff.fill_null("")
-    dff: pl.DataFrame = lff.collect()
-    dff = add_links(dff)
-    if "sourceFile" in dff.columns:
-        dff = add_resource_link(dff)
-    if dff.height > 0:
-        dff = format_values(dff)
-    return dff
-
-
 def postprocess_page(dff: pl.DataFrame) -> pl.DataFrame:
     """Post-traitement à appliquer sur une page déjà paginée.
 
-    Équivalent à table_postprocess mais prend une DataFrame (pas un LazyFrame)
-    et ne matérialise rien de plus. À appeler après que la pagination ait été
-    poussée en SQL.
+    À appeler après la pagination.
     """
     dff = dff.with_columns(pl.all().cast(pl.String).fill_null(""))
     dff = add_links(dff)
@@ -469,6 +455,7 @@ def prepare_table_data(
     trigger_cleanup = no_update if source_table == "tableau" else str(uuid.uuid4())
 
     if data is None:
+        # Probablement car il s'agit de la page Tableau
         sort_by_key = normalize_sort_by(sort_by)
         dff, height, total_unique = _fetch_page_sql(
             filter_query=filter_query,
@@ -476,9 +463,7 @@ def prepare_table_data(
             page_current=page_current,
             page_size=page_size,
         )
-        already_paginated = True
     else:
-        already_paginated = False
         if isinstance(data, list):
             lff: pl.LazyFrame = pl.LazyFrame(
                 data, strict=False, infer_schema_length=5000
@@ -491,12 +476,17 @@ def prepare_table_data(
         if filter_query:
             lff = filter_table_data(lff, filter_query)
 
+        df_height = lff.select("uid").collect(engine="streaming")
+        height = df_height.height
+        total_unique = df_height["uid"].n_unique()
+
         if sort_by and len(sort_by) > 0:
             lff = sort_table_data(lff, sort_by)
 
-        dff: pl.DataFrame = table_postprocess(lff)
-        height = dff.height
-        total_unique = dff.select("uid").unique().height if "uid" in dff.columns else 0
+        start_row = page_current * page_size
+        lff = lff.slice(start_row, page_size)
+        dff = lff.collect(engine="streaming")
+        dff: pl.DataFrame = postprocess_page(dff)
 
     if height > 0:
         nb_rows = (
@@ -504,10 +494,6 @@ def prepare_table_data(
         )
     else:
         nb_rows = "0 lignes (0 marchés)"
-
-    if not already_paginated:
-        start_row = page_current * page_size
-        dff = dff.slice(start_row, page_size)
 
     table_columns, tooltip = setup_table_columns(dff)
 
