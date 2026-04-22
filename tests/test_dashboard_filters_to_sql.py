@@ -180,3 +180,43 @@ def test_considerations_environnementales_uses_list_has_any():
         "AND list_has_any(string_split(\"considerationsEnvironnementales\", ', '), ?::VARCHAR[])"
     )
     assert params == [2025, ["Clause env."]]
+
+
+def test_montant_min_only():
+    where_sql, params = dashboard_filters_to_sql(
+        dashboard_year="2025",
+        dashboard_montant_min=1000,
+    )
+    assert where_sql == 'YEAR("dateNotification") = ? AND "montant" >= ?'
+    assert params == [2025, 1000]
+
+
+def test_montant_max_only():
+    where_sql, params = dashboard_filters_to_sql(
+        dashboard_year="2025",
+        dashboard_montant_max=500,
+    )
+    assert where_sql == 'YEAR("dateNotification") = ? AND "montant" <= ?'
+    assert params == [2025, 500]
+
+
+def test_montant_zero_is_a_valid_lower_bound():
+    # 0 est falsy mais reste un filtre valide (distinct de None)
+    where_sql, params = dashboard_filters_to_sql(
+        dashboard_year="2025",
+        dashboard_montant_min=0,
+    )
+    assert where_sql == 'YEAR("dateNotification") = ? AND "montant" >= ?'
+    assert params == [2025, 0]
+
+
+def test_montant_min_and_max_combined():
+    where_sql, params = dashboard_filters_to_sql(
+        dashboard_year="2025",
+        dashboard_montant_min=100,
+        dashboard_montant_max=1000,
+    )
+    assert where_sql == (
+        'YEAR("dateNotification") = ? AND "montant" >= ? AND "montant" <= ?'
+    )
+    assert params == [2025, 100, 1000]
