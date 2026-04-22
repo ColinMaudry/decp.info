@@ -141,6 +141,7 @@ def built_db(tmp_path, monkeypatch):
     )
     data.write_parquet(parquet_path)
     monkeypatch.setenv("DATA_FILE_PARQUET_PATH", str(parquet_path))
+    monkeypatch.setenv("DUCKDB_PATH", str(db_path))
 
     from src.db import build_database
 

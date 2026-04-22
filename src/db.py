@@ -110,7 +110,7 @@ def build_database(db_path: Path, parquet_path: Path) -> None:
 
 
 def _ensure_database() -> Path:
-    db_path = Path("./decp.duckdb")
+    db_path = Path(os.getenv("DUCKDB_PATH", "./decp.duckdb"))
     parquet_path = Path(os.getenv("DATA_FILE_PARQUET_PATH"))
     lock_path = db_path.with_suffix(".duckdb.lock")
 
