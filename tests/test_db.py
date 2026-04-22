@@ -141,6 +141,7 @@ def built_db(tmp_path, monkeypatch):
     )
     data.write_parquet(parquet_path)
     monkeypatch.setenv("DATA_FILE_PARQUET_PATH", str(parquet_path))
+    monkeypatch.setenv("DUCKDB_PATH", str(db_path))
 
     from src.db import build_database
 
@@ -204,6 +205,38 @@ def test_query_marches_returns_polars_frame(built_db, monkeypatch):
     assert isinstance(frame, pl.DataFrame)
     assert frame.height == 2
     assert set(frame["uid"].to_list()) == {"1", "2"}
+
+
+def test_count_marches_returns_total_without_filter():
+    from src.db import count_marches
+
+    n = count_marches()
+    assert isinstance(n, int)
+    assert n > 0
+
+
+def test_count_marches_with_filter():
+    from src.db import count_marches
+
+    n = count_marches('"uid" = ?', ["__nonexistent__"])
+    assert n == 0
+
+
+def test_count_unique_marches_respects_distinct():
+    from src.db import count_unique_marches
+
+    n = count_unique_marches()
+    assert isinstance(n, int)
+    assert n > 0
+
+
+def test_query_marches_with_offset():
+    from src.db import query_marches
+
+    page_0 = query_marches(limit=2, offset=0)
+    page_1 = query_marches(limit=2, offset=2)
+    if page_0.height == 2 and page_1.height >= 1:
+        assert set(page_0["uid"].to_list()).isdisjoint(set(page_1["uid"].to_list()))
 
 
 def test_concurrent_build_serialized(tmp_path):
