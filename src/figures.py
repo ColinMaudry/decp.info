@@ -839,7 +839,7 @@ def get_top_org_table(data, org_type: str, extra_columns: list, filters: bool = 
         return html.Div()
 
     columns, tooltip = setup_table_columns(
-        dff, hideable=False, exclude=[f"{org_type}_id"], new_columns=["Attributions"]
+        dff, hideable=False, exclude=[f"{org_type}_id"]
     )
     dff = add_links(dff)
     data = dff.to_dicts()

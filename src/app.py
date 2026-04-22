@@ -2,6 +2,7 @@ import os
 from shutil import rmtree
 
 import dash_bootstrap_components as dbc
+import pandas  # noqa: F401  # eager import: avoid plotly's lazy-import race across Dash callback threads
 import tomllib
 from dash import Dash, Input, Output, State, dcc, html, page_container, page_registry
 from dotenv import load_dotenv
