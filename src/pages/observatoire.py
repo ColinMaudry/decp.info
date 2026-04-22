@@ -16,7 +16,7 @@ from dash import (
     register_page,
 )
 
-from src.db import query_marches, schema
+from src.db import schema
 from src.figures import (
     DataTable,
     get_barchart_sources,
@@ -664,10 +664,8 @@ def _compute_dashboard_children(filter_params_normalized: tuple):
         k: (list(v) if isinstance(v, tuple) else v) for k, v in filter_params_normalized
     }
 
-    lff: pl.LazyFrame = query_marches().lazy()
-    lff = prepare_dashboard_data(lff=lff, **filter_params)
-
-    dff = lff.collect(engine="streaming")
+    dff = prepare_dashboard_data(**filter_params)
+    lff = dff.lazy()
 
     df_per_uid = (
         dff.select("uid", "montant").group_by("uid").agg(pl.col("montant").first())
@@ -788,13 +786,13 @@ def update_dashboard_cards(*filter_values):
     prevent_initial_call=True,
 )
 def download_observatoire(_n_clicks, filter_params, hidden_columns):
-    lff = prepare_dashboard_data(lff=query_marches().lazy(), **(filter_params or {}))
+    dff = prepare_dashboard_data(**(filter_params or {}))
 
     if hidden_columns:
-        lff = lff.drop(hidden_columns)
+        dff = dff.drop(hidden_columns)
 
     def to_bytes(buffer):
-        lff.collect(engine="streaming").write_excel(buffer, worksheet="DECP")
+        dff.write_excel(buffer, worksheet="DECP")
 
     date = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     return dcc.send_bytes(to_bytes, filename=f"decp_observatoire_{date}.xlsx")
@@ -879,10 +877,10 @@ def populate_preview_table(
     if not is_open:
         return (no_update,) * 9
 
-    lff = prepare_dashboard_data(lff=query_marches().lazy(), **(filter_params or {}))
+    dff = prepare_dashboard_data(**(filter_params or {}))
 
     return prepare_table_data(
-        lff,
+        dff.lazy(),
         data_timestamp,
         filter_query,
         page_current,
