@@ -181,4 +181,20 @@ def dashboard_filters_to_sql(
         clauses.append('"sousTraitanceDeclaree" = ?')
         params.append(dashboard_marche_sous_traitance_declaree)
 
+    if dashboard_marche_techniques:
+        clauses.append("list_has_any(string_split(\"techniques\", ', '), ?::VARCHAR[])")
+        params.append(list(dashboard_marche_techniques))
+
+    if dashboard_marche_considerations_sociales:
+        clauses.append(
+            "list_has_any(string_split(\"considerationsSociales\", ', '), ?::VARCHAR[])"
+        )
+        params.append(list(dashboard_marche_considerations_sociales))
+
+    if dashboard_marche_considerations_environnementales:
+        clauses.append(
+            "list_has_any(string_split(\"considerationsEnvironnementales\", ', '), ?::VARCHAR[])"
+        )
+        params.append(list(dashboard_marche_considerations_environnementales))
+
     return " AND ".join(clauses), params

@@ -144,3 +144,39 @@ def test_titulaire_id_present_skips_categorie_and_departement():
     )
     assert where_sql == 'YEAR("dateNotification") = ? AND "titulaire_id" LIKE ?'
     assert params == [2025, "%999%"]
+
+
+def test_marche_techniques_uses_list_has_any():
+    where_sql, params = dashboard_filters_to_sql(
+        dashboard_year="2025",
+        dashboard_marche_techniques=["Enchère", "Accord-cadre"],
+    )
+    assert where_sql == (
+        'YEAR("dateNotification") = ? '
+        "AND list_has_any(string_split(\"techniques\", ', '), ?::VARCHAR[])"
+    )
+    assert params == [2025, ["Enchère", "Accord-cadre"]]
+
+
+def test_considerations_sociales_uses_list_has_any():
+    where_sql, params = dashboard_filters_to_sql(
+        dashboard_year="2025",
+        dashboard_marche_considerations_sociales=["Clause sociale"],
+    )
+    assert where_sql == (
+        'YEAR("dateNotification") = ? '
+        "AND list_has_any(string_split(\"considerationsSociales\", ', '), ?::VARCHAR[])"
+    )
+    assert params == [2025, ["Clause sociale"]]
+
+
+def test_considerations_environnementales_uses_list_has_any():
+    where_sql, params = dashboard_filters_to_sql(
+        dashboard_year="2025",
+        dashboard_marche_considerations_environnementales=["Clause env."],
+    )
+    assert where_sql == (
+        'YEAR("dateNotification") = ? '
+        "AND list_has_any(string_split(\"considerationsEnvironnementales\", ', '), ?::VARCHAR[])"
+    )
+    assert params == [2025, ["Clause env."]]
