@@ -88,3 +88,59 @@ def test_code_cpv_uses_prefix_like():
     )
     assert where_sql == 'YEAR("dateNotification") = ? AND "codeCPV" LIKE ?'
     assert params == [2025, "4521%"]
+
+
+def test_acheteur_departement_multiple_uses_in_clause():
+    where_sql, params = dashboard_filters_to_sql(
+        dashboard_year="2025",
+        dashboard_acheteur_departement_code=["75", "92", "93"],
+    )
+    assert where_sql == (
+        'YEAR("dateNotification") = ? AND "acheteur_departement_code" IN (?, ?, ?)'
+    )
+    assert params == [2025, "75", "92", "93"]
+
+
+def test_acheteur_categorie_adds_clause():
+    where_sql, params = dashboard_filters_to_sql(
+        dashboard_year="2025",
+        dashboard_acheteur_categorie="Commune",
+    )
+    assert where_sql == 'YEAR("dateNotification") = ? AND "acheteur_categorie" = ?'
+    assert params == [2025, "Commune"]
+
+
+def test_titulaire_categorie_and_departement():
+    where_sql, params = dashboard_filters_to_sql(
+        dashboard_year="2025",
+        dashboard_titulaire_categorie="PME",
+        dashboard_titulaire_departement_code=["35"],
+    )
+    assert where_sql == (
+        'YEAR("dateNotification") = ? '
+        'AND "titulaire_categorie" = ? '
+        'AND "titulaire_departement_code" IN (?)'
+    )
+    assert params == [2025, "PME", "35"]
+
+
+def test_acheteur_id_present_skips_categorie_and_departement():
+    where_sql, params = dashboard_filters_to_sql(
+        dashboard_year="2025",
+        dashboard_acheteur_id="123",
+        dashboard_acheteur_categorie="Commune",
+        dashboard_acheteur_departement_code=["75"],
+    )
+    assert where_sql == 'YEAR("dateNotification") = ? AND "acheteur_id" LIKE ?'
+    assert params == [2025, "%123%"]
+
+
+def test_titulaire_id_present_skips_categorie_and_departement():
+    where_sql, params = dashboard_filters_to_sql(
+        dashboard_year="2025",
+        dashboard_titulaire_id="999",
+        dashboard_titulaire_categorie="PME",
+        dashboard_titulaire_departement_code=["35"],
+    )
+    assert where_sql == 'YEAR("dateNotification") = ? AND "titulaire_id" LIKE ?'
+    assert params == [2025, "%999%"]

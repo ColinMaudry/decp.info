@@ -137,10 +137,26 @@ def dashboard_filters_to_sql(
     if dashboard_acheteur_id:
         clauses.append('"acheteur_id" LIKE ?')
         params.append(f"%{dashboard_acheteur_id}%")
+    else:
+        if dashboard_acheteur_categorie:
+            clauses.append('"acheteur_categorie" = ?')
+            params.append(dashboard_acheteur_categorie)
+        if dashboard_acheteur_departement_code:
+            placeholders = ", ".join(["?"] * len(dashboard_acheteur_departement_code))
+            clauses.append(f'"acheteur_departement_code" IN ({placeholders})')
+            params.extend(dashboard_acheteur_departement_code)
 
     if dashboard_titulaire_id:
         clauses.append('"titulaire_id" LIKE ?')
         params.append(f"%{dashboard_titulaire_id}%")
+    else:
+        if dashboard_titulaire_categorie:
+            clauses.append('"titulaire_categorie" = ?')
+            params.append(dashboard_titulaire_categorie)
+        if dashboard_titulaire_departement_code:
+            placeholders = ", ".join(["?"] * len(dashboard_titulaire_departement_code))
+            clauses.append(f'"titulaire_departement_code" IN ({placeholders})')
+            params.extend(dashboard_titulaire_departement_code)
 
     if dashboard_marche_type:
         clauses.append('"type" = ?')
