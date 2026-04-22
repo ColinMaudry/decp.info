@@ -1,3 +1,7 @@
+##### 2.7.4 (22 avril 2026)
+
+- Utilisation élargie de DuckDB au détriment de Polars => bien meilleure perf ([#72](https://github.com/ColinMaudry/decp.info/issues/72)
+
 ##### 2.7.3 (20 avril 2026)
 
 - Mise en cache des vues tableau par ensemble de filtres et de tris
