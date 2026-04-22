@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 import polars as pl
 
 from src.utils import logger
@@ -100,3 +102,36 @@ def sort_by_to_sql(sort_by: list[dict] | None, schema: pl.Schema) -> str:
         fragments.append(f'"{col}" {direction.upper()} NULLS LAST')
 
     return ", ".join(fragments)
+
+
+def dashboard_filters_to_sql(
+    dashboard_year=None,
+    dashboard_acheteur_id=None,
+    dashboard_acheteur_categorie=None,
+    dashboard_acheteur_departement_code=None,
+    dashboard_titulaire_id=None,
+    dashboard_titulaire_categorie=None,
+    dashboard_titulaire_departement_code=None,
+    dashboard_marche_type=None,
+    dashboard_marche_objet=None,
+    dashboard_marche_code_cpv=None,
+    dashboard_marche_considerations_sociales=None,
+    dashboard_marche_considerations_environnementales=None,
+    dashboard_marche_techniques=None,
+    dashboard_marche_innovant=None,
+    dashboard_marche_sous_traitance_declaree=None,
+    dashboard_montant_min=None,
+    dashboard_montant_max=None,
+) -> tuple[str, list]:
+    """Traduit les filtres du tableau de bord en (where_clause, params) DuckDB."""
+    clauses: list[str] = []
+    params: list = []
+
+    if dashboard_year:
+        clauses.append('YEAR("dateNotification") = ?')
+        params.append(int(dashboard_year))
+    else:
+        clauses.append('"dateNotification" > ?')
+        params.append(datetime.now() - timedelta(days=365))
+
+    return " AND ".join(clauses), params
