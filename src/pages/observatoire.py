@@ -508,17 +508,26 @@ Alors, on fait comment ?
                 size="xl",
             ),
             # DataTable
-            html.Div(
-                className="marches_table",
-                children=DataTable(
-                    dtid="observatoire-preview-table",
-                    page_size=5,
-                    page_action="custom",
-                    sort_action="custom",
-                    filter_action="custom",
-                    hidden_columns=[],
-                    columns=[{"id": col, "name": col} for col in OBSERVATOIRE_COLUMNS],
-                ),
+            dcc.Loading(
+                overlay_style={"visibility": "visible", "filter": "blur(2px)"},
+                id="loading-statistques",
+                type="default",
+                children=[
+                    html.Div(
+                        className="marches_table",
+                        children=DataTable(
+                            dtid="observatoire-preview-table",
+                            page_size=5,
+                            page_action="custom",
+                            sort_action="custom",
+                            filter_action="custom",
+                            hidden_columns=[],
+                            columns=[
+                                {"id": col, "name": col} for col in OBSERVATOIRE_COLUMNS
+                            ],
+                        ),
+                    )
+                ],
             ),
         ],
     ),
