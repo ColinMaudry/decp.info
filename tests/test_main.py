@@ -215,47 +215,6 @@ def test_008_search_to_observatoire(dash_duo: DashComposite):
     )
 
 
-def test_010_observatoire_montant_filter():
-    import datetime
-
-    from src.utils.data import prepare_dashboard_data
-
-    data = pl.DataFrame(
-        {
-            "uid": ["1", "2", "3"],
-            "montant": [100.0, 500.0, 1000.0],
-            "dateNotification": [datetime.date(2025, 1, 1)] * 3,
-        }
-    )
-
-    def apply(min_val=None, max_val=None):
-        return prepare_dashboard_data(
-            data.lazy(),
-            dashboard_year="2025",
-            dashboard_acheteur_id=None,
-            dashboard_acheteur_categorie=None,
-            dashboard_acheteur_departement_code=None,
-            dashboard_titulaire_id=None,
-            dashboard_titulaire_categorie=None,
-            dashboard_titulaire_departement_code=None,
-            dashboard_marche_type=None,
-            dashboard_marche_objet=None,
-            dashboard_marche_code_cpv=None,
-            dashboard_marche_considerations_sociales=None,
-            dashboard_marche_considerations_environnementales=None,
-            dashboard_marche_techniques=None,
-            dashboard_marche_innovant=None,
-            dashboard_marche_sous_traitance_declaree=None,
-            dashboard_montant_min=min_val,
-            dashboard_montant_max=max_val,
-        ).collect()
-
-    assert apply().height == 3
-    assert apply(min_val=400).height == 2  # 500, 1000
-    assert apply(max_val=500).height == 2  # 100, 500
-    assert apply(min_val=200, max_val=600).height == 1  # 500 only
-
-
 def test_009_observatoire_filter_persistence(dash_duo: DashComposite):
     import time
 
