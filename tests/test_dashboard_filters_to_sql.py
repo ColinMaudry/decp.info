@@ -77,7 +77,10 @@ def test_marche_objet_uses_case_insensitive_ilike():
         dashboard_year="2025",
         dashboard_marche_objet="travaux",
     )
-    assert where_sql == 'YEAR("dateNotification") = ? AND "objet" ILIKE ?'
+    assert (
+        where_sql
+        == 'YEAR("dateNotification") = ? AND "objet" IS NOT NULL AND "objet" <> \'\' AND "objet" ILIKE ?'
+    )
     assert params == [2025, "%travaux%"]
 
 

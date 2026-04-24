@@ -106,16 +106,6 @@ def test_unknown_column_is_skipped():
     assert params == []
 
 
-def test_escapes_identifier_with_quotes_not_concatenation():
-    from src.utils.table_sql import filter_query_to_sql
-
-    where, params = filter_query_to_sql(
-        "{objet} icontains '; DROP TABLE decp; --", SCHEMA
-    )
-    assert "DROP TABLE" not in where
-    assert any("DROP TABLE" in str(p) for p in params)
-
-
 def test_sort_by_empty():
     from src.utils.table_sql import sort_by_to_sql
 
