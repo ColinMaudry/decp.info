@@ -155,12 +155,16 @@ def query_marches(
         sql += f" LIMIT {int(limit)}"
     if offset is not None:
         sql += f" OFFSET {int(offset)}"
+
+    logger.debug("query_marches: " + sql.replace("?", "{}").format(*params))
+
     return get_cursor().execute(sql, list(params)).pl()
 
 
 def count_marches(where_sql: str = "TRUE", params: tuple | list = ()) -> int:
     """Retourne le nombre de lignes correspondant à where_sql."""
     sql = f"SELECT COUNT(*) FROM decp WHERE {where_sql}"
+    logger.debug("count_marches: " + sql.replace("?", "{}").format(*params))
     result = get_cursor().execute(sql, list(params)).fetchone()
     return int(result[0]) if result else 0
 
@@ -168,5 +172,6 @@ def count_marches(where_sql: str = "TRUE", params: tuple | list = ()) -> int:
 def count_unique_marches(where_sql: str = "TRUE", params: tuple | list = ()) -> int:
     """Retourne le nombre de uid distincts correspondant à where_sql."""
     sql = f"SELECT COUNT(DISTINCT uid) FROM decp WHERE {where_sql}"
+    logger.debug("count_unique_marches: " + sql.replace("?", "{}").format(*params))
     result = get_cursor().execute(sql, list(params)).fetchone()
     return int(result[0]) if result else 0

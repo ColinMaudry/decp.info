@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 import polars as pl
 
 from src.utils import logger
@@ -55,17 +57,11 @@ def filter_query_to_sql(filter_query: str, schema: pl.Schema) -> tuple[str, list
         value = raw_value.strip('"')
 
         if operator == "contains":
-            if value.endswith("*") and not value.startswith("*"):
-                like = value[:-1] + "%"
-            elif value.startswith("*") and not value.endswith("*"):
-                like = "%" + value[1:]
-            else:
-                like = "%" + value + "%"
-            target = f"CAST({quoted_col} AS VARCHAR)" if col_is_date else quoted_col
-            clauses.append(
-                f"{quoted_col} IS NOT NULL AND {target} <> '' AND {target} ILIKE ?"
-            )
-            params.append(like)
+            where_clause, param_list = tokenize_text_filter(col_name, value)
+            clauses.append(where_clause)
+            params.extend(param_list)
+            logger.debug(params)
+
         elif operator in (">", "<"):
             target = f"CAST({quoted_col} AS VARCHAR)" if col_is_date else quoted_col
             clauses.append(f"{quoted_col} IS NOT NULL AND {target} {operator} ?")
@@ -100,3 +96,128 @@ def sort_by_to_sql(sort_by: list[dict] | None, schema: pl.Schema) -> str:
         fragments.append(f'"{col}" {direction.upper()} NULLS LAST')
 
     return ", ".join(fragments)
+
+
+def dashboard_filters_to_sql(
+    dashboard_year=None,
+    dashboard_acheteur_id=None,
+    dashboard_acheteur_categorie=None,
+    dashboard_acheteur_departement_code=None,
+    dashboard_titulaire_id=None,
+    dashboard_titulaire_categorie=None,
+    dashboard_titulaire_departement_code=None,
+    dashboard_marche_type=None,
+    dashboard_marche_objet=None,
+    dashboard_marche_code_cpv=None,
+    dashboard_marche_considerations_sociales=None,
+    dashboard_marche_considerations_environnementales=None,
+    dashboard_marche_techniques=None,
+    dashboard_marche_innovant=None,
+    dashboard_marche_sous_traitance_declaree=None,
+    dashboard_montant_min=None,
+    dashboard_montant_max=None,
+) -> tuple[str, list]:
+    """Traduit les filtres du tableau de bord en (where_clause, params) DuckDB."""
+    clauses: list[str] = []
+    params: list = []
+
+    if dashboard_year:
+        clauses.append('YEAR("dateNotification") = ?')
+        params.append(int(dashboard_year))
+    else:
+        clauses.append('"dateNotification" > ?')
+        params.append(datetime.now() - timedelta(days=365))
+
+    if dashboard_acheteur_id:
+        clauses.append('"acheteur_id" LIKE ?')
+        params.append(f"%{dashboard_acheteur_id}%")
+    else:
+        if dashboard_acheteur_categorie:
+            clauses.append('"acheteur_categorie" = ?')
+            params.append(dashboard_acheteur_categorie)
+        if dashboard_acheteur_departement_code:
+            placeholders = ", ".join(["?"] * len(dashboard_acheteur_departement_code))
+            clauses.append(f'"acheteur_departement_code" IN ({placeholders})')
+            params.extend(dashboard_acheteur_departement_code)
+
+    if dashboard_titulaire_id:
+        clauses.append('"titulaire_id" LIKE ?')
+        params.append(f"%{dashboard_titulaire_id}%")
+    else:
+        if dashboard_titulaire_categorie:
+            clauses.append('"titulaire_categorie" = ?')
+            params.append(dashboard_titulaire_categorie)
+        if dashboard_titulaire_departement_code:
+            placeholders = ", ".join(["?"] * len(dashboard_titulaire_departement_code))
+            clauses.append(f'"titulaire_departement_code" IN ({placeholders})')
+            params.extend(dashboard_titulaire_departement_code)
+
+    if dashboard_marche_type:
+        clauses.append('"type" = ?')
+        params.append(dashboard_marche_type)
+
+    if dashboard_marche_objet:
+        where_clause, param_list = tokenize_text_filter("objet", dashboard_marche_objet)
+        clauses.append(where_clause)
+        params.extend(param_list)
+
+    if dashboard_marche_code_cpv:
+        clauses.append('"codeCPV" LIKE ?')
+        params.append(f"{dashboard_marche_code_cpv}%")
+
+    if dashboard_marche_innovant and dashboard_marche_innovant != "all":
+        clauses.append('"marcheInnovant" = ?')
+        params.append(dashboard_marche_innovant)
+
+    if (
+        dashboard_marche_sous_traitance_declaree
+        and dashboard_marche_sous_traitance_declaree != "all"
+    ):
+        clauses.append('"sousTraitanceDeclaree" = ?')
+        params.append(dashboard_marche_sous_traitance_declaree)
+
+    if dashboard_marche_techniques:
+        clauses.append("list_has_any(string_split(\"techniques\", ', '), ?::VARCHAR[])")
+        params.append(list(dashboard_marche_techniques))
+
+    if dashboard_marche_considerations_sociales:
+        clauses.append(
+            "list_has_any(string_split(\"considerationsSociales\", ', '), ?::VARCHAR[])"
+        )
+        params.append(list(dashboard_marche_considerations_sociales))
+
+    if dashboard_marche_considerations_environnementales:
+        clauses.append(
+            "list_has_any(string_split(\"considerationsEnvironnementales\", ', '), ?::VARCHAR[])"
+        )
+        params.append(list(dashboard_marche_considerations_environnementales))
+
+    if dashboard_montant_min is not None:
+        clauses.append('"montant" >= ?')
+        params.append(dashboard_montant_min)
+
+    if dashboard_montant_max is not None:
+        clauses.append('"montant" <= ?')
+        params.append(dashboard_montant_max)
+
+    return " AND ".join(clauses), params
+
+
+def tokenize_text_filter(column: str, text: str) -> tuple[str, list]:
+    terms = text.split()
+
+    conditions = []
+    params = []
+
+    for term in terms:
+        conditions.append(f'"{column}" ILIKE ?')
+
+        if term.startswith("*") or term.endswith("*"):
+            params.append(term.replace("*", "%"))
+        if "+" in term:
+            params.append(f"%{term.replace('+', ' ')}%")
+        else:
+            params.append(f"%{term}%")
+
+    where_clause = " AND ".join(conditions)
+    return where_clause, params

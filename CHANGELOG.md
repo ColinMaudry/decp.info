@@ -1,3 +1,9 @@
+##### 2.7.5 (24 avril 2026)
+
+- Amélioration des permormances de l'observatoire
+- Possibilité dans observatoire (champ objet) et tableau (tous champs texte) de soit chercher des mots présents, soit une suite de mot précise (voir mode d'emploi dans Tableau)
+- Ajout d'une animation pendant le chargement de la prévisualisation des données de l'observatoire
+
 ##### 2.7.4 (22 avril 2026)
 
 - Utilisation élargie de DuckDB au détriment de Polars => bien meilleure perf ([#72](https://github.com/ColinMaudry/decp.info/issues/72)
