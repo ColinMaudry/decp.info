@@ -57,17 +57,11 @@ def filter_query_to_sql(filter_query: str, schema: pl.Schema) -> tuple[str, list
         value = raw_value.strip('"')
 
         if operator == "contains":
-            if value.endswith("*") and not value.startswith("*"):
-                like = value[:-1] + "%"
-            elif value.startswith("*") and not value.endswith("*"):
-                like = "%" + value[1:]
-            else:
-                like = "%" + value + "%"
-            target = f"CAST({quoted_col} AS VARCHAR)" if col_is_date else quoted_col
-            clauses.append(
-                f"{quoted_col} IS NOT NULL AND {target} <> '' AND {target} ILIKE ?"
-            )
-            params.append(like)
+            where_clause, param_list = tokenize_text_filter(col_name, value)
+            clauses.append(where_clause)
+            params.extend(param_list)
+            logger.debug(params)
+
         elif operator in (">", "<"):
             target = f"CAST({quoted_col} AS VARCHAR)" if col_is_date else quoted_col
             clauses.append(f"{quoted_col} IS NOT NULL AND {target} {operator} ?")
@@ -163,8 +157,9 @@ def dashboard_filters_to_sql(
         params.append(dashboard_marche_type)
 
     if dashboard_marche_objet:
-        clauses.append('"objet" ILIKE ?')
-        params.append(f"%{dashboard_marche_objet}%")
+        where_clause, param_list = tokenize_text_filter("objet", dashboard_marche_objet)
+        clauses.append(where_clause)
+        params.extend(param_list)
 
     if dashboard_marche_code_cpv:
         clauses.append('"codeCPV" LIKE ?')
@@ -206,3 +201,23 @@ def dashboard_filters_to_sql(
         params.append(dashboard_montant_max)
 
     return " AND ".join(clauses), params
+
+
+def tokenize_text_filter(column: str, text: str) -> tuple[str, list]:
+    terms = text.split()
+
+    conditions = []
+    params = []
+
+    for term in terms:
+        conditions.append(f'"{column}" ILIKE ?')
+
+        if term.startswith("*") or term.endswith("*"):
+            params.append(term.replace("*", "%"))
+        if "+" in term:
+            params.append(f"%{term.replace('+', ' ')}%")
+        else:
+            params.append(f"%{term}%")
+
+    where_clause = " AND ".join(conditions)
+    return where_clause, params
