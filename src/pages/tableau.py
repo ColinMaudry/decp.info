@@ -163,18 +163,19 @@ layout = [
 
             Vous pouvez appliquer un filtre pour chaque colonne en entrant du texte sous le nom de la colonne, puis en tapant sur `Entrée`.
 
-            - Champs textuels : la recherche retourne les valeurs qui contiennent le texte recherché et n'est pas sensible à la casse (majuscules/minuscules).
-                - Exemple : `rennes` retourne "RENNES METROPOLE".
+            - Champs textuels : la recherche retourne les valeurs qui contiennent le texte recherché, n'est pas sensible à la casse (majuscules/minuscules) et est sensbible à l'accentuation.
+                - `rennes` => le texte contient "rennes"
+                - `metro* *pole` => le texte contient un mot qui commence par "metro" et un mot qui finit par "pole"
+                - `metropole rennes` => le texte contient les mots "metropole" et "rennes", n'importe où dans le texte
+                - `metropole+rennes` => le texte contient "metropole rennes", collé et dans cet ordre
+                - `metropole+rennes travaux distri*` => le texte contient "metropole rennes", "travaux" et un mot qui commence par "distri"
                 - Les guillemets simples (apostrophe du 4) doivent être prédédées d'une barre oblique (AltGr + 8). Exemple : `services d\\\'assurances`
             - Champs numériques (Durée en mois, Montant, ...) : vous pouvez...
                 - soit taper un nombre pour trouver les valeurs strictement égales. Exemple : `12` ne retourne que des 12
                 - soit le précéder de **>** ou **<** pour filtrer les valeurs supérieures ou inférieures. Exemple pour les offres reçues : `> 4` retourne les marchés ayant reçu plus de 4 offres.
-            - Champs date (Date de notification, ...) : vous pouvez également utiliser **>** ou **<**. Exemples :
+            - Champs date (Date de notification, ...) :
                 - `< 2024-01-31` pour "avant le 31 janvier 2024"
-                - `2024` pour "en 2024", `> 2022` pour "à partir de 2022".
-            - Pour les champs textuels et les champs dates :
-                - pour chercher du texte qui **commence par** votre texte, entrez `texte*`. C'est par exemple utile pour filtrer des acheteurs ou titulaires par numéro SIREN (`123456789*`) ou les marchés sur une année en particulier (`2024*`)
-                - pour chercher du texte qui **finit par** votre texte, entrez `*texte`
+                - `2024` pour "en 2024", `> 2022` pour "à partir de 2022"
 
             Vous pouvez filtrer plusieurs colonnes à la fois.
 
