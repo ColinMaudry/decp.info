@@ -206,7 +206,8 @@ def dashboard_filters_to_sql(
 def tokenize_text_filter(column: str, text: str) -> tuple[str, list]:
     terms = text.split()
 
-    conditions = []
+    conditions = [f'"{column}" IS NOT NULL', f"\"{column}\" <> ''"]
+
     params = []
 
     for term in terms:
@@ -214,7 +215,7 @@ def tokenize_text_filter(column: str, text: str) -> tuple[str, list]:
 
         if term.startswith("*") or term.endswith("*"):
             params.append(term.replace("*", "%"))
-        if "+" in term:
+        elif "+" in term:
             params.append(f"%{term.replace('+', ' ')}%")
         else:
             params.append(f"%{term}%")
