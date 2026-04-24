@@ -12,7 +12,7 @@ from src.utils import logger
 logging.getLogger("httpx").setLevel("WARNING")
 
 
-def get_annuaire_data(siret: str) -> dict:
+def get_annuaire_data(siret: str) -> dict | None:
     url = f"https://recherche-entreprises.api.gouv.fr/search?q={siret}"
     try:
         response = get(url).raise_for_status()

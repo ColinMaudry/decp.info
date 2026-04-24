@@ -109,7 +109,7 @@ def update_marche_info(marche, titulaires):
         column_object = DATA_SCHEMA.get(col)
         column_name = column_object.get("title") if column_object else col
 
-        if marche[col]:
+        if col in marche:
             if col == "acheteur_nom":
                 value = html.A(
                     href=f"/acheteurs/{marche['acheteur_id']}",

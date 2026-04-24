@@ -7,6 +7,8 @@ def make_org_jsonld(org_id, org_type, org_name=None, type_org_id="SIRET") -> dic
     address = None
     if type_org_id.lower() == "siret" and len(org_id) == 14:
         annuaire_data = get_annuaire_data(org_id)
+        if not annuaire_data:
+            return {}
         annuaire_address = annuaire_data["matching_etablissements"][0]
         code_postal = annuaire_address["code_postal"]
         commune = annuaire_address["libelle_commune"]

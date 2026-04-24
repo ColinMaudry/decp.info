@@ -11,8 +11,10 @@ import plotly.graph_objects as go
 import polars as pl
 from dash import dash_table, dcc, html
 from dash_extensions.javascript import Namespace
+from polars.exceptions import ColumnNotFoundError
 
 from src.db import schema
+from src.utils import logger
 from src.utils.data import DATA_SCHEMA, DEPARTEMENTS_GEOJSON
 from src.utils.table import add_links, format_number, setup_table_columns
 
@@ -833,7 +835,11 @@ def get_top_org_table(data, org_type: str, extra_columns: list, filters: bool = 
     lff = lff.cast(pl.String)
     lff = lff.fill_null("")
 
-    dff: pl.DataFrame = lff.collect(engine="streaming")
+    try:
+        dff: pl.DataFrame = lff.collect(engine="streaming")
+    except ColumnNotFoundError:
+        logger.warning(f"get_top_org_table: column not found. {lff.collect_schema()}")
+        return html.Div()
 
     if dff.height == 0:
         return html.Div()
