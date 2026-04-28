@@ -227,11 +227,12 @@ def point_on_map(lat, lon, departement_code=None):
         lat=[lat],
         lon=[lon],
         height=300,
-        width=400,
+        # width=400,
         color=[1],
-        size=[15],  # Point plus grand comme demandé
         zoom=settings["zoom"],
     )
+
+    fig.update_traces(marker=dict(size=10))
 
     # Configuration de la carte (interactive - zoomable)
     fig.update_layout(
@@ -242,7 +243,9 @@ def point_on_map(lat, lon, departement_code=None):
         coloraxis_showscale=False,
     )
 
-    return html.Div(dcc.Graph(figure=fig), style={"width": "400px"})
+    return html.Div(
+        dcc.Graph(figure=fig, config={"displayModeBar": False}),
+    )
 
 
 class DataTable(dash_table.DataTable):
