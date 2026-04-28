@@ -14,13 +14,14 @@ dependencies = [
   "xlsxwriter",
   "plotly[express]",
   "httpx",
-  "pandas",                    # utilisé pour la création de certains graphiques
+  "pandas", # utilisé pour la création de certains graphiques
   "unidecode",
   "dash-leaflet",
   "dash-extensions",
   "duckdb",
   "flask-caching",
   "pyarrow>=23.0.1",
+  "flask-cors>=6.0.2",
 ]
 
 [dependency-groups]

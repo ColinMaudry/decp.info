@@ -243,7 +243,7 @@ def get_marche_jsonld(marche, titulaires) -> str:
                 titulaire.get("titulaire_id"),
                 org_name=titulaire.get("titulaire_nom"),
                 org_type="titulaire",
-                type_org_id=titulaire.get("titulaire_typeIdentifiant"),
+                type_org_id=titulaire.get("titulaire_typeIdentifiant", "SIRET"),
             ),
             "orderedItem": {
                 "@type": type_order,
