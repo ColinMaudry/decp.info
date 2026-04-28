@@ -222,8 +222,8 @@ def point_on_map(lat, lon, departement_code=None):
 
     settings = regions.get(region_key, regions["Hexagone"])
 
-    # Création de la carte avec un point plus grand
-    fig = px.scatter_mapbox(
+    # Création de la carte
+    fig = px.scatter_map(
         lat=[lat],
         lon=[lon],
         height=300,
@@ -235,15 +235,11 @@ def point_on_map(lat, lon, departement_code=None):
 
     # Configuration de la carte (interactive - zoomable)
     fig.update_layout(
-        mapbox_style="light",  # Fond de carte clair
+        map_style="light",  # Fond de carte clair
         margin={"r": 0, "t": 0, "l": 0, "b": 0},
-        # Note: pas de uirevision='static' pour permettre l'interactivité
-    )
-
-    # Centrage et zoom appropriés
-    fig.update_layout(
         mapbox_center={"lat": settings["center"][0], "lon": settings["center"][1]},
         mapbox_zoom=settings["zoom"],
+        coloraxis_showscale=False,
     )
 
     return html.Div(dcc.Graph(figure=fig), style={"width": "400px"})
