@@ -57,6 +57,8 @@ def filter_query_to_sql(filter_query: str, schema: pl.Schema) -> tuple[str, list
         value = raw_value.strip('"')
 
         if operator == "contains":
+            if col_name in ("acheteur_id", "titulaire_id"):
+                value = value.replace(" ", "")
             where_clause, param_list = tokenize_text_filter(col_name, value)
             clauses.append(where_clause)
             params.extend(param_list)
@@ -129,6 +131,7 @@ def dashboard_filters_to_sql(
         params.append(datetime.now() - timedelta(days=365))
 
     if dashboard_acheteur_id:
+        dashboard_acheteur_id = dashboard_acheteur_id.replace(" ", "")
         clauses.append('"acheteur_id" LIKE ?')
         params.append(f"%{dashboard_acheteur_id}%")
     else:
@@ -141,6 +144,7 @@ def dashboard_filters_to_sql(
             params.extend(dashboard_acheteur_departement_code)
 
     if dashboard_titulaire_id:
+        dashboard_titulaire_id = dashboard_titulaire_id.replace(" ", "")
         clauses.append('"titulaire_id" LIKE ?')
         params.append(f"%{dashboard_titulaire_id}%")
     else:
