@@ -824,6 +824,9 @@ def toggle_montant_modal(n_triggers, _close):
     prevent_initial_call=False,
 )
 def add_organization_name_in_title(acheteur_id, titulaire_id):
+    acheteur_id = acheteur_id.replace(" ", "") if acheteur_id else None
+    titulaire_id = titulaire_id.replace(" ", "") if titulaire_id else None
+
     def lookup_nom(df_org, id_col, nom_col, org_id):
         match = df_org.filter(pl.col(id_col) == org_id)
         return match[nom_col].item(0) if match.height >= 1 else None
