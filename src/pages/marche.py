@@ -109,7 +109,7 @@ def update_marche_info(marche, titulaires):
         column_object = DATA_SCHEMA.get(col)
         column_name = column_object.get("title") if column_object else col
 
-        if marche[col]:
+        if col in marche:
             if col == "acheteur_nom":
                 value = html.A(
                     href=f"/acheteurs/{marche['acheteur_id']}",
@@ -243,7 +243,7 @@ def get_marche_jsonld(marche, titulaires) -> str:
                 titulaire.get("titulaire_id"),
                 org_name=titulaire.get("titulaire_nom"),
                 org_type="titulaire",
-                type_org_id=titulaire.get("titulaire_typeIdentifiant"),
+                type_org_id=titulaire.get("titulaire_typeIdentifiant", "SIRET"),
             ),
             "orderedItem": {
                 "@type": type_order,

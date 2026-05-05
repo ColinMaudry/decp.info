@@ -263,8 +263,15 @@ def update_titulaire_infos(url):
     if data_etablissement:
         data_etablissement = data_etablissement[0]
 
+        # Extraction du code département à partir du code postal
+        code_postal = data_etablissement.get("code_postal", "")
+        departement_code = code_postal[:2] if code_postal else None
+
+        # Création de la carte avec le code département pour un centrage approprié
         titulaire_map = point_on_map(
-            data_etablissement["latitude"], data_etablissement["longitude"]
+            data_etablissement["latitude"],
+            data_etablissement["longitude"],
+            departement_code,
         )
         code_departement, nom_departement, nom_region = get_departement_region(
             data_etablissement["code_postal"]

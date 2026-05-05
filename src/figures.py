@@ -11,8 +11,10 @@ import plotly.graph_objects as go
 import polars as pl
 from dash import dash_table, dcc, html
 from dash_extensions.javascript import Namespace
+from polars.exceptions import ColumnNotFoundError
 
 from src.db import schema
+from src.utils import logger
 from src.utils.data import DATA_SCHEMA, DEPARTEMENTS_GEOJSON
 from src.utils.table import add_links, format_number, setup_table_columns
 
@@ -173,38 +175,77 @@ def get_sources_tables(source_path) -> html.Div:
     return html.Div(children=datatable)
 
 
-def point_on_map(lat, lon):
-    lat = float(lat)
-    lon = float(lon)
+def point_on_map(lat, lon, departement_code=None):
+    """Fonction améliorée utilisant les codes départementaux pour la détection de région.
 
-    # Create a scatter mapbox or choropleth map
+    Args:
+        lat: Coordonnée de latitude
+        lon: Coordonnée de longitude
+        departement_code: Code du département (ex: '75', '971', etc.)
+
+    Returns:
+        html.Div contenant la carte, ou div vide si invalide
+    """
+    # Validation des coordonnées
+    try:
+        lat = float(lat)
+        lon = float(lon)
+    except (TypeError, ValueError):
+        return html.Div()  # Div vide pour les coordonnées invalides
+
+    # Vérification que les coordonnées sont valides
+    if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
+        return html.Div()
+
+    # Si aucun code département n'est fourni, retourner une div vide
+    if not departement_code:
+        return html.Div()
+
+    # Détermination de la région en utilisant le code département
+    # Logique identique à get_geographic_maps
+    if departement_code in ["971", "972", "973", "974", "976"]:
+        region_key = departement_code  # Département d'outre-mer
+    elif len(departement_code) == 2:  # Département métropolitain
+        region_key = "Hexagone"
+    else:
+        return html.Div()  # Format de code département invalide
+
+    # Paramètres de carte par région (réutilisés de get_geographic_maps)
+    regions = {
+        "Hexagone": {"center": [46.6, 2.2], "zoom": 5},
+        "971": {"center": [16.23, -61.55], "zoom": 9},  # Guadeloupe
+        "972": {"center": [14.64, -61.02], "zoom": 10},  # Martinique
+        "973": {"center": [3.93, -53.12], "zoom": 7},  # Guyane
+        "974": {"center": [-21.11, 55.53], "zoom": 9},  # La Réunion
+        "976": {"center": [-12.82, 45.16], "zoom": 10},  # Mayotte
+    }
+
+    settings = regions.get(region_key, regions["Hexagone"])
+
+    # Création de la carte
     fig = px.scatter_map(
-        lat=[lat], lon=[lon], height=300, width=400, color=[1], size=[1]
+        lat=[lat],
+        lon=[lon],
+        height=300,
+        # width=400,
+        color=[1],
+        zoom=settings["zoom"],
     )
 
-    fig.update_coloraxes(showscale=False)
+    fig.update_traces(marker=dict(size=10))
 
-    # Set map style (you can use 'open-street-map', 'carto-positron', etc.)
+    # Configuration de la carte (interactive - zoomable)
     fig.update_layout(
-        mapbox_style="light",  # Light, clean background
+        map_style="light",  # Fond de carte clair
         margin={"r": 0, "t": 0, "l": 0, "b": 0},
+        mapbox_center={"lat": settings["center"][0], "lon": settings["center"][1]},
+        mapbox_zoom=settings["zoom"],
+        coloraxis_showscale=False,
     )
 
-    # Optionally, center the map on France
-    fig.update_geos(
-        center=dict(lat=46.603354, lon=1.888334),  # Center of France
-        lataxis_range=[41, 51.5],  # Latitude range for France
-        lonaxis_range=[-5, 10],  # Longitude range for France
+    return html.Div(
+        dcc.Graph(figure=fig, config={"displayModeBar": False}),
     )
-
-    # But scatter_mapbox doesn't use geos, so better to control via zoom/center manually
-    # Let's reset and use proper centering in scatter_mapbox instead:
-
-    fig.update_layout(map_center={"lat": 46.6, "lon": 1.89}, map_zoom=4)
-
-    graph = dcc.Graph(id="map", figure=fig)
-    graph = html.Div(style={"width": "400px"})
-    return graph
 
 
 class DataTable(dash_table.DataTable):
@@ -833,7 +874,11 @@ def get_top_org_table(data, org_type: str, extra_columns: list, filters: bool = 
     lff = lff.cast(pl.String)
     lff = lff.fill_null("")
 
-    dff: pl.DataFrame = lff.collect(engine="streaming")
+    try:
+        dff: pl.DataFrame = lff.collect(engine="streaming")
+    except ColumnNotFoundError:
+        logger.warning(f"get_top_org_table: column not found. {lff.collect_schema()}")
+        return html.Div()
 
     if dff.height == 0:
         return html.Div()

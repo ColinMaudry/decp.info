@@ -154,6 +154,8 @@ def normalize_sort_by(sort_by) -> tuple:
 
 
 def format_number(number) -> str:
+    if not number:
+        return ""
     number = "{:,}".format(number).replace(",", " ")
     return number
 
