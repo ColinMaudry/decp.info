@@ -338,8 +338,7 @@ def test_015_tableau_filter_date(dash_duo: DashComposite):
         filter_cell_result = '.marches_table td[data-dash-column="dateNotification"] p'
         dash_duo.wait_for_element(filter_input, timeout=2)
         _filter_input: WebElement = dash_duo.find_element(filter_input)
-        _filter_input.send_keys("2024")  # a dateNotification that doesn't exist
+        _filter_input.send_keys("3333")  # a dateNotification that doesn't exist
         _filter_input.send_keys(Keys.ENTER)
         _filter_result: list[WebElement] = dash_duo.find_elements(filter_cell_result)
-
-        assert len(_filter_result) == 0
+        assert len(_filter_result) == 0, f"Page : {page}"

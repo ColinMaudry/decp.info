@@ -221,7 +221,7 @@ def tokenize_text_filter(
     if col_is_date:
         quoted_col = f'CAST("{column}" AS VARCHAR)'
     else:
-        quoted_col = '"column"'
+        quoted_col = f'"{column}"'
 
     conditions = [f'"{column}" IS NOT NULL', f"{quoted_col} <> ''"]
 
