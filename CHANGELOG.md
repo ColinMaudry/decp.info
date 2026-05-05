@@ -1,3 +1,9 @@
+##### 2.7.6 (5 mai 2026)
+
+- Correction du problème de filtre par date dans les tableaux
+- Retour des cartes dans les pages acheteur et titulaire
+- Possibilité de chercher un SIRET/SIREN avec des espaces dans les champs `SIRET acheteur` et `Identifiant titulaire`
+
 ##### 2.7.5 (24 avril 2026)
 
 - Amélioration des permormances de l'observatoire
