@@ -292,7 +292,7 @@ def test_011_observatoire_multi_param_url(dash_duo: DashComposite):
     )
 
 
-def test_get_distance_histogram_returns_graph():
+def test_012_get_distance_histogram_returns_graph():
     import polars as pl
     from dash import dcc
 
@@ -303,7 +303,7 @@ def test_get_distance_histogram_returns_graph():
     assert isinstance(result, dcc.Graph)
 
 
-def test_get_distance_histogram_handles_nulls():
+def test_013_get_distance_histogram_handles_nulls():
     import polars as pl
     from dash import dcc
 
@@ -314,7 +314,7 @@ def test_get_distance_histogram_handles_nulls():
     assert isinstance(result, dcc.Graph)
 
 
-def test_get_distance_histogram_all_nulls():
+def test_014_get_distance_histogram_all_nulls():
     import polars as pl
     from dash import dcc
 
@@ -322,4 +322,24 @@ def test_get_distance_histogram_all_nulls():
 
     lff = pl.LazyFrame({"titulaire_distance": pl.Series([], dtype=pl.Int64)})
     result = get_distance_histogram(lff)
+
     assert isinstance(result, dcc.Graph)
+
+
+def test_015_tableau_filter_date(dash_duo: DashComposite):
+    from src.app import app
+
+    dash_duo.start_server(app)
+    dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
+
+    for page in ["tableau", "acheteurs/123", "titulaires/345"]:
+        dash_duo.wait_for_page(f"{dash_duo.server_url}/{page}")
+        filter_input = '.marches_table th[data-dash-column="dateNotification"] input'
+        filter_cell_result = '.marches_table td[data-dash-column="dateNotification"] p'
+        dash_duo.wait_for_element(filter_input, timeout=2)
+        _filter_input: WebElement = dash_duo.find_element(filter_input)
+        _filter_input.send_keys("2024")  # a dateNotification that doesn't exist
+        _filter_input.send_keys(Keys.ENTER)
+        _filter_result: list[WebElement] = dash_duo.find_elements(filter_cell_result)
+
+        assert len(_filter_result) == 0

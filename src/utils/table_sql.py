@@ -57,12 +57,18 @@ def filter_query_to_sql(filter_query: str, schema: pl.Schema) -> tuple[str, list
         value = raw_value.strip('"')
 
         if operator == "contains":
+            if col_is_date:
+                target = f"CAST({quoted_col} AS VARCHAR)"
+
             if col_name in ("acheteur_id", "titulaire_id"):
                 value = value.replace(" ", "")
-            where_clause, param_list = tokenize_text_filter(col_name, value)
+            where_clause, param_list = tokenize_text_filter(
+                col_name, value, col_is_date
+            )
             clauses.append(where_clause)
             params.extend(param_list)
             logger.debug(params)
+            continue
 
         elif operator in (">", "<"):
             target = f"CAST({quoted_col} AS VARCHAR)" if col_is_date else quoted_col
@@ -207,15 +213,22 @@ def dashboard_filters_to_sql(
     return " AND ".join(clauses), params
 
 
-def tokenize_text_filter(column: str, text: str) -> tuple[str, list]:
+def tokenize_text_filter(
+    column: str, text: str, col_is_date: bool = False
+) -> tuple[str, list]:
     terms = text.split()
+    # si col_is_date alors le deuxième doit être casté en VARCHAR
+    if col_is_date:
+        quoted_col = f'CAST("{column}" AS VARCHAR)'
+    else:
+        quoted_col = '"column"'
 
-    conditions = [f'"{column}" IS NOT NULL', f"\"{column}\" <> ''"]
+    conditions = [f'"{column}" IS NOT NULL', f"{quoted_col} <> ''"]
 
     params = []
 
     for term in terms:
-        conditions.append(f'"{column}" ILIKE ?')
+        conditions.append(f"{quoted_col} ILIKE ?")
 
         if term.startswith("*") or term.endswith("*"):
             params.append(term.replace("*", "%"))
