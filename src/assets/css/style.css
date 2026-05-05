@@ -144,6 +144,10 @@ p.version > a {
   max-width: 900px;
 }
 
+#announcements p {
+  margin-bottom: 0.2rem;
+}
+
 .seeBorder {
   border: dotted 1px green;
 }
