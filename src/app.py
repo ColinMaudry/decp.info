@@ -145,7 +145,13 @@ navbar = dbc.Navbar(
                 style={"minWidth": "230px"},
             ),
             dbc.Nav(
-                children=[dcc.Markdown(os.getenv("ANNOUNCEMENTS"), id="announcements")],
+                children=[
+                    dcc.Markdown(
+                        os.getenv("ANNOUNCEMENTS"),
+                        id="announcements",
+                        dangerously_allow_html=True,
+                    ),
+                ],
                 style={
                     "maxWidth": "1200px",
                     "display": "inline-block",
