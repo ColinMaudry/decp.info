@@ -14,3 +14,11 @@ def test_health_returns_ok_without_auth():
     resp = app.test_client().get("/api/v1/health")
     assert resp.status_code == 200
     assert resp.get_json() == {"status": "ok"}
+
+
+def test_health_via_real_app():
+    """Vérifie que init_api est bien branché dans src.app."""
+    from src.app import app as dash_app
+
+    resp = dash_app.server.test_client().get("/api/v1/health")
+    assert resp.status_code == 200
