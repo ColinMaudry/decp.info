@@ -51,6 +51,16 @@ Vous pouvez consommer les données qui alimentent decp.info
 - en interrogeant l'[API REST ouverte](https://www.data.gouv.fr/datasets/donnees-essentielles-de-la-commande-publique-consolidees-format-tabulaire#user-content-api-rest)
 """
                         ),
+                        html.H4("API privée", id="api-privee"),
+                        dcc.Markdown(
+                            """
+Une API HTTP est disponible pour accéder aux mêmes données par programme.
+Documentation interactive : [Swagger UI](/api/v1/swagger).
+
+L'accès se fait sur token. Pour en obtenir un, contactez
+[colin@maudry.com](mailto:colin@maudry.com).
+"""
+                        ),
                         html.H4("Contact", id="contact"),
                         dcc.Markdown(
                             """
@@ -147,6 +157,11 @@ J'enregistre également les données suivantes, de manière anonyme, afin de mie
                                 html.A(
                                     "Consommer les données brutes",
                                     href="#donnees-brutes",
+                                    className="toc-link",
+                                ),
+                                html.A(
+                                    "API privée",
+                                    href="#api-privee",
                                     className="toc-link",
                                 ),
                                 html.A(
