@@ -22,6 +22,8 @@ dependencies = [
   "flask-caching",
   "pyarrow>=23.0.1",
   "flask-cors>=6.0.2",
+  "flask-smorest>=0.46.0",
+  "marshmallow>=3.20.0",
 ]
 
 [dependency-groups]
@@ -43,5 +45,7 @@ env = [
   "DEVELOPMENT=true",
   "REBUILD_DUCKDB=true",
   "DATA_SCHEMA_PATH=/home/colin/git/decp-processing/dist/schema.json",
+  "USERS_DB_PATH=tests/users.test.sqlite",
+  "MATOMO_TRACKING_ENABLED=false",
 ]
 addopts = "-p no:warnings"
