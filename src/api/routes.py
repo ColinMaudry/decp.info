@@ -68,6 +68,13 @@ def _track_consumption(response):
     token_id = getattr(g, "token_id", None)
     if token_id is not None:
         tracking.enqueue_counter_update(token_id)
+        tracking.enqueue_matomo_event(
+            token_id=token_id,
+            path=request.path,
+            query_string=request.query_string.decode("utf-8", errors="replace"),
+            status_code=response.status_code,
+            user_agent=request.headers.get("User-Agent", ""),
+        )
     return response
 
 

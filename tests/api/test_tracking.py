@@ -34,3 +34,46 @@ def test_after_request_hook_increments_counter_async(api_client, valid_token_hea
 
     rows = tokens_db.list_tokens(db_path)
     assert rows[0]["count_total"] == 1
+
+
+def test_matomo_disabled_skips_call(monkeypatch, api_client, valid_token_header):
+    monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "false")
+    client, _ = api_client
+
+    from src.api import tracking
+
+    called = []
+    monkeypatch.setattr(
+        tracking,
+        "_post_matomo",
+        lambda **kw: called.append(kw),
+    )
+    client.get("/api/v1/health")
+    tracking.flush(timeout=2.0)
+    assert called == []
+
+
+def test_matomo_enabled_posts_event(monkeypatch, api_client, valid_token_header):
+    monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    monkeypatch.setenv("MATOMO_URL", "https://matomo.example/matomo.php")
+    monkeypatch.setenv("MATOMO_SITE_ID", "42")
+
+    from src.api import tracking
+
+    captured = []
+    monkeypatch.setattr(
+        tracking,
+        "_post_matomo",
+        lambda **kw: captured.append(kw),
+    )
+
+    client, _ = api_client
+    client.get("/api/v1/schema", headers=valid_token_header)
+    tracking.flush(timeout=2.0)
+
+    assert len(captured) == 1
+    call = captured[0]
+    assert call["params"]["idsite"] == "42"
+    assert call["params"]["rec"] == "1"
+    assert "token-" in call["params"]["uid"]
+    assert call["params"]["dimension2"] == "200"
