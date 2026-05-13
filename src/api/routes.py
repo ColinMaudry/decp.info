@@ -95,7 +95,16 @@ def schema():
 @bp.route("/data")
 @require_token
 def data():
-    """Endpoint tabulaire : filtres dynamiques sur les colonnes DECP."""
+    """Récupère des marchés publics filtrés.
+
+    Filtres en query string sous la forme `<colonne>__<opérateur>=<valeur>`.
+
+    Opérateurs : exact, contains, notcontains, less, greater,
+    strictly_less, strictly_greater, in, notin, isnull, isnotnull, sort.
+
+    Paramètres réservés : page (défaut 1), page_size (défaut 50, max 1000),
+    columns (csv), count (true|false ; mettre false pour économiser le COUNT(*)).
+    """
     import polars as pl
     import polars.selectors as cs
 
