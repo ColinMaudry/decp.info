@@ -252,14 +252,14 @@ Pas de CSV / Parquet. Ajout possible plus tard via `?format=`.
 Header HTTP standard :
 
 ```
-Authorization: Bearer dcpinfo_a1b2c3d4...
+Authorization: Bearer decpinfo_a1b2c3d4...
 ```
 
 Pas de support via query string (fuites dans les logs).
 
 ### 6.2 Format du token
 
-Préfixe `dcpinfo_` + 32 octets aléatoires hex (43 caractères au total).
+Préfixe `decpinfo_` + 32 octets aléatoires hex (43 caractères au total).
 Le préfixe facilite la détection de fuites (gitleaks, etc.).
 
 ### 6.3 Hashing
