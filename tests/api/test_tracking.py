@@ -4,6 +4,7 @@ from src.api import tokens_db, tracking
 def test_counter_worker_increments_count(temp_db):
     _, token_id = tokens_db.create_token(temp_db, "x")
 
+    tracking.stop_worker()  # reset any worker left by earlier tests
     tracking.start_worker(str(temp_db))
     try:
         tracking.enqueue_counter_update(token_id)

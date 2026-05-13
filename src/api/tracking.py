@@ -104,15 +104,7 @@ def enqueue_counter_update(token_id: int) -> None:
 
 def flush(timeout: float = 2.0) -> None:
     """Attend que la queue soit drainée. Utile en test."""
-    if _queue is None:
+    q = _queue
+    if q is None:
         return
-    # Use a sentinel approach to properly honour the timeout
-    done_event = threading.Event()
-
-    def _wait():
-        _queue.join()
-        done_event.set()
-
-    t = threading.Thread(target=_wait, daemon=True)
-    t.start()
-    done_event.wait(timeout=timeout)
+    q.join()
