@@ -45,3 +45,60 @@ def test_data_pagination_links(api_client, valid_token_header):
     if body["meta"]["total"] > 1:
         assert body["links"]["next"] is not None
         assert "page=2" in body["links"]["next"]
+
+
+def test_data_filter_exact_string(api_client, valid_token_header):
+    client, _ = api_client
+    # On choisit une valeur qui existe dans test.parquet : récupère via la 1re ligne
+    base = client.get("/api/v1/data?page_size=1", headers=valid_token_header).get_json()
+    assert base["data"], "test.parquet vide ?"
+    uid = base["data"][0]["uid"]
+
+    resp = client.get(f"/api/v1/data?uid__exact={uid}", headers=valid_token_header)
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert all(row["uid"] == uid for row in body["data"])
+
+
+def test_data_unknown_column_filter_returns_400(api_client, valid_token_header):
+    client, _ = api_client
+    resp = client.get(
+        "/api/v1/data?colonne_inexistante__exact=x",
+        headers=valid_token_header,
+    )
+    assert resp.status_code == 400
+
+
+def test_data_columns_selection(api_client, valid_token_header):
+    client, _ = api_client
+    resp = client.get(
+        "/api/v1/data?columns=uid,objet&page_size=3",
+        headers=valid_token_header,
+    )
+    assert resp.status_code == 200
+    body = resp.get_json()
+    for row in body["data"]:
+        assert set(row.keys()) == {"uid", "objet"}
+
+
+def test_data_columns_unknown_returns_400(api_client, valid_token_header):
+    client, _ = api_client
+    resp = client.get(
+        "/api/v1/data?columns=uid,foobar",
+        headers=valid_token_header,
+    )
+    assert resp.status_code == 400
+
+
+def test_data_sort_desc(api_client, valid_token_header):
+    client, _ = api_client
+    resp = client.get(
+        "/api/v1/data?dateNotification__sort=desc&page_size=5",
+        headers=valid_token_header,
+    )
+    assert resp.status_code == 200
+    body = resp.get_json()
+    dates = [
+        row["dateNotification"] for row in body["data"] if row.get("dateNotification")
+    ]
+    assert dates == sorted(dates, reverse=True)
