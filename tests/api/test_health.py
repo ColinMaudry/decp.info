@@ -22,3 +22,4 @@ def test_health_via_real_app():
 
     resp = dash_app.server.test_client().get("/api/v1/health")
     assert resp.status_code == 200
+    assert resp.get_json() == {"status": "ok"}
