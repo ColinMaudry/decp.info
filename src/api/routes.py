@@ -1,6 +1,7 @@
-from flask import request
+from flask import g, request
 from flask_smorest import Blueprint, abort
 
+from src.api import tracking
 from src.api.auth import require_token
 from src.api.filters import FilterError, build_where
 from src.db import count_marches, query_marches
@@ -60,6 +61,14 @@ def _build_links(page, page_size, total):
     if total is None or page * page_size < total:
         next_url = url_for(page + 1)
     return {"prev": prev_url, "next": next_url}
+
+
+@bp.after_request
+def _track_consumption(response):
+    token_id = getattr(g, "token_id", None)
+    if token_id is not None:
+        tracking.enqueue_counter_update(token_id)
+    return response
 
 
 @bp.route("/health")

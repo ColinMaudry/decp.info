@@ -18,3 +18,9 @@ def init_api(server) -> None:
 
     api = Api(server)
     api.register_blueprint(routes.bp)
+
+    import os
+
+    from src.api import tracking
+
+    tracking.start_worker(os.environ["USERS_DB_PATH"])

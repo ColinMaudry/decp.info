@@ -19,12 +19,13 @@ def api_client(monkeypatch, tmp_path):
     monkeypatch.setenv("USERS_DB_PATH", str(db_path))
     from flask import Flask
 
-    from src.api import init_api, tokens_db
+    from src.api import init_api, tokens_db, tracking
 
     tokens_db.init_schema(db_path)
     server = Flask(__name__)
     init_api(server)
-    return server.test_client(), db_path
+    yield server.test_client(), db_path
+    tracking.stop_worker()
 
 
 @pytest.fixture
