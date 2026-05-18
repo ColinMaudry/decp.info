@@ -2,7 +2,9 @@ import json
 import logging
 import os
 from collections import OrderedDict
+from pathlib import Path
 
+import httpx
 import polars as pl
 from httpx import HTTPError, get
 
@@ -63,16 +65,25 @@ def get_departement_region(code_postal):
 
 def get_data_schema() -> dict:
     # Récupération du schéma des données tabulaires
-    path = os.getenv("DATA_SCHEMA_PATH")
-    if path.startswith("http"):
-        original_schema: dict = get(
-            os.getenv("DATA_SCHEMA_PATH"), follow_redirects=True
-        ).json()
-    elif os.path.exists(path):
-        with open(path) as f:
+    url = os.getenv("DATA_SCHEMA_PATH")
+    local_path = Path(os.getenv("DATA_SCHEMA_LOCAL", ""))
+
+    original_schema = {}
+    if url:
+        try:
+            original_schema: dict = get(url, follow_redirects=True).json()
+        except (
+            httpx.ReadTimeout,
+            httpx.ReadError,
+            httpx.ConnectError,
+            httpx.ConnectTimeout,
+        ):
+            logger.error(f"Erreur HTTP lors de la récupération du schéma ({url})")
+
+    if os.path.exists(local_path) and original_schema == {}:
+        with open(local_path) as f:
             original_schema: dict = json.load(f)
-    else:
-        raise Exception(f"Chemin vers le schéma invalide: {path}")
+        logger.info(f"Utilisation du schéma local ({local_path})")
 
     new_schema = OrderedDict()
 

@@ -1,3 +1,7 @@
+##### 2.7.8 (18 mai 2026)
+
+- Récupération du schéma de données plus robuste, ne pas dépendre de data.gouv.fr
+
 ##### 2.7.7 (11 mai 2026)
 
 - Suppression des mentions sur les profils d'acheteur. Omnikles/Safetender publie via l'API DUME et Klekoon ne publie pas, mais c'est peut-être pas le seul, donc je préfère supprimer et refaire un tour.
