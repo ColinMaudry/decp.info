@@ -42,6 +42,6 @@ env = [
   "DATA_FILE_PARQUET_PATH=tests/test.parquet",
   "DEVELOPMENT=true",
   "REBUILD_DUCKDB=true",
-  "DATA_SCHEMA_PATH=/home/colin/git/decp-processing/dist/schema.json",
+  "DATA_SCHEMA_LOCAL=/home/colin/git/decp-processing/dist/schema.json",
 ]
 addopts = "-p no:warnings"
