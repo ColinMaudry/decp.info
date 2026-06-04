@@ -79,12 +79,12 @@ def build_chart():
                 ),
                 # Publicité (appel d'offres)
                 html.Div(
-                    ["Publicité ", html.Small("(appel d'offres)")],
+                    ["Publicité"],
                     className="etapes-stage",
                 ),
                 _lane(
                     _bar(
-                        "Journaux d'annonces légales",
+                        "JAL",
                         "#f79009",
                         {"left": "40%", "right": "40%", "top": "6px", "height": "20px"},
                     ),
@@ -142,11 +142,7 @@ STAGES_MOBILE = [
     (
         "Publicité (appel d'offres)",
         [
-            (
-                "Journaux d'annonces légales",
-                "#f79009",
-                "de 90 000 € au seuil formalisé",
-            ),
+            ("JAL", "#f79009", "de 90 000 € au seuil formalisé"),
             ("BOAMP", "#1570ef", "à partir de 90 000 €"),
             (
                 "JOUE — avis de marché",
@@ -198,28 +194,6 @@ def build_mobile():
     return html.Div(blocks, className="etapes-mobile")
 
 
-def build_legend():
-    items = [
-        ("Approch", "#7c5cff"),
-        ("Journaux d'annonces légales", "#f79009"),
-        ("BOAMP", "#1570ef"),
-        ("JOUE", "#0e9384"),
-        ("DECP", "#12b76a"),
-    ]
-    return html.Div(
-        className="etapes-legend",
-        children=[
-            html.Span(
-                [
-                    html.I(style={"backgroundColor": color}),
-                    label,
-                ]
-            )
-            for label, color in items
-        ],
-    )
-
-
 layout = html.Div(
     className="container",
     children=[
@@ -233,7 +207,6 @@ layout = html.Div(
         ),
         build_chart(),
         build_mobile(),
-        build_legend(),
         dcc.Markdown(
             "**À noter :** l'axe horizontal n'est pas linéaire — les seuils "
             "sont espacés régulièrement pour rester lisibles. Les étapes "

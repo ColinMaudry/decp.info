@@ -646,27 +646,6 @@ input[type="number"] {
   align-items: center;
 }
 
-.etapes-legend {
-  margin-top: 14px;
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  font-size: 12px;
-}
-
-.etapes-legend span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.etapes-legend i {
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
-  display: inline-block;
-}
-
 .etapes-note {
   margin-top: 8px;
   color: #667085;
@@ -735,8 +714,7 @@ input[type="number"] {
 /* --- Bascule desktop / mobile au point de rupture 768 px --- */
 
 @media (max-width: 768px) {
-  .etapes-chart-scroll,
-  .etapes-legend {
+  .etapes-chart-scroll {
     display: none;
   }
   .etapes-mobile {
