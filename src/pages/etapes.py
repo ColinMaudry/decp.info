@@ -130,6 +130,74 @@ def build_chart():
     )
 
 
+# Données par étape, partagées par la vue mobile.
+# Chaque item : (libellé, couleur, plage de seuils en texte).
+STAGES_MOBILE = [
+    (
+        "Programmation",
+        [
+            ("Approch", "#7c5cff", "tous montants — publication non réglementaire"),
+        ],
+    ),
+    (
+        "Publicité (appel d'offres)",
+        [
+            (
+                "Journaux d'annonces légales",
+                "#f79009",
+                "de 90 000 € au seuil formalisé",
+            ),
+            ("BOAMP", "#1570ef", "à partir de 90 000 €"),
+            (
+                "JOUE — avis de marché",
+                "#0e9384",
+                "à partir des seuils formalisés (140 k€ / 216 k€)",
+            ),
+        ],
+    ),
+    (
+        "Attribution",
+        [
+            ("DECP — données essentielles", "#12b76a", "à partir de 40 000 €"),
+            ("JOUE — avis d'attribution", "#0e9384", "à partir des seuils formalisés"),
+        ],
+    ),
+    ("Contrat", []),
+    ("Paiement", []),
+]
+
+
+def build_mobile():
+    blocks = []
+    for stage, items in STAGES_MOBILE:
+        if items:
+            children = [
+                html.Div(
+                    [
+                        html.I(style={"backgroundColor": color}),
+                        html.Span(label, className="etapes-m-label"),
+                        html.Span(seuil, className="etapes-m-seuil"),
+                    ],
+                    className="etapes-m-item",
+                )
+                for label, color, seuil in items
+            ]
+        else:
+            children = [
+                html.Div(
+                    "aucune donnée publiée aujourd'hui",
+                    className="etapes-m-item etapes-m-empty",
+                )
+            ]
+        blocks.append(
+            html.Div(
+                [html.H4(stage, className="etapes-m-stage"), *children],
+                className="etapes-m-block",
+            )
+        )
+    return html.Div(blocks, className="etapes-mobile")
+
+
 def build_legend():
     items = [
         ("Approch", "#7c5cff"),
@@ -164,6 +232,7 @@ layout = html.Div(
             "bas) et par **seuil** (de gauche à droite, en euros hors taxes)."
         ),
         build_chart(),
+        build_mobile(),
         build_legend(),
         dcc.Markdown(
             "**À noter :** l'axe horizontal n'est pas linéaire — les seuils "
