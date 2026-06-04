@@ -1,4 +1,4 @@
-from dash import dcc, html, register_page
+from dash import Input, Output, State, callback, ctx, dcc, html, register_page
 
 from src.utils.seo import META_CONTENT
 
@@ -17,6 +17,41 @@ register_page(
     image_url=META_CONTENT["image_url"],
 )
 
+# Contenu des fiches — à rédiger en Markdown.
+# Clés barres : "bar-approch", "bar-jal", "bar-boamp", "bar-joue-marche",
+#               "bar-decp", "bar-joue-attribution"
+# Clés étapes (mobile) : "stage-programmation", "stage-publicite",
+#                         "stage-attribution", "stage-contrat", "stage-paiement"
+ALL_CONTENT: dict[str, str | None] = {
+    "bar-approch": None,
+    "bar-jal": None,
+    "bar-boamp": None,
+    "bar-joue-marche": None,
+    "bar-decp": None,
+    "bar-joue-attribution": None,
+    "stage-programmation": None,
+    "stage-publicite": None,
+    "stage-attribution": None,
+    "stage-contrat": None,
+    "stage-paiement": None,
+}
+
+_BAR_IDS = [
+    "bar-approch",
+    "bar-jal",
+    "bar-boamp",
+    "bar-joue-marche",
+    "bar-decp",
+    "bar-joue-attribution",
+]
+_STAGE_IDS = [
+    "stage-programmation",
+    "stage-publicite",
+    "stage-attribution",
+    "stage-contrat",
+    "stage-paiement",
+]
+
 
 def _lane(*bars):
     """Une ligne d'étape : fond segmenté en 5 + barres positionnées."""
@@ -32,10 +67,14 @@ def _lane(*bars):
     )
 
 
-def _bar(label, color, style):
+def _bar(label, color, style, bar_id=None):
     base = {"backgroundColor": color}
     base.update(style)
-    return html.Div(label, className="etapes-bar", style=base)
+    props = {"className": "etapes-bar", "style": base}
+    if bar_id is not None:
+        props["id"] = bar_id
+        props["n_clicks"] = 0
+    return html.Div(label, **props)
 
 
 def build_chart():
@@ -75,28 +114,29 @@ def build_chart():
                         "Approch — sourcing / préinformation (non réglementaire)",
                         "#7c5cff",
                         {"left": "2%", "right": "2%"},
+                        bar_id="bar-approch",
                     ),
                 ),
                 # Publicité (appel d'offres)
-                html.Div(
-                    ["Publicité"],
-                    className="etapes-stage",
-                ),
+                html.Div(["Publicité"], className="etapes-stage"),
                 _lane(
                     _bar(
                         "JAL",
                         "#f79009",
                         {"left": "40%", "right": "40%", "top": "6px", "height": "20px"},
+                        bar_id="bar-jal",
                     ),
                     _bar(
                         "BOAMP",
                         "#1570ef",
                         {"left": "40%", "right": "2%", "top": "28px", "height": "20px"},
+                        bar_id="bar-boamp",
                     ),
                     _bar(
                         "JOUE — avis de marché",
                         "#0e9384",
                         {"left": "60%", "right": "2%", "top": "6px", "height": "20px"},
+                        bar_id="bar-joue-marche",
                     ),
                 ),
                 # Attribution
@@ -106,11 +146,13 @@ def build_chart():
                         "DECP — données essentielles",
                         "#12b76a",
                         {"left": "20%", "right": "2%", "top": "6px", "height": "20px"},
+                        bar_id="bar-decp",
                     ),
                     _bar(
                         "JOUE — avis d'attribution",
                         "#0e9384",
                         {"left": "60%", "right": "2%", "top": "28px", "height": "20px"},
+                        bar_id="bar-joue-attribution",
                     ),
                 ),
                 # Contrat (vide)
@@ -131,16 +173,18 @@ def build_chart():
 
 
 # Données par étape, partagées par la vue mobile.
-# Chaque item : (libellé, couleur, plage de seuils en texte).
+# Chaque tuple : (libellé étape, id CSS, [(libellé, couleur, plage seuils)]).
 STAGES_MOBILE = [
     (
         "Programmation",
+        "stage-programmation",
         [
             ("Approch", "#7c5cff", "tous montants — publication non réglementaire"),
         ],
     ),
     (
         "Publicité (appel d'offres)",
+        "stage-publicite",
         [
             ("JAL", "#f79009", "de 90 000 € au seuil formalisé"),
             ("BOAMP", "#1570ef", "à partir de 90 000 €"),
@@ -153,19 +197,20 @@ STAGES_MOBILE = [
     ),
     (
         "Attribution",
+        "stage-attribution",
         [
             ("DECP — données essentielles", "#12b76a", "à partir de 40 000 €"),
             ("JOUE — avis d'attribution", "#0e9384", "à partir des seuils formalisés"),
         ],
     ),
-    ("Contrat", []),
-    ("Paiement", []),
+    ("Contrat", "stage-contrat", []),
+    ("Paiement", "stage-paiement", []),
 ]
 
 
 def build_mobile():
     blocks = []
-    for stage, items in STAGES_MOBILE:
+    for stage, stage_id, items in STAGES_MOBILE:
         if items:
             children = [
                 html.Div(
@@ -187,7 +232,21 @@ def build_mobile():
             ]
         blocks.append(
             html.Div(
-                [html.H4(stage, className="etapes-m-stage"), *children],
+                [
+                    html.Div(
+                        [
+                            html.H4(stage, className="etapes-m-stage"),
+                            html.Button(
+                                "Voir fiche →",
+                                id=stage_id,
+                                n_clicks=0,
+                                className="etapes-m-link",
+                            ),
+                        ],
+                        className="etapes-m-header",
+                    ),
+                    *children,
+                ],
                 className="etapes-m-block",
             )
         )
@@ -207,6 +266,8 @@ layout = html.Div(
         ),
         build_chart(),
         build_mobile(),
+        dcc.Store(id="etapes-selected", data=None),
+        html.Div(id="etapes-detail", className="etapes-detail"),
         dcc.Markdown(
             "**À noter :** l'axe horizontal n'est pas linéaire — les seuils "
             "sont espacés régulièrement pour rester lisibles. Les étapes "
@@ -216,3 +277,21 @@ layout = html.Div(
         ),
     ],
 )
+
+
+@callback(
+    Output("etapes-detail", "children"),
+    Output("etapes-selected", "data"),
+    [Input(id_, "n_clicks") for id_ in _BAR_IDS + _STAGE_IDS],
+    State("etapes-selected", "data"),
+    prevent_initial_call=True,
+)
+def _show_detail(*args):
+    current = args[-1]
+    triggered = ctx.triggered_id
+    if triggered == current:
+        return None, None
+    content = ALL_CONTENT.get(triggered)
+    if content is None:
+        return dcc.Markdown("*Fiche en cours de rédaction.*"), triggered
+    return dcc.Markdown(content), triggered
