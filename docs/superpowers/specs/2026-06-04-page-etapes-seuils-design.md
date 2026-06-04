@@ -100,14 +100,22 @@ Aucune modification de la navbar.
 
 Bloc dédié dans `src/assets/css/` (fichier existant ou nouveau), avec classes préfixées (ex. `.etapes-chart`, `.etapes-lane`, `.etapes-bar`…) pour éviter toute collision.
 
-Responsive : envelopper le graphique dans un conteneur `overflow-x:auto` avec une largeur minimale, afin que les barres restent lisibles sur petit écran plutôt que de s'écraser.
+### Responsive — deux rendus
+
+Le graphique en grille n'est pas lisible sur écran portrait étroit (la vue d'ensemble est perdue). On rend donc **deux représentations des mêmes données**, basculées par media query (point de rupture ~768 px) :
+
+- **Desktop / tablette (≥ 768 px)** : le graphique en grille (maquette v3), enveloppé dans un conteneur `overflow-x:auto` + `min-width` pour les écrans intermédiaires. Le rendu mobile est masqué.
+- **Mobile (< 768 px)** : le graphique est masqué et remplacé par une **liste verticale par étape**. Chaque étape est un bloc qui liste ses publications, chacune avec sa pastille de couleur, son nom, et sa **plage de seuils en texte** (ex. « DECP — à partir de 40 000 € »). Les étapes Contrat/Paiement affichent « aucune donnée publiée aujourd'hui ».
+
+Pour éviter la duplication, les publications de chaque étape (libellé, couleur, texte de plage) sont décrites **une seule fois** dans une structure de données Python, consommée par le rendu mobile et la légende. Le graphique en grille garde son positionnement explicite (intrinsèquement spatial).
 
 ## Vérification
 
 - `python run.py` puis ouvrir `/etapes` : le graphique s'affiche, fidèle à la maquette v3, avec le bandeau de navigation en haut.
 - `/etapes` **absente** de la navbar.
 - `/sitemap.xml` **contient** `/etapes`.
-- Sur fenêtre étroite : défilement horizontal du graphique, pas d'écrasement.
+- Sur fenêtre intermédiaire : défilement horizontal du graphique, pas d'écrasement.
+- Sur écran portrait étroit (< 768 px) : le graphique en grille est masqué, remplacé par la liste verticale par étape, lisible sans défilement horizontal.
 
 ## Référence
 

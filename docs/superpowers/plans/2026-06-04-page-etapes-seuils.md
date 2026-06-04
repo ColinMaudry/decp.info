@@ -4,7 +4,7 @@
 
 **Goal:** Créer une page statique `/etapes` qui affiche un graphique HTML/CSS montrant quelles données (Approch, Journaux d'annonces légales, BOAMP, JOUE, DECP) sont publiées à chaque étape de la passation d'un marché public et à partir de quel seuil réglementaire.
 
-**Architecture:** Une nouvelle page Dash auto-enregistrée (`src/pages/etapes.py`) qui expose un `layout` composé uniquement de `html.Div`/`dcc.Markdown` (aucun callback, aucune donnée dynamique). Le graphique est une grille CSS (1 colonne de libellés + 5 colonnes de seuils) où chaque publication est une barre positionnée en pourcentage. Le style vit dans `src/assets/css/style.css` (auto-chargé par Dash). L'URL est ajoutée au sitemap mais pas à la navbar.
+**Architecture:** Une nouvelle page Dash auto-enregistrée (`src/pages/etapes.py`) qui expose un `layout` composé uniquement de `html.Div`/`dcc.Markdown` (aucun callback, aucune donnée dynamique). La page rend **deux représentations des mêmes données** basculées par media query : sur desktop/tablette, un graphique en grille CSS (1 colonne de libellés + 5 colonnes de seuils) où chaque publication est une barre positionnée en pourcentage ; sur mobile portrait (< 768 px), une liste verticale par étape. Le style vit dans `src/assets/css/style.css` (auto-chargé par Dash). L'URL est ajoutée au sitemap mais pas à la navbar.
 
 **Tech Stack:** Python 3, Dash 3.4 (pages API), CSS (grille + positionnement absolu), Flask (route sitemap existante).
 
@@ -25,9 +25,9 @@
 
 ## File Structure
 
-- **Create** `src/pages/etapes.py` — la page : `register_page(...)` + `layout`. Contient une petite fonction interne `build_chart()` qui retourne le `html.Div` du graphique, pour garder le `layout` lisible. Responsabilité unique : décrire la page `/etapes`.
+- **Create** `src/pages/etapes.py` — la page : `register_page(...)` + `layout`. Contient `build_chart()` (graphique grille desktop), `build_mobile()` (liste verticale mobile, alimentée par la structure `STAGES_MOBILE`) et `build_legend()`, pour garder le `layout` lisible. Responsabilité unique : décrire la page `/etapes`.
 - **Modify** `src/app.py` — ajouter `"/etapes"` à la liste `pages` de la fonction `sitemap()`.
-- **Modify** `src/assets/css/style.css` — ajouter un bloc de règles préfixées `.etapes-*` (graphique + responsive).
+- **Modify** `src/assets/css/style.css` — ajouter un bloc de règles préfixées `.etapes-*` : graphique en grille, liste mobile `.etapes-m-*`, et media query de bascule à 768 px.
 
 ---
 
@@ -290,7 +290,7 @@ Expected (comparer à la maquette `.superpowers/brainstorm/80498-1780599135/cont
 - La barre « Journaux d'annonces légales » occupe la case 90 k€ → seuil formalisé ; DECP démarre à 40 k€ ; JOUE et BOAMP démarrent aux bons segments.
 - La légende sous le graphique liste les 5 publications avec leurs couleurs.
 
-À ce stade le style brut (couleurs des barres) doit déjà être visible car appliqué inline ; la mise en page de la grille sera finalisée en Task 3. Si la grille n'est pas encore correcte (colonnes non alignées), c'est attendu — continuer en Task 3. Arrêter le serveur.
+À ce stade le style brut (couleurs des barres) doit déjà être visible car appliqué inline ; la mise en page de la grille sera finalisée en Task 4. Si la grille n'est pas encore correcte (colonnes non alignées), c'est attendu — continuer. Arrêter le serveur.
 
 - [ ] **Step 4: Commit**
 
@@ -302,7 +302,114 @@ source .venv/bin/activate && git add src/pages/etapes.py && git commit -m "feat(
 
 ---
 
-## Task 3 : CSS du graphique (grille + responsive)
+## Task 3 : Vue mobile (liste verticale par étape)
+
+**Files:**
+
+- Modify: `src/pages/etapes.py`
+
+Sur écran portrait étroit, le graphique en grille n'est pas lisible (vue d'ensemble perdue). On ajoute une **liste verticale par étape** qui décrit les mêmes données en texte. Le basculement entre les deux rendus se fera en CSS (Task 4). Pour éviter la duplication, les publications de chaque étape sont décrites dans une structure de données Python consommée par le rendu mobile.
+
+- [ ] **Step 1: Ajouter la structure de données et `build_mobile()`**
+
+Dans `src/pages/etapes.py`, ajouter ce bloc juste avant la fonction `build_legend()` :
+
+```python
+# Données par étape, partagées par la vue mobile.
+# Chaque item : (libellé, couleur, plage de seuils en texte).
+STAGES_MOBILE = [
+    (
+        "Programmation",
+        [
+            ("Approch", "#7c5cff", "tous montants — publication non réglementaire"),
+        ],
+    ),
+    (
+        "Publicité (appel d'offres)",
+        [
+            ("Journaux d'annonces légales", "#f79009", "de 90 000 € au seuil formalisé"),
+            ("BOAMP", "#1570ef", "à partir de 90 000 €"),
+            (
+                "JOUE — avis de marché",
+                "#0e9384",
+                "à partir des seuils formalisés (140 k€ / 216 k€)",
+            ),
+        ],
+    ),
+    (
+        "Attribution",
+        [
+            ("DECP — données essentielles", "#12b76a", "à partir de 40 000 €"),
+            ("JOUE — avis d'attribution", "#0e9384", "à partir des seuils formalisés"),
+        ],
+    ),
+    ("Contrat", []),
+    ("Paiement", []),
+]
+
+
+def build_mobile():
+    blocks = []
+    for stage, items in STAGES_MOBILE:
+        if items:
+            children = [
+                html.Div(
+                    [
+                        html.I(style={"backgroundColor": color}),
+                        html.Span(label, className="etapes-m-label"),
+                        html.Span(seuil, className="etapes-m-seuil"),
+                    ],
+                    className="etapes-m-item",
+                )
+                for label, color, seuil in items
+            ]
+        else:
+            children = [
+                html.Div(
+                    "aucune donnée publiée aujourd'hui",
+                    className="etapes-m-item etapes-m-empty",
+                )
+            ]
+        blocks.append(
+            html.Div(
+                [html.H4(stage, className="etapes-m-stage"), *children],
+                className="etapes-m-block",
+            )
+        )
+    return html.Div(blocks, className="etapes-mobile")
+```
+
+- [ ] **Step 2: Insérer `build_mobile()` dans `layout`**
+
+Dans `layout`, la ligne `build_chart(),` (insérée en Task 2) est suivie de `build_mobile(),`, soit :
+
+```python
+        build_chart(),
+        build_mobile(),
+        build_legend(),
+```
+
+- [ ] **Step 3: Lancer l'app et vérifier (rendu brut, avant CSS de bascule)**
+
+Run :
+
+```bash
+source .venv/bin/activate && python run.py
+```
+
+Ouvrir `http://127.0.0.1:8050/etapes`. À ce stade les deux rendus s'affichent l'un sous l'autre (la bascule CSS arrive en Task 4) : sous le graphique, la liste affiche Programmation (Approch…), Publicité (3 publications), Attribution (2 publications), puis Contrat et Paiement avec « aucune donnée publiée aujourd'hui ». C'est attendu. Arrêter le serveur.
+
+- [ ] **Step 4: Commit**
+
+```bash
+source .venv/bin/activate && git add src/pages/etapes.py && git commit -m "feat(etapes): vue mobile liste par étape"
+```
+
+(Si échec dû à un hook : refaire `git add` puis `git commit`.)
+
+---
+
+## Task 4 : CSS du graphique + bascule mobile
 
 **Files:**
 
@@ -438,6 +545,77 @@ Ajouter à la fin du fichier :
   color: #667085;
   font-size: 13px;
 }
+
+/* --- Vue mobile (liste par étape) : masquée par défaut --- */
+
+.etapes-mobile {
+  display: none;
+  margin: 1rem 0;
+}
+
+.etapes-m-block {
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.etapes-m-stage {
+  margin: 0;
+  padding: 10px 12px;
+  background: #f9fafb;
+  border-bottom: 1px solid #eaecf0;
+  font-size: 15px;
+  color: #101828;
+}
+
+.etapes-m-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f2f4f7;
+  font-size: 13px;
+}
+
+.etapes-m-item:last-child {
+  border-bottom: none;
+}
+
+.etapes-m-item i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex: 0 0 auto;
+  position: relative;
+  top: 2px;
+}
+
+.etapes-m-label {
+  font-weight: 600;
+  color: #101828;
+}
+
+.etapes-m-seuil {
+  color: #667085;
+}
+
+.etapes-m-empty {
+  color: #98a2b3;
+  font-style: italic;
+}
+
+/* --- Bascule desktop / mobile au point de rupture 768 px --- */
+
+@media (max-width: 768px) {
+  .etapes-chart-scroll,
+  .etapes-legend {
+    display: none;
+  }
+  .etapes-mobile {
+    display: block;
+  }
+}
 ```
 
 - [ ] **Step 2: Lancer l'app et vérifier le rendu final**
@@ -448,13 +626,18 @@ Run :
 source .venv/bin/activate && python run.py
 ```
 
-Ouvrir `http://127.0.0.1:8050/etapes`.
-Expected : le graphique est désormais identique à la maquette v3 — colonnes alignées, en-tête X avec ligne de séparation foncée, barres colorées bien positionnées dans chaque segment, lignes Contrat/Paiement grisées en italique, légende sous le graphique.
+Ouvrir `http://127.0.0.1:8050/etapes` en grand écran (≥ 768 px).
+Expected : le graphique est identique à la maquette v3 — colonnes alignées, en-tête X avec ligne de séparation foncée, barres colorées bien positionnées dans chaque segment, lignes Contrat/Paiement grisées en italique, légende sous le graphique. La **liste mobile est masquée** (le graphique seul est visible).
 
-- [ ] **Step 3: Vérifier le responsive (petit écran)**
+- [ ] **Step 3: Vérifier la bascule responsive**
 
-Dans le navigateur, réduire la fenêtre à ~500 px de large (ou ouvrir les devtools en mode mobile).
-Expected : le graphique devient **défilable horizontalement** (grâce à `.etapes-chart-scroll { overflow-x:auto }` + `min-width:720px`), les barres ne s'écrasent pas. Arrêter le serveur.
+Dans le navigateur, ouvrir les devtools et passer en mode mobile portrait (largeur < 768 px, ex. iPhone SE 375 px). Tester aussi une largeur intermédiaire (~800 px).
+Expected :
+
+- À largeur intermédiaire (~800 px, ≥ 768) : le **graphique** s'affiche, défilable horizontalement (`overflow-x:auto` + `min-width:720px`), barres non écrasées ; liste mobile masquée.
+- En portrait (< 768 px) : le graphique **et la légende disparaissent**, remplacés par la **liste verticale par étape** — chaque étape est un bloc avec son titre, et chaque publication a sa pastille de couleur, son nom et sa plage de seuils en texte. Aucun défilement horizontal nécessaire. Contrat/Paiement affichent « aucune donnée publiée aujourd'hui » en italique.
+
+Arrêter le serveur.
 
 - [ ] **Step 4: Commit**
 
@@ -466,7 +649,7 @@ source .venv/bin/activate && git add src/assets/css/style.css && git commit -m "
 
 ---
 
-## Task 4 : Référencement de la page dans le sitemap
+## Task 5 : Référencement de la page dans le sitemap
 
 **Files:**
 
@@ -510,6 +693,7 @@ source .venv/bin/activate && git add src/app.py && git commit -m "feat(etapes): 
 - [ ] `/etapes` affiche le graphique fidèle à la maquette v3, avec le bandeau de navigation global en haut.
 - [ ] La page est **absente** de la navbar.
 - [ ] `/sitemap.xml` **contient** `/etapes`.
-- [ ] Sur fenêtre étroite, le graphique défile horizontalement sans s'écraser.
+- [ ] Sur fenêtre intermédiaire (≥ 768 px), le graphique défile horizontalement sans s'écraser.
+- [ ] Sur écran portrait étroit (< 768 px), le graphique est masqué et remplacé par la liste verticale par étape, lisible sans défilement horizontal.
 - [ ] Titre H2 de la page = « Quelles données pour quelles étapes et quels seuils ? ».
 - [ ] `name` de la page = « Étapes et données ».
