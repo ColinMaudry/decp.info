@@ -2,7 +2,7 @@ from dash import Input, Output, State, callback, ctx, dcc, html, register_page
 
 from src.utils.seo import META_CONTENT
 
-NAME = "Quelles données pour quelles étapes et quels seuils ?"
+NAME = "Quelles données pour quelles étapes et quels seuils dans les marchés publics ?"
 
 register_page(
     __name__,
@@ -293,5 +293,5 @@ def _show_detail(*args):
         return None, None
     content = ALL_CONTENT.get(triggered)
     if content is None:
-        return dcc.Markdown("*Fiche en cours de rédaction.*"), triggered
+        return dcc.Markdown(f"*Fiche en cours de rédaction.* {triggered}"), triggered
     return dcc.Markdown(content), triggered
