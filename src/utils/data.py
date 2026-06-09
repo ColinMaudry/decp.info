@@ -53,14 +53,16 @@ def get_departements_geojson() -> dict:
     return geojson
 
 
-def get_departement_region(code_postal):
-    if code_postal > "97000":
-        code_departement = code_postal[:3]
-    else:
-        code_departement = code_postal[:2]
-    nom_departement = DEPARTEMENTS[code_departement]["departement"]
-    nom_region = DEPARTEMENTS[code_departement]["region"]
-    return code_departement, nom_departement, nom_region
+def get_departement_region(code_postal: str | None):
+    if code_postal:
+        if code_postal > "97000":
+            code_departement = code_postal[:3]
+        else:
+            code_departement = code_postal[:2]
+        nom_departement = DEPARTEMENTS[code_departement]["departement"]
+        nom_region = DEPARTEMENTS[code_departement]["region"]
+        return code_departement, nom_departement, nom_region
+    return "", "", ""
 
 
 def get_data_schema() -> dict:

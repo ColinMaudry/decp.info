@@ -6,7 +6,7 @@ import pandas  # noqa: F401  # eager import: avoid plotly's lazy-import race acr
 import tomllib
 from dash import Dash, Input, Output, State, dcc, html, page_container, page_registry
 from dotenv import load_dotenv
-from flask import Response
+from flask import Flask, Response
 
 from src.utils import DEVELOPMENT
 from src.utils.cache import cache
@@ -27,12 +27,10 @@ META_TAGS = [
 if DEVELOPMENT:
     META_TAGS.append({"name": "robots", "content": "noindex"})
 
-app: Dash = Dash(
-    title="decp.info",
-    use_pages=True,
-    compress=True,
-    meta_tags=META_TAGS,
-)
+# Le cache doit être initialisé AVANT la construction de Dash : `use_pages=True`
+# importe les modules de pages pendant l'instanciation, et certains appellent des
+# fonctions memoizées (@cache.memoize) dès l'import (ex. tableau.py).
+server = Flask(__name__)
 
 cache_dir = os.getenv("CACHE_DIR", "/tmp/decp-cache")
 
@@ -40,7 +38,7 @@ if os.path.exists(cache_dir):
     rmtree(cache_dir)
 
 cache.init_app(
-    app.server,
+    server,
     config={
         "CACHE_TYPE": "FileSystemCache",
         "CACHE_DIR": cache_dir,
@@ -49,6 +47,14 @@ cache.init_app(
         ),  # 24h par défaut
         "CACHE_THRESHOLD": 300,
     },
+)
+
+app: Dash = Dash(
+    server=server,
+    title="decp.info",
+    use_pages=True,
+    compress=True,
+    meta_tags=META_TAGS,
 )
 
 
@@ -69,6 +75,7 @@ def sitemap():
         "/observatoire",
         "/tableau",
         "/a-propos",
+        "/etapes",
     ]
     xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
     xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'

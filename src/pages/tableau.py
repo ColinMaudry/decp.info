@@ -21,7 +21,7 @@ from dash import (
 
 from src.db import query_marches, schema
 from src.figures import DataTable, make_column_picker
-from src.utils import logger
+from src.utils import get_last_modified, logger
 from src.utils.seo import META_CONTENT
 from src.utils.table import (
     COLUMNS,
@@ -33,7 +33,7 @@ from src.utils.table import (
 )
 from src.utils.tracking import track_search
 
-update_date_timestamp = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
+update_date_timestamp = get_last_modified(os.getenv("DATA_FILE_PARQUET_PATH", ""))
 update_date = datetime.fromtimestamp(update_date_timestamp).strftime("%d/%m/%Y")
 update_date_iso = datetime.fromtimestamp(update_date_timestamp).isoformat()
 

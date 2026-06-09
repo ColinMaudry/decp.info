@@ -1,7 +1,7 @@
 [project]
 name = "decp.info"
 description = "Interface d'exploration et d'analyse des marchés publics français."
-version = "2.7.8"
+version = "2.7.9"
 requires-python = ">= 3.10"
 authors = [{ name = "Colin Maudry", email = "colin@colmo.tech" }]
 dependencies = [
@@ -42,6 +42,6 @@ env = [
   "DATA_FILE_PARQUET_PATH=tests/test.parquet",
   "DEVELOPMENT=true",
   "REBUILD_DUCKDB=true",
-  "DATA_SCHEMA_PATH=/home/colin/git/decp-processing/dist/schema.json",
+  "DATA_SCHEMA_LOCAL=/home/colin/git/decp-processing/dist/schema.json",
 ]
 addopts = "-p no:warnings"

@@ -8,27 +8,31 @@ import polars as pl
 import polars.selectors as cs
 from polars.exceptions import ComputeError
 
-from src.utils import logger
+from src.utils import get_last_modified, logger
 
 
-def should_rebuild(db_path: Path, parquet_path: Path) -> bool:
+def should_rebuild(db_path: Path, parquet_path: str) -> bool:
     db_path = Path(db_path)
-    parquet_path = Path(parquet_path)
     if not db_path.exists():
         return True
     dev = os.getenv("DEVELOPMENT", "False").lower() == "true"
     force = os.getenv("REBUILD_DUCKDB", "False").lower() == "true"
     if dev and not force:
         return False
-    return parquet_path.stat().st_mtime > db_path.stat().st_mtime
+    last_modified: float = get_last_modified(parquet_path)
+    return last_modified > db_path.stat().st_mtime
 
 
-def _load_source_frame(parquet_path: Path) -> pl.DataFrame:
+def _load_source_frame() -> pl.DataFrame:
     """Read the source parquet and apply the row-level transforms.
 
     Kept here (not in utils.py) so src.db has no dependency on utils.
     Mirrors the behavior previously in utils.get_decp_data().
     """
+
+    parquet_path: str = os.getenv("DATA_FILE_PARQUET_PATH", "")
+    if not (parquet_path.startswith("http")):
+        assert os.path.exists(parquet_path)
     try:
         lff: pl.LazyFrame = pl.scan_parquet(str(parquet_path))
     except ComputeError:
@@ -58,20 +62,21 @@ def _load_source_frame(parquet_path: Path) -> pl.DataFrame:
     return lff.collect()
 
 
-def build_database(db_path: Path, parquet_path: Path) -> None:
+def build_database(db_path: Path) -> None:
     """Build the DuckDB database atomically under an exclusive lock.
 
     Caller MUST hold the fcntl.flock on the .lock file.
     """
     db_path = Path(db_path)
-    parquet_path = Path(parquet_path)
     tmp_path = db_path.with_suffix(".duckdb.tmp")
     staging_parquet = db_path.with_suffix(".staging.parquet")
     if tmp_path.exists():
         tmp_path.unlink()
 
-    logger.info(f"Construction de la base DuckDB à partir de {parquet_path}...")
-    frame = _load_source_frame(parquet_path)
+    logger.info(
+        f"Construction de la base DuckDB à partir de {os.getenv('DATA_FILE_PARQUET_PATH', '')}..."
+    )
+    frame = _load_source_frame()
 
     # Write transformed frame as parquet so DuckDB can read it natively
     # (avoids pyarrow dependency for the Polars→DuckDB handoff)
@@ -111,13 +116,13 @@ def build_database(db_path: Path, parquet_path: Path) -> None:
 
 def _ensure_database() -> Path:
     db_path = Path(os.getenv("DUCKDB_PATH", "./decp.duckdb"))
-    parquet_path = Path(os.getenv("DATA_FILE_PARQUET_PATH"))
+    parquet_path = os.getenv("DATA_FILE_PARQUET_PATH", "")
     lock_path = db_path.with_suffix(".duckdb.lock")
 
     with open(lock_path, "w") as lock_fd:
         fcntl.flock(lock_fd, fcntl.LOCK_EX)
         if should_rebuild(db_path, parquet_path):
-            build_database(db_path, parquet_path)
+            build_database(db_path)
         else:
             logger.debug("Base de données déjà disponible et à jour.")
     return db_path
