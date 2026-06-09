@@ -1,3 +1,8 @@
+##### 2.7.9 (9 juin 2026)
+
+- Ajout d'une vue "étapes" (elle sera mieux intégrée dans le site à l'avenir)
+- Correction de petites erreurs qui polluent les logs
+
 ##### 2.7.8 (18 mai 2026)
 
 - Récupération du schéma de données plus robuste, ne pas dépendre de data.gouv.fr
