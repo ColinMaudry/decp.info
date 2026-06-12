@@ -41,3 +41,19 @@ DOMAIN_NAME = (
     if os.getenv("DEVELOPMENT", "False").lower() == "true"
     else "decp.info"
 )
+
+
+def get_data_update_timestamp(
+    parquet_path: str, fallback_path: str | None = None
+) -> float | None:
+    """Date de MAJ des données, best-effort, sans jamais lever (usage au boot)."""
+    try:
+        return get_last_modified(parquet_path)
+    except Exception as e:
+        logger.warning(f"Date de mise à jour des données indisponible ({e})")
+    if fallback_path:
+        try:
+            return os.path.getmtime(fallback_path)
+        except OSError:
+            pass
+    return None

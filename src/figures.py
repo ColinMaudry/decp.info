@@ -1,6 +1,5 @@
 from datetime import datetime
 from typing import Literal
-from urllib.error import HTTPError, URLError
 
 import dash_bootstrap_components as dbc
 import dash_leaflet as dl
@@ -120,9 +119,12 @@ def get_barchart_sources(lff: pl.LazyFrame, type_date: str):
 
 def get_sources_tables(source_path) -> html.Div:
     try:
+        if not source_path:
+            raise ValueError("SOURCE_STATS_CSV_PATH non défini")
         dff = pl.read_csv(source_path)
-    except (URLError, HTTPError):
-        return html.Div("Erreur de connexion")
+    except Exception as e:
+        logger.warning(f"Sources de données indisponibles ({e})")
+        return html.Div("Sources de données momentanément indisponibles.")
     dff = dff.with_columns(
         (
             pl.lit('<a href = "')
