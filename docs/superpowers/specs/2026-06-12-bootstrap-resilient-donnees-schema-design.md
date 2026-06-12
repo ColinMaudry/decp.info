@@ -70,28 +70,43 @@ touche l'API. On ne paie pas cette complexité tant qu'on n'en a pas la preuve.
 
 ## Décisions
 
-1. **Schéma** : URL primaire, fallback local. (confirmé)
+1. **Schéma** : URL primaire, **cache seul** en fallback (on supprime
+   `DATA_SCHEMA_LOCAL`). (confirmé)
 2. **DuckDB** : réutiliser le dernier DuckDB construit en cas d'échec. (confirmé)
 3. **Last-known-good réel du schéma** : après un fetch distant réussi, persister
-   le schéma localement pour que le fallback soit toujours le _dernier schéma
-   distant fonctionnel_. (confirmé)
+   le schéma dans un cache local pour que le fallback soit toujours le _dernier
+   schéma distant fonctionnel_. (confirmé)
 
-### Nuance sur le chemin de persistance du schéma
+### Chemin de persistance du schéma : `DATA_SCHEMA_CACHE` seul
 
-L'utilisateur a demandé « écrire dans `DATA_SCHEMA_LOCAL` ». Mais en dev,
-`DATA_SCHEMA_LOCAL = ../decp-processing/dist/schema.json` — un fichier d'un **autre
-repo**. L'écraser au boot salirait ce repo.
-
-**Choix retenu (à confirmer en relecture) :** introduire un **chemin de cache
-dédié que l'app possède**, distinct du fichier statique de secours.
+On remplace `DATA_SCHEMA_LOCAL` (qui pointait, en dev, vers
+`../decp-processing/dist/schema.json` — un fichier cross-repo qu'on ne veut pas
+écraser) par un **cache unique possédé par l'app**.
 
 - `DATA_SCHEMA_PATH` (URL) — source primaire.
 - `DATA_SCHEMA_CACHE` (nouveau, ex. défaut `./schema.cache.json`) — écrit après
-  chaque fetch distant réussi ; lu en fallback n°1 (dernier distant fonctionnel).
-- `DATA_SCHEMA_LOCAL` — graine statique de secours (fichier `decp-processing`),
-  **lue mais jamais écrite**.
+  chaque fetch distant réussi, lu en fallback.
 
-Chaîne de résolution : `URL → cache → local statique → RuntimeError`.
+Chaîne de résolution : `URL → cache → RuntimeError`.
+
+**Pourquoi c'est suffisant.** Le déploiement est en place sur un VM persistant
+(`ssh → cd /var/www/APP_NAME → git pull → restart systemd`), donc le fichier de
+cache survit aux déploiements — **même garantie de persistance que le DuckDB
+réutilisé**. Tous les incidents constatés (env oubliée, parquet KO, URL schéma en
+erreur) surviennent sur un **redéploiement** d'un hôte déjà chaud, où le cache a
+déjà été écrit par un boot précédent réussi ⇒ couvert.
+
+**Seul cas non couvert (assumé) :** le _cold start absolu_ — un hôte qui n'a jamais
+booté avec succès **et** URL distante down au même instant. Étroit, non-récurrent.
+Fermable plus tard par une graine commitée in-repo si jamais il se matérialise
+(YAGNI).
+
+**Contraintes :**
+
+- `DATA_SCHEMA_CACHE` (`./schema.cache.json`) doit être **`.gitignore`** — sinon le
+  `git pull` du déploiement entrerait en conflit. (Comme `decp.duckdb` aujourd'hui.)
+- En dev, plus de fallback vers le schéma frais de `decp-processing` : on bascule
+  sur le cache (dernier schéma data.gouv). Acceptable, l'URL restant primaire.
 
 ## Design
 
@@ -135,20 +150,19 @@ def _ensure_database() -> Path:
 
 ### Invariant 2 — Schéma (`src/utils/data.py`)
 
-> Un schéma valide non-vide est toujours retourné si une source (distant, cache,
-> ou local statique) en fournit un. Échec dur seulement si aucune.
+> Un schéma valide non-vide est toujours retourné si une source (distant ou cache)
+> en fournit un. Échec dur seulement si aucune.
 
 ```python
 def get_data_schema() -> dict:
+    cache_path = os.getenv("DATA_SCHEMA_CACHE", "./schema.cache.json")
     raw = _fetch_remote_schema(os.getenv("DATA_SCHEMA_PATH"))   # dict valide | None
     if raw is not None:
-        _persist_schema_cache(raw, os.getenv("DATA_SCHEMA_CACHE", "./schema.cache.json"))
+        _persist_schema_cache(raw, cache_path)
     else:
-        raw = _load_schema_file(os.getenv("DATA_SCHEMA_CACHE", "./schema.cache.json"))
+        raw = _load_schema_file(cache_path)
     if raw is None:
-        raw = _load_schema_file(os.getenv("DATA_SCHEMA_LOCAL", ""))
-    if raw is None:
-        raise RuntimeError("Aucun schéma disponible (distant, cache ni local).")
+        raise RuntimeError("Aucun schéma disponible (ni distant ni cache).")
     return OrderedDict((c["name"], c) for c in raw["fields"])
 ```
 
@@ -173,11 +187,15 @@ Couvrir chaque branche de fallback. Sans dépendre du réseau réel.
 2. URL renvoie une erreur HTTP (mock 500) ⇒ fallback cache.
 3. URL renvoie un JSON malformé (sans `"fields"`) ⇒ fallback cache.
 4. URL KO + cache présent ⇒ schéma du cache.
-5. URL KO + cache absent + local statique présent ⇒ schéma local.
-6. Toutes sources KO ⇒ `RuntimeError` claire.
-7. Échec d'écriture du cache ⇒ schéma quand même retourné (non bloquant).
+5. URL KO + cache absent ⇒ `RuntimeError` claire.
+6. Échec d'écriture du cache ⇒ schéma quand même retourné (non bloquant).
 
-**Bootstrap DuckDB (`_ensure_database`) :** 8. `should_rebuild` lève + DuckDB existant ⇒ réutilisé, pas d'exception. 9. `build_database` lève + DuckDB existant ⇒ réutilisé, pas d'exception. 10. Échec + **aucun** DuckDB (cold start) ⇒ ré-lève. 11. Cas nominal : rebuild nécessaire et possible ⇒ build effectué.
+**Bootstrap DuckDB (`_ensure_database`) :**
+
+7. `should_rebuild` lève + DuckDB existant ⇒ réutilisé, pas d'exception.
+8. `build_database` lève + DuckDB existant ⇒ réutilisé, pas d'exception.
+9. Échec + **aucun** DuckDB (cold start) ⇒ ré-lève.
+10. Cas nominal : rebuild nécessaire et possible ⇒ build effectué.
 
 Mocker `get_last_modified` / `build_database` / `httpx.get` ; utiliser des fichiers
 DuckDB et schéma temporaires (`tmp_path`).
@@ -190,12 +208,16 @@ DuckDB et schéma temporaires (`tmp_path`).
 
 ## Variables d'environnement
 
-| Variable                 | Rôle                                    | Changement           |
-| ------------------------ | --------------------------------------- | -------------------- |
-| `DATA_FILE_PARQUET_PATH` | Source parquet (URL ou chemin)          | inchangé             |
-| `DATA_SCHEMA_PATH`       | URL schéma (primaire)                   | inchangé             |
-| `DATA_SCHEMA_LOCAL`      | Fichier schéma de secours statique      | **lu, jamais écrit** |
-| `DATA_SCHEMA_CACHE`      | Cache last-known-good du schéma distant | **nouveau**          |
-| `DUCKDB_PATH`            | Fichier DuckDB                          | inchangé             |
+| Variable                 | Rôle                                    | Changement   |
+| ------------------------ | --------------------------------------- | ------------ |
+| `DATA_FILE_PARQUET_PATH` | Source parquet (URL ou chemin)          | inchangé     |
+| `DATA_SCHEMA_PATH`       | URL schéma (primaire)                   | inchangé     |
+| `DATA_SCHEMA_LOCAL`      | Ancien fichier de secours statique      | **supprimé** |
+| `DATA_SCHEMA_CACHE`      | Cache last-known-good du schéma distant | **nouveau**  |
+| `DUCKDB_PATH`            | Fichier DuckDB                          | inchangé     |
 
-Mettre à jour `.template.env` avec `DATA_SCHEMA_CACHE`.
+À faire côté config :
+
+- Ajouter `DATA_SCHEMA_CACHE` à `.template.env`, retirer `DATA_SCHEMA_LOCAL` de
+  `.template.env` / `.env`.
+- Ajouter `schema.cache.json` (ou la valeur de `DATA_SCHEMA_CACHE`) au `.gitignore`.
