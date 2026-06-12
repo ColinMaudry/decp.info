@@ -42,6 +42,12 @@ _TEST_DATA = [
 _PARQUET_PATH = Path(os.path.abspath("tests/test.parquet"))
 _DB_PATH = Path(os.path.abspath("decp.duckdb"))
 
+# Schéma déterministe et hors-ligne pour les tests : on pointe le cache sur un
+# fixture commité et on désactive la récupération distante.
+_SCHEMA_FIXTURE = Path(os.path.abspath("tests/schema.fixture.json"))
+os.environ["DATA_SCHEMA_CACHE"] = str(_SCHEMA_FIXTURE)
+os.environ.pop("DATA_SCHEMA_PATH", None)
+
 
 def _cleanup_db_artifacts() -> None:
     for artifact in (
