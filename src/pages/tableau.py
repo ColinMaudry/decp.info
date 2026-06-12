@@ -124,7 +124,11 @@ layout = [
                             "contentUrl": "https://www.data.gouv.fr/api/1/datasets/r/11cea8e8-df3e-4ed1-932b-781e2635e432",
                         },
                     ],
-                    "temporalCoverage": f"2018-01-01/{update_date_iso[:10]}",
+                    **(
+                        {"temporalCoverage": f"2018-01-01/{update_date_iso[:10]}"}
+                        if update_date_iso
+                        else {}
+                    ),
                     "spatialCoverage": {
                         "@type": "Place",
                         "address": {"countryCode": "FR"},

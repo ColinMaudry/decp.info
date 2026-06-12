@@ -80,7 +80,12 @@ def _fetch_remote_schema(url: str | None) -> dict | None:
         return None
     try:
         raw = get(url, follow_redirects=True).raise_for_status().json()
-    except (httpx.HTTPError, httpx.TransportError, json.JSONDecodeError) as e:
+    except (
+        httpx.HTTPError,
+        httpx.TransportError,
+        httpx.TimeoutException,
+        json.JSONDecodeError,
+    ) as e:
         logger.error(f"Schéma distant indisponible ({url}) : {e}")
         return None
     return _validate_schema(raw)
