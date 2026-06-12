@@ -31,6 +31,7 @@ def test_should_rebuild_prod_when_parquet_newer(parquet_and_db, monkeypatch):
     os.utime(db, (now, now))
     os.utime(parquet, (now + 10, now + 10))
     monkeypatch.setenv("DEVELOPMENT", "false")
+    monkeypatch.setattr("src.db.get_last_modified", lambda p: parquet.stat().st_mtime)
     assert should_rebuild(db, parquet) is True
 
 
@@ -42,6 +43,7 @@ def test_should_not_rebuild_prod_when_parquet_older(parquet_and_db, monkeypatch)
     os.utime(parquet, (now, now))
     os.utime(db, (now + 10, now + 10))
     monkeypatch.setenv("DEVELOPMENT", "false")
+    monkeypatch.setattr("src.db.get_last_modified", lambda p: parquet.stat().st_mtime)
     assert should_rebuild(db, parquet) is False
 
 
@@ -66,6 +68,7 @@ def test_should_rebuild_dev_when_rebuild_forced(parquet_and_db, monkeypatch):
     os.utime(parquet, (now + 10, now + 10))
     monkeypatch.setenv("DEVELOPMENT", "true")
     monkeypatch.setenv("REBUILD_DUCKDB", "true")
+    monkeypatch.setattr("src.db.get_last_modified", lambda p: parquet.stat().st_mtime)
     assert should_rebuild(db, parquet) is True
 
 
@@ -145,7 +148,7 @@ def built_db(tmp_path, monkeypatch):
 
     from src.db import build_database
 
-    build_database(db_path, parquet_path)
+    build_database(db_path)
     return db_path
 
 
@@ -190,8 +193,15 @@ def test_build_creates_derived_tables(built_db):
 
 
 def test_query_marches_returns_polars_frame(built_db, monkeypatch):
-    monkeypatch.setenv(
-        "DATA_FILE_PARQUET_PATH", str(built_db.parent / "source.parquet")
+    parquet_path = built_db.parent / "source.parquet"
+    monkeypatch.setenv("DATA_FILE_PARQUET_PATH", str(parquet_path))
+    # Patch on both the source module and dst namespace: the reload re-imports
+    # get_last_modified from src.utils, so src.utils must be patched to survive.
+    monkeypatch.setattr(
+        "src.utils.get_last_modified", lambda p: parquet_path.stat().st_mtime
+    )
+    monkeypatch.setattr(
+        "src.db.get_last_modified", lambda p: parquet_path.stat().st_mtime
     )
     # Force src.db to load pointing at this test DB.
     import importlib
@@ -239,7 +249,7 @@ def test_query_marches_with_offset():
         assert set(page_0["uid"].to_list()).isdisjoint(set(page_1["uid"].to_list()))
 
 
-def test_concurrent_build_serialized(tmp_path):
+def test_concurrent_build_serialized(tmp_path, monkeypatch):
     """Multiple threads calling _ensure_database must serialize via flock.
 
     Only one should actually build; others wait, see the fresh DB, and skip.
@@ -269,6 +279,10 @@ def test_concurrent_build_serialized(tmp_path):
         }
     )
     df.write_parquet(parquet_path)
+    monkeypatch.setenv("DATA_FILE_PARQUET_PATH", str(parquet_path))
+    monkeypatch.setattr(
+        "src.db.get_last_modified", lambda p: parquet_path.stat().st_mtime
+    )
 
     db_path = tmp_path / "decp.duckdb"
     lock_path = db_path.with_suffix(".duckdb.lock")
@@ -283,7 +297,7 @@ def test_concurrent_build_serialized(tmp_path):
                 fcntl.flock(lf.fileno(), fcntl.LOCK_EX)
                 try:
                     if db.should_rebuild(db_path, parquet_path):
-                        db.build_database(db_path, parquet_path)
+                        db.build_database(db_path)
                 finally:
                     fcntl.flock(lf.fileno(), fcntl.LOCK_UN)
         except BaseException as exc:
