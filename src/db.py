@@ -128,7 +128,7 @@ def _ensure_database() -> Path:
             else:
                 logger.debug("Base de données déjà disponible et à jour.")
         except Exception as e:
-            if db_exists:
+            if db_exists and db_path.exists():
                 logger.error(
                     f"Bootstrap données KO ({e}). "
                     f"Réutilisation du DuckDB existant : {db_path}"

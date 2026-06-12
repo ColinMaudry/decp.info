@@ -340,7 +340,8 @@ def test_ensure_database_reuses_db_when_build_raises(tmp_path, monkeypatch):
     monkeypatch.setenv("DATA_FILE_PARQUET_PATH", "http://unreachable")
     monkeypatch.setattr(db, "should_rebuild", lambda *a, **k: True)
     monkeypatch.setattr(db, "build_database", _raise)
-    db._ensure_database()  # ne doit pas lever
+    result = db._ensure_database()  # ne doit pas lever
+    assert result == dbf
     assert dbf.read_bytes() == b"existing"
 
 
