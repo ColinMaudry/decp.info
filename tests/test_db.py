@@ -312,3 +312,59 @@ def test_concurrent_build_serialized(tmp_path, monkeypatch):
     assert errors == []
     assert db_path.exists()
     assert not tmp_path_artifact.exists()
+
+
+def _raise(*args, **kwargs):
+    raise RuntimeError("boom")
+
+
+def test_ensure_database_reuses_db_when_should_rebuild_raises(tmp_path, monkeypatch):
+    import src.db as db
+
+    dbf = tmp_path / "decp.duckdb"
+    dbf.write_bytes(b"existing")
+    monkeypatch.setenv("DUCKDB_PATH", str(dbf))
+    monkeypatch.setenv("DATA_FILE_PARQUET_PATH", "http://unreachable")
+    monkeypatch.setattr(db, "should_rebuild", _raise)
+    result = db._ensure_database()  # ne doit pas lever
+    assert result == dbf
+    assert dbf.read_bytes() == b"existing"
+
+
+def test_ensure_database_reuses_db_when_build_raises(tmp_path, monkeypatch):
+    import src.db as db
+
+    dbf = tmp_path / "decp.duckdb"
+    dbf.write_bytes(b"existing")
+    monkeypatch.setenv("DUCKDB_PATH", str(dbf))
+    monkeypatch.setenv("DATA_FILE_PARQUET_PATH", "http://unreachable")
+    monkeypatch.setattr(db, "should_rebuild", lambda *a, **k: True)
+    monkeypatch.setattr(db, "build_database", _raise)
+    db._ensure_database()  # ne doit pas lever
+    assert dbf.read_bytes() == b"existing"
+
+
+def test_ensure_database_raises_on_cold_start(tmp_path, monkeypatch):
+    import src.db as db
+
+    dbf = tmp_path / "decp.duckdb"  # n'existe pas
+    monkeypatch.setenv("DUCKDB_PATH", str(dbf))
+    monkeypatch.setenv("DATA_FILE_PARQUET_PATH", "http://unreachable")
+    monkeypatch.setattr(db, "should_rebuild", lambda *a, **k: True)
+    monkeypatch.setattr(db, "build_database", _raise)
+    with pytest.raises(RuntimeError):
+        db._ensure_database()
+
+
+def test_ensure_database_builds_when_needed(tmp_path, monkeypatch):
+    import src.db as db
+
+    dbf = tmp_path / "decp.duckdb"
+    dbf.write_bytes(b"old")
+    monkeypatch.setenv("DUCKDB_PATH", str(dbf))
+    monkeypatch.setenv("DATA_FILE_PARQUET_PATH", "http://x")
+    called = {}
+    monkeypatch.setattr(db, "should_rebuild", lambda *a, **k: True)
+    monkeypatch.setattr(db, "build_database", lambda p: called.setdefault("built", p))
+    db._ensure_database()
+    assert called.get("built") == dbf
