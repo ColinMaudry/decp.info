@@ -21,7 +21,7 @@ from dash import (
 
 from src.db import query_marches, schema
 from src.figures import DataTable, make_column_picker
-from src.utils import get_last_modified, logger
+from src.utils import get_data_update_timestamp, logger
 from src.utils.seo import META_CONTENT
 from src.utils.table import (
     COLUMNS,
@@ -33,9 +33,16 @@ from src.utils.table import (
 )
 from src.utils.tracking import track_search
 
-update_date_timestamp = get_last_modified(os.getenv("DATA_FILE_PARQUET_PATH", ""))
-update_date = datetime.fromtimestamp(update_date_timestamp).strftime("%d/%m/%Y")
-update_date_iso = datetime.fromtimestamp(update_date_timestamp).isoformat()
+update_date_timestamp = get_data_update_timestamp(
+    os.getenv("DATA_FILE_PARQUET_PATH", ""),
+    os.getenv("DUCKDB_PATH", "./decp.duckdb"),
+)
+if update_date_timestamp is not None:
+    update_date = datetime.fromtimestamp(update_date_timestamp).strftime("%d/%m/%Y")
+    update_date_iso = datetime.fromtimestamp(update_date_timestamp).isoformat()
+else:
+    update_date = "date inconnue"
+    update_date_iso = ""
 
 
 NAME = "Tableau"
@@ -117,7 +124,11 @@ layout = [
                             "contentUrl": "https://www.data.gouv.fr/api/1/datasets/r/11cea8e8-df3e-4ed1-932b-781e2635e432",
                         },
                     ],
-                    "temporalCoverage": f"2018-01-01/{update_date_iso[:10]}",
+                    **(
+                        {"temporalCoverage": f"2018-01-01/{update_date_iso[:10]}"}
+                        if update_date_iso
+                        else {}
+                    ),
                     "spatialCoverage": {
                         "@type": "Place",
                         "address": {"countryCode": "FR"},

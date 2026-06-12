@@ -57,6 +57,10 @@ app: Dash = Dash(
     meta_tags=META_TAGS,
 )
 
+from src.api import init_api  # noqa: E402  # inline: src.db.conn must be ready first
+
+init_api(app.server)
+
 
 # robots.txt
 @app.server.route("/robots.txt")

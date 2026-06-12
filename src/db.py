@@ -118,13 +118,24 @@ def _ensure_database() -> Path:
     db_path = Path(os.getenv("DUCKDB_PATH", "./decp.duckdb"))
     parquet_path = os.getenv("DATA_FILE_PARQUET_PATH", "")
     lock_path = db_path.with_suffix(".duckdb.lock")
+    db_exists = db_path.exists()
 
     with open(lock_path, "w") as lock_fd:
         fcntl.flock(lock_fd, fcntl.LOCK_EX)
-        if should_rebuild(db_path, parquet_path):
-            build_database(db_path)
-        else:
-            logger.debug("Base de données déjà disponible et à jour.")
+        try:
+            if should_rebuild(db_path, parquet_path):
+                build_database(db_path)
+            else:
+                logger.debug("Base de données déjà disponible et à jour.")
+        except Exception as e:
+            if db_exists and db_path.exists():
+                logger.error(
+                    f"Bootstrap données KO ({e}). "
+                    f"Réutilisation du DuckDB existant : {db_path}"
+                )
+            else:
+                logger.critical("Aucune base DuckDB et reconstruction impossible.")
+                raise
     return db_path
 
 
