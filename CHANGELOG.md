@@ -14,6 +14,15 @@
 - Nouvelles variables d'environnement : `USERS_DB_PATH`, `MATOMO_URL`, `MATOMO_SITE_ID`, `MATOMO_TRACKING_ENABLED`.
 - Création de 2 Custom Dimensions côté Matomo : `dimension1=token_id`, `dimension2=http_status`.
 
+##### 2.7.9 (9 juin 2026)
+
+- Ajout d'une vue "étapes" (elle sera mieux intégrée dans le site à l'avenir)
+- Correction de petites erreurs qui polluent les logs
+
+##### 2.7.8 (18 mai 2026)
+
+- Récupération du schéma de données plus robuste, ne pas dépendre de data.gouv.fr
+
 ##### 2.7.7 (11 mai 2026)
 
 - Suppression des mentions sur les profils d'acheteur. Omnikles/Safetender publie via l'API DUME et Klekoon ne publie pas, mais c'est peut-être pas le seul, donc je préfère supprimer et refaire un tour.
