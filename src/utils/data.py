@@ -65,7 +65,12 @@ def get_departement_region(code_postal: str | None):
 
 
 def _validate_schema(raw) -> dict | None:
-    if isinstance(raw, dict) and isinstance(raw.get("fields"), list) and raw["fields"]:
+    if (
+        isinstance(raw, dict)
+        and isinstance(raw.get("fields"), list)
+        and raw["fields"]
+        and all(isinstance(c, dict) and "name" in c for c in raw["fields"])
+    ):
         return raw
     return None
 
@@ -75,7 +80,7 @@ def _fetch_remote_schema(url: str | None) -> dict | None:
         return None
     try:
         raw = get(url, follow_redirects=True).raise_for_status().json()
-    except (httpx.HTTPError, json.JSONDecodeError) as e:
+    except (httpx.HTTPError, httpx.TransportError, json.JSONDecodeError) as e:
         logger.error(f"Schéma distant indisponible ({url}) : {e}")
         return None
     return _validate_schema(raw)
@@ -101,7 +106,7 @@ def _persist_schema_cache(raw: dict, path: str) -> None:
         with open(tmp, "w") as f:
             json.dump(raw, f)
         os.replace(tmp, path)
-    except OSError as e:
+    except (OSError, ValueError) as e:
         logger.warning(f"Écriture du cache schéma échouée ({path}) : {e}")
 
 
