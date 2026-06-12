@@ -177,6 +177,62 @@ Helpers :
   un échec d'écriture est loggé mais **non bloquant** (le schéma en mémoire reste
   valide).
 
+### Invariant 3 — Chargements au niveau module des pages
+
+> L'import d'une page (exécuté au boot via `use_pages`) ne doit jamais tuer le
+> démarrage à cause d'une ressource externe KO. Une ressource indisponible
+> dégrade gracieusement l'affichage.
+
+Audit des chargements à l'import (tous les `layout` de pages sont au niveau
+module ⇒ leur contenu s'exécute au boot). Deux points de rupture **externes** :
+
+**C — `src/pages/tableau.py:36-38`.** `get_last_modified(URL parquet)` fait un
+HTTP HEAD **sans gestion d'erreur** (URL injoignable, en-tête `last-modified`
+absent) ⇒ import KO ⇒ boot KO. C'est le même piège que `db.py`, mais dans une page.
+
+Correctif : un helper best-effort dans `src/utils/__init__.py` qui ne lève jamais
+et retombe sur le mtime du DuckDB (garanti présent par l'Invariant 1) :
+
+```python
+def get_data_update_timestamp(parquet_path: str, fallback_path: str | None = None) -> float | None:
+    """Date de MAJ des données, best-effort, sans jamais lever (usage au boot)."""
+    try:
+        return get_last_modified(parquet_path)
+    except Exception as e:
+        logger.warning(f"Date de mise à jour des données indisponible ({e})")
+    if fallback_path:
+        try:
+            return os.path.getmtime(fallback_path)
+        except OSError:
+            pass
+    return None
+```
+
+`tableau.py` l'utilise et gère le cas `None` (affiche « date inconnue »,
+`update_date_iso = ""`).
+
+**D — `src/pages/a-propos.py:103`.** `get_sources_tables(SOURCE_STATS_CSV_PATH)`
+(`src/figures.py:121`) fait `pl.read_csv(source_path)` mais ne rattrape que
+`URLError, HTTPError` — pas les erreurs Polars, ni `source_path` vide/`None`, ni
+fichier absent ⇒ import KO ⇒ boot KO.
+
+Correctif : élargir le `except` et gérer le chemin vide :
+
+```python
+def get_sources_tables(source_path) -> html.Div:
+    try:
+        if not source_path:
+            raise ValueError("SOURCE_STATS_CSV_PATH non défini")
+        dff = pl.read_csv(source_path)
+    except Exception as e:
+        logger.warning(f"Sources de données indisponibles ({e})")
+        return html.Div("Sources de données momentanément indisponibles.")
+    ...  # suite inchangée
+```
+
+Hors périmètre des pages : `data/departements.json` + `.geojson` (fichiers
+in-repo apportés par `git pull`, pas pilotés par env/URL — voir Hors périmètre).
+
 ## Tests (TDD)
 
 Couvrir chaque branche de fallback. Sans dépendre du réseau réel.
@@ -200,11 +256,24 @@ Couvrir chaque branche de fallback. Sans dépendre du réseau réel.
 Mocker `get_last_modified` / `build_database` / `httpx.get` ; utiliser des fichiers
 DuckDB et schéma temporaires (`tmp_path`).
 
+**Chargements de pages (Invariant 3) :**
+
+11. `get_data_update_timestamp` : `get_last_modified` lève + `fallback_path`
+    existant ⇒ retourne le mtime du fallback (pas d'exception).
+12. `get_data_update_timestamp` : tout KO (lève + pas de fallback) ⇒ `None`.
+13. `get_data_update_timestamp` : cas nominal ⇒ retourne la valeur de
+    `get_last_modified` (mocké).
+14. `get_sources_tables(None)` ⇒ `html.Div` de repli (pas d'exception).
+15. `get_sources_tables("/inexistant.csv")` ⇒ `html.Div` de repli.
+16. `get_sources_tables(<csv valide>)` ⇒ `html.Div` contenant la `DataTable`.
+
 ## Hors périmètre
 
 - Séparation des process API / Web (reportée — voir plus haut).
 - Surveillance / alerting externe (les logs `error`/`critical` suffisent pour ce lot).
 - Validation fine du contenu du parquet au-delà de « lisible par Polars/DuckDB ».
+- Durcissement des `open()` in-repo (`data/departements.json` + `.geojson`) :
+  fichiers versionnés, apportés par `git pull`, jamais pilotés par env/URL (YAGNI).
 
 ## Variables d'environnement
 
@@ -215,6 +284,7 @@ DuckDB et schéma temporaires (`tmp_path`).
 | `DATA_SCHEMA_LOCAL`      | Ancien fichier de secours statique      | **supprimé** |
 | `DATA_SCHEMA_CACHE`      | Cache last-known-good du schéma distant | **nouveau**  |
 | `DUCKDB_PATH`            | Fichier DuckDB                          | inchangé     |
+| `SOURCE_STATS_CSV_PATH`  | CSV stats sources (page À propos, D)    | inchangé     |
 
 À faire côté config :
 
