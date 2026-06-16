@@ -6,6 +6,7 @@ from src.api.auth import require_token
 from src.api.filters import FilterError, build_where
 from src.db import count_marches, query_marches
 from src.db import schema as duckdb_schema
+from src.utils.data import DATA_SCHEMA
 
 bp = Blueprint(
     "api_v1",
@@ -85,12 +86,9 @@ def health():
 
 
 @bp.route("/schema")
-@bp.doc(security=[{"BearerAuth": []}])
-@require_token
 def schema():
-    """Liste des colonnes disponibles dans le dataset DECP."""
-    cols = [{"name": name, "type": str(dtype)} for name, dtype in duckdb_schema.items()]
-    return {"columns": cols}
+    """Liste des champs disponibles dans le dataset DECP (format TableSchema)."""
+    return {"fields": list(DATA_SCHEMA.values())}
 
 
 @bp.route("/data")

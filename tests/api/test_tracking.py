@@ -29,7 +29,7 @@ def test_after_request_hook_increments_counter_async(api_client, valid_token_hea
 
     # Faire une requête (qui doit déclencher l'incrément)
     client.get("/api/v1/health")  # pas authentifiée → ne compte pas
-    client.get("/api/v1/schema", headers=valid_token_header)
+    client.get("/api/v1/data", headers=valid_token_header)  # /schema est public
 
     tracking.flush(timeout=2.0)
 
@@ -49,7 +49,7 @@ def test_matomo_disabled_skips_call(monkeypatch, api_client, valid_token_header)
         "_post_matomo",
         lambda **kw: called.append(kw),
     )
-    client.get("/api/v1/health")
+    client.get("/api/v1/data", headers=valid_token_header)  # authentifiée → hook actif
     tracking.flush(timeout=2.0)
     assert called == []
 
@@ -69,7 +69,7 @@ def test_matomo_enabled_posts_event(monkeypatch, api_client, valid_token_header)
     )
 
     client, _ = api_client
-    client.get("/api/v1/schema", headers=valid_token_header)
+    client.get("/api/v1/data", headers=valid_token_header)  # /schema est public
     tracking.flush(timeout=2.0)
 
     assert len(captured) == 1
