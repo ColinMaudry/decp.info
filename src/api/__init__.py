@@ -15,6 +15,14 @@ def init_api(server) -> None:
         "OPENAPI_SWAGGER_UI_URL",
         "https://cdn.jsdelivr.net/npm/swagger-ui-dist/",
     )
+    server.config.setdefault(
+        "API_SPEC_OPTIONS",
+        {
+            "components": {
+                "securitySchemes": {"BearerAuth": {"type": "http", "scheme": "bearer"}}
+            }
+        },
+    )
 
     api = Api(server)
     api.register_blueprint(routes.bp)

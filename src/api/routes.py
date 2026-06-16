@@ -85,6 +85,7 @@ def health():
 
 
 @bp.route("/schema")
+@bp.doc(security=[{"BearerAuth": []}])
 @require_token
 def schema():
     """Liste des colonnes disponibles dans le dataset DECP."""
@@ -93,6 +94,46 @@ def schema():
 
 
 @bp.route("/data")
+@bp.doc(
+    security=[{"BearerAuth": []}],
+    parameters=[
+        {
+            "name": "page",
+            "in": "query",
+            "schema": {"type": "integer", "default": 1, "minimum": 1},
+            "description": "Numéro de page (commence à 1).",
+        },
+        {
+            "name": "page_size",
+            "in": "query",
+            "schema": {"type": "integer", "default": 50, "minimum": 1, "maximum": 1000},
+            "description": "Nombre de résultats par page (max 1000).",
+        },
+        {
+            "name": "columns",
+            "in": "query",
+            "schema": {"type": "string"},
+            "description": "Liste de colonnes à retourner, séparées par des virgules (ex: `id,acheteur_id,montant`). Par défaut : toutes.",
+        },
+        {
+            "name": "count",
+            "in": "query",
+            "schema": {"type": "string", "enum": ["true", "false"], "default": "true"},
+            "description": "Inclure le total (`COUNT(*)`) dans la réponse. Mettre `false` pour accélérer la requête.",
+        },
+        {
+            "name": "<colonne>__<opérateur>",
+            "in": "query",
+            "schema": {"type": "string"},
+            "description": (
+                "Filtre dynamique. Remplacer `<colonne>` par un nom de colonne (voir `/schema`) "
+                "et `<opérateur>` par : `exact`, `contains`, `notcontains`, `less`, `greater`, "
+                "`strictly_less`, `strictly_greater`, `in`, `notin`, `isnull`, `isnotnull`, `sort`. "
+                "Exemple : `acheteur_id__contains=VILLE`, `montant__greater=10000`."
+            ),
+        },
+    ],
+)
 @require_token
 def data():
     """Récupère des marchés publics filtrés.
