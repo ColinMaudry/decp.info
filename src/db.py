@@ -198,18 +198,21 @@ def aggregate_marches(
     where_sql: str = "TRUE",
     params: tuple | list = (),
     group_by: str | None = None,
+    order_by: str | None = None,
     limit: int | None = None,
     offset: int | None = None,
 ) -> pl.DataFrame:
     """SELECT agrégé paramétré contre la table decp.
 
-    `select_sql` et `group_by` sont des fragments SQL construits depuis des
-    noms de colonnes validés (jamais de valeur utilisateur libre). Les
-    valeurs de filtre passent par le binding `?` via `params`.
+    `select_sql`, `group_by` et `order_by` sont des fragments SQL construits
+    depuis des noms de colonnes validés (jamais de valeur utilisateur libre).
+    Les valeurs de filtre passent par le binding `?` via `params`.
     """
     sql = f"SELECT {select_sql} FROM decp WHERE {where_sql}"
     if group_by:
         sql += f" GROUP BY {group_by}"
+    if order_by:
+        sql += f" ORDER BY {order_by}"
     if limit is not None:
         sql += f" LIMIT {int(limit)}"
     if offset is not None:

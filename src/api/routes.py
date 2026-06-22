@@ -141,9 +141,12 @@ def schema():
                 "la colonne de sortie est nommée `colonne__count`, `colonne__sum`, "
                 "`colonne__avg`, `colonne__min`, `colonne__max`\n\n"
                 "En mode agrégation, la réponse contient des lignes groupées, "
-                "`columns` est interdit et `meta` ne contient pas `total`.\n\n"
+                "`columns` est interdit et `meta` ne contient pas `total`. "
+                "`sort` peut être appliqué sur une colonne `groupby` (ex. `acheteur_departement_code__sort=asc`) ; "
+                "il n'est pas supporté sur les alias d'agrégats (ex. `uid__count__sort=desc` → 400).\n\n"
                 "Exemples : `acheteur_id__contains=VILLE`, `montant__greater=10000`, "
-                "`acheteur_departement_code__groupby&montant__sum`."
+                "`acheteur_departement_code__groupby&montant__sum`, "
+                "`acheteur_departement_code__groupby&uid__count&acheteur_departement_code__sort=asc`."
             ),
         },
     ],
@@ -159,7 +162,8 @@ def data():
     Agrégation (drapeaux sans valeur) : `<colonne>__groupby`,
     `<colonne>__count|sum|avg|min|max`. Les colonnes agrégées sont nommées
     `<colonne>__<opérateur>`. `columns` est interdit avec une agrégation et
-    `meta` ne contient alors pas `total`.
+    `meta` ne contient alors pas `total`. `sort` est supporté sur les colonnes
+    `groupby` ; non supporté sur les alias d'agrégats (→ 400).
 
     Paramètres réservés : page (défaut 1), page_size (défaut 50, max 1000),
     columns (csv), count_results (true|false ; mettre false pour économiser
@@ -193,6 +197,7 @@ def data():
             where_sql=where_sql,
             params=params,
             group_by=agg.group_by_sql,
+            order_by=order_sql or None,
             limit=page_size,
             offset=(page - 1) * page_size,
         )
