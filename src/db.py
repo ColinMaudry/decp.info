@@ -191,3 +191,30 @@ def count_unique_marches(where_sql: str = "TRUE", params: tuple | list = ()) -> 
     logger.debug("count_unique_marches: " + sql.replace("?", "{}").format(*params))
     result = get_cursor().execute(sql, list(params)).fetchone()
     return int(result[0]) if result else 0
+
+
+def aggregate_marches(
+    select_sql: str,
+    where_sql: str = "TRUE",
+    params: tuple | list = (),
+    group_by: str | None = None,
+    limit: int | None = None,
+    offset: int | None = None,
+) -> pl.DataFrame:
+    """SELECT agrégé paramétré contre la table decp.
+
+    `select_sql` et `group_by` sont des fragments SQL construits depuis des
+    noms de colonnes validés (jamais de valeur utilisateur libre). Les
+    valeurs de filtre passent par le binding `?` via `params`.
+    """
+    sql = f"SELECT {select_sql} FROM decp WHERE {where_sql}"
+    if group_by:
+        sql += f" GROUP BY {group_by}"
+    if limit is not None:
+        sql += f" LIMIT {int(limit)}"
+    if offset is not None:
+        sql += f" OFFSET {int(offset)}"
+
+    logger.debug("aggregate_marches: " + sql.replace("?", "{}").format(*params))
+
+    return get_cursor().execute(sql, list(params)).pl()
