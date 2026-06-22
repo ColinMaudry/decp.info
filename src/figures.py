@@ -738,13 +738,18 @@ CONSIDERATIONS_COLUMNS = {
 def compute_considerations_stats(lff: pl.LazyFrame) -> dict[str, tuple[int, int]]:
     """Part des marchés (uid distincts) ayant au moins une considération.
 
-    Renvoie {"sociales": (count, pct), "environnementales": (count, pct)}.
+    Renvoie pour chaque clé (sociales, environnementales) :
+      - (count, pct) : marchés avec au moins une considération (regex)
+      - (count, pct) suffixé _renseignees : marchés avec une valeur non nulle
     Dénominateur = tous les uid distincts. Colonne absente -> (0, 0).
     """
     names = lff.collect_schema().names()
     present = {key: col for key, col in CONSIDERATIONS_COLUMNS.items() if col in names}
 
-    stats = {key: (0, 0) for key in CONSIDERATIONS_COLUMNS}
+    stats: dict[str, tuple[int, int]] = {}
+    for key in CONSIDERATIONS_COLUMNS:
+        stats[key] = (0, 0)
+        stats[f"{key}_renseignees"] = (0, 0)
 
     if not present:
         return stats
@@ -761,26 +766,37 @@ def compute_considerations_stats(lff: pl.LazyFrame) -> dict[str, tuple[int, int]
         return stats
 
     for key, col in present.items():
-        count = agg.filter(pl.col(col).str.contains(CONSIDERATIONS_REGEX)).height
-        pct = round(100 * count / total)
-        stats[key] = (count, pct)
+        count_pos = agg.filter(pl.col(col).str.contains(CONSIDERATIONS_REGEX)).height
+        count_ren = agg.filter(pl.col(col).is_not_null()).height
+        stats[key] = (count_pos, round(100 * count_pos / total))
+        stats[f"{key}_renseignees"] = (count_ren, round(100 * count_ren / total))
 
     return stats
 
 
+# (clé, libellé, couleur principale, couleur renseignée)
 CONSIDERATIONS_DISPLAY = [
-    ("sociales", "Sociales", "#CC6677"),
-    ("environnementales", "Environnementales", "#117733"),
+    ("sociales", "Sociales", "#CC6677", "#E5B2BB"),
+    ("environnementales", "Environnementales", "#117733", "#88BB99"),
 ]
 
 
+def _progress_bar(pct: int, color: str) -> dbc.Progress:
+    return dbc.Progress(
+        dbc.Progress(
+            value=pct, label=f"{pct} %", bar=True, color=color, style={"color": "white"}
+        ),
+    )
+
+
 def get_considerations_card_content(lff: pl.LazyFrame) -> html.Div:
-    """Deux barres de progression : part des marchés avec considération."""
+    """Quatre barres groupées par type : considération positive + valeur renseignée."""
     stats = compute_considerations_stats(lff)
 
     blocks = []
-    for key, label, color in CONSIDERATIONS_DISPLAY:
-        count, pct = stats[key]
+    for key, label, color, color_ren in CONSIDERATIONS_DISPLAY:
+        count_pos, pct_pos = stats[key]
+        count_ren, pct_ren = stats[f"{key}_renseignees"]
         blocks.append(
             html.Div(
                 className="mb-3",
@@ -790,20 +806,22 @@ def get_considerations_card_content(lff: pl.LazyFrame) -> html.Div:
                         children=[
                             html.Span(label),
                             html.Span(
-                                f"{format_number(count)} marchés",
+                                f"{format_number(count_pos)} marchés",
                                 className="text-muted",
                             ),
                         ],
                     ),
-                    dbc.Progress(
-                        dbc.Progress(
-                            value=pct,
-                            label=f"{pct} %",
-                            bar=True,
-                            color=color,
-                            style={"color": "white"},
-                        ),
+                    _progress_bar(pct_pos, color),
+                    html.Div(
+                        className="d-flex justify-content-end mt-1",
+                        children=[
+                            html.Span(
+                                f"{format_number(count_ren)} marchés (renseignée)",
+                                className="text-muted",
+                            ),
+                        ],
                     ),
+                    _progress_bar(pct_ren, color_ren),
                 ],
             )
         )
