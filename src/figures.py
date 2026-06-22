@@ -769,9 +769,8 @@ def compute_considerations_stats(lff: pl.LazyFrame) -> dict[str, tuple[int, int]
 
 
 CONSIDERATIONS_DISPLAY = [
-    # (clé, libellé, couleur Safe)
-    ("sociales", "Sociales", "rgb(204, 102, 119)"),
-    ("environnementales", "Environnementales", "rgb(17, 119, 51)"),
+    ("sociales", "Sociales", "#CC6677"),
+    ("environnementales", "Environnementales", "#117733"),
 ]
 
 
@@ -799,7 +798,7 @@ def get_considerations_card_content(lff: pl.LazyFrame) -> html.Div:
                     dbc.Progress(
                         value=pct,
                         label=f"{pct} %",
-                        style={"backgroundColor": color},
+                        color=color,
                     ),
                 ],
             )

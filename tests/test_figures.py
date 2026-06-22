@@ -134,26 +134,25 @@ def test_get_considerations_card_content_returns_two_progress_bars():
 
     assert isinstance(div, html.Div)
 
-    # Récupère récursivement tous les dbc.Progress
     def find_progress(component, found):
-        children = getattr(component, "children", None)
         if isinstance(component, dbc.Progress):
             found.append(component)
+        children = getattr(component, "children", None)
         if isinstance(children, (list, tuple)):
             for c in children:
                 find_progress(c, found)
-        elif children is not None:
+        elif children is not None and not isinstance(children, str):
             find_progress(children, found)
         return found
 
     bars = find_progress(div, [])
     assert len(bars) == 2
 
-    # Sociales (rouge) : u1 -> 50%. Environnementales (vert) : u2 -> 50%.
+    # Sociales (#CC6677) : u1 -> 50%. Environnementales (#117733) : u2 -> 50%.
     social_bar, env_bar = bars[0], bars[1]
     assert social_bar.value == 50
     assert social_bar.label == "50 %"
-    assert social_bar.style["backgroundColor"] == "rgb(204, 102, 119)"
+    assert social_bar.color == "#CC6677"
     assert env_bar.value == 50
     assert env_bar.label == "50 %"
-    assert env_bar.style["backgroundColor"] == "rgb(17, 119, 51)"
+    assert env_bar.color == "#117733"
