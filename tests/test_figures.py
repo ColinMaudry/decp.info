@@ -42,9 +42,10 @@ def test_compute_considerations_stats_basic():
     # 4 marchés au total. Social : u1, u3 -> 2/4 = 50%. Env : u2 -> 1/4 = 25%.
     assert stats["sociales"] == (2, 50)
     assert stats["environnementales"] == (1, 25)
-    # Renseignées : social u1/u2/u3/u4 non null -> 4/4=100%. Env : u1/u2/u4 non null -> 3/4=75%.
-    assert stats["sociales_renseignees"] == (4, 100)
-    assert stats["environnementales_renseignees"] == (3, 75)
+    # Renseignées : dénominateur = non-null ; numérateur = positifs.
+    # Social : 4 non-null, 2 positifs -> (4, 50%). Env : 3 non-null, 1 positif -> (3, 33%).
+    assert stats["sociales_renseignees"] == (4, 50)
+    assert stats["environnementales_renseignees"] == (3, 33)
 
 
 def test_compute_considerations_stats_dedup_per_uid():
@@ -76,8 +77,9 @@ def test_compute_considerations_stats_dedup_per_uid():
     # 2 marchés distincts. Social : u1 -> 1/2 = 50%.
     assert stats["sociales"] == (1, 50)
     assert stats["environnementales"] == (0, 0)
-    assert stats["sociales_renseignees"] == (2, 100)
-    assert stats["environnementales_renseignees"] == (2, 100)
+    # Social : 2 non-null, 1 positif -> (2, 50%). Env : 2 non-null, 0 positif -> (2, 0%).
+    assert stats["sociales_renseignees"] == (2, 50)
+    assert stats["environnementales_renseignees"] == (2, 0)
 
 
 def test_compute_considerations_stats_missing_column():
@@ -95,7 +97,8 @@ def test_compute_considerations_stats_missing_column():
     # Colonne env absente -> (0, 0) sans exception. Social : 1/2 = 50%.
     assert stats["sociales"] == (1, 50)
     assert stats["environnementales"] == (0, 0)
-    assert stats["sociales_renseignees"] == (2, 100)
+    # Social : 2 non-null, 1 positif -> (2, 50%). Env absente -> (0, 0).
+    assert stats["sociales_renseignees"] == (2, 50)
     assert stats["environnementales_renseignees"] == (0, 0)
 
 
@@ -164,13 +167,13 @@ def test_get_considerations_card_content_returns_four_progress_bars():
     assert social_pos.value == 50
     assert social_pos.color == "#CC6677"
     assert social_pos.style["color"] == "white"
-    # Sociales renseignées : u1 + u2 non null -> 2/2 = 100%
-    assert social_ren.value == 100
+    # Sociales renseignées : 2 non-null, 1 positif (u1) -> 50%
+    assert social_ren.value == 50
     assert social_ren.color == "#E5B2BB"
     # Environnementales positives : u2 -> 1/2 = 50%
     assert env_pos.value == 50
     assert env_pos.color == "#117733"
     assert env_pos.style["color"] == "white"
-    # Environnementales renseignées : u1 (Sans objet) + u2 -> 2/2 = 100%
-    assert env_ren.value == 100
+    # Environnementales renseignées : 2 non-null (u1 "Sans objet", u2), 1 positif (u2) -> 50%
+    assert env_ren.value == 50
     assert env_ren.color == "#88BB99"

@@ -739,9 +739,10 @@ def compute_considerations_stats(lff: pl.LazyFrame) -> dict[str, tuple[int, int]
     """Part des marchés (uid distincts) ayant au moins une considération.
 
     Renvoie pour chaque clé (sociales, environnementales) :
-      - (count, pct) : marchés avec au moins une considération (regex)
-      - (count, pct) suffixé _renseignees : marchés avec une valeur non nulle
-    Dénominateur = tous les uid distincts. Colonne absente -> (0, 0).
+      - (count_pos, pct) : positifs / tous les uid distincts
+      - (count_ren, pct) suffixé _renseignees : non-null uid comme dénominateur,
+        positifs comme numérateur (= part de positifs parmi les marchés renseignés)
+    Colonne absente -> (0, 0).
     """
     names = lff.collect_schema().names()
     present = {key: col for key, col in CONSIDERATIONS_COLUMNS.items() if col in names}
@@ -768,8 +769,9 @@ def compute_considerations_stats(lff: pl.LazyFrame) -> dict[str, tuple[int, int]
     for key, col in present.items():
         count_pos = agg.filter(pl.col(col).str.contains(CONSIDERATIONS_REGEX)).height
         count_ren = agg.filter(pl.col(col).is_not_null()).height
+        pct_pos_ren = round(100 * count_pos / count_ren) if count_ren > 0 else 0
         stats[key] = (count_pos, round(100 * count_pos / total))
-        stats[f"{key}_renseignees"] = (count_ren, round(100 * count_ren / total))
+        stats[f"{key}_renseignees"] = (count_ren, pct_pos_ren)
 
     return stats
 
@@ -816,7 +818,7 @@ def get_considerations_card_content(lff: pl.LazyFrame) -> html.Div:
                         className="d-flex justify-content-end mt-1",
                         children=[
                             html.Span(
-                                f"{format_number(count_ren)} marchés (renseignée)",
+                                f"parmi les {format_number(count_ren)} marchés renseignés",
                                 className="text-muted",
                             ),
                         ],
