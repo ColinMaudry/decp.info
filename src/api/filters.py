@@ -6,6 +6,7 @@ OPERATORS = {
     "exact",
     "contains",
     "notcontains",
+    "differs",
     "less",
     "greater",
     "strictly_less",
@@ -132,6 +133,9 @@ def build_where(
         elif op == "notcontains":
             where_parts.append(f'"{col}" NOT LIKE ?')
             params.append(f"%{v}%")
+        elif op == "differs":
+            where_parts.append(f'"{col}" IS DISTINCT FROM ?')
+            params.append(v)
 
     where_sql = " AND ".join(where_parts) if where_parts else "TRUE"
     order_sql = ", ".join(order_parts) if order_parts else None

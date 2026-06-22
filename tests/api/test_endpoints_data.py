@@ -102,3 +102,13 @@ def test_data_sort_desc(api_client, valid_token_header):
         row["dateNotification"] for row in body["data"] if row.get("dateNotification")
     ]
     assert dates == sorted(dates, reverse=True)
+
+
+def test_data_differs_excludes_value(api_client, valid_token_header):
+    client, _ = api_client
+    base = client.get("/api/v1/data?page_size=1", headers=valid_token_header).get_json()
+    uid = base["data"][0]["uid"]
+    resp = client.get(f"/api/v1/data?uid__differs={uid}", headers=valid_token_header)
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert all(row["uid"] != uid for row in body["data"])

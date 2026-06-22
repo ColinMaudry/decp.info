@@ -139,3 +139,15 @@ def test_sort_invalid_direction_raises():
 def test_param_without_operator_raises():
     with pytest.raises(FilterError):
         build_where([("uidexact", "x")], SCHEMA)
+
+
+def test_differs_filter():
+    where, params, _ = build_where([("uid__differs", "abc")], SCHEMA)
+    assert where == '"uid" IS DISTINCT FROM ?'
+    assert params == ["abc"]
+
+
+def test_differs_filter_on_int():
+    where, params, _ = build_where([("annee__differs", "2020")], SCHEMA)
+    assert where == '"annee" IS DISTINCT FROM ?'
+    assert params == [2020]
