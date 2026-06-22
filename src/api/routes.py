@@ -202,10 +202,14 @@ def data():
             offset=(page - 1) * page_size,
         )
         df_ready = df.with_columns(cs.temporal().cast(pl.String))
+        # Si la page est partielle, on connaît le total exact ; sinon on ne sait pas.
+        agg_total = (
+            (page - 1) * page_size + df.height if df.height < page_size else None
+        )
         return {
             "data": df_ready.to_dicts(),
             "meta": {"page": page, "page_size": page_size},
-            "links": _build_links(page, page_size, None),
+            "links": _build_links(page, page_size, agg_total),
         }
 
     df = query_marches(
