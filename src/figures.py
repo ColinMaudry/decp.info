@@ -728,6 +728,86 @@ def get_dashboard_summary_table(dff, dff_per_uid, nb_marches):
     return summary_table
 
 
+CONSIDERATIONS_REGEX = r"(?i)Clause|Critère|Marché réservé"
+CONSIDERATIONS_COLUMNS = {
+    "sociales": "considerationsSociales",
+    "environnementales": "considerationsEnvironnementales",
+}
+
+
+def compute_considerations_stats(lff: pl.LazyFrame) -> dict[str, tuple[int, int]]:
+    """Part des marchés (uid distincts) ayant au moins une considération.
+
+    Renvoie {"sociales": (count, pct), "environnementales": (count, pct)}.
+    Dénominateur = tous les uid distincts. Colonne absente -> (0, 0).
+    """
+    names = lff.collect_schema().names()
+    present = {key: col for key, col in CONSIDERATIONS_COLUMNS.items() if col in names}
+
+    stats = {key: (0, 0) for key in CONSIDERATIONS_COLUMNS}
+
+    if not present:
+        return stats
+
+    agg = (
+        lff.select(["uid"] + list(present.values()))
+        .group_by("uid")
+        .agg([pl.col(col).first() for col in present.values()])
+        .collect(engine="streaming")
+    )
+
+    total = agg.height
+    if total == 0:
+        return stats
+
+    for key, col in present.items():
+        count = agg.filter(pl.col(col).str.contains(CONSIDERATIONS_REGEX)).height
+        pct = round(100 * count / total)
+        stats[key] = (count, pct)
+
+    return stats
+
+
+CONSIDERATIONS_DISPLAY = [
+    # (clé, libellé, couleur Safe)
+    ("sociales", "Sociales", "rgb(204, 102, 119)"),
+    ("environnementales", "Environnementales", "rgb(17, 119, 51)"),
+]
+
+
+def get_considerations_card_content(lff: pl.LazyFrame) -> html.Div:
+    """Deux barres de progression : part des marchés avec considération."""
+    stats = compute_considerations_stats(lff)
+
+    blocks = []
+    for key, label, color in CONSIDERATIONS_DISPLAY:
+        count, pct = stats[key]
+        blocks.append(
+            html.Div(
+                className="mb-3",
+                children=[
+                    html.Div(
+                        className="d-flex justify-content-between",
+                        children=[
+                            html.Span(label),
+                            html.Span(
+                                f"{format_number(count)} marchés",
+                                className="text-muted",
+                            ),
+                        ],
+                    ),
+                    dbc.Progress(
+                        value=pct,
+                        label=f"{pct} %",
+                        style={"backgroundColor": color},
+                    ),
+                ],
+            )
+        )
+
+    return html.Div(children=blocks)
+
+
 def make_card(
     title: str, subtitle=None, fig=None, paragraphs=None, lg=6, xl=4
 ) -> dbc.Col:
