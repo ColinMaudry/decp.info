@@ -124,25 +124,49 @@ def schema():
             "in": "query",
             "schema": {"type": "string"},
             "description": (
-                "Filtre dynamique. Remplacer `<colonne>` par un nom de colonne (voir `/schema`) "
-                "et `<opérateur>` par : `exact`, `contains`, `notcontains`, `less`, `greater`, "
-                "`strictly_less`, `strictly_greater`, `in`, `notin`, `isnull`, `isnotnull`, `sort`. "
-                "Exemple : `acheteur_id__contains=VILLE`, `montant__greater=10000`."
+                "Filtre ou agrégation dynamique : `<colonne>__<opérateur>` "
+                "(voir les colonnes via `/schema`).\n\n"
+                "**Filtres** (`<colonne>__<op>=<valeur>`) :\n"
+                "- `exact` : égal à la valeur\n"
+                "- `differs` : différent de la valeur (null-safe, `IS DISTINCT FROM`)\n"
+                "- `contains` / `notcontains` : contient / ne contient pas (LIKE)\n"
+                "- `in` / `notin` : dans / hors d'une liste séparée par des virgules\n"
+                "- `less` / `greater` : ≤ / ≥\n"
+                "- `strictly_less` / `strictly_greater` : < / >\n"
+                "- `isnull` / `isnotnull` : valeur nulle / non nulle (sans valeur)\n"
+                "- `sort` : tri, valeur `asc` ou `desc`\n\n"
+                "**Agrégation** (drapeaux sans valeur, ex. `acheteur_departement_code__groupby&montant__sum`) :\n"
+                "- `groupby` : regroupe sur la colonne\n"
+                "- `count`, `sum`, `avg`, `min`, `max` : agrège la colonne ; "
+                "la colonne de sortie est nommée `colonne__count`, `colonne__sum`, "
+                "`colonne__avg`, `colonne__min`, `colonne__max`\n\n"
+                "En mode agrégation, la réponse contient des lignes groupées, "
+                "`columns` est interdit et `meta` ne contient pas `total`.\n\n"
+                "Exemples : `acheteur_id__contains=VILLE`, `montant__greater=10000`, "
+                "`acheteur_departement_code__groupby&montant__sum`."
             ),
         },
     ],
 )
 @require_token
 def data():
-    """Récupère des marchés publics filtrés.
+    """Récupère des marchés publics filtrés, triés ou agrégés.
 
-    Filtres en query string sous la forme `<colonne>__<opérateur>=<valeur>`.
+    Filtres en query string : `<colonne>__<opérateur>=<valeur>`.
+    Opérateurs de filtre : exact, differs, contains, notcontains, in, notin,
+    less, greater, strictly_less, strictly_greater, isnull, isnotnull, sort.
 
-    Opérateurs : exact, contains, notcontains, less, greater,
-    strictly_less, strictly_greater, in, notin, isnull, isnotnull, sort.
+    Agrégation (drapeaux sans valeur) : `<colonne>__groupby`,
+    `<colonne>__count|sum|avg|min|max`. Les colonnes agrégées sont nommées
+    `<colonne>__<opérateur>`. `columns` est interdit avec une agrégation et
+    `meta` ne contient alors pas `total`.
 
     Paramètres réservés : page (défaut 1), page_size (défaut 50, max 1000),
-    columns (csv), count_results (true|false ; mettre false pour économiser le COUNT(*)).
+    columns (csv), count_results (true|false ; mettre false pour économiser
+    le COUNT(*)).
+
+    Exemple d'agrégation :
+    `?acheteur_departement_code__groupby&uid__count&montant__sum`
     """
     import polars as pl
     import polars.selectors as cs
