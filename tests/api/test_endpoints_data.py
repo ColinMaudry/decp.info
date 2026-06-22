@@ -17,9 +17,9 @@ def test_data_default_pagination(api_client, valid_token_header):
     assert "total" in body["meta"]
 
 
-def test_data_count_false_omits_total(api_client, valid_token_header):
+def test_data_count_results_false_omits_total(api_client, valid_token_header):
     client, _ = api_client
-    resp = client.get("/api/v1/data?count=false", headers=valid_token_header)
+    resp = client.get("/api/v1/data?count_results=false", headers=valid_token_header)
     assert resp.status_code == 200
     body = resp.get_json()
     assert "total" not in body["meta"]

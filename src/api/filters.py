@@ -17,7 +17,7 @@ OPERATORS = {
     "sort",
 }
 
-RESERVED_PARAMS = {"page", "page_size", "columns", "count"}
+RESERVED_PARAMS = {"page", "page_size", "columns", "count_results"}
 
 
 class FilterError(ValueError):

@@ -114,10 +114,10 @@ def schema():
             "description": "Liste de colonnes à retourner, séparées par des virgules (ex: `id,acheteur_id,montant`). Par défaut : toutes.",
         },
         {
-            "name": "count",
+            "name": "count_results",
             "in": "query",
             "schema": {"type": "string", "enum": ["true", "false"], "default": "true"},
-            "description": "Inclure le total (`COUNT(*)`) dans la réponse. Mettre `false` pour accélérer la requête.",
+            "description": "Inclure le total (`COUNT(*)`) dans `meta`. Mettre `false` pour accélérer la requête. Ignoré en mode agrégation.",
         },
         {
             "name": "<colonne>__<opérateur>",
@@ -142,14 +142,14 @@ def data():
     strictly_less, strictly_greater, in, notin, isnull, isnotnull, sort.
 
     Paramètres réservés : page (défaut 1), page_size (défaut 50, max 1000),
-    columns (csv), count (true|false ; mettre false pour économiser le COUNT(*)).
+    columns (csv), count_results (true|false ; mettre false pour économiser le COUNT(*)).
     """
     import polars as pl
     import polars.selectors as cs
 
     page, page_size = _parse_pagination()
     columns = _parse_columns()
-    count = request.args.get("count", "true").lower() != "false"
+    count_results = request.args.get("count_results", "true").lower() != "false"
 
     try:
         where_sql, params, order_sql = build_where(
@@ -170,7 +170,7 @@ def data():
     # JSON ne sérialise pas date/datetime nativement → cast en string ISO
     df_ready = df.with_columns(cs.temporal().cast(pl.String))
 
-    total = count_marches(where_sql, params) if count else None
+    total = count_marches(where_sql, params) if count_results else None
     meta = {"page": page, "page_size": page_size}
     if total is not None:
         meta["total"] = total

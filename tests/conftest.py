@@ -74,7 +74,8 @@ def test_data():
     _cleanup_db_artifacts()
 
 
-def pytest_setup_options():
+@pytest.fixture(scope="session")
+def chrome_options():
     options = Options()
     options.add_argument("--window-size=1200,1200 ")
     options.add_experimental_option(

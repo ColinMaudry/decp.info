@@ -114,7 +114,7 @@ def test_reserved_params_are_ignored():
             ("page", "2"),
             ("page_size", "100"),
             ("columns", "uid"),
-            ("count", "false"),
+            ("count_results", "false"),
             ("uid__exact", "z"),
         ],
         SCHEMA,
