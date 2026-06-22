@@ -177,6 +177,10 @@ p.version > a {
   margin-right: 12px;
 }
 
+#search_results td[data-dash-column="Département"] {
+  text-wrap: wrap;
+}
+
 /* --- Dashboard inputs --- */
 
 .Select--multi .Select-value {
