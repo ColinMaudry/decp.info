@@ -769,7 +769,10 @@ def compute_considerations_stats(lff: pl.LazyFrame) -> dict[str, tuple[int, int]
     for key, col in present.items():
         count_pos = agg.filter(pl.col(col).str.contains(CONSIDERATIONS_REGEX)).height
         count_ren = agg.filter(pl.col(col).is_not_null()).height
-        pct_pos_ren = round(100 * count_pos / count_ren) if count_ren > 0 else 0
+        count_pos_ren = agg.filter(
+            pl.col(col).is_not_null() & (pl.col(col) != "Sans objet")
+        ).height
+        pct_pos_ren = round(100 * count_pos_ren / count_ren) if count_ren > 0 else 0
         stats[key] = (count_pos, round(100 * count_pos / total))
         stats[f"{key}_renseignees"] = (count_ren, pct_pos_ren)
 

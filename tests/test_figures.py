@@ -42,9 +42,10 @@ def test_compute_considerations_stats_basic():
     # 4 marchés au total. Social : u1, u3 -> 2/4 = 50%. Env : u2 -> 1/4 = 25%.
     assert stats["sociales"] == (2, 50)
     assert stats["environnementales"] == (1, 25)
-    # Renseignées : dénominateur = non-null ; numérateur = positifs.
-    # Social : 4 non-null, 2 positifs -> (4, 50%). Env : 3 non-null, 1 positif -> (3, 33%).
-    assert stats["sociales_renseignees"] == (4, 50)
+    # Renseignées : dénominateur = non-null ; numérateur = non-null ET != "Sans objet".
+    # Social : 4 non-null, 3 != "Sans objet" (u1/u3/u4) -> (4, 75%).
+    # Env : 3 non-null, 1 != "Sans objet" (u2) -> (3, 33%).
+    assert stats["sociales_renseignees"] == (4, 75)
     assert stats["environnementales_renseignees"] == (3, 33)
 
 
