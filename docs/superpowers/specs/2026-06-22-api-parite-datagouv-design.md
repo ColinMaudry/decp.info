@@ -42,6 +42,8 @@ collision avec l'opérateur d'agrégation `count` de data.gouv.fr.
 2. Ajouter l'opérateur de filtre `differs`.
 3. Ajouter les opérateurs d'agrégation `groupby`, `count`, `sum`, `avg`,
    `min`, `max`, avec la même forme de réponse que data.gouv.fr.
+4. **Documenter** chaque mot-clé dans le Swagger UI de l'API, de façon à
+   mettre en valeur les possibilités de l'API decp.info.
 
 Non-objectifs : le paramètre `or` (grammaire récursive imbriquée), les
 opérateurs `groupby`/agrégats appliqués via `or`, toute évolution du
@@ -58,10 +60,9 @@ benchmark (sera traitée après).
 - Le mot `count` n'est donc plus réservé ; il est interprété comme
   opérateur d'agrégation (section 3).
 
-**Rupture de contrat assumée :** un client qui passait `count=false`
-verra ce paramètre ré-interprété. Acceptable : l'API est privée et
-l'objectif est explicitement la parité avec data.gouv.fr. À documenter
-dans le message de commit.
+**Rupture de contrat :** un client qui passait `count=false` verra ce
+paramètre ré-interprété. Sans conséquence : l'API n'est pas encore en
+production, on peut donc itérer librement.
 
 ### 2. Opérateur `differs`
 
@@ -152,6 +153,33 @@ else:
     <chemin existant>
 ```
 
+### 4. Documentation (Swagger UI)
+
+La doc de l'API est générée par flask-smorest et exposée sur
+`/api/v1/swagger`, pilotée par le docstring de `routes.data()` et le bloc
+`@bp.doc(parameters=[...])`. C'est la surface de documentation à enrichir
+(aucune autre page de doc API n'existe).
+
+À mettre à jour :
+
+- Remplacer le paramètre `count` par `count_results` (même description).
+- Étendre la description du paramètre dynamique `<colonne>__<opérateur>`
+  avec une **définition d'une ligne par opérateur**, regroupés par
+  catégorie :
+  - _Filtres_ : `exact`, `differs`, `contains`, `notcontains`, `in`,
+    `notin`, `less`, `greater`, `strictly_less`, `strictly_greater`,
+    `isnull`, `isnotnull`, `sort`.
+  - _Agrégation_ (drapeaux sans valeur) : `groupby`, `count`, `sum`,
+    `avg`, `min`, `max`.
+- Décrire le **mode agrégation** : drapeaux sans valeur, réponse en lignes
+  groupées, colonnes `col__op`, `columns` interdit, pas de `total`.
+- Mettre à jour le docstring de `data()` (visible dans Swagger) en
+  cohérence, avec au moins un exemple de requête d'agrégation.
+
+Objectif éditorial : un lecteur qui découvre l'API doit comprendre, depuis
+le seul Swagger UI, l'ensemble des opérateurs disponibles et comment s'en
+servir.
+
 ### Sécurité SQL
 
 Les noms de colonnes proviennent du schéma DuckDB validé (`col in schema`),
@@ -176,6 +204,9 @@ Nouveaux tests (`tests/` API) :
 - `columns` + agrégation : 400.
 - `count_results=false` : réponse sans `total` (chemin non-agrégé).
 - non-régression : opérateurs existants inchangés.
+- doc : le spec OpenAPI généré (`/api/v1/openapi.json`) référence
+  `count_results` et mentionne les nouveaux opérateurs (vérif légère, p. ex.
+  présence des chaînes attendues).
 
 Comparaison de référence : pour quelques requêtes, les valeurs agrégées
 doivent correspondre à celles renvoyées par data.gouv.fr sur la même
