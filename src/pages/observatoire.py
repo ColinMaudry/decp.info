@@ -20,6 +20,7 @@ from src.db import schema
 from src.figures import (
     DataTable,
     get_barchart_sources,
+    get_considerations_card_content,
     get_dashboard_summary_table,
     get_distance_histogram,
     get_duplicate_matrix,
@@ -719,6 +720,15 @@ def _compute_dashboard_children(filter_params_normalized: tuple):
             title="Type d'achat",
             subtitle="en nombre de marchés attribués",
             fig=donut_marche_type,
+        )
+    )
+
+    considerations_content = get_considerations_card_content(lff)
+    cards.append(
+        make_card(
+            title="Considérations sociales et environnementales",
+            subtitle="part des marchés concernés",
+            fig=considerations_content,
         )
     )
 
