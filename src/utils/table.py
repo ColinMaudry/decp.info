@@ -4,6 +4,7 @@ import uuid
 import polars as pl
 from dash import no_update
 from polars import selectors as cs
+from unidecode import unidecode
 
 from src.db import count_marches, count_unique_marches, query_marches, schema
 from src.utils import logger
@@ -215,6 +216,25 @@ def format_values(dff: pl.DataFrame) -> pl.DataFrame:
     return dff
 
 
+_ACCENT_REPLACEMENTS = [
+    ("[éèêëÉÈÊË]", "e"),
+    ("[àâäÀÂÄ]", "a"),
+    ("[ùûüÙÛÜ]", "u"),
+    ("[îïÎÏ]", "i"),
+    ("[ôöÔÖ]", "o"),
+    ("[çÇ]", "c"),
+    ("[ñÑ]", "n"),
+    ("[æÆ]", "ae"),
+    ("[œŒ]", "oe"),
+]
+
+
+def _deaccent_col(expr: pl.Expr) -> pl.Expr:
+    for pattern, replacement in _ACCENT_REPLACEMENTS:
+        expr = expr.str.replace_all(pattern, replacement)
+    return expr
+
+
 def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
     _schema = lff.collect_schema()
     filtering_expressions = filter_query.split(" && ")
@@ -256,17 +276,17 @@ def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
             elif operator == "contains":
                 if col_type in ["String", "Date"] and isinstance(filter_value, str):
                     filter_value = filter_value.strip('"')
+                    normalized_value = unidecode(filter_value)
+                    col_expr = _deaccent_col(pl.col(col_name))
                     if filter_value.endswith("*"):
                         lff = lff.filter(
-                            pl.col(col_name).str.starts_with(filter_value[:-1])
+                            col_expr.str.starts_with(normalized_value[:-1])
                         )
                     elif filter_value.startswith("*"):
-                        lff = lff.filter(
-                            pl.col(col_name).str.ends_with(filter_value[1:])
-                        )
+                        lff = lff.filter(col_expr.str.ends_with(normalized_value[1:]))
                     else:
                         lff = lff.filter(
-                            pl.col(col_name).str.contains("(?i)" + filter_value)
+                            col_expr.str.contains("(?i)" + normalized_value)
                         )
                 elif col_type.startswith("Int") or col_type.startswith("Float"):
                     lff = lff.filter(pl.col(col_name) == filter_value)

@@ -44,6 +44,33 @@ def test_filter_table_data_does_not_call_track_search(monkeypatch, sample_lff):
     assert result.height == 1
 
 
+def test_filter_table_data_accent_insensitive():
+    """Chercher sans accent doit trouver des valeurs accentuées, et vice versa."""
+    from src.utils.table import filter_table_data
+
+    lff = pl.LazyFrame(
+        [
+            {"uid": "1", "acheteur_nom": "Mairie de Nîmes", "objet": "Voirie"},
+            {"uid": "2", "acheteur_nom": "Commune de Reims", "objet": "Éclairage"},
+            {"uid": "3", "acheteur_nom": "Ville de Paris", "objet": "Travaux"},
+        ]
+    )
+
+    # Sans accent → trouve la valeur accentuée
+    result = filter_table_data(lff, "{acheteur_nom} icontains Nimes").collect()
+    assert result.height == 1
+    assert result["uid"][0] == "1"
+
+    # Avec accent → trouve la valeur accentuée
+    result = filter_table_data(lff, "{acheteur_nom} icontains Nîmes").collect()
+    assert result.height == 1
+
+    # Sans accent → trouve la valeur avec accent initial (É)
+    result = filter_table_data(lff, "{objet} icontains eclairage").collect()
+    assert result.height == 1
+    assert result["uid"][0] == "2"
+
+
 def test_normalize_sort_by_handles_empty():
     from src.utils.table import normalize_sort_by
 
