@@ -3,8 +3,8 @@ from flask_smorest import Blueprint, abort
 
 from src.api import tracking
 from src.api.auth import require_token
-from src.api.filters import FilterError, build_where
-from src.db import count_marches, query_marches
+from src.api.filters import FilterError, build_where, parse_aggregators
+from src.db import aggregate_marches, count_marches, query_marches
 from src.db import schema as duckdb_schema
 from src.utils.data import DATA_SCHEMA
 
@@ -151,12 +151,33 @@ def data():
     columns = _parse_columns()
     count_results = request.args.get("count_results", "true").lower() != "false"
 
+    args = list(request.args.items(multi=True))
     try:
-        where_sql, params, order_sql = build_where(
-            list(request.args.items(multi=True)), duckdb_schema
-        )
+        agg = parse_aggregators(args, duckdb_schema)
+        where_sql, params, order_sql = build_where(args, duckdb_schema)
     except FilterError as e:
         abort(400, message=str(e), errors={"field": e.field})
+
+    if agg is not None:
+        if columns:
+            abort(
+                400,
+                message="`columns` ne peut pas être combiné avec une agrégation",
+            )
+        df = aggregate_marches(
+            select_sql=agg.select_sql,
+            where_sql=where_sql,
+            params=params,
+            group_by=agg.group_by_sql,
+            limit=page_size,
+            offset=(page - 1) * page_size,
+        )
+        df_ready = df.with_columns(cs.temporal().cast(pl.String))
+        return {
+            "data": df_ready.to_dicts(),
+            "meta": {"page": page, "page_size": page_size},
+            "links": _build_links(page, page_size, None),
+        }
 
     df = query_marches(
         where_sql=where_sql,

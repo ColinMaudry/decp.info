@@ -112,3 +112,44 @@ def test_data_differs_excludes_value(api_client, valid_token_header):
     assert resp.status_code == 200
     body = resp.get_json()
     assert all(row["uid"] != uid for row in body["data"])
+
+
+def test_data_aggregation_groupby_count(api_client, valid_token_header):
+    client, _ = api_client
+    resp = client.get(
+        "/api/v1/data?acheteur_departement_code__groupby&uid__count",
+        headers=valid_token_header,
+    )
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["data"], "agrégation vide ?"
+    for row in body["data"]:
+        assert set(row.keys()) == {"acheteur_departement_code", "uid__count"}
+    assert "total" not in body["meta"]
+
+
+def test_data_aggregation_global_count(api_client, valid_token_header):
+    client, _ = api_client
+    resp = client.get("/api/v1/data?uid__count", headers=valid_token_header)
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert len(body["data"]) == 1
+    assert "uid__count" in body["data"][0]
+
+
+def test_data_aggregation_with_filter(api_client, valid_token_header):
+    client, _ = api_client
+    resp = client.get(
+        "/api/v1/data?acheteur_departement_code__groupby&uid__count&montant__greater=0",
+        headers=valid_token_header,
+    )
+    assert resp.status_code == 200
+
+
+def test_data_aggregation_with_columns_returns_400(api_client, valid_token_header):
+    client, _ = api_client
+    resp = client.get(
+        "/api/v1/data?uid__count&columns=uid",
+        headers=valid_token_header,
+    )
+    assert resp.status_code == 400
