@@ -735,7 +735,7 @@ CONSIDERATIONS_COLUMNS = {
 }
 
 
-def compute_considerations_stats(lff: pl.LazyFrame) -> dict[str, tuple[int, int]]:
+def compute_considerations_stats(lff: pl.LazyFrame) -> dict[str, tuple[int, int, int]]:
     """Statistiques considérations pour l'observatoire.
 
     Clés renvoyées :
@@ -746,7 +746,7 @@ def compute_considerations_stats(lff: pl.LazyFrame) -> dict[str, tuple[int, int]
     names = lff.collect_schema().names()
     present = {key: col for key, col in CONSIDERATIONS_COLUMNS.items() if col in names}
 
-    stats: dict[str, tuple[int, int]] = {"champs_renseignes": (0, 0)}
+    stats: dict[str, tuple[int, int, int]] = {"champs_renseignes": (0, 0)}
     for key in CONSIDERATIONS_COLUMNS:
         stats[f"{key}_renseignees"] = (0, 0)
 
@@ -770,7 +770,7 @@ def compute_considerations_stats(lff: pl.LazyFrame) -> dict[str, tuple[int, int]
             pl.col(col).is_not_null() & (pl.col(col) != "Sans objet")
         ).height
         pct_pos_ren = round(100 * count_pos_ren / count_ren) if count_ren > 0 else 0
-        stats[f"{key}_renseignees"] = (count_ren, pct_pos_ren)
+        stats[f"{key}_renseignees"] = (count_ren, count_pos_ren, pct_pos_ren)
         if key == "sociales":
             stats["champs_renseignes"] = (count_ren, round(100 * count_ren / total))
 
@@ -779,8 +779,8 @@ def compute_considerations_stats(lff: pl.LazyFrame) -> dict[str, tuple[int, int]
 
 # (clé stats, libellé, couleur)
 CONSIDERATIONS_RENSEIGNEES = [
-    ("sociales_renseignees", "Sociales", "#CC6677"),
-    ("environnementales_renseignees", "Environnementales", "#117733"),
+    ("sociales_renseignees", "Considérations sociales", "#CC6677"),
+    ("environnementales_renseignees", "Considérations environnementales", "#117733"),
 ]
 
 
@@ -817,7 +817,7 @@ def get_considerations_card_content(lff: pl.LazyFrame) -> html.Div:
     ]
 
     for key, label, color in CONSIDERATIONS_RENSEIGNEES:
-        count, pct = stats[key]
+        total_count, count, pct = stats[key]
         blocks.append(
             html.Div(
                 className="mb-3",
@@ -827,7 +827,7 @@ def get_considerations_card_content(lff: pl.LazyFrame) -> html.Div:
                         children=[
                             html.Span(label),
                             html.Span(
-                                f"parmi les {format_number(count)} marchés renseignés",
+                                f"dans {format_number(count)} marchés",
                                 className="text-muted",
                             ),
                         ],
