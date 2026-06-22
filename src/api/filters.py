@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import date, datetime
 
 import polars as pl
@@ -19,6 +20,55 @@ OPERATORS = {
 }
 
 RESERVED_PARAMS = {"page", "page_size", "columns", "count_results"}
+
+AGGREGATORS = {"groupby", "count", "sum", "avg", "min", "max"}
+AGG_SQL = {"count": "COUNT", "sum": "SUM", "avg": "AVG", "min": "MIN", "max": "MAX"}
+
+
+@dataclass
+class AggregationSpec:
+    select_sql: str
+    group_by_sql: str | None
+
+
+def parse_aggregators(
+    args: list[tuple[str, str]], schema: pl.Schema
+) -> "AggregationSpec | None":
+    """Détecte les drapeaux d'agrégation (`col__groupby`, `col__count`, ...).
+
+    Retourne None si aucun agrégateur. Sinon, construit les fragments SQL
+    `select_sql` et `group_by_sql` (noms de colonnes validés contre le schéma).
+    """
+    group_cols: list[str] = []
+    aggregates: list[tuple[str, str]] = []  # (operator, column)
+    has_agg = False
+
+    for key, _ in args:
+        parsed = _split_key(key)
+        if not parsed:
+            continue
+        col, op = parsed
+        if op not in AGGREGATORS:
+            continue
+        has_agg = True
+        if col not in schema:
+            raise FilterError(f"Colonne inconnue : {col!r}", field=key)
+        if op == "groupby":
+            group_cols.append(col)
+        else:
+            aggregates.append((op, col))
+
+    if not has_agg:
+        return None
+
+    select_parts = [f'"{c}"' for c in group_cols]
+    for op, col in aggregates:
+        select_parts.append(f'{AGG_SQL[op]}("{col}") AS "{col}__{op}"')
+
+    group_by_sql = ", ".join(f'"{c}"' for c in group_cols) if group_cols else None
+    return AggregationSpec(
+        select_sql=", ".join(select_parts), group_by_sql=group_by_sql
+    )
 
 
 class FilterError(ValueError):
@@ -84,6 +134,9 @@ def build_where(
         if not parsed:
             raise FilterError(f"Paramètre non reconnu : {key}", field=key)
         col, op = parsed
+
+        if op in AGGREGATORS:
+            continue
 
         if op not in OPERATORS:
             raise FilterError(f"Opérateur inconnu : __{op}", field=key)

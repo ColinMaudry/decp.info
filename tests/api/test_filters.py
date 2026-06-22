@@ -1,7 +1,7 @@
 import polars as pl
 import pytest
 
-from src.api.filters import FilterError, build_where
+from src.api.filters import AggregationSpec, FilterError, build_where, parse_aggregators
 
 SCHEMA = pl.Schema(
     {
@@ -151,3 +151,54 @@ def test_differs_filter_on_int():
     where, params, _ = build_where([("annee__differs", "2020")], SCHEMA)
     assert where == '"annee" IS DISTINCT FROM ?'
     assert params == [2020]
+
+
+def test_parse_aggregators_none_when_absent():
+    assert parse_aggregators([("uid__exact", "a")], SCHEMA) is None
+
+
+def test_parse_aggregators_groupby_and_count():
+    spec = parse_aggregators([("annee__groupby", ""), ("uid__count", "")], SCHEMA)
+    assert isinstance(spec, AggregationSpec)
+    assert spec.select_sql == '"annee", COUNT("uid") AS "uid__count"'
+    assert spec.group_by_sql == '"annee"'
+
+
+def test_parse_aggregators_multiple_aggregates():
+    spec = parse_aggregators(
+        [
+            ("annee__groupby", ""),
+            ("montant__sum", ""),
+            ("montant__avg", ""),
+            ("montant__min", ""),
+            ("montant__max", ""),
+        ],
+        SCHEMA,
+    )
+    assert spec.select_sql == (
+        '"annee", SUM("montant") AS "montant__sum", '
+        'AVG("montant") AS "montant__avg", '
+        'MIN("montant") AS "montant__min", '
+        'MAX("montant") AS "montant__max"'
+    )
+    assert spec.group_by_sql == '"annee"'
+
+
+def test_parse_aggregators_global_without_groupby():
+    spec = parse_aggregators([("uid__count", "")], SCHEMA)
+    assert spec.select_sql == 'COUNT("uid") AS "uid__count"'
+    assert spec.group_by_sql is None
+
+
+def test_parse_aggregators_unknown_column_raises():
+    with pytest.raises(FilterError):
+        parse_aggregators([("nope__count", "")], SCHEMA)
+
+
+def test_build_where_ignores_aggregator_flags():
+    where, params, _ = build_where(
+        [("annee__groupby", ""), ("uid__count", ""), ("montant__greater", "100")],
+        SCHEMA,
+    )
+    assert where == '"montant" >= ?'
+    assert params == [100.0]
