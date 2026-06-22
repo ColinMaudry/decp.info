@@ -796,9 +796,13 @@ def get_considerations_card_content(lff: pl.LazyFrame) -> html.Div:
                         ],
                     ),
                     dbc.Progress(
-                        value=pct,
-                        label=f"{pct} %",
-                        color=color,
+                        dbc.Progress(
+                            value=pct,
+                            label=f"{pct} %",
+                            bar=True,
+                            color=color,
+                            style={"color": "white"},
+                        ),
                     ),
                 ],
             )

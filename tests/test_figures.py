@@ -145,14 +145,18 @@ def test_get_considerations_card_content_returns_two_progress_bars():
             find_progress(children, found)
         return found
 
-    bars = find_progress(div, [])
-    assert len(bars) == 2
+    all_bars = find_progress(div, [])
+    # Structure imbriquée : outer (track) + inner (bar=True, couleur + texte blanc)
+    inner_bars = [b for b in all_bars if getattr(b, "bar", False)]
+    assert len(inner_bars) == 2
 
     # Sociales (#CC6677) : u1 -> 50%. Environnementales (#117733) : u2 -> 50%.
-    social_bar, env_bar = bars[0], bars[1]
+    social_bar, env_bar = inner_bars[0], inner_bars[1]
     assert social_bar.value == 50
     assert social_bar.label == "50 %"
     assert social_bar.color == "#CC6677"
+    assert social_bar.style["color"] == "white"
     assert env_bar.value == 50
     assert env_bar.label == "50 %"
     assert env_bar.color == "#117733"
+    assert env_bar.style["color"] == "white"
