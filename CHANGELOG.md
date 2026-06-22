@@ -1,18 +1,8 @@
-## [Unreleased]
+#### 2.8.0
 
-### Ajouté
-
-- API privée tabulaire `/api/v1/data` (filtres dynamiques, pagination, tri).
-- Endpoint `/api/v1/schema` (description du dataset).
-- Endpoint `/api/v1/health` (sonde monitoring).
-- Documentation interactive Swagger UI à `/api/v1/swagger`.
-- CLI d'administration des tokens : `python -m src.api.tokens_cli` (create, list, revoke).
-- Suivi de consommation : compteurs SQLite (`api_tokens.count_total`, `last_used_at`) + événements Matomo async.
-
-### Configuration
-
-- Nouvelles variables d'environnement : `USERS_DB_PATH`, `MATOMO_URL`, `MATOMO_SITE_ID`, `MATOMO_TRACKING_ENABLED`.
-- Création de 2 Custom Dimensions côté Matomo : `dimension1=token_id`, `dimension2=http_status`.
+- Ajout des considérations sociales et environnementales à l'observatoire
+- Les filtres textuels dans les vues tableaux ne sont plus sensibles à l'accentuation
+- API privée tabulaire sur abonnement (filtres dynamiques, pagination, tri) avec documentation interactive Swagger UI à `/api/v1/swagger` (📨 <colin@colmo.tech> si intéressé)
 
 ##### 2.7.9 (9 juin 2026)
 
