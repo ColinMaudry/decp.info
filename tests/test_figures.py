@@ -10,25 +10,25 @@ def test_compute_considerations_stats_basic():
 
     lff = _make_lff(
         [
-            # uid u1 : social oui (Clause), env non (Sans objet)
+            # u1 : social oui (Clause), env non (Sans objet)
             {
                 "uid": "u1",
                 "considerationsSociales": "Clause sociale",
                 "considerationsEnvironnementales": "Sans objet",
             },
-            # uid u2 : social non (Sans objet), env oui (Critère)
+            # u2 : social non (Sans objet), env oui (Critère)
             {
                 "uid": "u2",
                 "considerationsSociales": "Sans objet",
                 "considerationsEnvironnementales": "Critère environnemental",
             },
-            # uid u3 : social oui (Marché réservé compte), env null
+            # u3 : social oui (Marché réservé), env null
             {
                 "uid": "u3",
                 "considerationsSociales": "Marché réservé",
                 "considerationsEnvironnementales": None,
             },
-            # uid u4 : aucune considération
+            # u4 : social autre valeur (pas "Sans objet"), env null
             {
                 "uid": "u4",
                 "considerationsSociales": "Pas de considération sociale",
@@ -39,13 +39,11 @@ def test_compute_considerations_stats_basic():
 
     stats = compute_considerations_stats(lff)
 
-    # 4 marchés au total. Social : u1, u3 -> 2/4 = 50%. Env : u2 -> 1/4 = 25%.
-    assert stats["sociales"] == (2, 50)
-    assert stats["environnementales"] == (1, 25)
-    # Renseignées : dénominateur = non-null ; numérateur = non-null ET != "Sans objet".
-    # Social : 4 non-null, 3 != "Sans objet" (u1/u3/u4) -> (4, 75%).
-    # Env : 3 non-null, 1 != "Sans objet" (u2) -> (3, 33%).
+    # champs_renseignes : basé sur sociales. 4 non-null / 4 total -> (4, 100%).
+    assert stats["champs_renseignes"] == (4, 100)
+    # Sociales renseignées : dén=4 non-null, num=3 != "Sans objet" (u1/u3/u4) -> (4, 75%).
     assert stats["sociales_renseignees"] == (4, 75)
+    # Env renseignées : dén=3 non-null (u1/u2/u4), num=1 != "Sans objet" (u2) -> (3, 33%).
     assert stats["environnementales_renseignees"] == (3, 33)
 
 
@@ -54,7 +52,7 @@ def test_compute_considerations_stats_dedup_per_uid():
 
     lff = _make_lff(
         [
-            # uid u1 présent 2 fois (2 titulaires) -> compté une seule fois
+            # u1 présent 2 fois (2 titulaires) -> compté une seule fois
             {
                 "uid": "u1",
                 "considerationsSociales": "Clause sociale",
@@ -75,11 +73,10 @@ def test_compute_considerations_stats_dedup_per_uid():
 
     stats = compute_considerations_stats(lff)
 
-    # 2 marchés distincts. Social : u1 -> 1/2 = 50%.
-    assert stats["sociales"] == (1, 50)
-    assert stats["environnementales"] == (0, 0)
-    # Social : 2 non-null, 1 positif -> (2, 50%). Env : 2 non-null, 0 positif -> (2, 0%).
+    # 2 uid distincts. Social 2 non-null, 1 != "Sans objet" (u1) -> (2, 50%).
+    assert stats["champs_renseignes"] == (2, 100)
     assert stats["sociales_renseignees"] == (2, 50)
+    # Env 2 non-null, 0 != "Sans objet" -> (2, 0%).
     assert stats["environnementales_renseignees"] == (2, 0)
 
 
@@ -95,10 +92,8 @@ def test_compute_considerations_stats_missing_column():
 
     stats = compute_considerations_stats(lff)
 
-    # Colonne env absente -> (0, 0) sans exception. Social : 1/2 = 50%.
-    assert stats["sociales"] == (1, 50)
-    assert stats["environnementales"] == (0, 0)
-    # Social : 2 non-null, 1 positif -> (2, 50%). Env absente -> (0, 0).
+    # Colonne env absente -> (0, 0). Social : 2 non-null, 1 != "Sans objet" -> (2, 50%).
+    assert stats["champs_renseignes"] == (2, 100)
     assert stats["sociales_renseignees"] == (2, 50)
     assert stats["environnementales_renseignees"] == (0, 0)
 
@@ -116,13 +111,12 @@ def test_compute_considerations_stats_empty():
 
     stats = compute_considerations_stats(lff)
 
-    assert stats["sociales"] == (0, 0)
-    assert stats["environnementales"] == (0, 0)
+    assert stats["champs_renseignes"] == (0, 0)
     assert stats["sociales_renseignees"] == (0, 0)
     assert stats["environnementales_renseignees"] == (0, 0)
 
 
-def test_get_considerations_card_content_returns_four_progress_bars():
+def test_get_considerations_card_content_returns_three_progress_bars():
     import dash_bootstrap_components as dbc
     from dash import html
 
@@ -158,23 +152,16 @@ def test_get_considerations_card_content_returns_four_progress_bars():
             find_progress(children, found)
         return found
 
-    all_bars = find_progress(div, [])
-    inner_bars = [b for b in all_bars if getattr(b, "bar", False)]
-    # 4 barres internes : 2 positives + 2 renseignées
-    assert len(inner_bars) == 4
+    inner_bars = [b for b in find_progress(div, []) if getattr(b, "bar", False)]
+    assert len(inner_bars) == 3
 
-    social_pos, social_ren, env_pos, env_ren = inner_bars
-    # Sociales positives : u1 -> 1/2 = 50%
-    assert social_pos.value == 50
-    assert social_pos.color == "#CC6677"
-    assert social_pos.style["color"] == "white"
-    # Sociales renseignées : 2 non-null, 1 positif (u1) -> 50%
-    assert social_ren.value == 50
-    assert social_ren.color == "#E5B2BB"
-    # Environnementales positives : u2 -> 1/2 = 50%
-    assert env_pos.value == 50
-    assert env_pos.color == "#117733"
-    assert env_pos.style["color"] == "white"
-    # Environnementales renseignées : 2 non-null (u1 "Sans objet", u2), 1 positif (u2) -> 50%
-    assert env_ren.value == 50
-    assert env_ren.color == "#88BB99"
+    bar_ren, bar_social, bar_env = inner_bars
+    # Bar 1 : champs renseignés (2/2 = 100%, gris)
+    assert bar_ren.value == 100
+    assert bar_ren.color == "#6c757d"
+    # Bar 2 : sociales parmi renseignés (u1 != "Sans objet" -> 1/2 = 50%, rose)
+    assert bar_social.value == 50
+    assert bar_social.color == "#CC6677"
+    # Bar 3 : env parmi renseignés (u2 != "Sans objet" -> 1/2 = 50%, vert)
+    assert bar_env.value == 50
+    assert bar_env.color == "#117733"

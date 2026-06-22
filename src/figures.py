@@ -736,20 +736,18 @@ CONSIDERATIONS_COLUMNS = {
 
 
 def compute_considerations_stats(lff: pl.LazyFrame) -> dict[str, tuple[int, int]]:
-    """Part des marchés (uid distincts) ayant au moins une considération.
+    """Statistiques considérations pour l'observatoire.
 
-    Renvoie pour chaque clé (sociales, environnementales) :
-      - (count_pos, pct) : positifs / tous les uid distincts
-      - (count_ren, pct) suffixé _renseignees : non-null uid comme dénominateur,
-        positifs comme numérateur (= part de positifs parmi les marchés renseignés)
+    Clés renvoyées :
+      - "champs_renseignes"        : (count_ren_sociales, pct / total)
+      - "{key}_renseignees"        : (count_ren, pct positifs parmi renseignés)
     Colonne absente -> (0, 0).
     """
     names = lff.collect_schema().names()
     present = {key: col for key, col in CONSIDERATIONS_COLUMNS.items() if col in names}
 
-    stats: dict[str, tuple[int, int]] = {}
+    stats: dict[str, tuple[int, int]] = {"champs_renseignes": (0, 0)}
     for key in CONSIDERATIONS_COLUMNS:
-        stats[key] = (0, 0)
         stats[f"{key}_renseignees"] = (0, 0)
 
     if not present:
@@ -767,22 +765,22 @@ def compute_considerations_stats(lff: pl.LazyFrame) -> dict[str, tuple[int, int]
         return stats
 
     for key, col in present.items():
-        count_pos = agg.filter(pl.col(col).str.contains(CONSIDERATIONS_REGEX)).height
         count_ren = agg.filter(pl.col(col).is_not_null()).height
         count_pos_ren = agg.filter(
             pl.col(col).is_not_null() & (pl.col(col) != "Sans objet")
         ).height
         pct_pos_ren = round(100 * count_pos_ren / count_ren) if count_ren > 0 else 0
-        stats[key] = (count_pos, round(100 * count_pos / total))
         stats[f"{key}_renseignees"] = (count_ren, pct_pos_ren)
+        if key == "sociales":
+            stats["champs_renseignes"] = (count_ren, round(100 * count_ren / total))
 
     return stats
 
 
-# (clé, libellé, couleur principale, couleur renseignée)
-CONSIDERATIONS_DISPLAY = [
-    ("sociales", "Sociales", "#CC6677", "#E5B2BB"),
-    ("environnementales", "Environnementales", "#117733", "#88BB99"),
+# (clé stats, libellé, couleur)
+CONSIDERATIONS_RENSEIGNEES = [
+    ("sociales_renseignees", "Sociales", "#CC6677"),
+    ("environnementales_renseignees", "Environnementales", "#117733"),
 ]
 
 
@@ -795,13 +793,31 @@ def _progress_bar(pct: int, color: str) -> dbc.Progress:
 
 
 def get_considerations_card_content(lff: pl.LazyFrame) -> html.Div:
-    """Quatre barres groupées par type : considération positive + valeur renseignée."""
+    """Trois barres : champs renseignés + part positive pour sociales et environnementales."""
     stats = compute_considerations_stats(lff)
 
-    blocks = []
-    for key, label, color, color_ren in CONSIDERATIONS_DISPLAY:
-        count_pos, pct_pos = stats[key]
-        count_ren, pct_ren = stats[f"{key}_renseignees"]
+    count_ren, pct_ren = stats["champs_renseignes"]
+    blocks = [
+        html.Div(
+            className="mb-3",
+            children=[
+                html.Div(
+                    className="d-flex justify-content-between",
+                    children=[
+                        html.Span("Champs considérations renseignés"),
+                        html.Span(
+                            f"{format_number(count_ren)} marchés",
+                            className="text-muted",
+                        ),
+                    ],
+                ),
+                _progress_bar(pct_ren, "#6c757d"),
+            ],
+        )
+    ]
+
+    for key, label, color in CONSIDERATIONS_RENSEIGNEES:
+        count, pct = stats[key]
         blocks.append(
             html.Div(
                 className="mb-3",
@@ -811,22 +827,12 @@ def get_considerations_card_content(lff: pl.LazyFrame) -> html.Div:
                         children=[
                             html.Span(label),
                             html.Span(
-                                f"{format_number(count_pos)} marchés",
+                                f"parmi les {format_number(count)} marchés renseignés",
                                 className="text-muted",
                             ),
                         ],
                     ),
-                    _progress_bar(pct_pos, color),
-                    html.Div(
-                        className="d-flex justify-content-end mt-1",
-                        children=[
-                            html.Span(
-                                f"parmi les {format_number(count_ren)} marchés renseignés",
-                                className="text-muted",
-                            ),
-                        ],
-                    ),
-                    _progress_bar(pct_ren, color_ren),
+                    _progress_bar(pct, color),
                 ],
             )
         )
