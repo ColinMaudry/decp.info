@@ -379,14 +379,29 @@ table.cell-table th {
   background-color: rgb(255 240 240 / 40%);
 }
 
-/* Barre de défilement horizontale miroir, collée en haut */
+/* Barre de défilement horizontale, collée en haut au-dessus des en-têtes */
 .marches_table .dt-hscroll {
   position: sticky;
   top: 0;
   z-index: 11; /* au-dessus des en-têtes sticky */
   overflow-x: auto;
   overflow-y: hidden;
-  height: 14px;
+  height: 12px;
+  scrollbar-color: orange #e0e0e0;
+  scrollbar-width: thin;
+}
+
+.marches_table .dt-hscroll::-webkit-scrollbar {
+  height: 12px;
+}
+
+.marches_table .dt-hscroll::-webkit-scrollbar-thumb {
+  background-color: orange;
+  border-radius: 6px;
+}
+
+.marches_table .dt-hscroll::-webkit-scrollbar-track {
+  background-color: #e0e0e0;
 }
 
 .marches_table .dt-hscroll-inner {
@@ -395,14 +410,6 @@ table.cell-table th {
 
 .marches_table .dt-hscroll.is-hidden {
   display: none;
-}
-
-/* Conteneur scrollable horizontal — overflow-y:clip ne crée pas de scroll container vertical */
-/* donc position:sticky sur th.dash-header reste calé sur la page */
-.marches_table .dt-scroll-wrapper {
-  overflow-x: auto;
-  overflow-y: clip;
-  width: 100%;
 }
 
 /* Column Visibility Menu */
