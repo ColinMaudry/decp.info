@@ -375,6 +375,11 @@ table.cell-table th {
   background-color: #fff;
 }
 
+/* Quand la barre de scroll est visible, pousser les en-têtes en dessous */
+.marches_table:has(.dt-hscroll:not(.is-hidden)) th.dash-header {
+  top: 16px;
+}
+
 .marches_table .cell-table tr:nth-child(even) td {
   background-color: rgb(255 240 240 / 40%);
 }
@@ -384,20 +389,20 @@ table.cell-table th {
   position: sticky;
   top: 0;
   z-index: 11; /* au-dessus des en-têtes sticky */
-  overflow-x: auto;
+  overflow-x: scroll; /* scroll (pas auto) force le thumb toujours visible */
   overflow-y: hidden;
-  height: 12px;
+  height: 16px;
   scrollbar-color: orange #e0e0e0;
-  scrollbar-width: thin;
+  scrollbar-width: auto;
 }
 
 .marches_table .dt-hscroll::-webkit-scrollbar {
-  height: 12px;
+  height: 16px;
 }
 
 .marches_table .dt-hscroll::-webkit-scrollbar-thumb {
   background-color: orange;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 .marches_table .dt-hscroll::-webkit-scrollbar-track {
