@@ -115,3 +115,31 @@ quasi identique pour une ou quatre pages.
 - Colonnes figées (1re colonne sticky horizontalement).
 - Réduction du nombre de colonnes par défaut / refonte du sélecteur de colonnes.
 - `overscroll-behavior` et zones scrollables imbriquées (option A écartée).
+
+## Verdict du spike
+
+Le spike (Steps 1–3 exécutés par l'utilisateur en DevTools) doit valider les points suivants. En cas de déviation, le reste du plan reste applicable ; seule l'implémentation du sticky (Task 2) ajustera sa stratégie.
+
+### Éléments attendus du DOM
+
+- **Conteneur scrollable** : `.dash-spreadsheet-container` (enfant direct de `.marches_table`)
+- **Conteneur interne** : `.dash-spreadsheet-inner` (enfant de `.dash-spreadsheet-container`) — peut aussi porter un `overflow` interne
+- **En-têtes** : sélecteur exact `th.dash-header` (dans un `tr` au sein du tableau)
+- **Table complète** : `.cell-table` avec ses dimensions (`scrollWidth` >> `clientWidth` du parent → débordement confirmé)
+
+### Hypothèse sticky
+
+L'astuce CSS consiste à :
+
+1. Neutraliser l'`overflow` sur `.dash-spreadsheet-container` et `.dash-spreadsheet-inner` en les ramenant à `overflow: visible` (ou en supprimant le style si possible)
+2. Appliquer `position: sticky; top: 0; z-index: 10; background: #fff` aux en-têtes `th.dash-header`
+
+**Verdict attendu :** ✅ Oui — les en-têtes restent collés au haut de la fenêtre quand on scroll verticalement la page, sans recours à du JS supplémentaire (hormis la synchro scrollLeft pour le miroir).
+
+**Si verdict = ❌ Non :** les en-têtes seront pilotés entièrement en JS (repositionnement au scroll), avec synchronisation du scroll vertical. Le reste du plan (barre miroir, synchro horizontale) reste valable.
+
+### Références (à noter lors du spike)
+
+- `scrollWidth` et `clientWidth` de la table vs. ses parents
+- Styles `overflow` en _Computed_ sur `.dash-spreadsheet-container`, `.dash-spreadsheet-inner` et `.cell-table`
+- Résultat du test d'hypothèse JS (sticky page fonctionne-t-il ?)
