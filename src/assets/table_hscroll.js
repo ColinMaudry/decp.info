@@ -10,7 +10,6 @@
   function setup(wrapper) {
     if (wrapper.dataset.hscrollReady === "1") return;
     const scrollEl = getScrollEl(wrapper);
-    if (!scrollEl) return;
 
     const bar = document.createElement("div");
     bar.className = "dt-hscroll is-hidden";
@@ -19,6 +18,8 @@
     bar.appendChild(inner);
     wrapper.insertBefore(bar, wrapper.firstChild);
 
+    // syncing évite les boucles dans la même pile d'exécution ; l'affectation de scrollLeft
+    // déclenche l'événement scroll de façon synchrone dans Chromium.
     let syncing = false;
     const onBar = () => {
       if (syncing) return;
@@ -39,6 +40,7 @@
       const total = scrollEl.scrollWidth;
       const visible = scrollEl.clientWidth;
       inner.style.width = total + "px";
+      // +1 absorbe les erreurs d'arrondi sous-pixel
       bar.classList.toggle("is-hidden", total <= visible + 1);
       bar.scrollLeft = scrollEl.scrollLeft;
     };
@@ -46,6 +48,7 @@
     // Recalcule quand le tableau change (pagination, tri, filtre, données).
     const obs = new MutationObserver(() => refresh());
     obs.observe(scrollEl, { childList: true, subtree: true, attributes: true });
+    // SPA : ce listener est intentionnellement conservé pour toute la durée de vie de la page.
     window.addEventListener("resize", refresh);
 
     wrapper.dataset.hscrollReady = "1";
