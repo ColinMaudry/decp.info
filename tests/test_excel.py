@@ -41,8 +41,8 @@ def test_write_styled_excel_known_column_wider_than_minimum():
     ws = wb.active
     width_autre = ws.column_dimensions["A"].width  # colonne 1 = "autre"
     width_objet = ws.column_dimensions["B"].width  # colonne 2 = "objet"
-    assert width_autre > 0
-    assert width_objet > width_autre
+    assert width_autre >= 15  # 132px minimum → ~18.9 chars xlsxwriter, borne basse 15
+    assert width_objet >= 40  # 350px → ~50 chars xlsxwriter, borne basse 40
 
 
 def test_write_styled_excel_custom_worksheet_name():

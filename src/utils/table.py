@@ -579,11 +579,13 @@ def write_styled_excel(df: pl.DataFrame, buffer, worksheet: str = "DECP") -> Non
         for col in df.columns
     }
     wb = xlsxwriter.Workbook(buffer, {"default_format_properties": {"text_wrap": True}})
-    ws = wb.add_worksheet(worksheet)
-    df.write_excel(
-        workbook=wb,
-        worksheet=ws,
-        header_format=_EXCEL_HEADER_FORMAT,
-        column_widths=col_widths,
-    )
-    wb.close()
+    try:
+        ws = wb.add_worksheet(worksheet)
+        df.write_excel(
+            workbook=wb,
+            worksheet=ws,
+            header_format=_EXCEL_HEADER_FORMAT,
+            column_widths=col_widths,
+        )
+    finally:
+        wb.close()

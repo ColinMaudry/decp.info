@@ -35,6 +35,7 @@ dev = [
   "webdriver-manager",
   "dash[testing]",
   "fastexcel",
+  "openpyxl",
 ]
 
 [tool.pytest.ini_options]
