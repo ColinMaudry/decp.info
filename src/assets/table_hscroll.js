@@ -14,39 +14,101 @@
 
     const bar = document.createElement("div");
     bar.className = "dt-hscroll is-hidden";
-    const inner = document.createElement("div");
-    inner.className = "dt-hscroll-inner";
-    bar.appendChild(inner);
+    const thumb = document.createElement("div");
+    thumb.className = "dt-hscroll-thumb";
+    bar.appendChild(thumb);
     wrapper.insertBefore(bar, wrapper.firstChild);
 
-    // La barre synchronise le scroll horizontal de la page (overflow: visible sur les
-    // conteneurs Dash laisse le scroll se faire au niveau de la page, ce qui permet
-    // aux en-têtes position:sticky de rester calés sur la fenêtre).
-    // syncing évite les boucles dans la même pile d'exécution.
-    let syncing = false;
-    const onBar = () => {
-      if (syncing) return;
-      syncing = true;
-      window.scrollTo(bar.scrollLeft, window.scrollY);
-      syncing = false;
-    };
-    const onPage = () => {
-      if (syncing) return;
-      syncing = true;
-      bar.scrollLeft = window.scrollX;
-      syncing = false;
-    };
-    bar.addEventListener("scroll", onBar);
-    // SPA : ce listener est intentionnellement conservé pour toute la durée de vie de la page.
-    window.addEventListener("scroll", onPage);
-
-    const refresh = () => {
+    // --- Métriques communes ---
+    const metrics = () => {
       const total = document.documentElement.scrollWidth;
       const visible = window.innerWidth;
-      inner.style.width = total + "px";
-      // +1 absorbe les erreurs d'arrondi sous-pixel
-      bar.classList.toggle("is-hidden", total <= visible + 1);
-      bar.scrollLeft = window.scrollX;
+      const trackW = bar.clientWidth;
+      const thumbW = Math.max(40, (visible / total) * trackW);
+      const scrollRange = total - visible;
+      const thumbRange = trackW - thumbW;
+      return { total, visible, trackW, thumbW, scrollRange, thumbRange };
+    };
+
+    // --- Mise à jour de la position du thumb ---
+    const syncThumb = () => {
+      const { total, visible, thumbW, scrollRange, thumbRange } = metrics();
+      if (total <= visible + 1 || thumbRange <= 0) return;
+      thumb.style.width = thumbW + "px";
+      const fraction = scrollRange > 0 ? window.scrollX / scrollRange : 0;
+      thumb.style.left = Math.round(fraction * thumbRange) + "px";
+    };
+
+    // --- Drag souris + tactile ---
+    let dragStartX = null;
+    let dragScrollStart = null;
+
+    const startDrag = (clientX) => {
+      dragStartX = clientX;
+      dragScrollStart = window.scrollX;
+    };
+    const moveDrag = (clientX) => {
+      if (dragStartX === null) return;
+      const dx = clientX - dragStartX;
+      const { scrollRange, thumbRange } = metrics();
+      if (thumbRange <= 0) return;
+      window.scrollTo(
+        dragScrollStart + (dx / thumbRange) * scrollRange,
+        window.scrollY
+      );
+    };
+    const endDrag = () => {
+      dragStartX = null;
+    };
+
+    thumb.addEventListener("mousedown", (e) => {
+      startDrag(e.clientX);
+      e.preventDefault();
+    });
+    document.addEventListener("mousemove", (e) => moveDrag(e.clientX));
+    document.addEventListener("mouseup", endDrag);
+
+    thumb.addEventListener(
+      "touchstart",
+      (e) => {
+        startDrag(e.touches[0].clientX);
+        e.preventDefault();
+      },
+      { passive: false }
+    );
+    document.addEventListener(
+      "touchmove",
+      (e) => {
+        if (dragStartX !== null) {
+          moveDrag(e.touches[0].clientX);
+          e.preventDefault();
+        }
+      },
+      { passive: false }
+    );
+    document.addEventListener("touchend", endDrag);
+
+    // Clic sur le track (hors thumb) : saute à la position cliquée.
+    bar.addEventListener("click", (e) => {
+      if (e.target === thumb) return;
+      const rect = bar.getBoundingClientRect();
+      const { scrollRange, thumbW, thumbRange } = metrics();
+      const fraction = Math.max(
+        0,
+        Math.min(1, (e.clientX - rect.left - thumbW / 2) / thumbRange)
+      );
+      window.scrollTo(fraction * scrollRange, window.scrollY);
+    });
+
+    // Synchronise le thumb quand la page défile (via clavier, molette, etc.).
+    // SPA : ce listener est intentionnellement conservé pour toute la durée de vie de la page.
+    window.addEventListener("scroll", syncThumb);
+
+    const refresh = () => {
+      const { total, visible } = metrics();
+      const hasOverflow = total > visible + 1;
+      bar.classList.toggle("is-hidden", !hasOverflow);
+      if (hasOverflow) syncThumb();
     };
 
     // Recalcule quand le tableau change (pagination, tri, filtre, données).

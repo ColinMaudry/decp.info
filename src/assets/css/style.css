@@ -389,32 +389,30 @@ table.cell-table th {
   position: sticky;
   top: 0;
   z-index: 11; /* au-dessus des en-têtes sticky */
-  overflow-x: scroll; /* scroll (pas auto) force le thumb toujours visible */
-  overflow-y: hidden;
   height: 16px;
-  scrollbar-color: orange #e0e0e0;
-  scrollbar-width: auto;
-}
-
-.marches_table .dt-hscroll::-webkit-scrollbar {
-  height: 16px;
-}
-
-.marches_table .dt-hscroll::-webkit-scrollbar-thumb {
-  background-color: orange;
-  border-radius: 8px;
-}
-
-.marches_table .dt-hscroll::-webkit-scrollbar-track {
   background-color: #e0e0e0;
-}
-
-.marches_table .dt-hscroll-inner {
-  height: 1px;
+  overflow: hidden;
+  cursor: pointer;
 }
 
 .marches_table .dt-hscroll.is-hidden {
   display: none;
+}
+
+/* Thumb custom — toujours visible, draggable */
+.marches_table .dt-hscroll-thumb {
+  position: absolute;
+  top: 2px;
+  height: calc(100% - 4px);
+  min-width: 40px;
+  background-color: orange;
+  border-radius: 8px;
+  cursor: grab;
+  user-select: none;
+}
+
+.marches_table .dt-hscroll-thumb:active {
+  cursor: grabbing;
 }
 
 /* Column Visibility Menu */
