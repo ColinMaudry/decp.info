@@ -373,29 +373,13 @@ table.cell-table th {
   overflow: visible !important;
 }
 
-/* En-têtes de colonnes collants en haut de la fenêtre */
-.marches_table th.dash-header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background-color: #fff;
-}
-
-/* Quand la barre de scroll est visible, pousser les en-têtes en dessous */
-.marches_table:has(.dt-hscroll:not(.is-hidden)) th.dash-header {
-  top: 16px;
-}
-
 .marches_table .cell-table tr:nth-child(even) td {
   background-color: rgb(255 240 240 / 40%);
 }
 
-/* Barre de défilement horizontale, collée en haut au-dessus des en-têtes */
+/* Barre de défilement horizontale en haut du tableau */
 .marches_table .dt-hscroll {
-  position: sticky;
-  top: 0;
-  z-index: 11; /* au-dessus des en-têtes sticky */
-  height: 16px;
+  height: 12px;
   background-color: #e0e0e0;
   overflow: hidden;
   cursor: pointer;
