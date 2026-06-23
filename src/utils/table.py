@@ -2,6 +2,7 @@ import os
 import uuid
 
 import polars as pl
+import xlsxwriter
 from dash import no_update
 from polars import selectors as cs
 from unidecode import unidecode
@@ -557,3 +558,32 @@ def invert_columns(columns):
 
 
 COLUMNS = schema.names()
+
+_EXCEL_MIN_COLUMN_WIDTH = 132  # ≈ 3.5 cm à 96 DPI
+_EXCEL_HEADER_FORMAT = {
+    "bold": True,
+    "bg_color": "#b33821",
+    "font_color": "white",
+}
+_EXCEL_COLUMN_WIDTHS = {
+    "objet": 350,
+    "acheteur_nom": 250,
+    "titulaire_nom": 250,
+    "acheteur_id": 160,
+}
+
+
+def write_styled_excel(df: pl.DataFrame, buffer, worksheet: str = "DECP") -> None:
+    col_widths = {
+        col: max(_EXCEL_MIN_COLUMN_WIDTH, _EXCEL_COLUMN_WIDTHS.get(col, 0))
+        for col in df.columns
+    }
+    wb = xlsxwriter.Workbook(buffer, {"default_format_properties": {"text_wrap": True}})
+    ws = wb.add_worksheet(worksheet)
+    df.write_excel(
+        workbook=wb,
+        worksheet=ws,
+        header_format=_EXCEL_HEADER_FORMAT,
+        column_widths=col_widths,
+    )
+    wb.close()
