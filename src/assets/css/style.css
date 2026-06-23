@@ -377,8 +377,11 @@ table.cell-table th {
   background-color: rgb(255 240 240 / 40%);
 }
 
-/* Barre de défilement horizontale en haut du tableau */
+/* Barre de défilement horizontale, collée en haut du tableau */
 .marches_table .dt-hscroll {
+  position: sticky;
+  top: 0;
+  z-index: 11;
   height: 12px;
   background-color: #e0e0e0;
   overflow: hidden;
