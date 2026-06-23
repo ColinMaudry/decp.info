@@ -4,10 +4,13 @@
 
   function setup(wrapper) {
     if (wrapper.dataset.hscrollReady === "1") return;
-    wrapper.dataset.hscrollReady = "1";
 
     const dashContainer = wrapper.querySelector(".dash-spreadsheet-container");
     if (!dashContainer) return;
+
+    // Garde posée après la vérification de dashContainer, avant toute manipulation DOM
+    // qui déclencherait rootObs et provoquerait une re-entrée dans setup().
+    wrapper.dataset.hscrollReady = "1";
 
     // Injecter le conteneur scrollable horizontal autour du conteneur Dash
     const scrollWrapper = document.createElement("div");
