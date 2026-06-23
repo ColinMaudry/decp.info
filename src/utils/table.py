@@ -383,9 +383,13 @@ def get_default_hidden_columns(page):
             "dureeRestanteMois",
         ]
     elif page == "tableau":
-        displayed_columns = os.getenv("DISPLAYED_COLUMNS")
+        displayed_columns = [
+            c.strip() for c in os.getenv("DISPLAYED_COLUMNS", "").split(",")
+        ]
     else:
-        displayed_columns = os.getenv("DISPLAYED_COLUMNS")
+        displayed_columns = [
+            c.strip() for c in os.getenv("DISPLAYED_COLUMNS", "").split(",")
+        ]
         logger.warning(f"Invalid page: {page}")
 
     hidden_columns = []
