@@ -3,17 +3,17 @@
     {
       "name": "acheteur_categorie",
       "type": "string",
-      "title": "Catégorie de l'acheteur",
-      "description": "Catégorie de l'acheteur selon son code juridique INSEE.",
-      "short_title": "Catégorie acheteur",
+      "title": "Cat\u00e9gorie de l'acheteur",
+      "description": "Cat\u00e9gorie de l'acheteur selon son code juridique INSEE.",
+      "short_title": "Cat\u00e9gorie acheteur",
       "enum": [
         "Commune",
         "Groupement de communes",
-        "Département",
-        "Département outre-mer",
-        "Région",
-        "État",
-        "Établissement hospitalier",
+        "D\u00e9partement",
+        "D\u00e9partement outre-mer",
+        "R\u00e9gion",
+        "\u00c9tat",
+        "\u00c9tablissement hospitalier",
         "EPIC",
         "Syndicat mixte"
       ]
@@ -22,90 +22,90 @@
       "name": "acheteur_commune_code",
       "type": "string",
       "title": "Commune de l'acheteur (code)",
-      "description": "Code de la commune où se trouve l'acheteur.",
+      "description": "Code de la commune o\u00f9 se trouve l'acheteur.",
       "short_title": "Commune ach. (code)"
     },
     {
       "name": "acheteur_commune_nom",
       "type": "string",
       "title": "Commune de l'acheteur",
-      "description": "Nom de la commune où se trouve l'acheteur.",
+      "description": "Nom de la commune o\u00f9 se trouve l'acheteur.",
       "short_title": "Commune acheteur"
     },
     {
       "name": "acheteur_departement_code",
       "type": "string",
-      "title": "Département de l'acheteur (code)",
-      "description": "Code du département où se trouve l'acheteur.",
-      "short_title": "Département ach. (code)"
+      "title": "D\u00e9partement de l'acheteur (code)",
+      "description": "Code du d\u00e9partement o\u00f9 se trouve l'acheteur.",
+      "short_title": "D\u00e9partement ach. (code)"
     },
     {
       "name": "acheteur_departement_nom",
       "type": "string",
-      "title": "Département de l'acheteur",
-      "description": "Nom du département où se trouve l'acheteur.",
-      "short_title": "Département acheteur"
+      "title": "D\u00e9partement de l'acheteur",
+      "description": "Nom du d\u00e9partement o\u00f9 se trouve l'acheteur.",
+      "short_title": "D\u00e9partement acheteur"
     },
     {
       "name": "acheteur_id",
       "type": "integer",
       "title": "SIRET acheteur",
-      "description": "Identifiant de l'établissement de l'acheteur (SIRET), référencé dans la base SIRENE de l'INSEE.",
+      "description": "Identifiant de l'\u00e9tablissement de l'acheteur (SIRET), r\u00e9f\u00e9renc\u00e9 dans la base SIRENE de l'INSEE.",
       "short_title": null
     },
     {
       "name": "acheteur_latitude",
       "type": "number",
       "title": "Latitude de l'acheteur",
-      "description": "Latitude des coordonnées géographiques de l'acheteur.",
+      "description": "Latitude des coordonn\u00e9es g\u00e9ographiques de l'acheteur.",
       "short_title": "Latitude acheteur"
     },
     {
       "name": "acheteur_longitude",
       "type": "number",
       "title": "Longitude de l'acheteur",
-      "description": "Longitude des coordonnées géographiques de l'acheteur.",
+      "description": "Longitude des coordonn\u00e9es g\u00e9ographiques de l'acheteur.",
       "short_title": "Longitude acheteur"
     },
     {
       "name": "acheteur_nom",
       "type": "string",
       "title": "Nom acheteur",
-      "description": "Nom de l'acheteur tel que renseigné dans la base SIRENE de l'INSEE.",
+      "description": "Nom de l'acheteur tel que renseign\u00e9 dans la base SIRENE de l'INSEE.",
       "short_title": "Acheteur"
     },
     {
       "name": "acheteur_region_code",
       "type": "string",
-      "title": "Région de l'acheteur (code)",
-      "description": "Code de la région où se trouve l'acheteur.",
-      "short_title": "Région ach. (code)"
+      "title": "R\u00e9gion de l'acheteur (code)",
+      "description": "Code de la r\u00e9gion o\u00f9 se trouve l'acheteur.",
+      "short_title": "R\u00e9gion ach. (code)"
     },
     {
       "name": "acheteur_region_nom",
       "type": "string",
-      "title": "Région de l'acheteur",
-      "description": "Nom de la région où se trouve l'acheteur.",
-      "short_title": "Région acheteur"
+      "title": "R\u00e9gion de l'acheteur",
+      "description": "Nom de la r\u00e9gion o\u00f9 se trouve l'acheteur.",
+      "short_title": "R\u00e9gion acheteur"
     },
     {
       "name": "attributionAvance",
       "type": "boolean",
       "title": "Attribution avance",
-      "description": "Si une avance sur le montant du marché public a été attribuée aux titulaires.",
+      "description": "Si une avance sur le montant du march\u00e9 public a \u00e9t\u00e9 attribu\u00e9e aux titulaires.",
       "short_title": null
     },
     {
       "name": "ccag",
       "type": "string",
       "title": "CCAG",
-      "description": "Cahier des clauses administratives générales et techniques (CCAG) utilisé pour le marché public.",
+      "description": "Cahier des clauses administratives g\u00e9n\u00e9rales et techniques (CCAG) utilis\u00e9 pour le march\u00e9 public.",
       "short_title": null,
       "enum": [
         "Travaux",
-        "Maitrise d'œuvre",
+        "Maitrise d'\u0153uvre",
         "Fournitures courantes et services",
-        "Marchés industriels",
+        "March\u00e9s industriels",
         "Prestations intellectuelles",
         "Techniques de l'information et de la communication"
       ]
@@ -114,317 +114,321 @@
       "name": "codeCPV",
       "type": "string",
       "title": "Code CPV",
-      "description": "Catégorie de bien, service ou travaux achetés, selon le Vocabulaire commun pour les marchés publics (CPV).",
+      "description": "Cat\u00e9gorie de bien, service ou travaux achet\u00e9s, selon le Vocabulaire commun pour les march\u00e9s publics (CPV).",
       "short_title": "CPV"
     },
     {
       "name": "considerationsEnvironnementales",
       "type": "string",
-      "title": "Considérations environnementales",
-      "description": "Les considérations environnementales prévues dans le marché public.",
+      "title": "Consid\u00e9rations environnementales",
+      "description": "Les consid\u00e9rations environnementales pr\u00e9vues dans le march\u00e9 public.",
       "short_title": "Cons. environnementales",
-      "enum": ["Clause environnementale", "Critère environnemental"]
+      "enum": ["Clause environnementale", "Crit\u00e8re environnemental"]
     },
     {
       "name": "considerationsSociales",
       "type": "string",
-      "title": "Considérations sociales",
-      "description": "Les considérations sociales prévues dans le marché public.",
+      "title": "Consid\u00e9rations sociales",
+      "description": "Les consid\u00e9rations sociales pr\u00e9vues dans le march\u00e9 public.",
       "short_title": "Cons. sociales",
-      "enum": ["Clause sociale", "Critère social", "Marché réservé"]
+      "enum": [
+        "Clause sociale",
+        "Crit\u00e8re social",
+        "March\u00e9 r\u00e9serv\u00e9"
+      ]
     },
     {
       "name": "dateNotification",
       "type": "date",
       "title": "Date notification",
-      "description": "Date à laquelle le marché public ou de la modification a été notifiée aux titulaires du marché public.",
+      "description": "Date \u00e0 laquelle le march\u00e9 public ou de la modification a \u00e9t\u00e9 notifi\u00e9e aux titulaires du march\u00e9 public.",
       "short_title": null,
       "format": "default"
     },
     {
       "name": "datePublicationDonnees",
       "type": "date",
-      "title": "Date publication données",
-      "description": "Date à laquelle les données du marché public ou de la modification ont été publiées sur data.gouv.fr.",
-      "short_title": "Date pub. données",
+      "title": "Date publication donn\u00e9es",
+      "description": "Date \u00e0 laquelle les donn\u00e9es du march\u00e9 public ou de la modification ont \u00e9t\u00e9 publi\u00e9es sur data.gouv.fr.",
+      "short_title": "Date pub. donn\u00e9es",
       "format": "default"
     },
     {
       "name": "donneesActuelles",
       "type": "boolean",
-      "title": "Données actuelles",
-      "description": "Si les données de cette ligne sont les données actuelles du marché public, une fois les éventuelles modifications prises en compte.",
+      "title": "Donn\u00e9es actuelles",
+      "description": "Si les donn\u00e9es de cette ligne sont les donn\u00e9es actuelles du march\u00e9 public, une fois les \u00e9ventuelles modifications prises en compte.",
       "short_title": null
     },
     {
       "name": "dureeMois",
       "type": "integer",
-      "title": "Durée (mois)",
-      "description": "Durée en mois du marché attribué.",
+      "title": "Dur\u00e9e (mois)",
+      "description": "Dur\u00e9e en mois du march\u00e9 attribu\u00e9.",
       "short_title": null
     },
     {
       "name": "dureeRestanteMois",
       "type": "number",
-      "title": "Durée restante (mois)",
-      "description": "Durée approximative en mois restante dans le marché, en tenant compte de la date de notification et de la durée du marché. Ce nombre ne peut être inférieur à 0.",
+      "title": "Dur\u00e9e restante (mois)",
+      "description": "Dur\u00e9e approximative en mois restante dans le march\u00e9, en tenant compte de la date de notification et de la dur\u00e9e du march\u00e9. Ce nombre ne peut \u00eatre inf\u00e9rieur \u00e0 0.",
       "short_title": null
     },
     {
       "name": "formePrix",
       "type": "string",
       "title": "Forme prix",
-      "description": "La forme du prix du marché public. Unitaire, Forfaitaire ou Mixte.",
+      "description": "La forme du prix du march\u00e9 public. Unitaire, Forfaitaire ou Mixte.",
       "short_title": null
     },
     {
       "name": "id",
       "type": "string",
       "title": "Identifiant interne",
-      "description": "Identifiant attribué par l'acheteur, censé être unique au sein de ses marchés.",
+      "description": "Identifiant attribu\u00e9 par l'acheteur, cens\u00e9 \u00eatre unique au sein de ses march\u00e9s.",
       "short_title": "Id. interne"
     },
     {
       "name": "idAccordCadre",
       "type": "string",
       "title": "Identifiant accord-cadre",
-      "description": "Pour un marché subséquent, l'identifiant interne du marché public relevant de la technique d'achat accord-cadre auquel il est lié.",
+      "description": "Pour un march\u00e9 subs\u00e9quent, l'identifiant interne du march\u00e9 public relevant de la technique d'achat accord-cadre auquel il est li\u00e9.",
       "short_title": "Id. accord-cadre"
     },
     {
       "name": "lieuExecution_code",
       "type": "integer",
-      "title": "Code lieu exécution",
-      "description": "Code du lieu d'exécution du marché public. Le type de code est renseigné par 'Type code lieu exécution'.",
-      "short_title": "Lieu exécution"
+      "title": "Code lieu ex\u00e9cution",
+      "description": "Code du lieu d'ex\u00e9cution du march\u00e9 public. Le type de code est renseign\u00e9 par 'Type code lieu ex\u00e9cution'.",
+      "short_title": "Lieu ex\u00e9cution"
     },
     {
       "name": "lieuExecution_typeCode",
       "type": "string",
-      "title": "Type code lieu exécution",
-      "description": "Type du code du lieu d'exécution.",
-      "short_title": "Type lieu exécution",
+      "title": "Type code lieu ex\u00e9cution",
+      "description": "Type du code du lieu d'ex\u00e9cution.",
+      "short_title": "Type lieu ex\u00e9cution",
       "enum": [
         "Code postal",
         "Code commune",
         "Code arrondissement",
         " Code canton",
-        "Code département",
-        "Code région",
+        "Code d\u00e9partement",
+        "Code r\u00e9gion",
         "Code pays"
       ]
     },
     {
       "name": "marcheInnovant",
       "type": "boolean",
-      "title": "Marché innovant",
-      "description": "Si le marché comporte des travaux, services ou fournitures innovantes.",
+      "title": "March\u00e9 innovant",
+      "description": "Si le march\u00e9 comporte des travaux, services ou fournitures innovantes.",
       "short_title": null
     },
     {
       "name": "modalitesExecution",
       "type": "string",
-      "title": "Modalités exécution",
-      "description": "Les modalités d'exécution du marché public.",
+      "title": "Modalit\u00e9s ex\u00e9cution",
+      "description": "Les modalit\u00e9s d'ex\u00e9cution du march\u00e9 public.",
       "short_title": null,
-      "enum": ["Tranches", "Bons de commande", "Marchés subséquents"]
+      "enum": ["Tranches", "Bons de commande", "March\u00e9s subs\u00e9quents"]
     },
     {
       "name": "modification_id",
       "type": "integer",
       "title": "Identifiant modification",
-      "description": "Identifiant de la modification. 0 = données initiales du marché public, 1 = première modification, etc.",
+      "description": "Identifiant de la modification. 0 = donn\u00e9es initiales du march\u00e9 public, 1 = premi\u00e8re modification, etc.",
       "short_title": "Id. modification"
     },
     {
       "name": "montant",
       "type": "number",
-      "title": "Montant attribué",
-      "description": "Montant forfaitaire ou montant maximum estimé hors-taxes, en euros. Ce montant est le montant attribué. Le montant final payé aux titulaires peut évoluer lors de la signature du contrat et de l'exécution du marché.",
+      "title": "Montant attribu\u00e9",
+      "description": "Montant forfaitaire ou montant maximum estim\u00e9 hors-taxes, en euros. Ce montant est le montant attribu\u00e9. Le montant final pay\u00e9 aux titulaires peut \u00e9voluer lors de la signature du contrat et de l'ex\u00e9cution du march\u00e9.",
       "short_title": "Montant"
     },
     {
       "name": "nature",
       "type": "string",
       "title": "Nature",
-      "description": "Marché, Marché de partenariat ou Marché de sécurité.",
+      "description": "March\u00e9, March\u00e9 de partenariat ou March\u00e9 de s\u00e9curit\u00e9.",
       "short_title": null
     },
     {
       "name": "objet",
       "type": "string",
       "title": "Objet",
-      "description": "Objet du marché public. Potentiellement coupé à 256 ou 1 000 caractères par le producteur de données.",
+      "description": "Objet du march\u00e9 public. Potentiellement coup\u00e9 \u00e0 256 ou 1 000 caract\u00e8res par le producteur de donn\u00e9es.",
       "short_title": null
     },
     {
       "name": "offresRecues",
       "type": "integer",
-      "title": "Offres reçues",
-      "description": "Le nombre d'offres reçues pendant la phase d'appel d'offres. Comprend aussi les offres irrégulières, inacceptables, inappropriées et anormalement basses.",
+      "title": "Offres re\u00e7ues",
+      "description": "Le nombre d'offres re\u00e7ues pendant la phase d'appel d'offres. Comprend aussi les offres irr\u00e9guli\u00e8res, inacceptables, inappropri\u00e9es et anormalement basses.",
       "short_title": null
     },
     {
       "name": "origineFrance",
       "type": "number",
       "title": "Origine France",
-      "description": "Pour les marchés de fournitures de denrées alimentaires, de véhicules, de produits de santé et d'habillement, selon la liste annexée à l'arrêté du 22 décembre 2022, la part des produits français avec laquelle le marché sera exécuté. 0.2 = 20 % de la part des produits sont français. Cette valeur ne peut pas être supérieure à la valeur de origineUE.",
+      "description": "Pour les march\u00e9s de fournitures de denr\u00e9es alimentaires, de v\u00e9hicules, de produits de sant\u00e9 et d'habillement, selon la liste annex\u00e9e \u00e0 l'arr\u00eat\u00e9 du 22 d\u00e9cembre 2022, la part des produits fran\u00e7ais avec laquelle le march\u00e9 sera ex\u00e9cut\u00e9. 0.2 = 20 % de la part des produits sont fran\u00e7ais. Cette valeur ne peut pas \u00eatre sup\u00e9rieure \u00e0 la valeur de origineUE.",
       "short_title": null
     },
     {
       "name": "origineUE",
       "type": "number",
       "title": "Origine UE",
-      "description": "Pour les marchés de fournitures de denrées alimentaires, de véhicules, de produits de santé et d'habillement, selon la liste annexée à l'arrêté du 22 décembre 2022, la part des produits issus de l'Union européenne avec laquelle le marché sera exécuté. 0.2 = 20 % de la part des produits provient de l'Union européenne. Cette valeur ne peut pas être inférieure à la valeur de origineFrance.",
+      "description": "Pour les march\u00e9s de fournitures de denr\u00e9es alimentaires, de v\u00e9hicules, de produits de sant\u00e9 et d'habillement, selon la liste annex\u00e9e \u00e0 l'arr\u00eat\u00e9 du 22 d\u00e9cembre 2022, la part des produits issus de l'Union europ\u00e9enne avec laquelle le march\u00e9 sera ex\u00e9cut\u00e9. 0.2 = 20 % de la part des produits provient de l'Union europ\u00e9enne. Cette valeur ne peut pas \u00eatre inf\u00e9rieure \u00e0 la valeur de origineFrance.",
       "short_title": null
     },
     {
       "name": "procedure",
       "type": "string",
-      "title": "Procédure",
-      "description": "Le type de procédure utilisé pour le marché public.",
+      "title": "Proc\u00e9dure",
+      "description": "Le type de proc\u00e9dure utilis\u00e9 pour le march\u00e9 public.",
       "short_title": null,
       "enum": [
-        "Procédure négociée ouverte",
-        "Procédure non négociée ouverte",
-        "Procédure négociée restreinte",
-        "Procédure non négociée restreinte"
+        "Proc\u00e9dure n\u00e9goci\u00e9e ouverte",
+        "Proc\u00e9dure non n\u00e9goci\u00e9e ouverte",
+        "Proc\u00e9dure n\u00e9goci\u00e9e restreinte",
+        "Proc\u00e9dure non n\u00e9goci\u00e9e restreinte"
       ]
     },
     {
       "name": "sourceDataset",
       "type": "string",
       "title": "Source dataset",
-      "description": "Code du jeu de données dont proviennent les données de ce marché public.",
+      "description": "Code du jeu de donn\u00e9es dont proviennent les donn\u00e9es de ce march\u00e9 public.",
       "short_title": null
     },
     {
       "name": "sourceFile",
       "type": "string",
       "title": "Source fichier",
-      "description": "Lien vers le fichier de données ouvertes dont proviennent les données de ce marché public.",
+      "description": "Lien vers le fichier de donn\u00e9es ouvertes dont proviennent les donn\u00e9es de ce march\u00e9 public.",
       "short_title": null,
       "format": "uri"
     },
     {
       "name": "sousTraitanceDeclaree",
       "type": "boolean",
-      "title": "Sous-traitance déclarée",
-      "description": "Au moment de la notification du marché, les titulaires du marché ont déclaré s'appuyer sur un ou plusieurs sous-traitants pour ce marché public.",
+      "title": "Sous-traitance d\u00e9clar\u00e9e",
+      "description": "Au moment de la notification du march\u00e9, les titulaires du march\u00e9 ont d\u00e9clar\u00e9 s'appuyer sur un ou plusieurs sous-traitants pour ce march\u00e9 public.",
       "short_title": "Sous-traitance"
     },
     {
       "name": "tauxAvance",
       "type": "number",
       "title": "Taux avance",
-      "description": "Taux de l'avance attribuée au titulaire principal du marché public par rapport au montant du marché (O.1 = 10 % du montant du marché). En fonction de la valeur de attributionAvance, une valeur égale à 0 signifie qu'il y a une avance mais que le taux n'est pas connu (attributionAvance=true).",
+      "description": "Taux de l'avance attribu\u00e9e au titulaire principal du march\u00e9 public par rapport au montant du march\u00e9 (O.1 = 10 % du montant du march\u00e9). En fonction de la valeur de attributionAvance, une valeur \u00e9gale \u00e0 0 signifie qu'il y a une avance mais que le taux n'est pas connu (attributionAvance=true).",
       "short_title": null
     },
     {
       "name": "techniques",
       "type": "string",
       "title": "Techniques",
-      "description": "Les techniques d'achat utilisées pour le marché public.",
+      "description": "Les techniques d'achat utilis\u00e9es pour le march\u00e9 public.",
       "short_title": null,
       "enum": [
         "Accord-cadre",
         "Concours",
-        "Système de qualification",
-        "Système d'acquisition dynamique",
-        "Catalogue électronique",
-        "Enchère électronique"
+        "Syst\u00e8me de qualification",
+        "Syst\u00e8me d'acquisition dynamique",
+        "Catalogue \u00e9lectronique",
+        "Ench\u00e8re \u00e9lectronique"
       ]
     },
     {
       "name": "titulaire_categorie",
       "type": "string",
-      "title": "Catégorie du titulaire",
-      "description": "Catégorie de l'entreprise titulaire selon la classification de l'INSEE.",
-      "short_title": "Catégorie titulaire",
+      "title": "Cat\u00e9gorie du titulaire",
+      "description": "Cat\u00e9gorie de l'entreprise titulaire selon la classification de l'INSEE.",
+      "short_title": "Cat\u00e9gorie titulaire",
       "enum": ["PME", "ETI", "GE"]
     },
     {
       "name": "titulaire_commune_code",
       "type": "string",
       "title": "Commune du titulaire (code)",
-      "description": "Code de la commune où se trouve le titulaire.",
+      "description": "Code de la commune o\u00f9 se trouve le titulaire.",
       "short_title": "Commune tit. (code)"
     },
     {
       "name": "titulaire_commune_nom",
       "type": "string",
       "title": "Commune du titulaire",
-      "description": "Nom de la commune où se trouve le titulaire.",
+      "description": "Nom de la commune o\u00f9 se trouve le titulaire.",
       "short_title": "Commune titulaire"
     },
     {
       "name": "titulaire_departement_code",
       "type": "string",
-      "title": "Département du titulaire (code)",
-      "description": "Code du département où se trouve le titulaire.",
-      "short_title": "Département tit. (code)"
+      "title": "D\u00e9partement du titulaire (code)",
+      "description": "Code du d\u00e9partement o\u00f9 se trouve le titulaire.",
+      "short_title": "D\u00e9partement tit. (code)"
     },
     {
       "name": "titulaire_departement_nom",
       "type": "string",
-      "title": "Département du titulaire",
-      "description": "Nom du département où se trouve le titulaire.",
-      "short_title": "Département titulaire"
+      "title": "D\u00e9partement du titulaire",
+      "description": "Nom du d\u00e9partement o\u00f9 se trouve le titulaire.",
+      "short_title": "D\u00e9partement titulaire"
     },
     {
       "name": "titulaire_distance",
       "type": "integer",
       "title": "Distance acheteur-titulaire",
-      "description": "Distance en kilomètres entre l'adresse de l'acheteur et celle du titulaire.",
+      "description": "Distance en kilom\u00e8tres entre l'adresse de l'acheteur et celle du titulaire.",
       "short_title": "Distance"
     },
     {
       "name": "titulaire_id",
       "type": "integer",
       "title": "Identifiant titulaire",
-      "description": "Identifiant du titulaire du marché. Voir 'Type identifiant' pour le référentiel utilisé",
+      "description": "Identifiant du titulaire du march\u00e9. Voir 'Type identifiant' pour le r\u00e9f\u00e9rentiel utilis\u00e9",
       "short_title": "Id. titulaire"
     },
     {
       "name": "titulaire_latitude",
       "type": "number",
       "title": "Latitude du titulaire",
-      "description": "Latitude des coordonnées géographiques du titulaire.",
+      "description": "Latitude des coordonn\u00e9es g\u00e9ographiques du titulaire.",
       "short_title": "Latitude titulaire"
     },
     {
       "name": "titulaire_longitude",
       "type": "number",
       "title": "Longitude du titulaire",
-      "description": "Longitude des coordonnées géographiques du titulaire.",
+      "description": "Longitude des coordonn\u00e9es g\u00e9ographiques du titulaire.",
       "short_title": "Longitude titulaire"
     },
     {
       "name": "titulaire_nom",
       "type": "string",
       "title": "Nom titulaire",
-      "description": "Nom du titulaire. Nom tel que renseigné dans la base SIRENE de l'INSEE si c'est un SIRET.",
+      "description": "Nom du titulaire. Nom tel que renseign\u00e9 dans la base SIRENE de l'INSEE si c'est un SIRET.",
       "short_title": "Titulaire"
     },
     {
       "name": "titulaire_region_code",
       "type": "string",
-      "title": "Région du titulaire (code)",
-      "description": "Code de la région où se trouve le titulaire.",
-      "short_title": "Région tit. (code)"
+      "title": "R\u00e9gion du titulaire (code)",
+      "description": "Code de la r\u00e9gion o\u00f9 se trouve le titulaire.",
+      "short_title": "R\u00e9gion tit. (code)"
     },
     {
       "name": "titulaire_region_nom",
       "type": "string",
-      "title": "Région du titulaire",
-      "description": "Nom de la région où se trouve le titulaire.",
-      "short_title": "Région titulaire"
+      "title": "R\u00e9gion du titulaire",
+      "description": "Nom de la r\u00e9gion o\u00f9 se trouve le titulaire.",
+      "short_title": "R\u00e9gion titulaire"
     },
     {
       "name": "titulaire_typeIdentifiant",
       "type": "string",
       "title": "Type identifiant",
-      "description": "Référentiel utilisé pour l'identifiant du titulaire.",
+      "description": "R\u00e9f\u00e9rentiel utilis\u00e9 pour l'identifiant du titulaire.",
       "short_title": "Type id.",
       "enum": ["SIRET", "TVA", "TAHITI", "RIDET", "FRWF", "IREP", "HORS-UE"]
     },
@@ -432,7 +436,7 @@
       "name": "type",
       "type": "string",
       "title": "Type",
-      "description": "Type de marché public : fournitures, services ou travaux (dérivé du code CPV).",
+      "description": "Type de march\u00e9 public : fournitures, services ou travaux (d\u00e9riv\u00e9 du code CPV).",
       "short_title": "Type",
       "enum": ["Fournitures", "Services", "Travaux"]
     },
@@ -440,7 +444,7 @@
       "name": "typeGroupementOperateurs",
       "type": "string",
       "title": "Type groupement",
-      "description": "Le type de groupement d'entreprises ou d'opérateurs économiques.",
+      "description": "Le type de groupement d'entreprises ou d'op\u00e9rateurs \u00e9conomiques.",
       "short_title": "Groupement",
       "enum": ["Conjoint", "Solidaire"]
     },
@@ -448,12 +452,12 @@
       "name": "typesPrix",
       "type": "string",
       "title": "Types prix",
-      "description": "Les types de prix du marché public.",
+      "description": "Les types de prix du march\u00e9 public.",
       "short_title": null,
       "enum": [
-        "Définitif ferme",
-        "Définitif actualisable",
-        "Définitif révisable",
+        "D\u00e9finitif ferme",
+        "D\u00e9finitif actualisable",
+        "D\u00e9finitif r\u00e9visable",
         "Provisoire"
       ]
     },
@@ -461,7 +465,7 @@
       "name": "uid",
       "type": "string",
       "title": "Identifiant unique",
-      "description": "Concaténation du SIRET de l'acheteur (acheteur_id) et de l'identifiant interne de l'acheteur (id). Utilisé comme identifiant de marché unique au niveau national.",
+      "description": "Concat\u00e9nation du SIRET de l'acheteur (acheteur_id) et de l'identifiant interne de l'acheteur (id). Utilis\u00e9 comme identifiant de march\u00e9 unique au niveau national.",
       "short_title": "Id. unique"
     }
   ]
