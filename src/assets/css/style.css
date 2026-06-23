@@ -359,6 +359,22 @@ table.cell-table th {
   right: 200px;
 }
 
+/* ===== Tableaux : en-têtes collants + scroll horizontal (#82) ===== */
+
+/* Neutraliser l'overflow interne de Dash pour que le sticky se cale sur la page */
+.marches_table .dash-spreadsheet-container,
+.marches_table .dash-spreadsheet-inner {
+  overflow: visible !important;
+}
+
+/* En-têtes de colonnes collants en haut de la fenêtre */
+.marches_table th.dash-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #fff;
+}
+
 .marches_table .cell-table tr:nth-child(even) td {
   background-color: rgb(255 240 240 / 40%);
 }
