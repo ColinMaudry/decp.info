@@ -379,6 +379,24 @@ table.cell-table th {
   background-color: rgb(255 240 240 / 40%);
 }
 
+/* Barre de défilement horizontale miroir, collée en haut */
+.marches_table .dt-hscroll {
+  position: sticky;
+  top: 0;
+  z-index: 11; /* au-dessus des en-têtes sticky */
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 14px;
+}
+
+.marches_table .dt-hscroll-inner {
+  height: 1px;
+}
+
+.marches_table .dt-hscroll.is-hidden {
+  display: none;
+}
+
 /* Column Visibility Menu */
 .column-actions {
   margin-right: 8px;
