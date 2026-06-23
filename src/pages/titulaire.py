@@ -87,13 +87,19 @@ layout = [
                         className="mb-2",
                         children=[
                             dbc.Col(
-                                html.H2(
-                                    children=[
-                                        html.Span(id="titulaire_siret"),
-                                        " - ",
-                                        html.Span(id="titulaire_nom"),
-                                    ],
-                                ),
+                                [
+                                    html.H2(
+                                        children=[
+                                            html.Span(id="titulaire_siret"),
+                                            " - ",
+                                            html.Span(id="titulaire_nom"),
+                                        ],
+                                    ),
+                                    html.P(
+                                        id="titulaire_activite_libelle",
+                                        style={"color": "gray", "marginTop": "-10px"},
+                                    ),
+                                ],
                                 width=8,
                             ),
                             dbc.Col(
@@ -255,10 +261,20 @@ layout = [
     Output(component_id="titulaire_departement", component_property="children"),
     Output(component_id="titulaire_region", component_property="children"),
     Output(component_id="titulaire_lien_annuaire", component_property="href"),
+    Output(component_id="titulaire_activite_libelle", component_property="children"),
     Input(component_id="titulaire_url", component_property="pathname"),
 )
 def update_titulaire_infos(url):
     titulaire_siret = url.split("/")[-1]
+    if "titulaire_activite_libelle" in DF_TITULAIRES.columns:
+        activite_libelle_row = DF_TITULAIRES.filter(
+            pl.col("titulaire_id") == titulaire_siret
+        ).select("titulaire_activite_libelle")
+        activite_libelle = (
+            activite_libelle_row.item(0, 0) if activite_libelle_row.height > 0 else ""
+        )
+    else:
+        activite_libelle = ""
     data = get_annuaire_data(titulaire_siret)
     data_etablissement = data.get("matching_etablissements") if data else None
     if data_etablissement:
@@ -302,6 +318,7 @@ def update_titulaire_infos(url):
         departement,
         nom_region,
         lien_annuaire,
+        activite_libelle,
     )
 
 
