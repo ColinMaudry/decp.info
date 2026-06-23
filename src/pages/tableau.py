@@ -174,11 +174,11 @@ layout = [
 
             Vous pouvez appliquer un filtre pour chaque colonne en entrant du texte sous le nom de la colonne, puis en tapant sur `Entrée`.
 
-            - Champs textuels : la recherche retourne les valeurs qui contiennent le texte recherché, n'est pas sensible à la casse (majuscules/minuscules) et est sensbible à l'accentuation.
+            - Champs textuels : la recherche retourne les valeurs qui contiennent le texte recherché, n'est sensible ni à la casse (majuscules/minuscules), ni à l'accentuation.
                 - `rennes` => le texte contient "rennes"
                 - `metro* *pole` => le texte contient un mot qui commence par "metro" et un mot qui finit par "pole"
                 - `metropole rennes` => le texte contient les mots "metropole" et "rennes", n'importe où dans le texte
-                - `metropole+rennes` => le texte contient "metropole rennes", collé et dans cet ordre
+                - `métropole+rennes` => le texte contient "metropole rennes" ou "métropole rennes", collé et dans cet ordre
                 - `metropole+rennes travaux distri*` => le texte contient "metropole rennes", "travaux" et un mot qui commence par "distri"
                 - Les guillemets simples (apostrophe du 4) doivent être prédédées d'une barre oblique (AltGr + 8). Exemple : `services d\\\'assurances`
             - Champs numériques (Durée en mois, Montant, ...) : vous pouvez...
