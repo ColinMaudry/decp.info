@@ -40,7 +40,12 @@ from src.utils.data import (
 )
 from src.utils.frontend import get_enum_values_as_dict
 from src.utils.seo import META_CONTENT
-from src.utils.table import COLUMNS, get_default_hidden_columns, prepare_table_data
+from src.utils.table import (
+    COLUMNS,
+    get_default_hidden_columns,
+    prepare_table_data,
+    write_styled_excel,
+)
 
 NAME = "Observatoire"
 
@@ -811,7 +816,7 @@ def download_observatoire(_n_clicks, filter_params, hidden_columns):
         dff = dff.drop(hidden_columns)
 
     def to_bytes(buffer):
-        dff.write_excel(buffer, worksheet="DECP")
+        write_styled_excel(dff, buffer)
 
     date = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     return dcc.send_bytes(to_bytes, filename=f"decp_observatoire_{date}.xlsx")

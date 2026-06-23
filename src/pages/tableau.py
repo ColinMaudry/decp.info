@@ -30,6 +30,7 @@ from src.utils.table import (
     invert_columns,
     prepare_table_data,
     sort_table_data,
+    write_styled_excel,
 )
 from src.utils.tracking import track_search
 
@@ -342,7 +343,7 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list | None =
         lff = sort_table_data(lff, sort_by)
 
     def to_bytes(buffer):
-        lff.collect(engine="streaming").write_excel(buffer, worksheet="DECP")
+        write_styled_excel(lff.collect(engine="streaming"), buffer)
 
     date = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     return dcc.send_bytes(to_bytes, filename=f"decp_{date}.xlsx")

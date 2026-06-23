@@ -33,6 +33,7 @@ from src.utils.table import (
     get_default_hidden_columns,
     prepare_table_data,
     sort_table_data,
+    write_styled_excel,
 )
 from src.utils.tracking import track_search
 
@@ -418,8 +419,10 @@ def download_titulaire_data(
     df_to_download = pl.DataFrame(data)
 
     def to_bytes(buffer):
-        df_to_download.write_excel(
-            buffer, worksheet="DECP" if annee in ["Toutes les années", None] else annee
+        write_styled_excel(
+            df_to_download,
+            buffer,
+            worksheet="DECP" if annee in ["Toutes les années", None] else annee,
         )
 
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
@@ -460,7 +463,7 @@ def download_filtered_titulaire_data(
         lff = sort_table_data(lff, sort_by)
 
     def to_bytes(buffer):
-        lff.collect(engine="streaming").write_excel(buffer, worksheet="DECP")
+        write_styled_excel(lff.collect(engine="streaming"), buffer)
 
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     return dcc.send_bytes(
