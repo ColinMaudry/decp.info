@@ -19,30 +19,24 @@
     bar.appendChild(thumb);
     wrapper.insertBefore(bar, wrapper.firstChild);
 
-    // Étend la barre à toute la largeur du viewport, hors du container Bootstrap.
-    // wrapper.getBoundingClientRect().left donne le décalage horizontal du conteneur.
-    const adjustBarWidth = () => {
-      const left = wrapper.getBoundingClientRect().left;
-      bar.style.marginLeft = -left + "px";
-      bar.style.width = window.innerWidth + "px";
-    };
-
-    // Métriques basées sur window.innerWidth (la barre occupe exactement la largeur du viewport).
+    // Métriques basées sur le conteneur scrollable (pas la page).
+    // dashContainer a overflow-x:hidden → scrollLeft est contrôlable par JS.
     const metrics = () => {
-      const total = document.documentElement.scrollWidth;
-      const visible = window.innerWidth;
+      const total = dashContainer.scrollWidth;
+      const visible = dashContainer.clientWidth;
       const thumbW = Math.max(40, (visible / total) * visible);
       const scrollRange = total - visible;
       const thumbRange = visible - thumbW;
       return { total, visible, thumbW, scrollRange, thumbRange };
     };
 
-    // --- Mise à jour de la position du thumb ---
+    // Mise à jour de la position du thumb selon dashContainer.scrollLeft.
     const syncThumb = () => {
       const { total, visible, thumbW, scrollRange, thumbRange } = metrics();
       if (total <= visible + 1 || thumbRange <= 0) return;
       thumb.style.width = thumbW + "px";
-      const fraction = scrollRange > 0 ? window.scrollX / scrollRange : 0;
+      const fraction =
+        scrollRange > 0 ? dashContainer.scrollLeft / scrollRange : 0;
       thumb.style.left = Math.round(fraction * thumbRange) + "px";
     };
 
@@ -52,16 +46,16 @@
 
     const startDrag = (clientX) => {
       dragStartX = clientX;
-      dragScrollStart = window.scrollX;
+      dragScrollStart = dashContainer.scrollLeft;
     };
     const moveDrag = (clientX) => {
       if (dragStartX === null) return;
       const dx = clientX - dragStartX;
       const { scrollRange, thumbRange } = metrics();
       if (thumbRange <= 0) return;
-      window.scrollTo(
-        dragScrollStart + (dx / thumbRange) * scrollRange,
-        window.scrollY
+      dashContainer.scrollLeft = Math.max(
+        0,
+        Math.min(scrollRange, dragScrollStart + (dx / thumbRange) * scrollRange)
       );
     };
     const endDrag = () => {
@@ -98,31 +92,40 @@
     // Clic sur le track (hors thumb) : saute à la position cliquée.
     bar.addEventListener("click", (e) => {
       if (e.target === thumb) return;
+      const rect = bar.getBoundingClientRect();
       const { scrollRange, thumbW, thumbRange } = metrics();
       const fraction = Math.max(
         0,
-        Math.min(
-          1,
-          (e.clientX - bar.getBoundingClientRect().left - thumbW / 2) /
-            thumbRange
-        )
+        Math.min(1, (e.clientX - rect.left - thumbW / 2) / thumbRange)
       );
-      window.scrollTo(fraction * scrollRange, window.scrollY);
+      dashContainer.scrollLeft = fraction * scrollRange;
     });
 
-    // Synchronise le thumb quand la page défile (clavier, molette, barre native, etc.).
+    // Scroll molette/trackpad horizontal → redirigé vers le conteneur.
     // SPA : ce listener est intentionnellement conservé pour toute la durée de vie de la page.
-    window.addEventListener("scroll", syncThumb);
+    wrapper.addEventListener(
+      "wheel",
+      (e) => {
+        if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+        e.preventDefault();
+        dashContainer.scrollLeft = Math.max(
+          0,
+          Math.min(
+            dashContainer.scrollWidth - dashContainer.clientWidth,
+            dashContainer.scrollLeft + e.deltaX
+          )
+        );
+      },
+      { passive: false }
+    );
+
+    // Synchronise le thumb quand le conteneur défile (drag, wheel, ou autre).
+    // SPA : ce listener est intentionnellement conservé pour toute la durée de vie de la page.
+    dashContainer.addEventListener("scroll", syncThumb);
 
     const refresh = () => {
-      adjustBarWidth();
-      // Mesure la largeur réelle de CETTE table (pas de la page entière) pour
-      // ne pas afficher la barre sur les petits tableaux d'une page qui a aussi
-      // un grand tableau (ex. top10 sur /acheteur, /titulaire, /observatoire).
-      const tableEl =
-        dashContainer.querySelector(".cell-table") || dashContainer;
-      const tableWidth = tableEl.getBoundingClientRect().width;
-      const hasOverflow = tableWidth > window.innerWidth + 1;
+      const hasOverflow =
+        dashContainer.scrollWidth > dashContainer.clientWidth + 1;
       bar.classList.toggle("is-hidden", !hasOverflow);
       if (hasOverflow) syncThumb();
     };
@@ -135,10 +138,7 @@
       attributes: true,
     });
     // SPA : ce listener est intentionnellement conservé pour toute la durée de vie de la page.
-    window.addEventListener("resize", () => {
-      adjustBarWidth();
-      refresh();
-    });
+    window.addEventListener("resize", refresh);
 
     refresh();
   }

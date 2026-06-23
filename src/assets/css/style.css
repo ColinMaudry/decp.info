@@ -361,8 +361,14 @@ table.cell-table th {
 
 /* ===== Tableaux : en-têtes collants + scroll horizontal (#82) ===== */
 
-/* Neutraliser l'overflow interne de Dash pour que le sticky se cale sur la page */
-.marches_table .dash-spreadsheet-container,
+/* Contenir le scroll horizontal dans le conteneur Dash (élimine la scrollbar native en bas de page) */
+/* overflow-y:clip évite la conversion CSS visible→auto qui ajouterait une scrollbar verticale */
+.marches_table .dash-spreadsheet-container {
+  overflow-x: hidden !important;
+  overflow-y: clip !important;
+}
+
+/* L'inner reste visible pour que le tableau se déploie librement en largeur */
 .marches_table .dash-spreadsheet-inner {
   overflow: visible !important;
 }
