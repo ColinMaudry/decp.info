@@ -4,6 +4,7 @@
 
   function setup(wrapper) {
     if (wrapper.dataset.hscrollReady === "1") return;
+    wrapper.dataset.hscrollReady = "1";
 
     const dashContainer = wrapper.querySelector(".dash-spreadsheet-container");
     if (!dashContainer) return;
@@ -59,7 +60,6 @@
     // SPA : ce listener est intentionnellement conservé pour toute la durée de vie de la page.
     window.addEventListener("resize", refresh);
 
-    wrapper.dataset.hscrollReady = "1";
     refresh();
   }
 
