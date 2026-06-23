@@ -359,11 +359,8 @@ def setup_table_columns(
 def get_default_hidden_columns(page):
     if page == "acheteur":
         displayed_columns = [
-            "uid",
             "objet",
             "dateNotification",
-            "titulaire_id",
-            "titulaire_typeIdentifiant",
             "titulaire_nom",
             "titulaire_distance",
             "montant",
@@ -372,10 +369,8 @@ def get_default_hidden_columns(page):
         ]
     elif page == "titulaire":
         displayed_columns = [
-            "uid",
             "objet",
             "dateNotification",
-            "acheteur_id",
             "acheteur_nom",
             "titulaire_distance",
             "montant",
@@ -408,6 +403,13 @@ def postprocess_page(dff: pl.DataFrame) -> pl.DataFrame:
     À appeler après la pagination.
     """
     dff = dff.with_columns(pl.all().cast(pl.String).fill_null(""))
+    if "uid" in dff.columns:
+        dff = dff.with_columns(
+            (
+                '<a href="/marches/' + pl.col("uid") + '" title="Voir le marché">🔍</a>'
+            ).alias("marche")
+        )
+        dff = dff.select(["marche"] + [c for c in dff.columns if c != "marche"])
     dff = add_links(dff)
     if "sourceFile" in dff.columns:
         dff = add_resource_link(dff)

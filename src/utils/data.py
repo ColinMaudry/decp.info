@@ -158,3 +158,11 @@ DF_TITULAIRES = build_org_frame("titulaire")
 DEPARTEMENTS = get_departements()
 DEPARTEMENTS_GEOJSON = get_departements_geojson()
 DATA_SCHEMA = get_data_schema()
+# Colonne virtuelle (dérivée de uid) : lien loupe vers la fiche du marché.
+# Absente du schéma DuckDB, créée à l'affichage dans postprocess_page().
+DATA_SCHEMA["marche"] = {
+    "name": "marche",
+    "type": "string",
+    "title": "Marché",
+    "description": "Lien vers la fiche détaillée du marché.",
+}

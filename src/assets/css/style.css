@@ -363,6 +363,15 @@ table.cell-table th {
   background-color: rgb(255 240 240 / 40%);
 }
 
+/* Colonne "Marché" : lien loupe centré et sans soulignement */
+table.cell-table td[data-dash-column="marche"] .dash-cell-value {
+  text-align: center !important;
+}
+
+td[data-dash-column="marche"] a {
+  text-decoration: none;
+}
+
 /* Column Visibility Menu */
 .column-actions {
   margin-right: 8px;

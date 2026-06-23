@@ -313,3 +313,31 @@ def test_fetch_page_sql_post_processes_links(flask_app):
         )
     if page.height > 0:
         assert "<a href" in page["uid"][0]
+
+
+def test_postprocess_page_adds_marche_column():
+    """postprocess_page doit créer une colonne 'marche' en première position,
+    un lien 🔍 vers /marches/{uid}, tout en conservant la colonne uid."""
+    from src.utils.table import postprocess_page
+
+    dff = pl.DataFrame({"uid": ["abc"], "objet": ["Travaux divers"]})
+    result = postprocess_page(dff)
+
+    # 'marche' existe et est la première colonne
+    assert result.columns[0] == "marche"
+    # Lien loupe vers la fiche du marché
+    assert "/marches/abc" in result["marche"][0]
+    assert "🔍" in result["marche"][0]
+    # uid est conservée et reste un lien affichant sa propre valeur
+    assert "uid" in result.columns
+    assert "abc" in result["uid"][0]
+
+
+def test_postprocess_page_without_uid_has_no_marche():
+    """Sans colonne uid, aucune colonne 'marche' n'est ajoutée."""
+    from src.utils.table import postprocess_page
+
+    dff = pl.DataFrame({"objet": ["Travaux divers"]})
+    result = postprocess_page(dff)
+
+    assert "marche" not in result.columns
