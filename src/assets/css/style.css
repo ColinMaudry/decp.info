@@ -397,6 +397,14 @@ table.cell-table th {
   display: none;
 }
 
+/* Conteneur scrollable horizontal — overflow-y:clip ne crée pas de scroll container vertical */
+/* donc position:sticky sur th.dash-header reste calé sur la page */
+.marches_table .dt-scroll-wrapper {
+  overflow-x: auto;
+  overflow-y: clip;
+  width: 100%;
+}
+
 /* Column Visibility Menu */
 .column-actions {
   margin-right: 8px;
