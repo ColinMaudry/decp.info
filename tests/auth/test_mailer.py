@@ -1,42 +1,63 @@
 import pytest
-from flask import Flask
-from flask_mail import Mail
 
 from src.auth import mailer
 
 
+class _FakeTransac:
+    def __init__(self):
+        self.calls = []
+
+    def send_transac_email(self, **kwargs):
+        self.calls.append(kwargs)
+
+
+class _FakeClient:
+    def __init__(self):
+        self.transactional_emails = _FakeTransac()
+
+
 @pytest.fixture
-def mail_app(monkeypatch, tmp_path):
-    app = Flask(
-        __name__,
-        template_folder=str(
-            (__import__("pathlib").Path(mailer.__file__).parent / "templates").resolve()
-        ),
-    )
-    app.config["MAIL_SUPPRESS_SEND"] = True
-    app.config["MAIL_DEFAULT_SENDER"] = "noreply@decp.info"
-    app.config["TESTING"] = True
-    mail = Mail(app)
-    monkeypatch.setattr(mailer, "_mail", mail)
+def fake_client(monkeypatch):
+    client = _FakeClient()
+    monkeypatch.setattr(mailer, "_client", client)
     monkeypatch.setenv("APP_BASE_URL", "http://localhost:8050")
-    return app
+    monkeypatch.setenv("BREVO_TEMPLATE_VERIFY_ID", "11")
+    monkeypatch.setenv("BREVO_TEMPLATE_RESET_ID", "22")
+    monkeypatch.setenv("MAIL_FROM", "noreply@decp.info")
+    monkeypatch.setenv("MAIL_FROM_NAME", "decp.info")
+    return client
 
 
-def test_send_verification_email(mail_app):
-    with mail_app.app_context(), mail_app.test_request_context():
-        with mail_app.extensions["mail"].record_messages() as outbox:
-            mailer.send_verification_email("a@b.c", "TOKEN123")
-    assert len(outbox) == 1
-    msg = outbox[0]
-    assert msg.recipients == ["a@b.c"]
-    assert "/auth/verify-email?token=TOKEN123" in msg.body
-    assert "/auth/verify-email?token=TOKEN123" in msg.html
+def test_send_verification_email(fake_client):
+    mailer.send_verification_email("a@b.c", "TOKEN123")
+    calls = fake_client.transactional_emails.calls
+    assert len(calls) == 1
+    call = calls[0]
+    assert call["template_id"] == 11
+    assert call["to"][0].email == "a@b.c"
+    assert call["sender"].email == "noreply@decp.info"
+    assert "/auth/verify-email?token=TOKEN123" in call["params"]["link"]
 
 
-def test_send_reset_email(mail_app):
-    with mail_app.app_context(), mail_app.test_request_context():
-        with mail_app.extensions["mail"].record_messages() as outbox:
-            mailer.send_reset_email("a@b.c", "RESET456")
-    assert len(outbox) == 1
-    msg = outbox[0]
-    assert "reinitialiser-mot-de-passe?token=RESET456" in msg.body
+def test_send_reset_email(fake_client):
+    mailer.send_reset_email("a@b.c", "RESET456")
+    calls = fake_client.transactional_emails.calls
+    assert len(calls) == 1
+    call = calls[0]
+    assert call["template_id"] == 22
+    assert "reinitialiser-mot-de-passe?token=RESET456" in call["params"]["link"]
+
+
+def test_init_mailer_builds_client(monkeypatch):
+    monkeypatch.setenv("BREVO_API_KEY", "test-key")
+    monkeypatch.delenv("BREVO_SANDBOX", raising=False)
+    monkeypatch.setattr(mailer, "_client", None)
+    mailer.init_mailer()
+    assert mailer._client is not None
+
+
+def test_send_without_init_raises(monkeypatch):
+    monkeypatch.setattr(mailer, "_client", None)
+    monkeypatch.setenv("BREVO_TEMPLATE_VERIFY_ID", "11")
+    with pytest.raises(AssertionError):
+        mailer.send_verification_email("a@b.c", "TOKEN123")

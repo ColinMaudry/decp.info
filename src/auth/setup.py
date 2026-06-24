@@ -36,7 +36,7 @@ def init_auth(app: Flask) -> None:
     db.init_schema()
     db.purge_expired_tokens()
 
-    mailer.init_mailer(app)
+    mailer.init_mailer()
 
     _login_manager = LoginManager()
     _login_manager.login_view = "/connexion"
@@ -49,8 +49,8 @@ def init_auth(app: Flask) -> None:
 
     _csrf = CSRFProtect(app)
 
-    if not os.getenv("SMTP_HOST"):
+    if not os.getenv("BREVO_API_KEY"):
         logger.warning(
-            "SMTP_HOST non défini : les emails d'auth échoueront. "
-            "Définissez les variables SMTP_* dans .env pour envoyer des emails."
+            "BREVO_API_KEY non défini : les emails d'auth échoueront. "
+            "Définissez les variables BREVO_* dans .env pour envoyer des emails."
         )

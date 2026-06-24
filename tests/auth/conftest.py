@@ -31,7 +31,28 @@ def client(app):
 
 
 @pytest.fixture
-def mail_outbox(app):
-    mail = app.extensions["mail"]
-    with mail.record_messages() as outbox:
-        yield outbox
+def mail_outbox(app, monkeypatch):
+    from src.auth import mailer
+
+    calls = []
+
+    class _Msg:
+        def __init__(self, call):
+            self._call = call
+
+        @property
+        def recipients(self):
+            return [to.email for to in self._call["to"]]
+
+    class _FakeTransac:
+        def send_transac_email(self, **kwargs):
+            calls.append(_Msg(kwargs))
+
+    class _FakeClient:
+        def __init__(self):
+            self.transactional_emails = _FakeTransac()
+
+    monkeypatch.setattr(mailer, "_client", _FakeClient())
+    monkeypatch.setenv("BREVO_TEMPLATE_VERIFY_ID", "11")
+    monkeypatch.setenv("BREVO_TEMPLATE_RESET_ID", "22")
+    yield calls
