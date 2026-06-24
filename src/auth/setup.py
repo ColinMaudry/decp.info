@@ -6,6 +6,7 @@ from flask_wtf.csrf import CSRFProtect
 
 from src.auth import db, mailer
 from src.auth.models import load_user
+from src.auth.oauth import init_oauth
 from src.utils import DEVELOPMENT, logger
 
 _csrf: CSRFProtect | None = None
@@ -47,10 +48,18 @@ def init_auth(app: Flask) -> None:
 
     app.register_blueprint(auth_bp)
 
+    init_oauth(app)
+
     _csrf = CSRFProtect(app)
 
     if not os.getenv("BREVO_API_KEY"):
         logger.warning(
             "BREVO_API_KEY non défini : les emails d'auth échoueront. "
             "Définissez les variables BREVO_* dans .env pour envoyer des emails."
+        )
+
+    if not os.getenv("LINKEDIN_CLIENT_ID"):
+        logger.warning(
+            "LINKEDIN_CLIENT_ID non défini : la connexion LinkedIn échouera. "
+            "Définissez LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET dans .env."
         )

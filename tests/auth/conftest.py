@@ -19,6 +19,9 @@ def app(users_db_path, monkeypatch):
     from src.auth.setup import init_auth
 
     monkeypatch.setenv("SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("LINKEDIN_CLIENT_ID", "test-client-id")
+    monkeypatch.setenv("LINKEDIN_CLIENT_SECRET", "test-client-secret")
+    monkeypatch.setenv("APP_BASE_URL", "http://localhost:8050")
     app = Flask(__name__)
     app.config["WTF_CSRF_ENABLED"] = False
     init_auth(app)

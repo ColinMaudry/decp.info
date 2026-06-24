@@ -25,6 +25,7 @@ dependencies = [
   "brevo-python==5.0.0rc1",
   "flask-wtf",
   "email-validator",
+  "authlib",
   "flask-cors>=6.0.2",
   "flask-smorest>=0.46.0",
   "marshmallow>=3.20.0",
