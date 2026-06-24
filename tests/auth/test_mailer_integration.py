@@ -12,8 +12,7 @@ pytestmark = pytest.mark.integration
     reason="BREVO_API_KEY absent — test d'intégration Brevo ignoré",
 )
 def test_send_verification_email_sandbox(monkeypatch):
-    # Force le mode sandbox : Brevo valide la requête sans délivrer.
-    monkeypatch.setenv("BREVO_SANDBOX", "true")
+    # DEVELOPMENT=true (défini dans pytest.ini_options) active le mode sandbox Brevo.
     monkeypatch.setenv("APP_BASE_URL", "http://localhost:8050")
     mailer.init_mailer()
     # Ne doit pas lever : l'API Brevo accepte la requête en sandbox.

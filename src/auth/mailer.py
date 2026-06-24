@@ -7,7 +7,7 @@ from brevo import (
 )
 from brevo.core.api_error import ApiError
 
-from src.utils import logger
+from src.utils import DEVELOPMENT, logger
 
 _client: Brevo | None = None
 
@@ -16,8 +16,7 @@ def init_mailer() -> None:
     """Construit le client Brevo à partir des variables d'environnement."""
     global _client
     api_key = os.getenv("BREVO_API_KEY", "")
-    sandbox = os.getenv("BREVO_SANDBOX", "").lower() == "true"
-    headers = {"X-Sib-Sandbox": "drop"} if sandbox else None
+    headers = {"X-Sib-Sandbox": "drop"} if DEVELOPMENT else None
     _client = Brevo(api_key=api_key, headers=headers)
 
 

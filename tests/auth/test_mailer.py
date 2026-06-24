@@ -50,7 +50,6 @@ def test_send_reset_email(fake_client):
 
 def test_init_mailer_builds_client(monkeypatch):
     monkeypatch.setenv("BREVO_API_KEY", "test-key")
-    monkeypatch.delenv("BREVO_SANDBOX", raising=False)
     monkeypatch.setattr(mailer, "_client", None)
     mailer.init_mailer()
     assert mailer._client is not None
