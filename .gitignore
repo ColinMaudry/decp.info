@@ -18,3 +18,6 @@ users.sqlite
 *.sqlite
 !tests/*.sqlite
 !tests/**/*.sqlite
+
+# Superpowers brainstorming companion
+.superpowers/
