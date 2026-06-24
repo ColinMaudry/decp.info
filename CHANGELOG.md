@@ -1,7 +1,9 @@
-##### En cours
+##### 2.9.0
 
-- comptes utilisateurs : inscription avec vérification d'email, connexion,
-  réinitialisation de mot de passe, page compte (#73)
+- Comptes utilisateurs : inscription avec vérification d'email, connexion, réinitialisation de mot de passe, page compte ([#73](https://github.com/ColinMaudry/decp.info/issues/73))
+- Sauvegarde régulière de la base de données des utilisateurs ([#89](https://github.com/ColinMaudry/decp.info/issues/89))
+- Ajout des codes et libellés NAF des titulaires
+- Affichage de l'activité (NAF) des titulaires sur leur page /titulaire
 
 #### 2.8.0
 
