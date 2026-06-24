@@ -16,6 +16,25 @@ MIN_PASSWORD_LENGTH = 8
 _DUMMY_HASH = generate_password_hash("dummy-password-for-timing")
 
 
+def resolve_oauth_user(
+    provider: str, subject: str, email: str, email_verified: bool
+) -> User:
+    identity = db.get_oauth_identity(provider, subject)
+    if identity is not None:
+        return User(db.get_user_by_id(identity["user_id"]))
+
+    row = db.get_user_by_email(email)
+    if row is not None:
+        db.link_oauth_identity(provider, subject, row["id"])
+        if email_verified and not row["email_verified"]:
+            db.set_email_verified(row["id"])
+        return User(db.get_user_by_id(row["id"]))
+
+    user_id = db.create_oauth_user(email)
+    db.link_oauth_identity(provider, subject, user_id)
+    return User(db.get_user_by_id(user_id))
+
+
 def _redirect_with_error(path: str, error: str, email: str | None = None):
     url = f"{path}?error={error}"
     if email:
