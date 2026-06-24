@@ -14,6 +14,7 @@ register_page(
 
 ERROR_MESSAGES = {
     "invalid_current_password": "Le mot de passe actuel est incorrect.",
+    "no_password_set": "Votre compte n'a pas de mot de passe (connexion via LinkedIn). Utilisez la réinitialisation de mot de passe pour en définir un.",
     "password_too_short": "Le nouveau mot de passe doit faire au moins 8 caractères.",
     "password_mismatch": "Les nouveaux mots de passe ne correspondent pas.",
     "invalid_email": "L'adresse email n'est pas valide.",

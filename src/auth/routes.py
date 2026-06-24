@@ -100,7 +100,9 @@ def login():
         check_password_hash(_DUMMY_HASH, password)  # uniformiser le temps
         return _redirect_with_error("/connexion", "invalid_credentials", email)
 
-    if not check_password_hash(row["password_hash"], password):
+    if row["password_hash"] is None or not check_password_hash(
+        row["password_hash"], password
+    ):
         return _redirect_with_error("/connexion", "invalid_credentials", email)
 
     if not row["email_verified"]:
@@ -177,6 +179,8 @@ def change_password():
     password_confirm = request.form.get("password_confirm") or ""
 
     row = db.get_user_by_id(current_user.id)
+    if row["password_hash"] is None:
+        return _redirect_with_error("/compte/admin", "no_password_set")
     if not check_password_hash(row["password_hash"], current_pw):
         return _redirect_with_error("/compte/admin", "invalid_current_password")
 
@@ -231,7 +235,9 @@ def confirm_email_change():
 def delete_account():
     current_pw = request.form.get("current_password") or ""
     row = db.get_user_by_id(current_user.id)
-    if not check_password_hash(row["password_hash"], current_pw):
+    if row["password_hash"] is not None and not check_password_hash(
+        row["password_hash"], current_pw
+    ):
         return _redirect_with_error("/compte/admin", "invalid_current_password")
 
     user_id = current_user.id

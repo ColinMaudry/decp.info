@@ -63,3 +63,8 @@ def init_auth(app: Flask) -> None:
             "LINKEDIN_CLIENT_ID non défini : la connexion LinkedIn échouera. "
             "Définissez LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET dans .env."
         )
+
+    if not os.getenv("APP_BASE_URL"):
+        logger.warning(
+            "APP_BASE_URL non défini : le callback LinkedIn produira une URI relative invalide."
+        )
