@@ -161,7 +161,7 @@ def get_sources_tables(source_path) -> html.Div:
         style_cell_conditional=[
             {
                 "if": {"column_id": ["nom", "organisation"]},
-                "minWidth": "350px",
+                "minWidth": "220px",
                 "textAlign": "left",
                 "overflow": "hidden",
                 "lineHeight": "14px",

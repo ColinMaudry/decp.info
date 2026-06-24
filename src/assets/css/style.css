@@ -141,6 +141,10 @@ p.version > a {
   border-radius: 0;
 }
 
+.account-nav .nav-link:hover {
+  background-color: rgba(255, 240, 240, 0.9);
+}
+
 .account-nav .nav-link.active {
   color: #d9230f;
   font-weight: 600;
