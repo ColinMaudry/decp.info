@@ -14,13 +14,16 @@ from src.utils import get_last_modified, logger
 def should_rebuild(db_path: Path, parquet_path: str) -> bool:
     db_path = Path(db_path)
     if not db_path.exists():
+        logger.info("Fichier DuckDB inexistant.")
         return True
     dev = os.getenv("DEVELOPMENT", "False").lower() == "true"
     force = os.getenv("REBUILD_DUCKDB", "False").lower() == "true"
     if dev and not force:
         return False
     last_modified: float = get_last_modified(parquet_path)
-    return last_modified > db_path.stat().st_mtime
+    fresh_parquet = last_modified > db_path.stat().st_mtime
+    logger.info(f"Parquet plus récent : {str(fresh_parquet)}")
+    return fresh_parquet
 
 
 def _load_source_frame() -> pl.DataFrame:

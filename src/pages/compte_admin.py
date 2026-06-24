@@ -200,7 +200,6 @@ def layout(
             _password_section(),
             html.Hr(className="mt-4"),
             _danger_section(),
-            _logout_section(),
         ]
     )
     return account_shell("admin", contenu)

@@ -78,10 +78,6 @@ button[disabled] {
   color: #666;
 }
 
-button:hover:not([disabled]) {
-  background-color: #fee;
-}
-
 /* Global Link Styles */
 #_pages_content a {
   color: #993333;

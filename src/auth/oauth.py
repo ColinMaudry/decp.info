@@ -17,5 +17,8 @@ def init_oauth(app: Flask) -> None:
         client_id=os.getenv("LINKEDIN_CLIENT_ID"),
         client_secret=os.getenv("LINKEDIN_CLIENT_SECRET"),
         server_metadata_url=LINKEDIN_DISCOVERY_URL,
-        client_kwargs={"scope": "openid profile email"},
+        client_kwargs={
+            "scope": "openid profile email",
+            "token_endpoint_auth_method": "client_secret_post",
+        },
     )

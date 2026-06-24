@@ -264,12 +264,22 @@ def linkedin_callback():
         # L'utilisateur a refusé / annulé l'autorisation côté LinkedIn.
         return _redirect_with_error("/connexion", "oauth_cancelled")
     try:
-        token = oauth.linkedin.authorize_access_token()
+        # LinkedIn ne retourne pas le nonce dans l'ID token (non-conformité OIDC) :
+        # authorize_access_token() lève MissingClaimError("nonce") après avoir échangé
+        # le code avec succès. Le token est déjà stocké dans oauth.linkedin.token à ce
+        # moment, donc on capture cette erreur précise et on continue.
+        try:
+            oauth.linkedin.authorize_access_token()
+        except Exception as exc:
+            if "nonce" not in str(exc) or not oauth.linkedin.token:
+                raise
+        resp = oauth.linkedin.get("https://api.linkedin.com/v2/userinfo")
+        resp.raise_for_status()
+        userinfo = resp.json()
     except Exception:
         logger.exception("Échec de l'échange de token LinkedIn")
         return _redirect_with_error("/connexion", "oauth_failed")
 
-    userinfo = token.get("userinfo") or {}
     subject = userinfo.get("sub")
     email = (userinfo.get("email") or "").strip().lower()
     if not subject or not email:

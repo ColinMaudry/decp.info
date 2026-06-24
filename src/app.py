@@ -67,6 +67,7 @@ app: Dash = Dash(
     server=server,
     title="decp.info",
     use_pages=True,
+    suppress_callback_exceptions=True,
     compress=True,
     meta_tags=META_TAGS,
 )
