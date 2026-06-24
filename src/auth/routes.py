@@ -1,10 +1,13 @@
+import os
+
 from email_validator import EmailNotValidError, validate_email
-from flask import Blueprint, redirect, request
+from flask import Blueprint, redirect, request, session
 from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from src.auth import db, mailer, tokens
 from src.auth.models import User
+from src.auth.oauth import oauth
 from src.auth.setup import safe_next
 from src.utils import logger
 
@@ -237,3 +240,38 @@ def delete_account():
     db.delete_user(user_id)
     logout_user()
     return redirect("/?account_deleted=1")
+
+
+@auth_bp.route("/linkedin", methods=["GET"])
+def linkedin_login():
+    session["oauth_next"] = safe_next(
+        request.args.get("next"), fallback="/compte/admin"
+    )
+    redirect_uri = f"{os.getenv('APP_BASE_URL', '')}/auth/linkedin/callback"
+    return oauth.linkedin.authorize_redirect(redirect_uri)
+
+
+@auth_bp.route("/linkedin/callback", methods=["GET"])
+def linkedin_callback():
+    next_url = safe_next(session.pop("oauth_next", None), fallback="/compte/admin")
+    if request.args.get("error"):
+        # L'utilisateur a refusé / annulé l'autorisation côté LinkedIn.
+        return _redirect_with_error("/connexion", "oauth_cancelled")
+    try:
+        token = oauth.linkedin.authorize_access_token()
+    except Exception:
+        logger.exception("Échec de l'échange de token LinkedIn")
+        return _redirect_with_error("/connexion", "oauth_failed")
+
+    userinfo = token.get("userinfo") or {}
+    subject = userinfo.get("sub")
+    email = (userinfo.get("email") or "").strip().lower()
+    if not subject or not email:
+        logger.error("Réponse LinkedIn sans sub/email : %s", userinfo)
+        return _redirect_with_error("/connexion", "oauth_failed")
+
+    user = resolve_oauth_user(
+        "linkedin", subject, email, bool(userinfo.get("email_verified"))
+    )
+    login_user(user, remember=True)
+    return redirect(next_url)
