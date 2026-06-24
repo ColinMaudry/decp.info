@@ -13,8 +13,25 @@ délivrabilité (le mail de reset est-il arrivé ?), expose au risque de suspens
 la boîte mail en cas de pic, et délivre moins bien.
 
 On migre vers **Brevo** (compte gratuit existant) en utilisant son **API
-transactionnelle** via le SDK officiel `brevo-python` (v5) et ses **templates
-hébergés**. Brevo est une société française, données en UE (bon pour le RGPD).
+transactionnelle** via le SDK officiel `brevo-python` **v5** (`5.0.0rc1`, une
+pré-release / release candidate, à installer avec `--pre` et épinglée strictement)
+et ses **templates hébergés**. Brevo est une société française, données en UE
+(bon pour le RGPD).
+
+L'API v5 (vérifiée par introspection du paquet) :
+
+```python
+from brevo import Brevo, SendTransacEmailRequestSender, SendTransacEmailRequestToItem
+from brevo.core.api_error import ApiError
+
+client = Brevo(api_key="...", headers={"X-Sib-Sandbox": "drop"})  # headers optionnels
+client.transactional_emails.send_transac_email(
+    template_id=123,
+    params={"link": "https://..."},
+    sender=SendTransacEmailRequestSender(email="noreply@decp.info", name="decp.info"),
+    to=[SendTransacEmailRequestToItem(email="dest@example.com")],
+)
+```
 
 ## Objectif
 
@@ -53,12 +70,12 @@ send_reset_email(email: str, token: str) -> None
 
 ### Composants de `src/auth/mailer.py` (réécrit)
 
-| Fonction                                         | Rôle                                                                                                                                                               |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `init_mailer()`                                  | Construit le client Brevo (`TransactionalEmailsApi`) depuis `BREVO_API_KEY`. Plus de paramètre `app`. Stocke le client au niveau module.                           |
-| `_send_template(template_id, recipient, params)` | Construit un `SendSmtpEmail(to, template_id, params, sender)`, applique le mode sandbox si activé, appelle `send_transac_email`, log + remonte les `ApiException`. |
-| `send_verification_email(email, token)`          | Construit le lien `{base}/auth/verify-email?token=...` et appelle `_send_template(VERIFY_ID, email, {"link": link})`.                                              |
-| `send_reset_email(email, token)`                 | Construit le lien `{base}/reinitialiser-mot-de-passe?token=...` et appelle `_send_template(RESET_ID, email, {"link": link})`.                                      |
+| Fonction                                         | Rôle                                                                                                                                                                                                         |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `init_mailer()`                                  | Construit le client `Brevo(api_key=...)` depuis `BREVO_API_KEY` (+ header sandbox si `BREVO_SANDBOX=true`). Plus de paramètre `app`. Stocke le client au niveau module.                                      |
+| `_send_template(template_id, recipient, params)` | Appelle `client.transactional_emails.send_transac_email(template_id, params, sender=SendTransacEmailRequestSender(...), to=[SendTransacEmailRequestToItem(email=recipient)])`, log + remonte les `ApiError`. |
+| `send_verification_email(email, token)`          | Construit le lien `{base}/auth/verify-email?token=...` et appelle `_send_template(VERIFY_ID, email, {"link": link})`.                                                                                        |
+| `send_reset_email(email, token)`                 | Construit le lien `{base}/reinitialiser-mot-de-passe?token=...` et appelle `_send_template(RESET_ID, email, {"link": link})`.                                                                                |
 
 Disparaît : toute la logique Jinja (`jinja_loader.searchpath`, `render_template`,
 les templates `.txt`/`.html`), `MAIL_SUPPRESS_SEND`, l'objet Flask-Mail.
@@ -102,7 +119,7 @@ reste possible et prioritaire.
 
 ## Gestion d'erreur
 
-- `_send_template` enveloppe l'appel dans un `try/except ApiException` : log
+- `_send_template` enveloppe l'appel dans un `try/except ApiError` : log
   (niveau error, sans la clé API) puis `raise` pour que l'appelant gère.
 - Si `init_mailer()` n'a pas été appelé ou `BREVO_API_KEY` absente : `assert`/erreur
   explicite, comme l'actuel « Mailer non initialisé ».
@@ -111,10 +128,10 @@ reste possible et prioritaire.
 
 Réconciliation validée :
 
-- **Tests unitaires** (`tests/auth/test_mailer.py`, réécrit) : on **mocke**
-  `TransactionalEmailsApi.send_transac_email` (monkeypatch) et on vérifie le payload
-  envoyé pour chaque fonction :
-  - `to == [{"email": "a@b.c"}]`
+- **Tests unitaires** (`tests/auth/test_mailer.py`, réécrit) : on **mocke** la méthode
+  `transactional_emails.send_transac_email` du client (monkeypatch) et on capture les
+  kwargs passés pour chaque fonction :
+  - `to[0].email == "a@b.c"`
   - `template_id == BREVO_TEMPLATE_VERIFY_ID` / `..._RESET_ID`
   - `params["link"]` contient le bon chemin et le token
   - Aucun appel réseau, tourne en CI sans clé.
@@ -124,13 +141,21 @@ Réconciliation validée :
 - **Test d'intégration optionnel** : `@pytest.mark.integration`, skippé par défaut,
   exécuté seulement si `BREVO_API_KEY` est présent, tape la vraie API en sandbox.
 
-## Points à vérifier en implémentation (ne pas présumer)
+## Faits vérifiés / points résiduels
 
-- Nom exact du package/import du SDK v5 (`brevo_python` vs autre) et des classes
-  (`TransactionalEmailsApi`, `SendSmtpEmail`, `Configuration`, `ApiClient`,
-  `ApiException`) — confirmer sur la doc/repo getbrevo/brevo-python v5.
-- Mécanisme exact du mode **sandbox** Brevo (header `X-Sib-Sandbox` et sa valeur,
-  ou réglage compte) — confirmer côté doc Brevo.
+**Vérifié par introspection de `brevo-python==5.0.0rc1`** :
+
+- Install : `pip install --pre "brevo-python==5.0.0rc1"` (package PyPI `brevo-python`,
+  import `brevo`).
+- Imports : `from brevo import Brevo, SendTransacEmailRequestSender, SendTransacEmailRequestToItem` ; `from brevo.core.api_error import ApiError`.
+- Client : `Brevo(api_key=..., headers={...})` ; envoi via
+  `client.transactional_emails.send_transac_email(template_id=int, params=dict, sender=..., to=[...], headers=dict|None)`.
+
+**À confirmer en implémentation (ne pas bloquer) :**
+
+- Valeur exacte du header sandbox Brevo (`X-Sib-Sandbox: drop` est la valeur
+  documentée pour « accepter mais ne pas délivrer ») — à confirmer avec un envoi
+  réel en sandbox.
 - Usage éventuel des variables legacy `SENDER_SERVER_DOMAIN`/`LOGIN_EMAIL`/
   `FROM_EMAIL`/`TO_EMAIL` ailleurs dans le code avant toute suppression.
 
