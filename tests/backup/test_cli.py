@@ -33,3 +33,14 @@ def test_backup_then_list(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "users-" in out
     assert len(storage.objects) == 1
+
+
+def test_restore(tmp_path):
+    env = _env(tmp_path)
+    storage = FakeStorage()
+    # Create a backup first
+    assert cli.main(["backup"], env=env, storage=storage) == 0
+    key = next(iter(storage.objects))
+    # Restore it
+    ret = cli.main(["restore", key], env=env, storage=storage)
+    assert ret == 0

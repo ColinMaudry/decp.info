@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 import sys
 from datetime import datetime, timezone
@@ -6,6 +7,8 @@ from datetime import datetime, timezone
 from src.backup import service
 from src.backup.config import load_config
 from src.backup.storage import S3Storage
+
+logger = logging.getLogger(__name__)
 
 
 def main(argv=None, env=None, storage=None) -> int:
@@ -24,9 +27,14 @@ def main(argv=None, env=None, storage=None) -> int:
     now = datetime.now(timezone.utc)
 
     if args.cmd == "backup":
-        key = service.run_backup(config, storage, now)
-        print(f"sauvegarde créée : {key}")
-        return 0
+        try:
+            key = service.run_backup(config, storage, now)
+            print(f"sauvegarde créée : {key}")
+            return 0
+        except Exception as exc:
+            logger.error("Échec de la sauvegarde : %s", exc, exc_info=True)
+            print(f"Erreur : {exc}", file=sys.stderr)
+            return 1
 
     if args.cmd == "list":
         backups = service.list_backups(config, storage)

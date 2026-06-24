@@ -14,8 +14,13 @@ class Storage(Protocol):
 
 class S3Storage:
     def __init__(
-        self, bucket, endpoint_url, access_key, secret_key, region="us-east-1"
-    ):
+        self,
+        bucket: str,
+        endpoint_url: str | None,
+        access_key: str,
+        secret_key: str,
+        region: str = "us-east-1",
+    ) -> None:
         self._bucket = bucket
         self._client = boto3.client(
             "s3",

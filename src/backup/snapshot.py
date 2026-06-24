@@ -5,6 +5,8 @@ from pathlib import Path
 
 
 def make_snapshot(db_path: Path) -> bytes:
+    if not db_path.exists():
+        raise FileNotFoundError(f"Base de données introuvable : {db_path}")
     with tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False) as tmp:
         tmp_path = Path(tmp.name)
     try:

@@ -1,3 +1,4 @@
+import logging
 import os
 import tempfile
 from datetime import datetime
@@ -7,6 +8,8 @@ from src.backup import crypto, naming, snapshot
 from src.backup.config import BackupConfig
 from src.backup.rotation import select_retained
 from src.backup.storage import Storage
+
+logger = logging.getLogger(__name__)
 
 
 def _dated_keys(storage: Storage, prefix: str) -> list[tuple[str, datetime]]:
@@ -30,6 +33,7 @@ def run_backup(config: BackupConfig, storage: Storage, now: datetime) -> str:
     for k, ts in dated:
         if ts not in retained:
             storage.delete(k)
+    logger.info("Sauvegarde créée : %s", key)
     return key
 
 
@@ -57,6 +61,7 @@ def restore(config: BackupConfig, storage: Storage, key: str, now: datetime) -> 
             backup_copy.write_bytes(db_path.read_bytes())
         os.replace(tmp_path, db_path)
     except Exception:
+        logger.error("Échec de la restauration depuis %s", key, exc_info=True)
         tmp_path.unlink(missing_ok=True)
         raise
     return backup_copy
