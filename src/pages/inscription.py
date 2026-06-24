@@ -1,6 +1,8 @@
 import dash_bootstrap_components as dbc
 from dash import dcc, html, register_page
 
+from src.pages.connexion import linkedin_button
+
 NAME = "Inscription"
 
 register_page(
@@ -67,6 +69,8 @@ def layout(error: str | None = None, email: str | None = None, **_):
                     dbc.Button("Créer le compte", type="submit", color="primary"),
                 ],
             ),
+            html.Div("ou", className="text-center text-muted my-2"),
+            linkedin_button(),
             html.Hr(),
             dcc.Link("Déjà un compte ? Se connecter", href="/connexion"),
         ],

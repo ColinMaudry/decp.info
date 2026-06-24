@@ -72,3 +72,28 @@ def test_callback_user_cancelled_redirects(client, users_db_path):
     resp = client.get("/auth/linkedin/callback?error=user_cancelled_login")
     assert resp.status_code == 302
     assert "error=oauth_cancelled" in resp.headers["Location"]
+
+
+def test_connexion_layout_has_linkedin_button():
+    import src.app  # noqa: F401 - Initialize Dash app before importing pages
+    from src.pages.connexion import layout
+
+    html_str = str(layout())
+    assert "Connexion avec LinkedIn" in html_str
+    assert "/auth/linkedin" in html_str
+
+
+def test_connexion_layout_shows_oauth_error():
+    import src.app  # noqa: F401 - Initialize Dash app before importing pages
+    from src.pages.connexion import layout
+
+    assert "LinkedIn" in str(layout(error="oauth_failed"))
+
+
+def test_inscription_layout_has_linkedin_button():
+    import src.app  # noqa: F401 - Initialize Dash app before importing pages
+    from src.pages.inscription import layout
+
+    html_str = str(layout())
+    assert "Connexion avec LinkedIn" in html_str
+    assert "/auth/linkedin" in html_str

@@ -14,6 +14,8 @@ register_page(
 ERROR_MESSAGES = {
     "invalid_credentials": "Identifiants invalides.",
     "email_not_verified": "Vérifiez d'abord votre adresse email (consultez votre boîte de réception).",
+    "oauth_cancelled": "Connexion LinkedIn annulée.",
+    "oauth_failed": "Échec de la connexion via LinkedIn. Réessayez.",
 }
 
 INFO_MESSAGES = {
@@ -24,6 +26,15 @@ INFO_MESSAGES = {
     "verified": "Adresse email vérifiée. Vous pouvez maintenant vous connecter.",
     "password_changed": "Mot de passe mis à jour. Connectez-vous avec le nouveau.",
 }
+
+
+def linkedin_button():
+    return html.A(
+        "Connexion avec LinkedIn",
+        href="/auth/linkedin",
+        className="btn w-100 mb-2",
+        style={"backgroundColor": "rgb(10, 102, 194)", "color": "white"},
+    )
 
 
 def layout(error: str | None = None, email: str | None = None, **kwargs):
@@ -70,6 +81,8 @@ def layout(error: str | None = None, email: str | None = None, **kwargs):
                     dbc.Button("Se connecter", type="submit", color="primary"),
                 ],
             ),
+            html.Div("ou", className="text-center text-muted my-2"),
+            linkedin_button(),
             html.Hr(),
             html.Div(
                 [
