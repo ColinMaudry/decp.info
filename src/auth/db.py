@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     email_verified INTEGER NOT NULL DEFAULT 0,
+    pending_email TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -61,6 +62,13 @@ def reset_conn_for_tests() -> None:
 def init_schema() -> None:
     conn = get_conn()
     conn.executescript(USERS_SCHEMA)
+    _migrate(conn)
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    cols = {row["name"] for row in conn.execute("PRAGMA table_info(users)")}
+    if "pending_email" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN pending_email TEXT")
 
 
 def _now() -> str:
@@ -102,6 +110,29 @@ def update_password_hash(user_id: int, password_hash: str) -> None:
         "UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?",
         (password_hash, _now(), user_id),
     )
+
+
+def set_pending_email(user_id: int, email: str) -> None:
+    get_conn().execute(
+        "UPDATE users SET pending_email = ?, updated_at = ? WHERE id = ?",
+        (email.lower(), _now(), user_id),
+    )
+
+
+def promote_pending_email(user_id: int) -> str | None:
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT pending_email FROM users WHERE id = ?", (user_id,)
+    ).fetchone()
+    if row is None or not row["pending_email"]:
+        return None
+    new_email = row["pending_email"]
+    conn.execute(
+        "UPDATE users SET email = ?, pending_email = NULL, "
+        "email_verified = 1, updated_at = ? WHERE id = ?",
+        (new_email, _now(), user_id),
+    )
+    return new_email
 
 
 def delete_user(user_id: int) -> None:

@@ -165,3 +165,40 @@ def test_cascade_delete_on_user_delete(users_db_path):
     create_email_verification_token("t", uid, _future(1))
     delete_user(uid)
     assert find_email_verification_token("t") is None
+
+
+def test_pending_email_column_exists(users_db_path):
+    from src.auth import db
+
+    db.init_schema()
+    cols = {r["name"] for r in db.get_conn().execute("PRAGMA table_info(users)")}
+    assert "pending_email" in cols
+
+
+def test_set_and_promote_pending_email(users_db_path):
+    from werkzeug.security import generate_password_hash
+
+    from src.auth import db
+
+    db.init_schema()
+    uid = db.create_user("old@example.fr", generate_password_hash("password12"))
+    db.set_pending_email(uid, "new@example.fr")
+    assert db.get_user_by_id(uid)["pending_email"] == "new@example.fr"
+
+    promoted = db.promote_pending_email(uid)
+    assert promoted == "new@example.fr"
+    row = db.get_user_by_id(uid)
+    assert row["email"] == "new@example.fr"
+    assert row["pending_email"] is None
+    assert row["email_verified"] == 1
+
+
+def test_promote_pending_email_noop_when_empty(users_db_path):
+    from werkzeug.security import generate_password_hash
+
+    from src.auth import db
+
+    db.init_schema()
+    uid = db.create_user("a@b.c", generate_password_hash("password12"))
+    assert db.promote_pending_email(uid) is None
+    assert db.get_user_by_id(uid)["email"] == "a@b.c"
