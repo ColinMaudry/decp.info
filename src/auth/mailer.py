@@ -4,6 +4,8 @@ from pathlib import Path
 from flask import Flask, render_template
 from flask_mail import Mail, Message
 
+from src.utils import logger
+
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 _mail: Mail | None = None
@@ -18,7 +20,8 @@ def init_mailer(app: Flask) -> None:
     app.config["MAIL_USE_TLS"] = os.getenv("SMTP_USE_TLS", "True").lower() == "true"
     app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_FROM", "noreply@decp.info")
     app.config["MAIL_SUPPRESS_SEND"] = (
-        os.getenv("DEVELOPMENT", "False").lower() == "true"
+        os.getenv("MAIL_SUPPRESS_SEND", os.getenv("DEVELOPMENT", "False")).lower()
+        == "true"
     )
     # Inclure les templates du package auth dans la recherche Jinja
     if hasattr(app.jinja_loader, "searchpath"):
@@ -44,6 +47,18 @@ def _send(
     **ctx,
 ) -> None:
     assert _mail is not None, "Mailer non initialisé (init_mailer(app) non appelé)"
+    if _mail.suppress:
+        suppress_cause = (
+            "MAIL_SUPPRESS_SEND=true"
+            if os.getenv("MAIL_SUPPRESS_SEND") is not None
+            else "DEVELOPMENT=true"
+        )
+        logger.warning(
+            "Email supprimé (%s) — non envoyé à %s : %s",
+            suppress_cause,
+            recipient,
+            subject,
+        )
     msg = Message(subject=subject, recipients=[recipient])
     msg.body = render_template(txt_template, **ctx)
     msg.html = render_template(html_template, **ctx)
