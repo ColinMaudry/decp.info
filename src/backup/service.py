@@ -45,15 +45,18 @@ def restore(config: BackupConfig, storage: Storage, key: str, now: datetime) -> 
 
     with tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False) as tmp:
         tmp_path = Path(tmp.name)
-    snapshot.write_snapshot(data, tmp_path)
-    if not snapshot.verify_integrity(tmp_path):
-        tmp_path.unlink(missing_ok=True)
-        raise ValueError(f"Sauvegarde corrompue, restauration annulée : {key}")
+    try:
+        snapshot.write_snapshot(data, tmp_path)
+        if not snapshot.verify_integrity(tmp_path):
+            raise ValueError(f"Sauvegarde corrompue, restauration annulée : {key}")
 
-    db_path = config.db_path
-    stamp = now.strftime("%Y%m%dT%H%M%SZ")
-    backup_copy = db_path.with_name(f"{db_path.name}.bak-{stamp}")
-    if db_path.exists():
-        backup_copy.write_bytes(db_path.read_bytes())
-    os.replace(tmp_path, db_path)
+        db_path = config.db_path
+        stamp = now.strftime("%Y%m%dT%H%M%SZ")
+        backup_copy = db_path.with_name(f"{db_path.name}.bak-{stamp}")
+        if db_path.exists():
+            backup_copy.write_bytes(db_path.read_bytes())
+        os.replace(tmp_path, db_path)
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise
     return backup_copy
