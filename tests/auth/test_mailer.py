@@ -61,3 +61,14 @@ def test_send_without_init_raises(monkeypatch):
     monkeypatch.setenv("BREVO_TEMPLATE_VERIFY_ID", "11")
     with pytest.raises(AssertionError):
         mailer.send_verification_email("a@b.c", "TOKEN123")
+
+
+def test_send_email_change_email(fake_client):
+    mailer.send_email_change_email("new@example.fr", "tok123")
+
+    calls = fake_client.transactional_emails.calls
+    assert len(calls) == 1
+    call = calls[0]
+    assert call["template_id"] == 11
+    assert call["to"][0].email == "new@example.fr"
+    assert "/auth/confirm-email-change?token=tok123" in call["params"]["link"]

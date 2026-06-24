@@ -63,3 +63,8 @@ def send_verification_email(email: str, token: str) -> None:
 def send_reset_email(email: str, token: str) -> None:
     link = f"{_base_url()}/reinitialiser-mot-de-passe?token={token}"
     _send_template(_template_id("BREVO_TEMPLATE_RESET_ID"), email, {"link": link})
+
+
+def send_email_change_email(email: str, token: str) -> None:
+    link = f"{_base_url()}/auth/confirm-email-change?token={token}"
+    _send_template(_template_id("BREVO_TEMPLATE_VERIFY_ID"), email, {"link": link})
