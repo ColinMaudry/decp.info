@@ -199,3 +199,19 @@ def confirm_email_change():
         return redirect("/compte/admin?error=invalid_token")
     db.promote_pending_email(user_id)
     return redirect("/compte/admin?email_changed=1")
+
+
+@auth_bp.route("/delete-account", methods=["POST"])
+@login_required
+def delete_account():
+    current_pw = request.form.get("current_password") or ""
+    row = db.get_user_by_id(current_user.id)
+    if not check_password_hash(row["password_hash"], current_pw):
+        return _redirect_with_error("/compte/admin", "invalid_current_password")
+
+    user_id = current_user.id
+    db.delete_email_verification_tokens_for_user(user_id)
+    db.delete_password_reset_tokens_for_user(user_id)
+    db.delete_user(user_id)
+    logout_user()
+    return redirect("/?account_deleted=1")

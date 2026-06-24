@@ -78,3 +78,25 @@ def test_change_password_mismatch(client, users_db_path):
         },
     )
     assert "error=password_mismatch" in resp.headers["Location"]
+
+
+def test_delete_account_requires_login(client, users_db_path):
+    resp = client.post("/auth/delete-account", data={"current_password": "x"})
+    assert resp.status_code in (302, 401)
+
+
+def test_delete_account_wrong_password(client, users_db_path):
+    uid = _login(client)
+    resp = client.post("/auth/delete-account", data={"current_password": "wrong"})
+    assert "error=invalid_current_password" in resp.headers["Location"]
+    assert db.get_user_by_id(uid) is not None
+
+
+def test_delete_account_success(client, users_db_path):
+    uid = _login(client)
+    resp = client.post(
+        "/auth/delete-account", data={"current_password": "old-password12"}
+    )
+    assert resp.status_code == 302
+    assert "account_deleted=1" in resp.headers["Location"]
+    assert db.get_user_by_id(uid) is None
