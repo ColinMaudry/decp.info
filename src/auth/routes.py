@@ -156,15 +156,15 @@ def change_password():
 
     row = db.get_user_by_id(current_user.id)
     if not check_password_hash(row["password_hash"], current_pw):
-        return _redirect_with_error("/compte", "invalid_current_password")
+        return _redirect_with_error("/compte/admin", "invalid_current_password")
 
     if len(password) < MIN_PASSWORD_LENGTH:
-        return _redirect_with_error("/compte", "password_too_short")
+        return _redirect_with_error("/compte/admin", "password_too_short")
     if password != password_confirm:
-        return _redirect_with_error("/compte", "password_mismatch")
+        return _redirect_with_error("/compte/admin", "password_mismatch")
 
     db.update_password_hash(current_user.id, generate_password_hash(password))
-    return redirect("/compte?password_changed=1")
+    return redirect("/compte/admin?password_changed=1")
 
 
 @auth_bp.route("/change-email", methods=["POST"])

@@ -266,7 +266,7 @@ def _auth_nav(_):
             nav=True,
             in_navbar=True,
             children=[
-                dbc.DropdownMenuItem("Mon compte", href="/compte"),
+                dbc.DropdownMenuItem("Mon compte", href="/compte/admin"),
                 dbc.DropdownMenuItem(
                     html.Form(
                         method="POST",
