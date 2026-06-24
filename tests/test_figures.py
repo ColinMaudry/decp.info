@@ -41,10 +41,10 @@ def test_compute_considerations_stats_basic():
 
     # champs_renseignes : basé sur sociales. 4 non-null / 4 total -> (4, 100%).
     assert stats["champs_renseignes"] == (4, 100)
-    # Sociales renseignées : dén=4 non-null, num=3 != "Sans objet" (u1/u3/u4) -> (4, 75%).
-    assert stats["sociales_renseignees"] == (4, 75)
-    # Env renseignées : dén=3 non-null (u1/u2/u4), num=1 != "Sans objet" (u2) -> (3, 33%).
-    assert stats["environnementales_renseignees"] == (3, 33)
+    # Sociales renseignées : dén=4 non-null, num=3 != "Sans objet" (u1/u3/u4) -> (4, 3, 75%).
+    assert stats["sociales_renseignees"] == (4, 3, 75)
+    # Env renseignées : dén=3 non-null (u1/u2/u4), num=1 != "Sans objet" (u2) -> (3, 1, 33%).
+    assert stats["environnementales_renseignees"] == (3, 1, 33)
 
 
 def test_compute_considerations_stats_dedup_per_uid():
@@ -73,11 +73,11 @@ def test_compute_considerations_stats_dedup_per_uid():
 
     stats = compute_considerations_stats(lff)
 
-    # 2 uid distincts. Social 2 non-null, 1 != "Sans objet" (u1) -> (2, 50%).
+    # 2 uid distincts. Social 2 non-null, 1 != "Sans objet" (u1) -> (2, 1, 50%).
     assert stats["champs_renseignes"] == (2, 100)
-    assert stats["sociales_renseignees"] == (2, 50)
-    # Env 2 non-null, 0 != "Sans objet" -> (2, 0%).
-    assert stats["environnementales_renseignees"] == (2, 0)
+    assert stats["sociales_renseignees"] == (2, 1, 50)
+    # Env 2 non-null, 0 != "Sans objet" -> (2, 0, 0%).
+    assert stats["environnementales_renseignees"] == (2, 0, 0)
 
 
 def test_compute_considerations_stats_missing_column():
@@ -92,9 +92,9 @@ def test_compute_considerations_stats_missing_column():
 
     stats = compute_considerations_stats(lff)
 
-    # Colonne env absente -> (0, 0). Social : 2 non-null, 1 != "Sans objet" -> (2, 50%).
+    # Colonne env absente -> (0, 0). Social : 2 non-null, 1 != "Sans objet" -> (2, 1, 50%).
     assert stats["champs_renseignes"] == (2, 100)
-    assert stats["sociales_renseignees"] == (2, 50)
+    assert stats["sociales_renseignees"] == (2, 1, 50)
     assert stats["environnementales_renseignees"] == (0, 0)
 
 
