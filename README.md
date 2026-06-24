@@ -25,6 +25,24 @@ uv run run.py
 
 Ne pas oublier de mettre à jour les fichier .env.
 
+### Sauvegarde de la base utilisateurs
+
+`users.sqlite` est sauvegardée toutes les heures sur S3 via un timer systemd. Pour lister les sauvegardes disponibles :
+
+```bash
+python -m src.backup list
+```
+
+Pour restaurer une sauvegarde, arrêtez le service, restaurez la base, puis redémarrez :
+
+```bash
+systemctl stop decpinfo
+python -m src.backup restore backups/users-YYYYMMDDTHHMMSSZ.sqlite.gz.enc
+systemctl start decpinfo
+```
+
+Voir `CLAUDE.md` pour la documentation complète de déploiement.
+
 ## Liens connexes
 
 - [decp-processing](https://github.com/ColinMaudry/decp-processing) (traitement et publication des données)

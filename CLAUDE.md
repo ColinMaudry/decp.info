@@ -96,3 +96,26 @@ Tests require a running Chrome/Chromium browser. They use `DashComposite` from `
 
 - `main` branch → manual deploy to decp.info via GitHub Actions
 - `dev` branch → auto-deploy to test.decp.info via GitHub Actions
+
+#### Sauvegarde de la base utilisateurs
+
+`users.sqlite` est sauvegardée toutes les heures sur S3 par un timer systemd
+(voir `deploy/decpinfo-backup.{service,timer}`). Installation initiale (une fois,
+sur le serveur, en root) :
+
+```bash
+cp deploy/decpinfo-backup.service deploy/decpinfo-backup.timer /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now decpinfo-backup.timer
+systemctl list-timers decpinfo-backup.timer # vérifier le prochain déclenchement
+```
+
+Restauration manuelle :
+
+```bash
+cd /var/www/decpinfo && source .venv/bin/activate
+python -m src.backup list
+systemctl stop decpinfo
+python -m src.backup restore backups/users-YYYYMMDDTHHMMSSZ.sqlite.gz.enc
+systemctl start decpinfo
+```
