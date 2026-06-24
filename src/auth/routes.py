@@ -165,3 +165,37 @@ def change_password():
 
     db.update_password_hash(current_user.id, generate_password_hash(password))
     return redirect("/compte?password_changed=1")
+
+
+@auth_bp.route("/change-email", methods=["POST"])
+@login_required
+def change_email():
+    email = (request.form.get("email") or "").strip()
+    try:
+        valid = validate_email(email, check_deliverability=False)
+        email = valid.normalized.lower()
+    except EmailNotValidError:
+        return _redirect_with_error("/compte/admin", "invalid_email")
+
+    if db.get_user_by_email(email) is not None:
+        return _redirect_with_error("/compte/admin", "email_taken")
+
+    db.set_pending_email(current_user.id, email)
+    token = tokens.create_verification_token(current_user.id)
+    try:
+        mailer.send_email_change_email(email, token)
+    except Exception:
+        logger.exception("Échec d'envoi de l'email de changement d'adresse")
+        return _redirect_with_error("/compte/admin", "email_send_failed")
+
+    return redirect("/compte/admin?email_pending=1")
+
+
+@auth_bp.route("/confirm-email-change", methods=["GET"])
+def confirm_email_change():
+    token = request.args.get("token") or ""
+    user_id = tokens.consume_verification_token(token)
+    if user_id is None:
+        return redirect("/compte/admin?error=invalid_token")
+    db.promote_pending_email(user_id)
+    return redirect("/compte/admin?email_changed=1")
