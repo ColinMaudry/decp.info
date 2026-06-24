@@ -45,8 +45,6 @@ def main(argv=None, env=None, storage=None) -> int:
         print("Redémarrez ensuite le service : systemctl start decpinfo")
         return 0
 
-    return 1
-
 
 if __name__ == "__main__":  # pragma: no cover
     sys.exit(main())
