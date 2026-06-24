@@ -206,13 +206,3 @@ def layout(
 )
 def _toggle_delete_modal(_open, _cancel, is_open):
     return not is_open
-
-
-@callback(
-    Output("compte-offcanvas", "is_open"),
-    Input("compte-offcanvas-open", "n_clicks"),
-    State("compte-offcanvas", "is_open"),
-    prevent_initial_call=True,
-)
-def _toggle_offcanvas(_n, is_open):
-    return not is_open

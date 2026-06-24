@@ -1,5 +1,5 @@
 import dash_bootstrap_components as dbc
-from dash import dcc, html
+from dash import Input, Output, State, callback, dcc, html
 from flask_login import current_user
 
 # Définition centralisée des sections de l'espace compte.
@@ -104,3 +104,13 @@ def account_shell(active: str, contenu):
     )
     content = dbc.Col([mobile, contenu], md=9)
     return dbc.Container(dbc.Row([sidebar, content]), className="py-4")
+
+
+@callback(
+    Output("compte-offcanvas", "is_open"),
+    Input("compte-offcanvas-open", "n_clicks"),
+    State("compte-offcanvas", "is_open"),
+    prevent_initial_call=True,
+)
+def _toggle_offcanvas(_n, is_open):
+    return not is_open
