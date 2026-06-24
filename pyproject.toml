@@ -53,6 +53,7 @@ env = [
   "USERS_DB_PATH=tests/users.test.sqlite",
   "SECRET_KEY=test-secret-do-not-use-in-prod",
   "MAIL_FROM=test@decp.info",
+  "MAIL_SUPPRESS_SEND=true",
   "APP_BASE_URL=http://localhost:8050",
   "SMTP_HOST=localhost",
   "SMTP_PORT=25",

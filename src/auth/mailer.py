@@ -66,7 +66,7 @@ def _send(
 
 
 def send_verification_email(email: str, token: str) -> None:
-    link = f"{_base_url()}/verification-email?token={token}"
+    link = f"{_base_url()}/auth/verify-email?token={token}"
     _send(
         "Vérification de votre adresse email — decp.info",
         email,

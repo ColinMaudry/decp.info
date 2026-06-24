@@ -29,8 +29,8 @@ def test_send_verification_email(mail_app):
     assert len(outbox) == 1
     msg = outbox[0]
     assert msg.recipients == ["a@b.c"]
-    assert "verification-email?token=TOKEN123" in msg.body
-    assert "verification-email?token=TOKEN123" in msg.html
+    assert "/auth/verify-email?token=TOKEN123" in msg.body
+    assert "/auth/verify-email?token=TOKEN123" in msg.html
 
 
 def test_send_reset_email(mail_app):
