@@ -22,7 +22,7 @@ dependencies = [
   "flask-caching",
   "pyarrow>=23.0.1",
   "flask-login",
-  "flask-mail",
+  "brevo-python==5.0.0rc1",
   "flask-wtf",
   "email-validator",
   "flask-cors>=6.0.2",
