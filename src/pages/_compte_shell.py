@@ -75,7 +75,7 @@ def _nav(active: str):
         dbc.NavLink(s["label"], href=s["href"], active=(s["key"] == active))
         for s in visible_sections(current_user_has_subscription())
     ]
-    return dbc.Nav(links, vertical=True, pills=True)
+    return dbc.Nav(links, vertical=True, class_name="account-nav")
 
 
 def account_shell(active: str, contenu):

@@ -138,6 +138,20 @@ p.version > a {
   font-weight: 600;
 }
 
+.account-nav .nav-link {
+  color: inherit;
+  padding-left: 10px;
+  border-left: 3px solid transparent;
+  border-radius: 0;
+}
+
+.account-nav .nav-link.active {
+  color: #d9230f;
+  font-weight: 600;
+  border-left-color: #d9230f;
+  background-color: transparent;
+}
+
 #announcements {
   margin: 25px 40px 0 60px;
   font-size: 90%;

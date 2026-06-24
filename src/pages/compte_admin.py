@@ -102,10 +102,17 @@ def _password_section():
 def _danger_section():
     return html.Div(
         [
-            html.H4("Zone danger", className="mt-5 text-danger"),
+            html.H4(
+                "Zone danger",
+                className="mt-3",
+                style={"color": "#d9230f"},
+            ),
             html.P("La suppression de votre compte est définitive."),
             dbc.Button(
-                "Supprimer mon compte", id="delete-open", color="danger", outline=True
+                "Supprimer mon compte",
+                id="delete-open",
+                color="primary",
+                outline=True,
             ),
             dbc.Modal(
                 id="delete-modal",
@@ -148,7 +155,8 @@ def _danger_section():
                 ],
             ),
         ],
-        className="border border-danger rounded p-3 mt-4",
+        className="rounded p-3 mt-4",
+        style={"border": "1px solid #d9230f"},
     )
 
 
@@ -159,7 +167,7 @@ def _logout_section():
         className="mt-4",
         children=[
             _csrf("logout"),
-            dbc.Button("Déconnexion", type="submit", color="secondary"),
+            dbc.Button("Déconnexion", type="submit", color="secondary", outline=True),
         ],
     )
 
