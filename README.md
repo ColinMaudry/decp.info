@@ -41,8 +41,6 @@ python -m src.backup restore backups/users-YYYYMMDDTHHMMSSZ.sqlite.gz.enc
 systemctl start decpinfo
 ```
 
-Voir `CLAUDE.md` pour la documentation complète de déploiement.
-
 ## Liens connexes
 
 - [decp-processing](https://github.com/ColinMaudry/decp-processing) (traitement et publication des données)
