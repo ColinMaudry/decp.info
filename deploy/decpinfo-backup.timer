@@ -1,0 +1,9 @@
+[Unit]
+Description=Déclenche la sauvegarde horaire de users.sqlite (decp.info)
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+
+[Install]
+WantedBy=timers.target

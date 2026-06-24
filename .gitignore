@@ -12,3 +12,9 @@ build
 **/decp.duckdb.tmp
 **/decp.duckdb.lock
 **/schema.cache.json
+
+# Runtime databases (never commit)
+users.sqlite
+*.sqlite
+!tests/*.sqlite
+!tests/**/*.sqlite
