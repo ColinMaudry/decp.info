@@ -386,6 +386,10 @@ td[data-dash-column="marche"] a {
   text-decoration: none;
 }
 
+th[data-dash-column="marche"].dash-filter input {
+  display: none;
+}
+
 /* Barre de défilement horizontale, collée en haut du tableau */
 .marches_table .dt-hscroll {
   position: sticky;
