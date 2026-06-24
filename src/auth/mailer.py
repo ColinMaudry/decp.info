@@ -16,8 +16,7 @@ def init_mailer() -> None:
     """Construit le client Brevo à partir des variables d'environnement."""
     global _client
     api_key = os.getenv("BREVO_API_KEY", "")
-    headers = {"X-Sib-Sandbox": "drop"} if DEVELOPMENT else None
-    _client = Brevo(api_key=api_key, headers=headers)
+    _client = Brevo(api_key=api_key)
 
 
 def _base_url() -> str:
@@ -40,12 +39,14 @@ def _template_id(env_var: str) -> int:
 
 def _send_template(template_id: int, recipient: str, params: dict) -> None:
     assert _client is not None, "Mailer non initialisé (init_mailer() non appelé)"
+    sandbox_headers = {"X-Sib-Sandbox": "drop"} if DEVELOPMENT else None
     try:
         _client.transactional_emails.send_transac_email(
             template_id=template_id,
             params=params,
             sender=_sender(),
             to=[SendTransacEmailRequestToItem(email=recipient)],
+            headers=sandbox_headers,
         )
     except ApiError:
         logger.exception(

@@ -37,6 +37,7 @@ def test_send_verification_email(fake_client):
     assert call["to"][0].email == "a@b.c"
     assert call["sender"].email == "noreply@decp.info"
     assert "/auth/verify-email?token=TOKEN123" in call["params"]["link"]
+    assert call["headers"] == {"X-Sib-Sandbox": "drop"}  # DEVELOPMENT=true en tests
 
 
 def test_send_reset_email(fake_client):
