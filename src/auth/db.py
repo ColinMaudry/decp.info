@@ -10,7 +10,7 @@ USERS_SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
+    password_hash TEXT,
     email_verified INTEGER NOT NULL DEFAULT 0,
     pending_email TEXT,
     created_at TEXT NOT NULL,
@@ -32,6 +32,15 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
     user_id INTEGER NOT NULL,
     expires_at TEXT NOT NULL,
     created_at TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS oauth_identities (
+    provider TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    user_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (provider, subject),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 """
@@ -66,9 +75,50 @@ def init_schema() -> None:
 
 
 def _migrate(conn: sqlite3.Connection) -> None:
-    cols = {row["name"] for row in conn.execute("PRAGMA table_info(users)")}
+    cols = {row["name"]: row for row in conn.execute("PRAGMA table_info(users)")}
     if "pending_email" not in cols:
         conn.execute("ALTER TABLE users ADD COLUMN pending_email TEXT")
+        cols = {row["name"]: row for row in conn.execute("PRAGMA table_info(users)")}
+    if cols.get("password_hash") and cols["password_hash"]["notnull"] == 1:
+        _rebuild_users_password_nullable(conn)
+
+
+def _rebuild_users_password_nullable(conn: sqlite3.Connection) -> None:
+    # SQLite ne peut pas retirer un NOT NULL via ALTER : on reconstruit la table.
+    # foreign_keys OFF pour éviter le cascade-delete pendant le DROP.
+    conn.execute("PRAGMA foreign_keys = OFF")
+    try:
+        conn.execute("BEGIN")
+        conn.execute(
+            """
+            CREATE TABLE users_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT NOT NULL UNIQUE,
+                password_hash TEXT,
+                email_verified INTEGER NOT NULL DEFAULT 0,
+                pending_email TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            "INSERT INTO users_new (id, email, password_hash, email_verified, "
+            "pending_email, created_at, updated_at) "
+            "SELECT id, email, password_hash, email_verified, pending_email, "
+            "created_at, updated_at FROM users"
+        )
+        conn.execute("DROP TABLE users")
+        conn.execute("ALTER TABLE users_new RENAME TO users")
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email)"
+        )
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise
+    finally:
+        conn.execute("PRAGMA foreign_keys = ON")
 
 
 def _now() -> str:
@@ -198,3 +248,33 @@ def purge_expired_tokens() -> None:
     conn = get_conn()
     conn.execute("DELETE FROM email_verification_tokens WHERE expires_at <= ?", (now,))
     conn.execute("DELETE FROM password_reset_tokens WHERE expires_at <= ?", (now,))
+
+
+def create_oauth_user(email: str) -> int:
+    conn = get_conn()
+    now = _now()
+    cur = conn.execute(
+        "INSERT INTO users (email, password_hash, email_verified, created_at, updated_at) "
+        "VALUES (?, NULL, 1, ?, ?)",
+        (email.lower(), now, now),
+    )
+    return cur.lastrowid
+
+
+def get_oauth_identity(provider: str, subject: str) -> sqlite3.Row | None:
+    return (
+        get_conn()
+        .execute(
+            "SELECT * FROM oauth_identities WHERE provider = ? AND subject = ?",
+            (provider, subject),
+        )
+        .fetchone()
+    )
+
+
+def link_oauth_identity(provider: str, subject: str, user_id: int) -> None:
+    get_conn().execute(
+        "INSERT INTO oauth_identities (provider, subject, user_id, created_at) "
+        "VALUES (?, ?, ?, ?)",
+        (provider, subject, user_id, _now()),
+    )
