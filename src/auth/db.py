@@ -2,10 +2,9 @@ import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
-from threading import Lock
+from threading import local
 
-_conn: sqlite3.Connection | None = None
-_conn_lock = Lock()
+_local = local()
 
 USERS_SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -42,24 +41,21 @@ def _db_path() -> Path:
 
 
 def get_conn() -> sqlite3.Connection:
-    global _conn
-    with _conn_lock:
-        if _conn is None:
-            _conn = sqlite3.connect(
-                str(_db_path()), check_same_thread=False, isolation_level=None
-            )
-            _conn.row_factory = sqlite3.Row
-            _conn.execute("PRAGMA foreign_keys = ON")
-            _conn.execute("PRAGMA journal_mode = WAL")
-        return _conn
+    conn = getattr(_local, "conn", None)
+    if conn is None:
+        conn = sqlite3.connect(str(_db_path()), isolation_level=None)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
+        conn.execute("PRAGMA journal_mode = WAL")
+        _local.conn = conn
+    return conn
 
 
 def reset_conn_for_tests() -> None:
-    global _conn
-    with _conn_lock:
-        if _conn is not None:
-            _conn.close()
-        _conn = None
+    conn = getattr(_local, "conn", None)
+    if conn is not None:
+        conn.close()
+    _local.conn = None
 
 
 def init_schema() -> None:
