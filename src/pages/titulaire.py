@@ -33,6 +33,7 @@ from src.utils.table import (
     get_default_hidden_columns,
     prepare_table_data,
     sort_table_data,
+    write_styled_excel,
 )
 from src.utils.tracking import track_search
 
@@ -86,13 +87,19 @@ layout = [
                         className="mb-2",
                         children=[
                             dbc.Col(
-                                html.H2(
-                                    children=[
-                                        html.Span(id="titulaire_siret"),
-                                        " - ",
-                                        html.Span(id="titulaire_nom"),
-                                    ],
-                                ),
+                                [
+                                    html.H2(
+                                        children=[
+                                            html.Span(id="titulaire_siret"),
+                                            " - ",
+                                            html.Span(id="titulaire_nom"),
+                                        ],
+                                    ),
+                                    html.P(
+                                        id="titulaire_activite_libelle",
+                                        style={"color": "gray", "marginTop": "-10px"},
+                                    ),
+                                ],
                                 width=8,
                             ),
                             dbc.Col(
@@ -254,17 +261,34 @@ layout = [
     Output(component_id="titulaire_departement", component_property="children"),
     Output(component_id="titulaire_region", component_property="children"),
     Output(component_id="titulaire_lien_annuaire", component_property="href"),
+    Output(component_id="titulaire_activite_libelle", component_property="children"),
     Input(component_id="titulaire_url", component_property="pathname"),
 )
 def update_titulaire_infos(url):
     titulaire_siret = url.split("/")[-1]
+    if "titulaire_activite_libelle" in DF_TITULAIRES.columns:
+        activite_libelle_row = DF_TITULAIRES.filter(
+            pl.col("titulaire_id") == titulaire_siret
+        ).select("titulaire_activite_libelle")
+        activite_libelle = (
+            activite_libelle_row.item(0, 0) if activite_libelle_row.height > 0 else ""
+        )
+    else:
+        activite_libelle = ""
     data = get_annuaire_data(titulaire_siret)
     data_etablissement = data.get("matching_etablissements") if data else None
     if data_etablissement:
         data_etablissement = data_etablissement[0]
 
+        # Extraction du code département à partir du code postal
+        code_postal = data_etablissement.get("code_postal", "")
+        departement_code = code_postal[:2] if code_postal else None
+
+        # Création de la carte avec le code département pour un centrage approprié
         titulaire_map = point_on_map(
-            data_etablissement["latitude"], data_etablissement["longitude"]
+            data_etablissement["latitude"],
+            data_etablissement["longitude"],
+            departement_code,
         )
         code_departement, nom_departement, nom_region = get_departement_region(
             data_etablissement["code_postal"]
@@ -294,6 +318,7 @@ def update_titulaire_infos(url):
         departement,
         nom_region,
         lien_annuaire,
+        activite_libelle,
     )
 
 
@@ -411,8 +436,10 @@ def download_titulaire_data(
     df_to_download = pl.DataFrame(data)
 
     def to_bytes(buffer):
-        df_to_download.write_excel(
-            buffer, worksheet="DECP" if annee in ["Toutes les années", None] else annee
+        write_styled_excel(
+            df_to_download,
+            buffer,
+            worksheet="DECP" if annee in ["Toutes les années", None] else annee,
         )
 
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
@@ -453,7 +480,7 @@ def download_filtered_titulaire_data(
         lff = sort_table_data(lff, sort_by)
 
     def to_bytes(buffer):
-        lff.collect(engine="streaming").write_excel(buffer, worksheet="DECP")
+        write_styled_excel(lff.collect(engine="streaming"), buffer)
 
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     return dcc.send_bytes(

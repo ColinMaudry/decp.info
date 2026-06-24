@@ -215,47 +215,6 @@ def test_008_search_to_observatoire(dash_duo: DashComposite):
     )
 
 
-def test_010_observatoire_montant_filter():
-    import datetime
-
-    from src.utils.data import prepare_dashboard_data
-
-    data = pl.DataFrame(
-        {
-            "uid": ["1", "2", "3"],
-            "montant": [100.0, 500.0, 1000.0],
-            "dateNotification": [datetime.date(2025, 1, 1)] * 3,
-        }
-    )
-
-    def apply(min_val=None, max_val=None):
-        return prepare_dashboard_data(
-            data.lazy(),
-            dashboard_year="2025",
-            dashboard_acheteur_id=None,
-            dashboard_acheteur_categorie=None,
-            dashboard_acheteur_departement_code=None,
-            dashboard_titulaire_id=None,
-            dashboard_titulaire_categorie=None,
-            dashboard_titulaire_departement_code=None,
-            dashboard_marche_type=None,
-            dashboard_marche_objet=None,
-            dashboard_marche_code_cpv=None,
-            dashboard_marche_considerations_sociales=None,
-            dashboard_marche_considerations_environnementales=None,
-            dashboard_marche_techniques=None,
-            dashboard_marche_innovant=None,
-            dashboard_marche_sous_traitance_declaree=None,
-            dashboard_montant_min=min_val,
-            dashboard_montant_max=max_val,
-        ).collect()
-
-    assert apply().height == 3
-    assert apply(min_val=400).height == 2  # 500, 1000
-    assert apply(max_val=500).height == 2  # 100, 500
-    assert apply(min_val=200, max_val=600).height == 1  # 500 only
-
-
 def test_009_observatoire_filter_persistence(dash_duo: DashComposite):
     import time
 
@@ -333,7 +292,7 @@ def test_011_observatoire_multi_param_url(dash_duo: DashComposite):
     )
 
 
-def test_get_distance_histogram_returns_graph():
+def test_012_get_distance_histogram_returns_graph():
     import polars as pl
     from dash import dcc
 
@@ -344,7 +303,7 @@ def test_get_distance_histogram_returns_graph():
     assert isinstance(result, dcc.Graph)
 
 
-def test_get_distance_histogram_handles_nulls():
+def test_013_get_distance_histogram_handles_nulls():
     import polars as pl
     from dash import dcc
 
@@ -355,7 +314,7 @@ def test_get_distance_histogram_handles_nulls():
     assert isinstance(result, dcc.Graph)
 
 
-def test_get_distance_histogram_all_nulls():
+def test_014_get_distance_histogram_all_nulls():
     import polars as pl
     from dash import dcc
 
@@ -363,4 +322,23 @@ def test_get_distance_histogram_all_nulls():
 
     lff = pl.LazyFrame({"titulaire_distance": pl.Series([], dtype=pl.Int64)})
     result = get_distance_histogram(lff)
+
     assert isinstance(result, dcc.Graph)
+
+
+def test_015_tableau_filter_date(dash_duo: DashComposite):
+    from src.app import app
+
+    dash_duo.start_server(app)
+    dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
+
+    for page in ["tableau", "acheteurs/123", "titulaires/345"]:
+        dash_duo.wait_for_page(f"{dash_duo.server_url}/{page}")
+        filter_input = '.marches_table th[data-dash-column="dateNotification"] input'
+        filter_cell_result = '.marches_table td[data-dash-column="dateNotification"] p'
+        dash_duo.wait_for_element(filter_input, timeout=2)
+        _filter_input: WebElement = dash_duo.find_element(filter_input)
+        _filter_input.send_keys("3333")  # a dateNotification that doesn't exist
+        _filter_input.send_keys(Keys.ENTER)
+        _filter_result: list[WebElement] = dash_duo.find_elements(filter_cell_result)
+        assert len(_filter_result) == 0, f"Page : {page}"

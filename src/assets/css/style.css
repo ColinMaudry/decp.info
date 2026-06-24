@@ -144,6 +144,10 @@ p.version > a {
   max-width: 900px;
 }
 
+#announcements p {
+  margin-bottom: 0.2rem;
+}
+
 .seeBorder {
   border: dotted 1px green;
 }
@@ -171,6 +175,10 @@ p.version > a {
 
 .search_options input {
   margin-right: 12px;
+}
+
+#search_results td[data-dash-column="Département"] {
+  text-wrap: wrap;
 }
 
 /* --- Dashboard inputs --- */
@@ -351,8 +359,66 @@ table.cell-table th {
   right: 200px;
 }
 
+/* ===== Tableaux : en-têtes collants + scroll horizontal (#82) ===== */
+
+/* Contenir le scroll horizontal dans le conteneur Dash (élimine la scrollbar native en bas de page) */
+/* overflow-y:clip évite la conversion CSS visible→auto qui ajouterait une scrollbar verticale */
+.marches_table .dash-spreadsheet-container {
+  overflow-x: hidden !important;
+  overflow-y: clip !important;
+}
+
+/* L'inner reste visible pour que le tableau se déploie librement en largeur */
+.marches_table .dash-spreadsheet-inner {
+  overflow: visible !important;
+}
+
 .marches_table .cell-table tr:nth-child(even) td {
   background-color: rgb(255 240 240 / 40%);
+}
+
+/* Colonne "Marché" : lien loupe centré et sans soulignement */
+table.cell-table td[data-dash-column="marche"] .dash-cell-value {
+  text-align: center !important;
+}
+
+td[data-dash-column="marche"] a {
+  text-decoration: none;
+}
+
+th[data-dash-column="marche"].dash-filter input {
+  display: none;
+}
+
+/* Barre de défilement horizontale, collée en haut du tableau */
+.marches_table .dt-hscroll {
+  position: sticky;
+  top: 0;
+  z-index: 11;
+  height: 12px;
+  background-color: #e0e0e0;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.marches_table .dt-hscroll.is-hidden {
+  display: none;
+}
+
+/* Thumb custom — toujours visible, draggable */
+.marches_table .dt-hscroll-thumb {
+  position: absolute;
+  top: 2px;
+  height: calc(100% - 4px);
+  min-width: 40px;
+  background-color: orange;
+  border-radius: 8px;
+  cursor: grab;
+  user-select: none;
+}
+
+.marches_table .dt-hscroll-thumb:active {
+  cursor: grabbing;
 }
 
 /* Column Visibility Menu */
@@ -541,4 +607,219 @@ input[type="number"]::-webkit-inner-spin-button {
 
 input[type="number"] {
   -moz-appearance: textfield;
+}
+
+/* ===== Page /etapes : graphique données par étape et par seuil ===== */
+
+.etapes-chart-scroll {
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.etapes-chart {
+  min-width: 720px;
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 13px;
+  display: grid;
+  grid-template-columns: 150px repeat(5, 1fr);
+}
+
+.etapes-corner {
+  border-bottom: 2px solid #344054;
+}
+
+.etapes-xhead {
+  grid-column: 2 / -1;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border-bottom: 2px solid #344054;
+}
+
+.etapes-xcell {
+  text-align: center;
+  padding: 6px 2px;
+  font-size: 11px;
+  color: #475467;
+  border-left: 1px dashed #d0d5dd;
+}
+
+.etapes-xcell strong {
+  display: block;
+  color: #101828;
+  font-size: 12px;
+}
+
+.etapes-stage {
+  padding: 14px 10px;
+  font-weight: 600;
+  color: #101828;
+  border-bottom: 1px solid #eaecf0;
+  display: flex;
+  align-items: center;
+}
+
+.etapes-stage small {
+  font-weight: 400;
+  color: #667085;
+}
+
+.etapes-lane {
+  grid-column: 2 / -1;
+  position: relative;
+  border-bottom: 1px solid #eaecf0;
+  min-height: 52px;
+}
+
+.etapes-segs {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.etapes-segs > div {
+  border-left: 1px dashed #eaecf0;
+}
+
+.etapes-bar {
+  position: absolute;
+  top: 9px;
+  height: 32px;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: pointer;
+  transition: filter 0.15s, box-shadow 0.15s;
+}
+
+.etapes-bar:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+}
+
+.etapes-empty {
+  color: #98a2b3;
+  font-style: italic;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.etapes-note {
+  margin-top: 8px;
+  color: #667085;
+  font-size: 13px;
+}
+
+/* --- Vue mobile (liste par étape) : masquée par défaut --- */
+
+.etapes-mobile {
+  display: none;
+  margin: 1rem 0;
+}
+
+.etapes-m-block {
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.etapes-m-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f9fafb;
+  border-bottom: 1px solid #eaecf0;
+}
+
+.etapes-m-stage {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 15px;
+  color: #101828;
+}
+
+.etapes-m-link {
+  background: none;
+  border: none;
+  color: #1570ef;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.etapes-m-link:hover {
+  text-decoration: underline;
+}
+
+.etapes-m-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f2f4f7;
+  font-size: 13px;
+}
+
+.etapes-m-item:last-child {
+  border-bottom: none;
+}
+
+.etapes-m-item i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex: 0 0 auto;
+  position: relative;
+  top: 2px;
+}
+
+.etapes-m-label {
+  font-weight: 600;
+  color: #101828;
+}
+
+.etapes-m-seuil {
+  color: #667085;
+}
+
+.etapes-m-empty {
+  color: #98a2b3;
+  font-style: italic;
+}
+
+.etapes-detail {
+  margin: 1rem 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.etapes-detail:empty {
+  display: none;
+}
+
+/* --- Bascule desktop / mobile au point de rupture 768 px --- */
+
+@media (max-width: 768px) {
+  .etapes-chart-scroll {
+    display: none;
+  }
+  .etapes-mobile {
+    display: block;
+  }
 }

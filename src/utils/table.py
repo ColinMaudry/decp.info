@@ -2,10 +2,12 @@ import os
 import uuid
 
 import polars as pl
+import xlsxwriter
 from dash import no_update
 from polars import selectors as cs
+from unidecode import unidecode
 
-from src.db import query_marches, schema
+from src.db import count_marches, count_unique_marches, query_marches, schema
 from src.utils import logger
 from src.utils.cache import cache
 from src.utils.data import DATA_SCHEMA
@@ -154,6 +156,8 @@ def normalize_sort_by(sort_by) -> tuple:
 
 
 def format_number(number) -> str:
+    if not number:
+        return ""
     number = "{:,}".format(number).replace(",", " ")
     return number
 
@@ -213,6 +217,25 @@ def format_values(dff: pl.DataFrame) -> pl.DataFrame:
     return dff
 
 
+_ACCENT_REPLACEMENTS = [
+    ("[éèêëÉÈÊË]", "e"),
+    ("[àâäÀÂÄ]", "a"),
+    ("[ùûüÙÛÜ]", "u"),
+    ("[îïÎÏ]", "i"),
+    ("[ôöÔÖ]", "o"),
+    ("[çÇ]", "c"),
+    ("[ñÑ]", "n"),
+    ("[æÆ]", "ae"),
+    ("[œŒ]", "oe"),
+]
+
+
+def _deaccent_col(expr: pl.Expr) -> pl.Expr:
+    for pattern, replacement in _ACCENT_REPLACEMENTS:
+        expr = expr.str.replace_all(pattern, replacement)
+    return expr
+
+
 def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
     _schema = lff.collect_schema()
     filtering_expressions = filter_query.split(" && ")
@@ -254,17 +277,17 @@ def filter_table_data(lff: pl.LazyFrame, filter_query: str) -> pl.LazyFrame:
             elif operator == "contains":
                 if col_type in ["String", "Date"] and isinstance(filter_value, str):
                     filter_value = filter_value.strip('"')
+                    normalized_value = unidecode(filter_value)
+                    col_expr = _deaccent_col(pl.col(col_name))
                     if filter_value.endswith("*"):
                         lff = lff.filter(
-                            pl.col(col_name).str.starts_with(filter_value[:-1])
+                            col_expr.str.starts_with(normalized_value[:-1])
                         )
                     elif filter_value.startswith("*"):
-                        lff = lff.filter(
-                            pl.col(col_name).str.ends_with(filter_value[1:])
-                        )
+                        lff = lff.filter(col_expr.str.ends_with(normalized_value[1:]))
                     else:
                         lff = lff.filter(
-                            pl.col(col_name).str.contains("(?i)" + filter_value)
+                            col_expr.str.contains("(?i)" + normalized_value)
                         )
                 elif col_type.startswith("Int") or col_type.startswith("Float"):
                     lff = lff.filter(pl.col(col_name) == filter_value)
@@ -337,11 +360,8 @@ def setup_table_columns(
 def get_default_hidden_columns(page):
     if page == "acheteur":
         displayed_columns = [
-            "uid",
             "objet",
             "dateNotification",
-            "titulaire_id",
-            "titulaire_typeIdentifiant",
             "titulaire_nom",
             "titulaire_distance",
             "montant",
@@ -350,10 +370,8 @@ def get_default_hidden_columns(page):
         ]
     elif page == "titulaire":
         displayed_columns = [
-            "uid",
             "objet",
             "dateNotification",
-            "acheteur_id",
             "acheteur_nom",
             "titulaire_distance",
             "montant",
@@ -361,9 +379,13 @@ def get_default_hidden_columns(page):
             "dureeRestanteMois",
         ]
     elif page == "tableau":
-        displayed_columns = os.getenv("DISPLAYED_COLUMNS")
+        displayed_columns = [
+            c.strip() for c in os.getenv("DISPLAYED_COLUMNS", "").split(",")
+        ]
     else:
-        displayed_columns = os.getenv("DISPLAYED_COLUMNS")
+        displayed_columns = [
+            c.strip() for c in os.getenv("DISPLAYED_COLUMNS", "").split(",")
+        ]
         logger.warning(f"Invalid page: {page}")
 
     hidden_columns = []
@@ -376,38 +398,67 @@ def get_default_hidden_columns(page):
     return hidden_columns
 
 
-@cache.memoize()
-def _load_filter_sort_postprocess(filter_query, sort_by_key):
-    logger.debug(
-        f"Cache miss — recomputing for filter={filter_query!r} sort={sort_by_key!r}"
-    )
+def postprocess_page(dff: pl.DataFrame) -> pl.DataFrame:
+    """Post-traitement à appliquer sur une page déjà paginée.
 
-    lff: pl.LazyFrame = query_marches().lazy()
-
-    if filter_query:
-        lff = filter_table_data(lff, filter_query)
-
-    if sort_by_key:
-        sort_by = [
-            {"column_id": col, "direction": direction} for col, direction in sort_by_key
-        ]
-        lff = sort_table_data(lff, sort_by)
-
-    dff = table_postprocess(lff)
-
-    return dff
-
-
-def table_postprocess(lff) -> pl.DataFrame:
-    lff = lff.cast(pl.String)
-    lff = lff.fill_null("")
-    dff: pl.DataFrame = lff.collect()
+    À appeler après la pagination.
+    """
+    dff = dff.with_columns(pl.all().cast(pl.String).fill_null(""))
+    if "uid" in dff.columns:
+        dff = dff.with_columns(
+            (
+                '<a href="/marches/' + pl.col("uid") + '" title="Voir le marché">🔍</a>'
+            ).alias("marche")
+        )
+        dff = dff.select(["marche"] + [c for c in dff.columns if c != "marche"])
     dff = add_links(dff)
     if "sourceFile" in dff.columns:
         dff = add_resource_link(dff)
     if dff.height > 0:
         dff = format_values(dff)
     return dff
+
+
+@cache.memoize()
+def _fetch_page_sql(
+    filter_query: str | None,
+    sort_by_key: tuple,
+    page_current: int,
+    page_size: int,
+) -> tuple[pl.DataFrame, int, int]:
+    """Chemin rapide : filtre/tri/pagine dans DuckDB, post-traite la page seule.
+
+    Retourne (page_dataframe_post_traitée, total_count, total_unique_count).
+    """
+    # Import local pour éviter une dépendance circulaire
+    # (src.utils.table_sql importe split_filter_part depuis src.utils.table).
+    from src.utils.table_sql import filter_query_to_sql, sort_by_to_sql
+
+    logger.debug(
+        f"Cache miss SQL — filter={filter_query!r} sort={sort_by_key!r} "
+        f"page={page_current} size={page_size}"
+    )
+
+    where_sql, params = filter_query_to_sql(filter_query or "", schema)
+
+    sort_by_dash = [
+        {"column_id": col, "direction": direction} for col, direction in sort_by_key
+    ]
+    order_by = sort_by_to_sql(sort_by_dash, schema) or None
+
+    total = count_marches(where_sql, params)
+    total_unique = count_unique_marches(where_sql, params)
+
+    page = query_marches(
+        where_sql=where_sql,
+        params=params,
+        order_by=order_by,
+        limit=page_size,
+        offset=page_current * page_size,
+    )
+
+    page = postprocess_page(page)
+    return page, total, total_unique
 
 
 def prepare_table_data(
@@ -433,9 +484,13 @@ def prepare_table_data(
     trigger_cleanup = no_update if source_table == "tableau" else str(uuid.uuid4())
 
     if data is None:
+        # Probablement car il s'agit de la page Tableau
         sort_by_key = normalize_sort_by(sort_by)
-        dff: pl.DataFrame = _load_filter_sort_postprocess(
-            filter_query=filter_query, sort_by_key=sort_by_key
+        dff, height, total_unique = _fetch_page_sql(
+            filter_query=filter_query,
+            sort_by_key=sort_by_key,
+            page_current=page_current,
+            page_size=page_size,
         )
     else:
         if isinstance(data, list):
@@ -450,23 +505,24 @@ def prepare_table_data(
         if filter_query:
             lff = filter_table_data(lff, filter_query)
 
+        df_height = lff.select("uid").collect(engine="streaming")
+        height = df_height.height
+        total_unique = df_height["uid"].n_unique()
+
         if sort_by and len(sort_by) > 0:
             lff = sort_table_data(lff, sort_by)
 
-        dff: pl.DataFrame = table_postprocess(lff)
-
-    height = dff.height
+        start_row = page_current * page_size
+        lff = lff.slice(start_row, page_size)
+        dff = lff.collect(engine="streaming")
+        dff: pl.DataFrame = postprocess_page(dff)
 
     if height > 0:
         nb_rows = (
-            f"{format_number(height)} lignes "
-            f"({format_number(dff.select('uid').unique().height)} marchés)"
+            f"{format_number(height)} lignes ({format_number(total_unique)} marchés)"
         )
     else:
         nb_rows = "0 lignes (0 marchés)"
-
-    start_row = page_current * page_size
-    dff = dff.slice(start_row, page_size)
 
     table_columns, tooltip = setup_table_columns(dff)
 
@@ -502,3 +558,34 @@ def invert_columns(columns):
 
 
 COLUMNS = schema.names()
+
+_EXCEL_MIN_COLUMN_WIDTH = 132  # ≈ 3.5 cm à 96 DPI
+_EXCEL_HEADER_FORMAT = {
+    "bold": True,
+    "bg_color": "#b33821",
+    "font_color": "white",
+}
+_EXCEL_COLUMN_WIDTHS = {
+    "objet": 350,
+    "acheteur_nom": 250,
+    "titulaire_nom": 250,
+    "acheteur_id": 160,
+}
+
+
+def write_styled_excel(df: pl.DataFrame, buffer, worksheet: str = "DECP") -> None:
+    col_widths = {
+        col: max(_EXCEL_MIN_COLUMN_WIDTH, _EXCEL_COLUMN_WIDTHS.get(col, 0))
+        for col in df.columns
+    }
+    wb = xlsxwriter.Workbook(buffer, {"default_format_properties": {"text_wrap": True}})
+    try:
+        ws = wb.add_worksheet(worksheet)
+        df.write_excel(
+            workbook=wb,
+            worksheet=ws,
+            header_format=_EXCEL_HEADER_FORMAT,
+            column_widths=col_widths,
+        )
+    finally:
+        wb.close()

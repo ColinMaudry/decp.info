@@ -3,6 +3,41 @@
 - comptes utilisateurs : inscription avec vérification d'email, connexion,
   réinitialisation de mot de passe, page compte (#73)
 
+#### 2.8.0
+
+- Ajout des considérations sociales et environnementales à l'observatoire
+- Les filtres textuels dans les vues tableaux ne sont plus sensibles à l'accentuation
+- API privée tabulaire sur abonnement (filtres dynamiques, pagination, tri) avec documentation interactive Swagger UI à `/api/v1/swagger` (📨 <colin@colmo.tech> si intéressé)
+
+##### 2.7.9 (9 juin 2026)
+
+- Ajout d'une vue "étapes" (elle sera mieux intégrée dans le site à l'avenir)
+- Correction de petites erreurs qui polluent les logs
+
+##### 2.7.8 (18 mai 2026)
+
+- Récupération du schéma de données plus robuste, ne pas dépendre de data.gouv.fr
+
+##### 2.7.7 (11 mai 2026)
+
+- Suppression des mentions sur les profils d'acheteur. Omnikles/Safetender publie via l'API DUME et Klekoon ne publie pas, mais c'est peut-être pas le seul, donc je préfère supprimer et refaire un tour.
+
+##### 2.7.6 (5 mai 2026)
+
+- Correction du problème de filtre par date dans les tableaux
+- Retour des cartes dans les pages acheteur et titulaire
+- Possibilité de chercher un SIRET/SIREN avec des espaces dans les champs `SIRET acheteur` et `Identifiant titulaire`
+
+##### 2.7.5 (24 avril 2026)
+
+- Amélioration des permormances de l'observatoire
+- Possibilité dans observatoire (champ objet) et tableau (tous champs texte) de soit chercher des mots présents, soit une suite de mot précise (voir mode d'emploi dans Tableau)
+- Ajout d'une animation pendant le chargement de la prévisualisation des données de l'observatoire
+
+##### 2.7.4 (22 avril 2026)
+
+- Utilisation élargie de DuckDB au détriment de Polars => bien meilleure perf ([#72](https://github.com/ColinMaudry/decp.info/issues/72)
+
 ##### 2.7.3 (20 avril 2026)
 
 - Mise en cache des vues tableau par ensemble de filtres et de tris

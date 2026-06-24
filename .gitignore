@@ -11,3 +11,4 @@ build
 **/decp.duckdb
 **/decp.duckdb.tmp
 **/decp.duckdb.lock
+**/schema.cache.json

@@ -2,6 +2,7 @@ import polars as pl
 from dash import Input, Output, callback, dcc, html, register_page
 
 from src.db import get_cursor
+from src.utils import logger
 from src.utils.data import DF_ACHETEURS, DF_TITULAIRES
 
 NAME = "Liste des marchés publics"
@@ -27,9 +28,12 @@ def make_org_nom_verbe(org_type, org_id) -> tuple:
 
 
 def get_title(code, org_type, org_id):
-    org_nom, verbe = make_org_nom_verbe(org_type, org_id)
-
-    return f"Marchés publics {verbe} par {org_nom} | decp.info"
+    if org_type:
+        org_nom, verbe = make_org_nom_verbe(org_type, org_id)
+        return f"Marchés publics {verbe} par {org_nom} | decp.info"
+    else:
+        logger.warning(f"Pas de org_type pour org_id: {org_id}")
+        return "Marchés publics | decp.info"
 
 
 def get_description(code, org_type, org_id):

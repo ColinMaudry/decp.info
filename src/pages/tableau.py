@@ -21,7 +21,7 @@ from dash import (
 
 from src.db import query_marches, schema
 from src.figures import DataTable, make_column_picker
-from src.utils import logger
+from src.utils import get_data_update_timestamp, logger
 from src.utils.seo import META_CONTENT
 from src.utils.table import (
     COLUMNS,
@@ -30,12 +30,20 @@ from src.utils.table import (
     invert_columns,
     prepare_table_data,
     sort_table_data,
+    write_styled_excel,
 )
 from src.utils.tracking import track_search
 
-update_date_timestamp = os.path.getmtime(os.getenv("DATA_FILE_PARQUET_PATH"))
-update_date = datetime.fromtimestamp(update_date_timestamp).strftime("%d/%m/%Y")
-update_date_iso = datetime.fromtimestamp(update_date_timestamp).isoformat()
+update_date_timestamp = get_data_update_timestamp(
+    os.getenv("DATA_FILE_PARQUET_PATH", ""),
+    os.getenv("DUCKDB_PATH", "./decp.duckdb"),
+)
+if update_date_timestamp is not None:
+    update_date = datetime.fromtimestamp(update_date_timestamp).strftime("%d/%m/%Y")
+    update_date_iso = datetime.fromtimestamp(update_date_timestamp).isoformat()
+else:
+    update_date = "date inconnue"
+    update_date_iso = ""
 
 
 NAME = "Tableau"
@@ -117,7 +125,11 @@ layout = [
                             "contentUrl": "https://www.data.gouv.fr/api/1/datasets/r/11cea8e8-df3e-4ed1-932b-781e2635e432",
                         },
                     ],
-                    "temporalCoverage": f"2018-01-01/{update_date_iso[:10]}",
+                    **(
+                        {"temporalCoverage": f"2018-01-01/{update_date_iso[:10]}"}
+                        if update_date_iso
+                        else {}
+                    ),
                     "spatialCoverage": {
                         "@type": "Place",
                         "address": {"countryCode": "FR"},
@@ -163,18 +175,19 @@ layout = [
 
             Vous pouvez appliquer un filtre pour chaque colonne en entrant du texte sous le nom de la colonne, puis en tapant sur `Entrée`.
 
-            - Champs textuels : la recherche retourne les valeurs qui contiennent le texte recherché et n'est pas sensible à la casse (majuscules/minuscules).
-                - Exemple : `rennes` retourne "RENNES METROPOLE".
+            - Champs textuels : la recherche retourne les valeurs qui contiennent le texte recherché, n'est sensible ni à la casse (majuscules/minuscules), ni à l'accentuation.
+                - `rennes` => le texte contient "rennes"
+                - `metro* *pole` => le texte contient un mot qui commence par "metro" et un mot qui finit par "pole"
+                - `metropole rennes` => le texte contient les mots "metropole" et "rennes", n'importe où dans le texte
+                - `métropole+rennes` => le texte contient "metropole rennes" ou "métropole rennes", collé et dans cet ordre
+                - `metropole+rennes travaux distri*` => le texte contient "metropole rennes", "travaux" et un mot qui commence par "distri"
                 - Les guillemets simples (apostrophe du 4) doivent être prédédées d'une barre oblique (AltGr + 8). Exemple : `services d\\\'assurances`
             - Champs numériques (Durée en mois, Montant, ...) : vous pouvez...
                 - soit taper un nombre pour trouver les valeurs strictement égales. Exemple : `12` ne retourne que des 12
                 - soit le précéder de **>** ou **<** pour filtrer les valeurs supérieures ou inférieures. Exemple pour les offres reçues : `> 4` retourne les marchés ayant reçu plus de 4 offres.
-            - Champs date (Date de notification, ...) : vous pouvez également utiliser **>** ou **<**. Exemples :
+            - Champs date (Date de notification, ...) :
                 - `< 2024-01-31` pour "avant le 31 janvier 2024"
-                - `2024` pour "en 2024", `> 2022` pour "à partir de 2022".
-            - Pour les champs textuels et les champs dates :
-                - pour chercher du texte qui **commence par** votre texte, entrez `texte*`. C'est par exemple utile pour filtrer des acheteurs ou titulaires par numéro SIREN (`123456789*`) ou les marchés sur une année en particulier (`2024*`)
-                - pour chercher du texte qui **finit par** votre texte, entrez `*texte`
+                - `2024` pour "en 2024", `> 2022` pour "à partir de 2022"
 
             Vous pouvez filtrer plusieurs colonnes à la fois.
 
@@ -330,7 +343,7 @@ def download_data(n_clicks, filter_query, sort_by, hidden_columns: list | None =
         lff = sort_table_data(lff, sort_by)
 
     def to_bytes(buffer):
-        lff.collect(engine="streaming").write_excel(buffer, worksheet="DECP")
+        write_styled_excel(lff.collect(engine="streaming"), buffer)
 
     date = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     return dcc.send_bytes(to_bytes, filename=f"decp_{date}.xlsx")
