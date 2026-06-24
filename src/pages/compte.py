@@ -1,7 +1,6 @@
 import dash_bootstrap_components as dbc
-from dash import Input, Output, callback, dcc, html, register_page
+from dash import dcc, html, register_page
 from flask_login import current_user
-from flask_wtf.csrf import generate_csrf
 
 NAME = "Mon compte"
 
@@ -42,7 +41,11 @@ def layout(error: str | None = None, password_changed: str | None = None, **_):
                 method="POST",
                 action="/auth/change-password",
                 children=[
-                    dcc.Input(type="hidden", id="csrf-change", name="csrf_token"),
+                    dcc.Input(
+                        type="hidden",
+                        id={"type": "csrf-input", "index": "change"},
+                        name="csrf_token",
+                    ),
                     dbc.Label("Mot de passe actuel"),
                     dbc.Input(
                         type="password",
@@ -74,19 +77,13 @@ def layout(error: str | None = None, password_changed: str | None = None, **_):
                 method="POST",
                 action="/auth/logout",
                 children=[
-                    dcc.Input(type="hidden", id="csrf-logout", name="csrf_token"),
+                    dcc.Input(
+                        type="hidden",
+                        id={"type": "csrf-input", "index": "logout"},
+                        name="csrf_token",
+                    ),
                     dbc.Button("Déconnexion", type="submit", color="secondary"),
                 ],
             ),
         ],
     )
-
-
-@callback(Output("csrf-change", "value"), Input("csrf-change", "id"))
-def _fill_csrf_change(_):
-    return generate_csrf()
-
-
-@callback(Output("csrf-logout", "value"), Input("csrf-logout", "id"))
-def _fill_csrf_logout(_):
-    return generate_csrf()

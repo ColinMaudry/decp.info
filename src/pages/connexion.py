@@ -1,6 +1,5 @@
 import dash_bootstrap_components as dbc
-from dash import Input, Output, callback, dcc, html, register_page
-from flask_wtf.csrf import generate_csrf
+from dash import dcc, html, register_page
 
 NAME = "Connexion"
 
@@ -47,7 +46,11 @@ def layout(error: str | None = None, email: str | None = None, **kwargs):
                 method="POST",
                 action="/auth/login",
                 children=[
-                    dcc.Input(type="hidden", id="csrf-login", name="csrf_token"),
+                    dcc.Input(
+                        type="hidden",
+                        id={"type": "csrf-input", "index": "login"},
+                        name="csrf_token",
+                    ),
                     dcc.Input(type="hidden", name="next", value=next_url),
                     dbc.Label("Adresse email"),
                     dbc.Input(
@@ -77,8 +80,3 @@ def layout(error: str | None = None, email: str | None = None, **kwargs):
             ),
         ],
     )
-
-
-@callback(Output("csrf-login", "value"), Input("csrf-login", "id"))
-def _fill_csrf(_):
-    return generate_csrf()

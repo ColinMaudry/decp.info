@@ -1,6 +1,5 @@
 import dash_bootstrap_components as dbc
-from dash import Input, Output, callback, dcc, html, register_page
-from flask_wtf.csrf import generate_csrf
+from dash import dcc, html, register_page
 
 NAME = "Mot de passe oublié"
 
@@ -46,7 +45,11 @@ def layout(
                 method="POST",
                 action="/auth/request-password-reset",
                 children=[
-                    dcc.Input(type="hidden", id="csrf-forgot", name="csrf_token"),
+                    dcc.Input(
+                        type="hidden",
+                        id={"type": "csrf-input", "index": "forgot"},
+                        name="csrf_token",
+                    ),
                     dbc.Label("Adresse email"),
                     dbc.Input(
                         type="email",
@@ -62,8 +65,3 @@ def layout(
             dcc.Link("Retour à la connexion", href="/connexion"),
         ],
     )
-
-
-@callback(Output("csrf-forgot", "value"), Input("csrf-forgot", "id"))
-def _fill_csrf(_):
-    return generate_csrf()

@@ -5,11 +5,13 @@ import dash_bootstrap_components as dbc
 import pandas  # noqa: F401  # eager import: avoid plotly's lazy-import race across Dash callback threads
 import tomllib
 from dash import (
+    ALL,
     Dash,
     Input,
     Output,
     State,
     callback,
+    ctx,
     dcc,
     html,
     page_container,
@@ -228,6 +230,7 @@ navbar = dbc.Navbar(
 
 app.layout = html.Div(
     [
+        dcc.Store(id="csrf-token"),
         navbar,
         dbc.Container(
             page_container,
@@ -272,7 +275,7 @@ def _auth_nav(_):
                         children=[
                             dcc.Input(
                                 type="hidden",
-                                id="csrf-navbar-logout",
+                                id={"type": "csrf-input", "index": "navbar-logout"},
                                 name="csrf_token",
                             ),
                             html.Button(
@@ -293,10 +296,20 @@ def _auth_nav(_):
 
 
 @callback(
-    Output("csrf-navbar-logout", "value"),
-    Input("csrf-navbar-logout", "id"),
+    Output("csrf-token", "data"),
+    Input("_pages_location", "pathname"),
+    Input("auth-nav-slot", "children"),
 )
-def _csrf_navbar_logout(_):
+def _generate_csrf_token(*_):
     from flask_wtf.csrf import generate_csrf
 
     return generate_csrf()
+
+
+@callback(
+    Output({"type": "csrf-input", "index": ALL}, "value"),
+    Input("csrf-token", "data"),
+    prevent_initial_call=True,
+)
+def _fill_csrf_inputs(token):
+    return [token] * len(ctx.outputs_list)
