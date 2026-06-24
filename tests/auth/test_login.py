@@ -17,7 +17,7 @@ def test_login_success(client, users_db_path):
         data={"email": "a@b.c", "password": "password12"},
     )
     assert resp.status_code == 302
-    assert resp.headers["Location"].endswith("/compte")
+    assert resp.headers["Location"].endswith("/compte/admin")
 
 
 def test_login_wrong_password(client, users_db_path):
@@ -63,7 +63,7 @@ def test_login_rejects_absolute_next(client, users_db_path):
             "next": "https://evil.com",
         },
     )
-    assert resp.headers["Location"].endswith("/compte")
+    assert resp.headers["Location"].endswith("/compte/admin")
 
 
 def test_logout_clears_session(client, users_db_path):

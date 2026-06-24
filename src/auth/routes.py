@@ -71,7 +71,7 @@ def verify_email():
 def login():
     email = (request.form.get("email") or "").strip().lower()
     password = request.form.get("password") or ""
-    next_url = safe_next(request.form.get("next"), fallback="/compte")
+    next_url = safe_next(request.form.get("next"), fallback="/compte/admin")
 
     row = db.get_user_by_email(email)
     if row is None:
@@ -181,6 +181,7 @@ def change_email():
         return _redirect_with_error("/compte/admin", "email_taken")
 
     db.set_pending_email(current_user.id, email)
+    db.delete_email_verification_tokens_for_user(current_user.id)
     token = tokens.create_verification_token(current_user.id)
     try:
         mailer.send_email_change_email(email, token)
@@ -197,7 +198,9 @@ def confirm_email_change():
     user_id = tokens.consume_verification_token(token)
     if user_id is None:
         return redirect("/compte/admin?error=invalid_token")
-    db.promote_pending_email(user_id)
+    new_email = db.promote_pending_email(user_id)
+    if new_email is None:
+        return redirect("/compte/admin?error=invalid_token")
     return redirect("/compte/admin?email_changed=1")
 
 
