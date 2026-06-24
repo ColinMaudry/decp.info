@@ -62,3 +62,6 @@ env = [
   "DATA_SCHEMA_LOCAL=/home/colin/git/decp-processing/dist/schema.json",
 ]
 addopts = "-p no:warnings"
+markers = [
+    "integration: tests touchant des services externes (Brevo) ; skippés par défaut en CI",
+]
