@@ -102,7 +102,13 @@ def has_active_subscription(user_id: int) -> bool:
     if row["status"] in _ACCESS_STATUSES:
         return True
     if row["status"] == "cancelled" and row["current_period_end"]:
-        return row["current_period_end"] > _now()
+        try:
+            end = datetime.fromisoformat(
+                row["current_period_end"].replace("Z", "+00:00")
+            )
+            return end > datetime.now(timezone.utc)
+        except ValueError:
+            return False
     return False
 
 

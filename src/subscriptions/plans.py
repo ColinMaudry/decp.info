@@ -30,16 +30,20 @@ PLANS = {
 
 def resolve_handle(key: str) -> str | None:
     meta = PLANS.get(key)
-    return _handle(meta["env"]) if meta else None
+    if meta is None:
+        return None
+    h = _handle(meta["env"])
+    return h if h else None
 
 
 def plan_meta(key: str) -> dict | None:
     meta = PLANS.get(key)
     if meta is None:
         return None
+    h = _handle(meta["env"])
     return {
         "key": key,
-        "handle": _handle(meta["env"]),
+        "handle": h if h else None,
         "label": meta["label"],
         "prix_ht": meta["prix_ht"],
         "description": meta["description"],

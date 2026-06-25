@@ -39,3 +39,17 @@ def test_trial_days_none_on_error(monkeypatch):
 def test_trial_days_none_when_no_trial(monkeypatch):
     monkeypatch.setattr(client, "get_plan", lambda h: {"trial_interval": None})
     assert plans.trial_days("simple") is None
+
+
+def test_resolve_handle_unset_env_returns_none(monkeypatch):
+    """Fix 3 : une variable d'env vide doit donner None, pas une chaîne vide."""
+    monkeypatch.delenv("FRISBII_PLAN_SIMPLE", raising=False)
+    assert plans.resolve_handle("simple") is None
+
+
+def test_plan_meta_handle_none_when_unset(monkeypatch):
+    """Fix 3 : plan_meta doit exposer handle=None quand l'env var est absente."""
+    monkeypatch.delenv("FRISBII_PLAN_SIMPLE", raising=False)
+    meta = plans.plan_meta("simple")
+    assert meta is not None
+    assert meta["handle"] is None

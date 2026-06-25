@@ -22,6 +22,9 @@ def subscribe():
         return "Plan inconnu", 400
 
     base = os.getenv("APP_BASE_URL", "")
+    if db.has_active_subscription(current_user.id):
+        return redirect(f"{base}/compte/abonnement")
+
     cust = _customer_handle(current_user.id)
     try:
         client.get_or_create_customer(cust, current_user.email)
