@@ -13,6 +13,18 @@ from src.utils import logger
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
+
+def _post_login_url(user_id: int) -> str:
+    try:
+        from src.subscriptions import db as sub_db
+
+        if sub_db.has_active_subscription(user_id):
+            return "/compte/admin"
+    except Exception:
+        pass
+    return "/compte/abonnement"
+
+
 MIN_PASSWORD_LENGTH = 8
 
 # Hash bidon pré-calculé pour uniformiser le timing login
@@ -93,7 +105,7 @@ def verify_email():
 def login():
     email = (request.form.get("email") or "").strip().lower()
     password = request.form.get("password") or ""
-    next_url = safe_next(request.form.get("next"), fallback="/compte/admin")
+    next_url = request.form.get("next")
 
     row = db.get_user_by_email(email)
     if row is None:
@@ -109,7 +121,7 @@ def login():
         return _redirect_with_error("/connexion", "email_not_verified", email)
 
     login_user(User(row), remember=True)
-    return redirect(next_url)
+    return redirect(safe_next(next_url, fallback=_post_login_url(row["id"])))
 
 
 @auth_bp.route("/logout", methods=["POST"])
@@ -259,7 +271,7 @@ def linkedin_login():
 
 @auth_bp.route("/linkedin/callback", methods=["GET"])
 def linkedin_callback():
-    next_url = safe_next(session.pop("oauth_next", None), fallback="/compte/admin")
+    oauth_next = session.pop("oauth_next", None)
     if request.args.get("error"):
         # L'utilisateur a refusé / annulé l'autorisation côté LinkedIn.
         return _redirect_with_error("/connexion", "oauth_cancelled")
@@ -290,4 +302,4 @@ def linkedin_callback():
         "linkedin", subject, email, bool(userinfo.get("email_verified"))
     )
     login_user(user, remember=True)
-    return redirect(next_url)
+    return redirect(safe_next(oauth_next, fallback=_post_login_url(user.id)))

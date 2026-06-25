@@ -90,6 +90,10 @@ from src.api import init_api  # noqa: E402  # inline: src.db.conn must be ready 
 
 init_api(app.server)
 
+from src.subscriptions.setup import init_subscriptions  # noqa: E402
+
+init_subscriptions(app.server)
+
 
 # robots.txt
 @app.server.route("/robots.txt")

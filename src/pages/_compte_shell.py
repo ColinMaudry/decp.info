@@ -6,15 +6,15 @@ from flask_login import current_user
 # Ajouter une section future = ajouter une ligne ici (+ créer sa page).
 SECTIONS = [
     {
-        "key": "admin",
-        "label": "Compte",
-        "href": "/compte/admin",
-        "require_subscription": False,
-    },
-    {
         "key": "abonnement",
         "label": "Abonnement",
         "href": "/compte/abonnement",
+        "require_subscription": False,
+    },
+    {
+        "key": "admin",
+        "label": "Compte",
+        "href": "/compte/admin",
         "require_subscription": False,
     },
     {
@@ -39,8 +39,11 @@ SECTIONS = [
 
 
 def current_user_has_subscription() -> bool:
-    """Stub : à brancher sur la facturation (issue #73)."""
-    return False
+    from src.subscriptions import db
+
+    if not current_user.is_authenticated:
+        return False
+    return db.has_active_subscription(current_user.id)
 
 
 def visible_sections(has_subscription: bool) -> list[dict]:
