@@ -15,7 +15,7 @@ def _handle(env_name: str) -> str:
 PLANS = {
     "simple": {
         "env": "FRISBII_PLAN_SIMPLE",
-        "label": "Abonnement simple",
+        "label": "Abonnement",
         "prix_ht": 20,
         "description": "Accès à des fonctionnalités supplémentaires de decp.info.",
     },
@@ -50,14 +50,11 @@ def plan_meta(key: str) -> dict | None:
     }
 
 
-def _parse_trial_interval(value) -> int | None:
-    # Reepay/Frisbii renvoie une durée type "2d" (jours), "1m" (mois), etc.
-    # On ne sait afficher que les jours pour l'instant ; format à confirmer.
-    if not value or not isinstance(value, str):
-        return None
-    value = value.strip().lower()
-    if value.endswith("d") and value[:-1].isdigit():
-        return int(value[:-1])
+def _parse_trial_interval(plan: dict) -> int | None:
+    unit = plan.get("trial_interval_unit", "")
+    length = plan.get("trial_interval_length")
+    if unit == "days" and isinstance(length, int) and length > 0:
+        return length
     return None
 
 
@@ -77,6 +74,6 @@ def trial_days(key: str) -> int | None:
     # L'API Frisbii/Reepay renvoie une liste de versions ; on prend la dernière (la plus récente).
     if isinstance(plan, list):
         plan = plan[-1] if plan else {}
-    days = _parse_trial_interval(plan.get("trial_interval"))
+    days = _parse_trial_interval(plan)
     _trial_cache[handle] = (now, days)
     return days

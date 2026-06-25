@@ -29,9 +29,7 @@ def _plan_card(meta: dict, trial: int | None, trial_used: bool):
             className="text-muted mb-2",
         )
     elif trial:
-        badge = html.Div(
-            f"{trial} jours d'essai gratuit", className="text-success mb-2"
-        )
+        badge = html.Div(f"{trial} jours d'essai gratuit", className="mb-2")
     else:
         badge = None
     return dbc.Card(
