@@ -45,3 +45,36 @@ def fake_httpx(monkeypatch):
     monkeypatch.setenv("FRISBII_API_BASE_URL", "https://api.test")
     monkeypatch.setattr(client.httpx, "request", _fake_request)
     return {"calls": calls, "queue": queue, "Response": FakeResponse}
+
+
+@pytest.fixture
+def sub_app(users_db_path, monkeypatch):
+    from flask import Flask
+
+    from src.auth.setup import init_auth
+    from src.subscriptions.setup import init_subscriptions
+
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("APP_BASE_URL", "http://localhost:8050")
+    monkeypatch.setenv("FRISBII_PLAN_SIMPLE", "plan_simple")
+    monkeypatch.setenv("FRISBII_PLAN_SOUTIEN", "plan_soutien")
+    monkeypatch.setenv("FRISBII_WEBHOOK_SECRET", "s3cr3t")
+    app = Flask(__name__)
+    app.config["WTF_CSRF_ENABLED"] = False
+    init_auth(app)
+    init_subscriptions(app)
+    return app
+
+
+@pytest.fixture
+def logged_in_client(sub_app):
+    from src.auth import db as auth_db
+
+    auth_db.init_schema()
+    uid = auth_db.create_user("sub@ex.fr", "hash")
+    auth_db.set_email_verified(uid)
+    client = sub_app.test_client()
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(uid)
+        sess["_fresh"] = True
+    return client, uid
