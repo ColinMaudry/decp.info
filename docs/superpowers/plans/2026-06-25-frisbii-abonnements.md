@@ -39,7 +39,7 @@
 
   - `class FrisbiiError(Exception)` avec attribut `.status_code: int` et `.body`.
   - `get_or_create_customer(handle: str, email: str) -> dict`
-  - `create_subscription_session(plan_handle: str, customer_handle: str, accept_url: str, cancel_url: str) -> str` (renvoie l'URL hébergée)
+  - `create_subscription_session(plan_handle: str, customer_handle: str, accept_url: str, cancel_url: str, no_trial: bool = False) -> str` (renvoie l'URL hébergée ; `no_trial=True` désactive l'essai du plan pour cette souscription)
   - `cancel_subscription(subscription_handle: str) -> dict`
   - `get_subscription(subscription_handle: str) -> dict`
   - `get_plan(plan_handle: str) -> dict`
@@ -135,6 +135,14 @@ def test_create_subscription_session_returns_url(fake_httpx):
     assert body["cancel_url"] == "https://app/ko"
 
 
+def test_create_subscription_session_no_trial(fake_httpx):
+    fake_httpx["queue"].append(fake_httpx["Response"](200, {"url": "https://pay.test/cs_2"}))
+    client.create_subscription_session(
+        "plan_simple", "decpinfo-1", "https://app/ok", "https://app/ko", no_trial=True
+    )
+    assert fake_httpx["calls"][0]["json"]["prepare_subscription"]["no_trial"] is True
+
+
 def test_http_error_raises_frisbii_error(fake_httpx):
     fake_httpx["queue"].append(fake_httpx["Response"](500, {"error": "boom"}))
     with pytest.raises(client.FrisbiiError) as exc:
@@ -201,15 +209,22 @@ def get_or_create_customer(handle: str, email: str) -> dict:
 
 
 def create_subscription_session(
-    plan_handle: str, customer_handle: str, accept_url: str, cancel_url: str
+    plan_handle: str,
+    customer_handle: str,
+    accept_url: str,
+    cancel_url: str,
+    no_trial: bool = False,
 ) -> str:
+    prepare = {"plan": plan_handle, "customer": customer_handle}
+    if no_trial:
+        prepare["no_trial"] = True
     data = _call(
         "POST",
         "/v1/session/subscription",
         json={
             "accept_url": accept_url,
             "cancel_url": cancel_url,
-            "prepare_subscription": {"plan": plan_handle, "customer": customer_handle},
+            "prepare_subscription": prepare,
         },
     )
     return data["url"]
@@ -230,7 +245,7 @@ def get_plan(plan_handle: str) -> dict:
 - [ ] **Step 5: Lancer les tests pour vérifier le succès**
 
 Run: `uv run pytest tests/subscriptions/test_client.py -v`
-Expected: PASS (5 tests).
+Expected: PASS (6 tests).
 
 - [ ] **Step 6: Commit**
 
@@ -260,6 +275,7 @@ git commit -m "feat(abonnement): client HTTP Frisbii (#90)"
   - `update_from_webhook(customer_handle: str, subscription_handle: str | None, status: str, current_period_end: str | None) -> None`
   - `set_cancelled(user_id: int, current_period_end: str | None) -> None`
   - `has_active_subscription(user_id: int) -> bool`
+  - `has_used_trial(user_id: int) -> bool` (anti-abus : essai déjà consommé ?)
 
 - [ ] **Step 1: Écrire les tests du module DB**
 
@@ -344,6 +360,20 @@ def test_set_cancelled(users_db_path):
     row = db.get_by_user(uid)
     assert row["status"] == "cancelled"
     assert row["current_period_end"] == end
+
+
+def test_trial_used_is_sticky_across_resubscribe(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.create_pending(uid, "decpinfo-1", "simple")
+    assert db.has_used_trial(uid) is False
+    # l'abonnement entre en essai → trial_used positionné
+    db.update_from_webhook("decpinfo-1", "sub_42", "trial", _future())
+    assert db.has_used_trial(uid) is True
+    # essai abandonné, puis nouvelle souscription : trial_used reste vrai
+    db.update_from_webhook("decpinfo-1", "sub_42", "expired", _past())
+    db.create_pending(uid, "decpinfo-1", "soutien")
+    assert db.has_used_trial(uid) is True
 ```
 
 - [ ] **Step 2: Lancer les tests pour vérifier l'échec**
@@ -369,6 +399,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     plan                        TEXT,
     status                      TEXT,
     current_period_end          TEXT,
+    trial_used                  INTEGER NOT NULL DEFAULT 0,
     created_at                  TEXT NOT NULL,
     updated_at                  TEXT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -426,12 +457,21 @@ def update_from_webhook(
     status: str,
     current_period_end: str | None,
 ) -> None:
+    trial_flag = 1 if status in _ACCESS_STATUSES else 0
     get_conn().execute(
         "UPDATE subscriptions SET "
         "frisbii_subscription_handle = COALESCE(?, frisbii_subscription_handle), "
-        "status = ?, current_period_end = ?, updated_at = ? "
+        "status = ?, current_period_end = ?, "
+        "trial_used = max(trial_used, ?), updated_at = ? "
         "WHERE frisbii_customer_handle = ?",
-        (subscription_handle, status, current_period_end, _now(), customer_handle),
+        (
+            subscription_handle,
+            status,
+            current_period_end,
+            trial_flag,
+            _now(),
+            customer_handle,
+        ),
     )
 
 
@@ -452,12 +492,17 @@ def has_active_subscription(user_id: int) -> bool:
     if row["status"] == "cancelled" and row["current_period_end"]:
         return row["current_period_end"] > _now()
     return False
+
+
+def has_used_trial(user_id: int) -> bool:
+    row = get_by_user(user_id)
+    return bool(row and row["trial_used"])
 ```
 
 - [ ] **Step 4: Lancer les tests pour vérifier le succès**
 
 Run: `uv run pytest tests/subscriptions/test_db.py -v`
-Expected: PASS (5 tests).
+Expected: PASS (6 tests).
 
 - [ ] **Step 5: Commit**
 
@@ -875,12 +920,32 @@ def test_subscribe_redirects_to_hosted_url(logged_in_client, monkeypatch):
     monkeypatch.setattr(
         frisbii_client,
         "create_subscription_session",
-        lambda plan, cust, ok, ko: "https://pay.test/cs_1",
+        lambda plan, cust, ok, ko, no_trial=False: "https://pay.test/cs_1",
     )
     resp = client.post("/subscriptions/subscribe", data={"plan": "simple"})
     assert resp.status_code == 303
     assert resp.headers["Location"] == "https://pay.test/cs_1"
     assert db.get_by_user(uid)["status"] == "pending"
+
+
+def test_subscribe_disables_trial_after_first_use(logged_in_client, monkeypatch):
+    client, uid = logged_in_client
+    # L'utilisateur a déjà consommé un essai par le passé.
+    db.create_pending(uid, "decpinfo-%d" % uid, "simple")
+    db.update_from_webhook("decpinfo-%d" % uid, "sub_42", "trial", "2099-01-01T00:00:00+00:00")
+    captured = {}
+    monkeypatch.setattr(
+        frisbii_client, "get_or_create_customer", lambda h, e: {"handle": h}
+    )
+
+    def fake_session(plan, cust, ok, ko, no_trial=False):
+        captured["no_trial"] = no_trial
+        return "https://pay.test/cs_9"
+
+    monkeypatch.setattr(frisbii_client, "create_subscription_session", fake_session)
+    resp = client.post("/subscriptions/subscribe", data={"plan": "soutien"})
+    assert resp.status_code == 303
+    assert captured["no_trial"] is True
 
 
 def test_subscribe_unknown_plan(logged_in_client):
@@ -992,11 +1057,14 @@ def subscribe():
     try:
         client.get_or_create_customer(cust, current_user.email)
         db.create_pending(current_user.id, cust, plan_key)
+        # Anti-abus : pas de nouvel essai si l'utilisateur en a déjà consommé un.
+        no_trial = db.has_used_trial(current_user.id)
         url = client.create_subscription_session(
             handle,
             cust,
             f"{base}/compte/abonnement?paiement=succes",
             f"{base}/compte/abonnement?paiement=annule",
+            no_trial=no_trial,
         )
     except client.FrisbiiError:
         logger.exception("Échec de création de session d'abonnement Frisbii")
@@ -1110,7 +1178,7 @@ FRISBII_WEBHOOK_SECRET=          # secret de signature des webhooks
 - [ ] **Step 8: Lancer les tests pour vérifier le succès**
 
 Run: `uv run pytest tests/subscriptions/test_routes.py -v`
-Expected: PASS (7 tests).
+Expected: PASS (8 tests).
 
 - [ ] **Step 9: Commit**
 

@@ -43,6 +43,17 @@ les branche sur Frisbii.
    automatiquement de `trial` à `active`. Si le paiement échoue → `expired`. Une
    résiliation pendant l'essai expire en **fin d'essai** (pas de débit). Pendant
    l'essai, l'utilisateur a **accès aux fonctions premium**.
+
+   **Anti-abus (un seul essai par compte).** Frisbii ne restreint pas l'essai par
+   client : sans garde-fou, un utilisateur pourrait s'abonner, résilier avant la fin
+   de l'essai (sans débit) et recommencer indéfiniment. On mémorise donc côté app un
+   indicateur `trial_used` (positionné dès que l'abonnement entre en `trial` ou
+   `active`). À toute souscription ultérieure d'un utilisateur dont `trial_used` est
+   vrai, la session est créée avec **`no_trial=true`** → passage direct en `active`,
+   débit immédiat, sans nouvel essai. _Limite connue, non traitée :_ un utilisateur
+   pourrait créer plusieurs comptes decp.info (emails différents) pour refarmer des
+   essais — acceptable vu l'essai de 2 jours et le contexte d'intérêt public.
+
 5. **Résiliation en fin de période courante.** `POST` cancel Frisbii avec le
    comportement **par défaut** (expiration en fin de période courante — ou fin
    d'essai si en essai). L'accès est maintenu jusqu'à `current_period_end` renvoyé
@@ -104,6 +115,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     plan                        TEXT,   -- 'simple' | 'soutien'
     status                      TEXT,   -- 'pending' | 'trial' | 'active' | 'cancelled' | 'expired'
     current_period_end          TEXT,   -- ISO 8601, nullable
+    trial_used                  INTEGER NOT NULL DEFAULT 0,  -- 1 dès qu'un essai a été consommé
     created_at                  TEXT NOT NULL,
     updated_at                  TEXT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -144,6 +156,8 @@ Fonctions :
   - Form `plan=simple|soutien`. Résout le handle via `plans.py` (400 si inconnu).
   - `get_or_create_customer("decpinfo-{user_id}", email)`.
   - `upsert_subscription(..., status='pending')`.
+  - **Anti-abus** : si `trial_used` est déjà vrai pour cet utilisateur, la session est
+    créée avec `no_trial=true` (pas de nouvel essai gratuit).
   - `create_subscription_session(...)` avec
     `accept_url={APP_BASE_URL}/compte/abonnement?paiement=succes` et
     `cancel_url={APP_BASE_URL}/compte/abonnement?paiement=annule`.
@@ -169,6 +183,8 @@ Fonctions :
     - `invoice_settled` / renouvellement → `current_period_end` maj.
     - `subscription_cancelled` → `status='cancelled'`, `current_period_end` maj.
     - `subscription_expired` / échec de paiement terminal → `status='expired'`.
+  - Dès que le statut calculé est `trial` ou `active`, positionne `trial_used=1`
+    (anti-abus, valeur collante).
   - Événement inconnu → **200** (ignoré). Erreur de traitement → **5xx** pour que
     Frisbii réessaie. Les noms exacts d'événements seront confirmés depuis la doc
     Frisbii ; le dispatch est piloté par une table `EVENT_HANDLERS` facile à étendre.
