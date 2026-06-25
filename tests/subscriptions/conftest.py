@@ -2,6 +2,12 @@ import json as _json
 
 import pytest
 
+# Initialise un Dash minimal pour que register_page() fonctionne dans les tests
+# unitaires de pages (pas besoin du serveur complet — juste que CONFIG soit peuplé).
+from dash import Dash as _Dash
+
+_Dash(__name__, assets_folder="assets")
+
 
 class FakeResponse:
     def __init__(self, status_code: int, payload=None):
