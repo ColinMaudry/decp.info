@@ -1222,6 +1222,16 @@ def test_plan_cards_present_when_no_subscription(monkeypatch):
     assert "2 jours d'essai gratuit" in text
 
 
+def test_plan_cards_no_trial_when_trial_used(monkeypatch):
+    monkeypatch.setenv("FRISBII_PLAN_SIMPLE", "plan_simple")
+    monkeypatch.setenv("FRISBII_PLAN_SOUTIEN", "plan_soutien")
+    from src.pages import compte_abonnement
+
+    text = str(compte_abonnement._plan_cards(trial_used=True, trial_for=lambda key: 2))
+    assert "Sans période d'essai" in text
+    assert "2 jours d'essai gratuit" not in text
+
+
 def test_active_view_shows_cancel(monkeypatch):
     from src.pages import compte_abonnement
 
@@ -1271,12 +1281,16 @@ def _csrf_input(index: str):
     )
 
 
-def _plan_card(meta: dict, trial: int | None):
-    badge = (
-        html.Div(f"{trial} jours d'essai gratuit", className="text-success mb-2")
-        if trial
-        else None
-    )
+def _plan_card(meta: dict, trial: int | None, trial_used: bool):
+    if trial_used:
+        badge = html.Div(
+            "Sans période d'essai (déjà utilisée) — débit immédiat",
+            className="text-muted mb-2",
+        )
+    elif trial:
+        badge = html.Div(f"{trial} jours d'essai gratuit", className="text-success mb-2")
+    else:
+        badge = None
     return dbc.Card(
         dbc.CardBody(
             [
@@ -1299,12 +1313,12 @@ def _plan_card(meta: dict, trial: int | None):
     )
 
 
-def _plan_cards(trial_for=plans.trial_days):
+def _plan_cards(trial_used=False, trial_for=plans.trial_days):
     cards = []
     for key in _PLAN_KEYS:
         meta = plans.plan_meta(key)
         if meta:
-            cards.append(_plan_card(meta, trial_for(key)))
+            cards.append(_plan_card(meta, trial_for(key), trial_used))
     return dbc.Row([dbc.Col(c, md=6) for c in cards])
 
 
@@ -1393,11 +1407,15 @@ def layout(**query):
     row = db.get_by_user(current_user.id) if current_user.is_authenticated else None
     has_access = db.has_active_subscription(current_user.id) if current_user.is_authenticated else False
 
+    trial_used = (
+        db.has_used_trial(current_user.id) if current_user.is_authenticated else False
+    )
+
     body = [html.H2("Abonnement"), *_feedback(query)]
     if has_access and row is not None:
         body.append(_active_view(row))
     else:
-        body.extend([_plan_cards(), html.Hr(), _explainer()])
+        body.extend([_plan_cards(trial_used=trial_used), html.Hr(), _explainer()])
 
     return account_shell("abonnement", html.Div(body))
 ```
@@ -1428,7 +1446,7 @@ def current_user_has_subscription() -> bool:
 - [ ] **Step 5: Lancer les tests pour vérifier le succès**
 
 Run: `uv run pytest tests/subscriptions/test_compte_abonnement.py -v`
-Expected: PASS (3 tests).
+Expected: PASS (4 tests).
 
 - [ ] **Step 6: Lancer toute la suite abonnements + vérifs de non-régression compte**
 

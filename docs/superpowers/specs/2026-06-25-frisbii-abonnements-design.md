@@ -230,8 +230,13 @@ accessible sans abonnement). Le contenu dépend de l'état :
 
 - Deux cartes de plan (Simple 20 € HT/mois, Soutien 50 € HT/mois), chacune avec un
   formulaire `POST /subscriptions/subscribe` (input caché `plan` + CSRF) et un bouton
-  « S'abonner ». Mention « {n} jours d'essai gratuit » sur les cartes, où `{n}` est
-  lu depuis le plan via `plans.trial_days(key)` (masquée si le plan n'a pas d'essai).
+  « S'abonner ». Mention d'essai sur les cartes, selon l'éligibilité de l'utilisateur
+  (`db.has_used_trial`) :
+  - essai non encore utilisé et plan avec essai → « {n} jours d'essai gratuit »
+    (`{n}` lu depuis le plan via `plans.trial_days(key)`) ;
+  - essai déjà utilisé (souscription créée avec `no_trial=true`) → mention explicite
+    **« Sans période d'essai (déjà utilisée) — débit immédiat »** ;
+  - plan sans essai configuré → aucune mention.
 - Contenu pédagogique (issue #90) :
   - **À quoi servent les abonnements** : abonnement Frisbii 50 €, serveur Scaleway
     40 €, espace de coworking 250 €, salaire médian 3 840 €.
