@@ -195,6 +195,12 @@ p.version > a {
   text-wrap: wrap;
 }
 
+/* Account form */
+
+input[type="email"] {
+  max-width: 400px;
+}
+
 /* --- Dashboard inputs --- */
 
 .Select--multi .Select-value {

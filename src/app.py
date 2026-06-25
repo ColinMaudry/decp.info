@@ -262,37 +262,7 @@ def _auth_nav(_):
     if current_user.is_authenticated:
         email = current_user.email
         display = email if len(email) <= 30 else email[:27] + "..."
-        return dbc.DropdownMenu(
-            label=display,
-            nav=True,
-            in_navbar=True,
-            children=[
-                dbc.DropdownMenuItem("Mon compte", href="/compte/admin"),
-                dbc.DropdownMenuItem(
-                    html.Form(
-                        method="POST",
-                        action="/auth/logout",
-                        style={"display": "inline"},
-                        children=[
-                            dcc.Input(
-                                type="hidden",
-                                id={"type": "csrf-input", "index": "navbar-logout"},
-                                name="csrf_token",
-                            ),
-                            html.Button(
-                                "D\u00e9connexion",
-                                type="submit",
-                                className="btn btn-link p-0",
-                                style={
-                                    "textDecoration": "none",
-                                    "color": "inherit",
-                                },
-                            ),
-                        ],
-                    )
-                ),
-            ],
-        )
+        return dbc.NavItem(dbc.NavLink(display, href="/compte/admin"))
     return dbc.NavItem(dbc.NavLink("Connexion", href="/connexion"))
 
 

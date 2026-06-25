@@ -2,10 +2,13 @@ import argparse
 import os
 import sys
 
+from dotenv import load_dotenv
+
 from src.api import tokens_db
 
 
 def main(argv=None, env=None) -> int:
+    load_dotenv()
     env = env if env is not None else os.environ
     parser = argparse.ArgumentParser(prog="python -m src.api.tokens_cli")
     sub = parser.add_subparsers(dest="cmd", required=True)

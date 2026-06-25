@@ -70,12 +70,39 @@ def account_guard(path: str, require_subscription: bool):
     return dcc.Location(href=href, id="compte-guard-redirect") if href else None
 
 
+def _logout_item():
+    return dbc.NavItem(
+        html.Form(
+            method="POST",
+            action="/auth/logout",
+            children=[
+                dcc.Input(
+                    type="hidden",
+                    id={"type": "csrf-input", "index": "sidebar-logout"},
+                    name="csrf_token",
+                ),
+                html.Button(
+                    "Déconnexion",
+                    type="submit",
+                    className="nav-link",
+                    style={
+                        "background": "none",
+                        "border": "none",
+                        "width": "100%",
+                        "textAlign": "left",
+                    },
+                ),
+            ],
+        )
+    )
+
+
 def _nav(active: str):
     links = [
         dbc.NavLink(s["label"], href=s["href"], active=(s["key"] == active))
         for s in visible_sections(current_user_has_subscription())
     ]
-    return dbc.Nav(links, vertical=True, class_name="account-nav")
+    return dbc.Nav(links + [_logout_item()], vertical=True, class_name="account-nav")
 
 
 def account_shell(active: str, contenu):
