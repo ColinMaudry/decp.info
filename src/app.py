@@ -1,5 +1,16 @@
+# ruff: noqa: E402  -- sys.path manipulation must precede third-party imports
 import os
+import sys
+from pathlib import Path
 from shutil import rmtree
+
+# Sur les serveurs où le package est installé en mode éditable, pip peut ajouter
+# src/ à sys.path via un fichier .pth. Combiné à la racine du projet (déjà dans
+# sys.path via gunicorn), Dash's use_pages enregistre alors chaque page deux fois :
+# une fois comme pages.X et une fois comme src.pages.X → erreur "duplicate paths".
+_src_dir = str(Path(__file__).parent.resolve())
+while _src_dir in sys.path:
+    sys.path.remove(_src_dir)
 
 import dash_bootstrap_components as dbc
 import pandas  # noqa: F401  # eager import: avoid plotly's lazy-import race across Dash callback threads
