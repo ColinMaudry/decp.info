@@ -1,4 +1,5 @@
-from flask import g, request
+import orjson
+from flask import Response, g, request
 from flask_smorest import Blueprint, abort
 
 from src.api import tracking
@@ -172,9 +173,6 @@ def data():
     Exemple d'agrégation :
     `?acheteur_departement_code__groupby&uid__count&montant__sum`
     """
-    import polars as pl
-    import polars.selectors as cs
-
     page, page_size = _parse_pagination()
     columns = _parse_columns()
     count_results = request.args.get("count_results", "true").lower() != "false"
@@ -201,16 +199,20 @@ def data():
             limit=page_size,
             offset=(page - 1) * page_size,
         )
-        df_ready = df.with_columns(cs.temporal().cast(pl.String))
         # Si la page est partielle, on connaît le total exact ; sinon on ne sait pas.
         agg_total = (
             (page - 1) * page_size + df.height if df.height < page_size else None
         )
-        return {
-            "data": df_ready.to_dicts(),
-            "meta": {"page": page, "page_size": page_size},
-            "links": _build_links(page, page_size, agg_total),
-        }
+        return Response(
+            orjson.dumps(
+                {
+                    "data": df.to_dicts(),
+                    "meta": {"page": page, "page_size": page_size},
+                    "links": _build_links(page, page_size, agg_total),
+                }
+            ),
+            mimetype="application/json",
+        )
 
     df = query_marches(
         where_sql=where_sql,
@@ -221,16 +223,18 @@ def data():
         offset=(page - 1) * page_size,
     )
 
-    # JSON ne sérialise pas date/datetime nativement → cast en string ISO
-    df_ready = df.with_columns(cs.temporal().cast(pl.String))
-
     total = count_marches(where_sql, params) if count_results else None
     meta = {"page": page, "page_size": page_size}
     if total is not None:
         meta["total"] = total
 
-    return {
-        "data": df_ready.to_dicts(),
-        "meta": meta,
-        "links": _build_links(page, page_size, total),
-    }
+    return Response(
+        orjson.dumps(
+            {
+                "data": df.to_dicts(),
+                "meta": meta,
+                "links": _build_links(page, page_size, total),
+            }
+        ),
+        mimetype="application/json",
+    )

@@ -13,9 +13,6 @@ Usage :
 Par défaut, --url pointe vers la production decp.info ; data.gouv.fr est
 interrogé sans authentification.
 
-AVERTISSEMENT : les deux bases n'ont pas le même volume (data.gouv.fr ~3M
-lignes, decp.info ~1,5M). C'est une comparaison d'implémentation, pas à
-volume égal.
 """
 
 import argparse

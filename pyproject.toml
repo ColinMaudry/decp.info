@@ -26,6 +26,7 @@ dependencies = [
   "flask-wtf",
   "email-validator",
   "authlib",
+  "orjson",
   "flask-cors>=6.0.2",
   "flask-smorest>=0.46.0",
   "marshmallow>=3.20.0",
@@ -67,5 +68,5 @@ env = [
 ]
 addopts = "-p no:warnings"
 markers = [
-    "integration: tests touchant des services externes (Brevo) ; skippés par défaut en CI",
+  "integration: tests touchant des services externes (Brevo) ; skippés par défaut en CI",
 ]
