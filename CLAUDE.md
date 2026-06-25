@@ -92,6 +92,24 @@ Tests require a running Chrome/Chromium browser. They use `DashComposite` from `
 - `DEVELOPMENT=true` enables debug logging and is set automatically during tests
 - `.env` file is required at runtime (copy from `template.env`)
 
+### Migrations de schéma SQLite
+
+Les migrations sont gérées dans `src/migrations.py` via une liste `_MIGRATIONS` de tuples `(id, sql)`. Elles sont appliquées automatiquement au démarrage de l'app (via `init_subscriptions`).
+
+Pour ajouter une migration :
+
+```python
+# src/migrations.py
+_MIGRATIONS = [
+    ("0001_add_prix_ht_to_subscriptions", "ALTER TABLE subscriptions ADD COLUMN prix_ht REAL"),
+    ("0002_ma_nouvelle_migration", "ALTER TABLE ... "),  # ajouter ici
+]
+```
+
+- L'ID doit être unique et croissant (convention `NNNN_description`)
+- Les migrations appliquées sont tracées dans la table `schema_migrations`
+- `apply_pending()` est idempotent : sans effet si la migration est déjà enregistrée, et tolère le cas où la colonne existe déjà dans le schéma (DB fraîche)
+
 ### Deployment
 
 - `main` branch → manual deploy to decp.info via GitHub Actions

@@ -2,6 +2,7 @@ import os
 
 from flask import Flask
 
+from src import migrations
 from src.subscriptions import db
 from src.utils import logger
 
@@ -15,6 +16,7 @@ _REQUIRED_ENV = (
 
 def init_subscriptions(app: Flask) -> None:
     db.init_schema()
+    migrations.apply_pending()
 
     from src.subscriptions.routes import subscriptions_bp, webhook
 

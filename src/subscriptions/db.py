@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     frisbii_customer_handle     TEXT,
     frisbii_subscription_handle TEXT,
     plan                        TEXT,
+    prix_ht                     REAL,
     status                      TEXT,
     current_period_end          TEXT,
     trial_used                  INTEGER NOT NULL DEFAULT 0,
@@ -31,16 +32,19 @@ def init_schema() -> None:
     get_conn().executescript(SUBSCRIPTIONS_SCHEMA)
 
 
-def create_pending(user_id: int, customer_handle: str, plan: str) -> None:
+def create_pending(
+    user_id: int, customer_handle: str, plan: str, prix_ht: float | None = None
+) -> None:
     now = _now()
     get_conn().execute(
         "INSERT INTO subscriptions "
-        "(user_id, frisbii_customer_handle, plan, status, created_at, updated_at) "
-        "VALUES (?, ?, ?, 'pending', ?, ?) "
+        "(user_id, frisbii_customer_handle, plan, prix_ht, status, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, 'pending', ?, ?) "
         "ON CONFLICT(user_id) DO UPDATE SET "
         "frisbii_customer_handle=excluded.frisbii_customer_handle, "
-        "plan=excluded.plan, status='pending', updated_at=excluded.updated_at",
-        (user_id, customer_handle, plan, now, now),
+        "plan=excluded.plan, prix_ht=excluded.prix_ht, "
+        "status='pending', updated_at=excluded.updated_at",
+        (user_id, customer_handle, plan, prix_ht, now, now),
     )
 
 

@@ -27,8 +27,11 @@ def subscribe():
 
     cust = _customer_handle(current_user.id)
     try:
+        meta = plans.plan_meta(plan_key)
         client.get_or_create_customer(cust, current_user.email)
-        db.create_pending(current_user.id, cust, plan_key)
+        db.create_pending(
+            current_user.id, cust, plan_key, meta["prix_ht"] if meta else None
+        )
         # Anti-abus : pas de nouvel essai si l'utilisateur en a déjà consommé un.
         no_trial = db.has_used_trial(current_user.id)
         url = client.create_subscription_session(
