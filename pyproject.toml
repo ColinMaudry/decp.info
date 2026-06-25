@@ -21,6 +21,7 @@ dependencies = [
   "duckdb",
   "flask-caching",
   "pyarrow>=23.0.1",
+  "orjson",
   "flask-cors>=6.0.2",
   "flask-smorest>=0.46.0",
   "marshmallow>=3.20.0",
