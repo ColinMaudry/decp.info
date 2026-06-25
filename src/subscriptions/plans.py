@@ -17,11 +17,11 @@ PLANS = {
         "env": "FRISBII_PLAN_SIMPLE",
         "label": "Abonnement simple",
         "prix_ht": 20,
-        "description": "Accès aux fonctionnalités premium de decp.info.",
+        "description": "Accès à des fonctionnalités supplémentaires de decp.info.",
     },
     "soutien": {
         "env": "FRISBII_PLAN_SOUTIEN",
-        "label": "Abonnement de soutien",
+        "label": "Abonnement de soutien ✊",
         "prix_ht": 50,
         "description": "Mêmes fonctionnalités, contribution renforcée au projet.",
     },
@@ -74,6 +74,9 @@ def trial_days(key: str) -> int | None:
     except client.FrisbiiError:
         logger.warning("Impossible de lire le plan Frisbii %s", handle)
         return cached[1] if cached else None
+    # L'API Frisbii/Reepay renvoie une liste de versions ; on prend la dernière (la plus récente).
+    if isinstance(plan, list):
+        plan = plan[-1] if plan else {}
     days = _parse_trial_interval(plan.get("trial_interval"))
     _trial_cache[handle] = (now, days)
     return days

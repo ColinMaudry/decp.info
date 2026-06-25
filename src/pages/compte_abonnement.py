@@ -1,5 +1,5 @@
 import dash_bootstrap_components as dbc
-from dash import dcc, html, register_page
+from dash import Input, Output, callback, dcc, html, register_page
 from flask_login import current_user
 
 from src.pages._compte_shell import account_guard, account_shell
@@ -16,10 +16,10 @@ register_page(
 _PLAN_KEYS = ("simple", "soutien")
 
 
-def _csrf_input(index: str):
-    return dcc.Input(
-        type="hidden", id={"type": "csrf-input", "index": index}, name="csrf_token"
-    )
+def _csrf_input():
+    from flask_wtf.csrf import generate_csrf
+
+    return dcc.Input(type="hidden", name="csrf_token", value=generate_csrf())
 
 
 def _plan_card(meta: dict, trial: int | None, trial_used: bool):
@@ -37,24 +37,25 @@ def _plan_card(meta: dict, trial: int | None, trial_used: bool):
     return dbc.Card(
         dbc.CardBody(
             [
-                html.H4(meta["label"]),
-                html.P(f"{meta['prix_ht']} € HT / mois"),
-                html.P(meta["description"]),
+                html.H4(meta["label"], className="mb-1"),
+                html.P(f"{meta['prix_ht']} € HT / mois", className="text-muted mb-3"),
+                html.P(meta["description"], className="mb-3"),
                 badge,
                 html.Form(
                     method="POST",
                     action="/subscriptions/subscribe",
                     children=[
-                        _csrf_input(f"subscribe-{meta['key']}"),
+                        _csrf_input(),
                         dcc.Input(type="hidden", name="plan", value=meta["key"]),
                         html.Button(
                             "S'abonner", type="submit", className="btn btn-primary"
                         ),
                     ],
                 ),
-            ]
+            ],
+            className="p-4",
         ),
-        className="mb-3",
+        className="h-100",
     )
 
 
@@ -64,22 +65,45 @@ def _plan_cards(trial_used=False, trial_for=plans.trial_days):
         meta = plans.plan_meta(key)
         if meta:
             cards.append(_plan_card(meta, trial_for(key), trial_used))
-    return dbc.Row([dbc.Col(c, md=6) for c in cards])
+    return dbc.Row([dbc.Col(c, md=6) for c in cards], className="g-4 mb-5")
 
 
 def _explainer():
-    return html.Div(
+    col_left = dbc.Col(
         [
-            html.H4("À quoi servent les abonnements"),
+            html.H4("Ce que les abonnements financent"),
             html.Ul(
                 [
                     html.Li("Abonnement Frisbii (solution de paiement) : 50 €"),
                     html.Li("Serveur Scaleway : 40 €"),
                     html.Li("Espace de coworking : 250 €"),
-                    html.Li("Salaire médian : 3 840 €"),
+                    html.Li(
+                        [
+                            "Salaire médian (",
+                            html.Span(
+                                "coût employeur",
+                                id="salaire-modal-trigger",
+                                style={
+                                    "cursor": "pointer",
+                                    "textDecoration": "underline",
+                                    "color": "var(--bs-link-color)",
+                                },
+                            ),
+                            ") : 3 840 €",
+                        ]
+                    ),
                 ]
             ),
-            html.H4("Ce que les abonnements de soutien permettraient"),
+        ],
+        md=6,
+        style={
+            "borderRight": "1px solid var(--bs-border-color)",
+            "paddingRight": "2rem",
+        },
+    )
+    col_right = dbc.Col(
+        [
+            html.H4("Ce que les abonnements de soutien permettent"),
             html.Ul(
                 [
                     html.Li(
@@ -88,14 +112,17 @@ def _explainer():
                         "cette non-publication."
                     ),
                     html.Li(
-                        "Coordination des bonnes volontés souhaitant militer pour une "
-                        "législation plus exigeante sur la transparence de la commande "
+                        "Fédération des bonnes volontés souhaitant militer pour une "
+                        "législation plus ambitieuse sur la transparence de la commande "
                         "publique."
                     ),
                 ]
             ),
-        ]
+        ],
+        md=6,
+        style={"paddingLeft": "2rem"},
     )
+    return dbc.Row([col_left, col_right], className="align-items-start pt-2")
 
 
 def _active_view(row):
@@ -120,7 +147,7 @@ def _active_view(row):
                 method="POST",
                 action="/subscriptions/cancel",
                 children=[
-                    _csrf_input("cancel"),
+                    _csrf_input(),
                     html.Button(
                         "Résilier", type="submit", className="btn btn-outline-danger"
                     ),
@@ -150,6 +177,26 @@ def _feedback(query):
     return out
 
 
+_salaire_modal = dbc.Modal(
+    [
+        dbc.ModalHeader(dbc.ModalTitle("Salaire médian — coût employeur")),
+        dbc.ModalBody(html.Img(src="/assets/salaire.png", style={"width": "100%"})),
+    ],
+    id="salaire-modal",
+    size="lg",
+    is_open=False,
+)
+
+
+@callback(
+    Output("salaire-modal", "is_open"),
+    Input("salaire-modal-trigger", "n_clicks"),
+    prevent_initial_call=True,
+)
+def _open_salaire_modal(_):
+    return True
+
+
 def layout(**query):
     guard = account_guard("/compte/abonnement", require_subscription=False)
     if guard is not None:
@@ -166,10 +213,11 @@ def layout(**query):
         db.has_used_trial(current_user.id) if current_user.is_authenticated else False
     )
 
-    body = [html.H2("Abonnement"), *_feedback(query)]
+    body = [html.H2("Abonnement", className="mb-4"), *_feedback(query)]
     if has_access and row is not None:
         body.append(_active_view(row))
     else:
-        body.extend([_plan_cards(trial_used=trial_used), html.Hr(), _explainer()])
+        body.extend([_plan_cards(trial_used=trial_used), _explainer()])
 
+    body.append(_salaire_modal)
     return account_shell("abonnement", html.Div(body))

@@ -6,15 +6,15 @@ from flask_login import current_user
 # Ajouter une section future = ajouter une ligne ici (+ créer sa page).
 SECTIONS = [
     {
-        "key": "admin",
-        "label": "Compte",
-        "href": "/compte/admin",
-        "require_subscription": False,
-    },
-    {
         "key": "abonnement",
         "label": "Abonnement",
         "href": "/compte/abonnement",
+        "require_subscription": False,
+    },
+    {
+        "key": "admin",
+        "label": "Compte",
+        "href": "/compte/admin",
         "require_subscription": False,
     },
     {

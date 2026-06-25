@@ -29,29 +29,42 @@ def test_get_or_create_customer_creates_on_404(fake_httpx):
 
 def test_create_subscription_session_returns_url(fake_httpx):
     fake_httpx["queue"].append(
-        fake_httpx["Response"](200, {"id": "cs_1", "url": "https://pay.test/cs_1"})
+        fake_httpx["Response"](
+            200,
+            {
+                "hosted_page_links": {
+                    "payment_info": "https://checkout.reepay.com/#/sub-1"
+                }
+            },
+        )
     )
     url = client.create_subscription_session(
         "plan_simple", "decpinfo-1", "https://app/ok", "https://app/ko"
     )
-    assert url == "https://pay.test/cs_1"
+    assert url == "https://checkout.reepay.com/#/sub-1"
     body = fake_httpx["calls"][0]["json"]
-    assert body["prepare_subscription"] == {
-        "plan": "plan_simple",
-        "customer": "decpinfo-1",
-    }
-    assert body["accept_url"] == "https://app/ok"
-    assert body["cancel_url"] == "https://app/ko"
+    assert body["plan"] == "plan_simple"
+    assert body["customer"] == "decpinfo-1"
+    assert body["signup_method"] == "link"
+    assert "prepare_subscription" not in body
+    assert "accept_url" not in body
 
 
 def test_create_subscription_session_no_trial(fake_httpx):
     fake_httpx["queue"].append(
-        fake_httpx["Response"](200, {"url": "https://pay.test/cs_2"})
+        fake_httpx["Response"](
+            200,
+            {
+                "hosted_page_links": {
+                    "payment_info": "https://checkout.reepay.com/#/sub-2"
+                }
+            },
+        )
     )
     client.create_subscription_session(
         "plan_simple", "decpinfo-1", "https://app/ok", "https://app/ko", no_trial=True
     )
-    assert fake_httpx["calls"][0]["json"]["prepare_subscription"]["no_trial"] is True
+    assert fake_httpx["calls"][0]["json"]["no_trial"] is True
 
 
 def test_http_error_raises_frisbii_error(fake_httpx):

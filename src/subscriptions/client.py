@@ -5,7 +5,7 @@ import httpx
 # NB : base URL et schémas d'endpoints à confirmer dans la doc Frisbii lors de la
 # première intégration en environnement de test. Frisbii Billing/Pay s'appuie sur
 # l'API Reepay (api.reepay.com) ; ajuster FRISBII_API_BASE_URL si besoin.
-_DEFAULT_BASE_URL = "https://api.reepay.com"
+_DEFAULT_BASE_URL = "https://api.frisbii.com"
 _TIMEOUT = 15.0
 
 
@@ -53,19 +53,16 @@ def create_subscription_session(
     cancel_url: str,
     no_trial: bool = False,
 ) -> str:
-    prepare = {"plan": plan_handle, "customer": customer_handle}
+    body: dict = {
+        "plan": plan_handle,
+        "customer": customer_handle,
+        "signup_method": "link",
+        "generate_handle": True,
+    }
     if no_trial:
-        prepare["no_trial"] = True
-    data = _call(
-        "POST",
-        "/v1/session/subscription",
-        json={
-            "accept_url": accept_url,
-            "cancel_url": cancel_url,
-            "prepare_subscription": prepare,
-        },
-    )
-    return data["url"]
+        body["no_trial"] = True
+    data = _call("POST", "/v1/subscription", json=body)
+    return data["hosted_page_links"]["payment_info"]
 
 
 def cancel_subscription(subscription_handle: str) -> dict:
