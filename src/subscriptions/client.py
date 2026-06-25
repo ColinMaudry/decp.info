@@ -25,13 +25,16 @@ def _base_url() -> str:
 
 
 def _call(method: str, path: str, json: dict | None = None) -> dict:
-    resp = httpx.request(
-        method,
-        f"{_base_url()}{path}",
-        auth=(_api_key(), ""),
-        json=json,
-        timeout=_TIMEOUT,
-    )
+    try:
+        resp = httpx.request(
+            method,
+            f"{_base_url()}{path}",
+            auth=(_api_key(), ""),
+            json=json,
+            timeout=_TIMEOUT,
+        )
+    except httpx.RequestError as exc:
+        raise FrisbiiError(0, str(exc)) from exc
     if resp.status_code >= 400:
         raise FrisbiiError(resp.status_code, resp.text)
     return resp.json()
