@@ -35,9 +35,10 @@ les branche sur Frisbii.
 3. **Abonnement à durée indéterminée, mois glissants.** L'abonnement est renouvelé
    chaque mois (période ancrée sur la date d'inscription, comportement par défaut
    Frisbii — pas de prorata de première période). Il perdure jusqu'à résiliation.
-4. **Essai gratuit de 2 jours, configuré côté Frisbii.** L'essai est un
+4. **Essai gratuit configuré côté Frisbii (2 jours souhaités).** L'essai est un
    `trial_interval` réglé sur **chaque plan dans le dashboard Frisbii** (aucun code
-   pour le définir). La carte est **collectée à la souscription** (page hébergée)
+   pour le définir, et **la durée n'est pas codée en dur** côté app : elle est lue
+   depuis le plan via l'API). La carte est **collectée à la souscription** (page hébergée)
    mais débitée seulement à la fin de l'essai ; l'abonnement passe alors
    automatiquement de `trial` à `active`. Si le paiement échoue → `expired`. Une
    résiliation pendant l'essai expire en **fin d'essai** (pas de débit). Pendant
@@ -82,6 +83,9 @@ Fonctions pures, sans état applicatif (toute config lue depuis l'env) :
 - `cancel_subscription(subscription_handle) -> dict`
   - Cancel par défaut (fin de période courante). Renvoie l'objet subscription.
 - `get_subscription(subscription_handle) -> dict` (utilitaire de réconciliation).
+- `get_plan(plan_handle) -> dict`
+  - `GET /v1/plan/{handle}`. Sert à lire les caractéristiques du plan (dont la durée
+    d'essai `trial_interval`) sans la coder en dur côté app.
 
 Base URL : `FRISBII_API_BASE_URL` (à confirmer au moment de l'implémentation depuis
 la doc Frisbii ; valeur par défaut documentée dans `.template.env`). Timeouts
@@ -196,6 +200,11 @@ PLANS = {
 `resolve_handle(key) -> str | None` pour les routes ; le dict sert aussi à rendre
 les cartes de la page.
 
+`trial_days(key) -> int | None` : lit la durée d'essai **depuis Frisbii**
+(`client.get_plan(handle)` → `trial_interval`, parsé en jours), avec un **cache**
+(TTL ~1 h via `src/utils/cache.py`, les plans changeant rarement). Échec API ou plan
+sans essai → `None` (la mention d'essai est alors masquée, pas de valeur en dur).
+
 ## Page `/compte/abonnement`
 
 `account_guard("/compte/abonnement", require_subscription=False)` reste (la page est
@@ -205,7 +214,8 @@ accessible sans abonnement). Le contenu dépend de l'état :
 
 - Deux cartes de plan (Simple 20 € HT/mois, Soutien 50 € HT/mois), chacune avec un
   formulaire `POST /subscriptions/subscribe` (input caché `plan` + CSRF) et un bouton
-  « S'abonner ». Mention « 2 jours d'essai gratuit » sur les cartes.
+  « S'abonner ». Mention « {n} jours d'essai gratuit » sur les cartes, où `{n}` est
+  lu depuis le plan via `plans.trial_days(key)` (masquée si le plan n'a pas d'essai).
 - Contenu pédagogique (issue #90) :
   - **À quoi servent les abonnements** : abonnement Frisbii 50 €, serveur Scaleway
     40 €, espace de coworking 250 €, salaire médian 3 840 €.
@@ -280,7 +290,9 @@ Unitaires (mocks, pas d'appel réseau réel) :
 - `db.py` : upsert / get / set_status ; `has_active_subscription` pour chaque statut
   (`trial` et `active` → vrai ; `cancelled` futur → vrai, passé → faux ; `pending`
   et `expired` → faux).
-- `plans.py` : `resolve_handle` (connu / inconnu).
+- `plans.py` : `resolve_handle` (connu / inconnu) ; `trial_days` (parsing du
+  `trial_interval` renvoyé par un `get_plan` mocké, mise en cache, `None` si échec API
+  ou plan sans essai).
 - `routes.py` : webhook — signature valide/invalide, dispatch de chaque événement
   vers le bon changement de statut (payloads factices), résolution par customer
   handle ; subscribe (redirect 303 vers l'URL de session, statut `pending` créé) ;
