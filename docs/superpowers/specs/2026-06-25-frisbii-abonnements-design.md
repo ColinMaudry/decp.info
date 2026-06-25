@@ -35,11 +35,18 @@ les branche sur Frisbii.
 3. **Abonnement à durée indéterminée, mois glissants.** L'abonnement est renouvelé
    chaque mois (période ancrée sur la date d'inscription, comportement par défaut
    Frisbii — pas de prorata de première période). Il perdure jusqu'à résiliation.
-4. **Résiliation en fin de période courante.** `POST` cancel Frisbii avec le
-   comportement **par défaut** (expiration en fin de période courante). L'accès est
-   maintenu jusqu'à `current_period_end` renvoyé par Frisbii ; aucun calcul de date
-   côté app.
-5. **Clé privée serveur uniquement.** HTTP Basic Auth (clé privée en username),
+4. **Essai gratuit de 2 jours, configuré côté Frisbii.** L'essai est un
+   `trial_interval` réglé sur **chaque plan dans le dashboard Frisbii** (aucun code
+   pour le définir). La carte est **collectée à la souscription** (page hébergée)
+   mais débitée seulement à la fin de l'essai ; l'abonnement passe alors
+   automatiquement de `trial` à `active`. Si le paiement échoue → `expired`. Une
+   résiliation pendant l'essai expire en **fin d'essai** (pas de débit). Pendant
+   l'essai, l'utilisateur a **accès aux fonctions premium**.
+5. **Résiliation en fin de période courante.** `POST` cancel Frisbii avec le
+   comportement **par défaut** (expiration en fin de période courante — ou fin
+   d'essai si en essai). L'accès est maintenu jusqu'à `current_period_end` renvoyé
+   par Frisbii ; aucun calcul de date côté app.
+6. **Clé privée serveur uniquement.** HTTP Basic Auth (clé privée en username),
    jamais exposée au frontend.
 
 ## Architecture
@@ -91,7 +98,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     frisbii_customer_handle     TEXT,
     frisbii_subscription_handle TEXT,
     plan                        TEXT,   -- 'simple' | 'soutien'
-    status                      TEXT,   -- 'pending' | 'active' | 'cancelled' | 'expired'
+    status                      TEXT,   -- 'pending' | 'trial' | 'active' | 'cancelled' | 'expired'
     current_period_end          TEXT,   -- ISO 8601, nullable
     created_at                  TEXT NOT NULL,
     updated_at                  TEXT NOT NULL,
@@ -111,18 +118,19 @@ Fonctions :
 - `get_subscription_by_customer(customer_handle) -> Row | None` (résolution webhook)
 - `set_status(user_id, status, current_period_end=None)`
 - `has_active_subscription(user_id) -> bool`
-  → `True` si une ligne existe avec `status='active'` **ou**
-  (`status='cancelled'` **et** `current_period_end` dans le futur). Couvre le cas
-  « résilié mais encore valide jusqu'à la fin du mois ».
+  → `True` si une ligne existe avec `status` dans (`trial`, `active`) **ou**
+  (`status='cancelled'` **et** `current_period_end` dans le futur). Couvre l'essai en
+  cours et le cas « résilié mais encore valide jusqu'à la fin de la période ».
 
 ### Statuts et cycle de vie
 
-| Statut      | Sens                                         | Accès premium         |
-| ----------- | -------------------------------------------- | --------------------- |
-| `pending`   | Session créée, paiement pas encore confirmé  | non                   |
-| `active`    | Abonnement en cours, renouvelé chaque mois   | oui                   |
-| `cancelled` | Résilié, valide jusqu'à `current_period_end` | oui (jusqu'à la date) |
-| `expired`   | Période échue (annulé ou échec de paiement)  | non                   |
+| Statut      | Sens                                          | Accès premium         |
+| ----------- | --------------------------------------------- | --------------------- |
+| `pending`   | Session créée, paiement pas encore confirmé   | non                   |
+| `trial`     | Essai gratuit en cours (2 j), carte collectée | oui                   |
+| `active`    | Abonnement en cours, renouvelé chaque mois    | oui                   |
+| `cancelled` | Résilié, valide jusqu'à `current_period_end`  | oui (jusqu'à la date) |
+| `expired`   | Période échue (annulé ou échec de paiement)   | non                   |
 
 ### `routes.py` — blueprint Flask
 
@@ -149,8 +157,11 @@ Fonctions :
     invalide → **403**.
   - Dispatch par type d'événement (mapping vers l'utilisateur via le customer
     handle stocké) :
-    - `subscription_created` / `subscription_activated` → `status='active'`,
-      `current_period_end` maj.
+    - `subscription_created` → `status='trial'` si l'abonnement démarre en essai
+      (champ d'essai du payload), sinon `status='active'` ; `current_period_end`
+      (= fin d'essai pendant l'essai) maj.
+    - fin d'essai / premier débit (`subscription_renewed` / `invoice_settled`) →
+      `status='active'`, `current_period_end` maj.
     - `invoice_settled` / renouvellement → `current_period_end` maj.
     - `subscription_cancelled` → `status='cancelled'`, `current_period_end` maj.
     - `subscription_expired` / échec de paiement terminal → `status='expired'`.
@@ -194,7 +205,7 @@ accessible sans abonnement). Le contenu dépend de l'état :
 
 - Deux cartes de plan (Simple 20 € HT/mois, Soutien 50 € HT/mois), chacune avec un
   formulaire `POST /subscriptions/subscribe` (input caché `plan` + CSRF) et un bouton
-  « S'abonner ».
+  « S'abonner ». Mention « 2 jours d'essai gratuit » sur les cartes.
 - Contenu pédagogique (issue #90) :
   - **À quoi servent les abonnements** : abonnement Frisbii 50 €, serveur Scaleway
     40 €, espace de coworking 250 €, salaire médian 3 840 €.
@@ -207,8 +218,10 @@ accessible sans abonnement). Le contenu dépend de l'état :
 
 - Plan courant, statut, date de prochain renouvellement / fin de validité
   (`current_period_end`).
+- Si `trial` : bandeau « Essai gratuit jusqu'au {date}, puis débit automatique ».
 - Si `cancelled` : bandeau « Abonnement résilié, actif jusqu'au {date} ».
-- Si `active` : formulaire `POST /subscriptions/cancel` (CSRF) + bouton « Résilier ».
+- Si `trial` ou `active` : formulaire `POST /subscriptions/cancel` (CSRF) + bouton
+  « Résilier » (en essai, la résiliation évite tout débit).
 
 **Messages de retour** (query params lus dans le `layout`) : `paiement=succes`
 (« Merci, votre abonnement est en cours d'activation »), `paiement=annule`,
@@ -241,7 +254,9 @@ FRISBII_WEBHOOK_SECRET=          # secret de signature des webhooks
 
 **Prérequis de configuration côté dashboard Frisbii** (hors code, à documenter) :
 
-- Créer les deux plans mensuels (mois glissants, ancrés sur la date d'inscription).
+- Créer les deux plans mensuels (mois glissants, ancrés sur la date d'inscription)
+  avec un **essai de 2 jours** (`trial_interval`) et collecte de la carte à la
+  souscription.
 - Configurer un webhook vers `{APP_BASE_URL}/frisbii/webhook` avec les événements
   d'abonnement et de facturation, et récupérer le secret de signature.
 
@@ -262,8 +277,9 @@ Unitaires (mocks, pas d'appel réseau réel) :
 
 - `client.py` : auth Basic, get-or-create customer (200 vs 404→create), création de
   session (URL renvoyée), cancel ; gestion d'erreur HTTP → `FrisbiiError`. HTTP mocké.
-- `db.py` : upsert / get / set_status ; `has_active_subscription` pour chaque statut,
-  y compris `cancelled` futur (vrai) vs passé (faux).
+- `db.py` : upsert / get / set_status ; `has_active_subscription` pour chaque statut
+  (`trial` et `active` → vrai ; `cancelled` futur → vrai, passé → faux ; `pending`
+  et `expired` → faux).
 - `plans.py` : `resolve_handle` (connu / inconnu).
 - `routes.py` : webhook — signature valide/invalide, dispatch de chaque événement
   vers le bon changement de statut (payloads factices), résolution par customer
