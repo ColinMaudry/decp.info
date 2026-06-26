@@ -135,6 +135,7 @@ def update_marche_info(marche, titulaires):
                     "considerationsEnvironnementales",
                 ]
                 and col in marche
+                and marche[col]
                 and "," in marche[col]
             ):
                 col_values = marche[col].split(", ")

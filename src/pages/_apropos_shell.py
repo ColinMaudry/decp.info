@@ -3,16 +3,16 @@ from dash import Input, Output, State, callback, html
 
 SECTIONS = [
     {"key": "presentation", "label": "Présentation", "href": "/a-propos/presentation"},
+    {"key": "explorer", "label": "Explorer le projet", "href": "/a-propos/explorer"},
+    {"key": "sources", "label": "Sources de données", "href": "/a-propos/sources"},
+    {"key": "qualite", "label": "Qualité des données", "href": "/a-propos/qualite"},
     {
         "key": "donnees-brutes",
         "label": "Données brutes",
         "href": "/a-propos/donnees-brutes",
     },
-    {"key": "contact", "label": "Contact", "href": "/a-propos/contact"},
     {"key": "contribuer", "label": "Contribuer", "href": "/a-propos/contribuer"},
-    {"key": "explorer", "label": "Explorer le projet", "href": "/a-propos/explorer"},
-    {"key": "qualite", "label": "Qualité des données", "href": "/a-propos/qualite"},
-    {"key": "sources", "label": "Sources de données", "href": "/a-propos/sources"},
+    {"key": "contact", "label": "Contact", "href": "/a-propos/contact"},
     {
         "key": "mentions-legales",
         "label": "Mentions légales",
