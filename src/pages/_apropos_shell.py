@@ -18,6 +18,11 @@ SECTIONS = [
         "label": "Mentions légales",
         "href": "/a-propos/mentions-legales",
     },
+    {
+        "key": "abonnement",
+        "label": "Abonnement",
+        "href": "/a-propos/abonnement",
+    },
 ]
 
 

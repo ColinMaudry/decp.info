@@ -19,5 +19,6 @@ users.sqlite
 !tests/*.sqlite
 !tests/**/*.sqlite
 
-# Superpowers brainstorming companion
+# LLM plugins
 .superpowers/
+.codegraph/
