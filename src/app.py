@@ -221,7 +221,9 @@ navbar = dbc.Navbar(
                         dbc.NavItem(
                             dbc.NavLink(
                                 page["name"].replace(" ", " "),
-                                href=page["relative_path"],
+                                href=page["relative_path"] + "/presentation"
+                                if page["name"] == "À propos"
+                                else page["relative_path"],
                                 active="exact",
                             )
                         )

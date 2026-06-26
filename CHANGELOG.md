@@ -5,7 +5,11 @@
 - Ajout des codes et libellés NAF des titulaires
 - Affichage de l'activité (NAF) des titulaires sur leur page /titulaire
 
-#### 2.8.0
+##### 2.8.1 (25 juin 2026)
+
+- Correction du bug dans la création de token d'API
+
+#### 2.8.0 (23 juin 2026)
 
 - Ajout des considérations sociales et environnementales à l'observatoire
 - Les filtres textuels dans les vues tableaux ne sont plus sensibles à l'accentuation
