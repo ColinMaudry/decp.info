@@ -23,6 +23,8 @@ def _csrf_input():
 
 
 def _plan_card(meta: dict, trial: int | None, trial_used: bool):
+    from src.utils import TOUS_ABONNES
+
     if trial_used:
         badge = html.Div(
             "Sans période d'essai (déjà utilisée) — débit immédiat",
@@ -46,7 +48,14 @@ def _plan_card(meta: dict, trial: int | None, trial_used: bool):
                         _csrf_input(),
                         dcc.Input(type="hidden", name="plan", value=meta["key"]),
                         html.Button(
-                            "S'abonner", type="submit", className="btn btn-primary"
+                            "S'abonner",
+                            type="submit",
+                            className=(
+                                "btn btn-secondary disabled"
+                                if TOUS_ABONNES
+                                else "btn btn-primary"
+                            ),
+                            disabled=TOUS_ABONNES,
                         ),
                     ],
                 ),
@@ -195,6 +204,19 @@ def _open_salaire_modal(_):
     return True
 
 
+def _tous_abonnes_banner():
+    from src.utils import TOUS_ABONNES
+
+    if not TOUS_ABONNES:
+        return None
+    return dbc.Alert(
+        "Les fonctionnalités normalement accessibles contre un abonnement de "
+        "20 € HT par mois sont accessibles à tous et toutes en attendant la "
+        "validation de mon dossier pour recevoir des paiements.",
+        color="info",
+    )
+
+
 def layout(**query):
     guard = account_guard("/compte/abonnement", require_subscription=False)
     if guard is not None:
@@ -211,7 +233,11 @@ def layout(**query):
         db.has_used_trial(current_user.id) if current_user.is_authenticated else False
     )
 
-    body = [html.H2("Abonnement", className="mb-4"), *_feedback(query)]
+    body = [html.H2("Abonnement", className="mb-4")]
+    banner = _tous_abonnes_banner()
+    if banner is not None:
+        body.append(banner)
+    body.extend(_feedback(query))
     if has_access and row is not None:
         body.append(_active_view(row))
     else:

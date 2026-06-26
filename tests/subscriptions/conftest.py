@@ -6,6 +6,8 @@ import pytest
 # unitaires de pages (pas besoin du serveur complet — juste que CONFIG soit peuplé).
 from dash import Dash as _Dash
 
+from src.pages import compte_abonnement  # noqa: F401
+
 _Dash(__name__, assets_folder="assets")
 
 
@@ -70,6 +72,20 @@ def sub_app(users_db_path, monkeypatch):
     init_auth(app)
     init_subscriptions(app)
     return app
+
+
+@pytest.fixture
+def app_context(sub_app):
+    """Fournit un contexte Flask pour les tests unitaires (ex. tests de composants Dash)."""
+    with sub_app.test_request_context():
+        yield sub_app
+
+
+@pytest.fixture(autouse=True)
+def _ensure_request_context(sub_app):
+    """Auto-use fixture pour garantir un contexte request Flask dans tous les tests du répertoire."""
+    with sub_app.test_request_context():
+        yield
 
 
 @pytest.fixture
