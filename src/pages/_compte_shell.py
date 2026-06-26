@@ -40,9 +40,12 @@ SECTIONS = [
 
 def current_user_has_subscription() -> bool:
     from src.subscriptions import db
+    from src.utils import TOUS_ABONNES
 
     if not current_user.is_authenticated:
         return False
+    if TOUS_ABONNES:
+        return True
     return db.has_active_subscription(current_user.id)
 
 

@@ -1,4 +1,13 @@
+from unittest.mock import patch
+
 from src.pages import _compte_shell as shell
+
+
+def _fake_user(authenticated: bool):
+    user = type("U", (), {})()
+    user.is_authenticated = authenticated
+    user.id = 1
+    return user
 
 
 def test_visible_sections_hides_gated_without_subscription():
@@ -41,3 +50,27 @@ def test_guard_redirect_allowed_returns_none():
         path="/compte/admin",
     )
     assert href is None
+
+
+def test_has_subscription_true_for_authenticated_when_tous_abonnes(monkeypatch):
+    monkeypatch.setattr("src.utils.TOUS_ABONNES", True)
+    with patch("src.pages._compte_shell.current_user", _fake_user(True)):
+        assert shell.current_user_has_subscription() is True
+
+
+def test_has_subscription_false_for_anonymous_even_with_tous_abonnes(monkeypatch):
+    monkeypatch.setattr("src.utils.TOUS_ABONNES", True)
+    with patch("src.pages._compte_shell.current_user", _fake_user(False)):
+        assert shell.current_user_has_subscription() is False
+
+
+def test_has_subscription_uses_db_when_flag_off(monkeypatch):
+    monkeypatch.setattr("src.utils.TOUS_ABONNES", False)
+    with (
+        patch("src.pages._compte_shell.current_user", _fake_user(True)),
+        patch(
+            "src.subscriptions.db.has_active_subscription", return_value=False
+        ) as mocked,
+    ):
+        assert shell.current_user_has_subscription() is False
+        mocked.assert_called_once_with(1)

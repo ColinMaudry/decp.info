@@ -31,6 +31,9 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 DEVELOPMENT = os.getenv("DEVELOPMENT", "False").lower() == "true"
+# Accès gratuit temporaire à toutes les fonctionnalités d'abonné, le temps que
+# la plateforme de paiement Frisbii valide la réception de paiements.
+TOUS_ABONNES = os.getenv("TOUS_ABONNES", "False").lower() == "true"
 logger = logging.getLogger("decp.info")
 
 if DEVELOPMENT:
