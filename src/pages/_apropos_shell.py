@@ -54,7 +54,7 @@ def apropos_shell(active: str, contenu):
         className="d-md-none",
     )
     content = dbc.Col([mobile, contenu], md=9)
-    return dbc.Container(dbc.Row([sidebar, content]), className="py-4")
+    return dbc.Container(dbc.Row([sidebar, content]), className="py-4", fluid=True)
 
 
 @callback(
