@@ -6,6 +6,7 @@ import httpx
 # première intégration en environnement de test. Frisbii Billing/Pay s'appuie sur
 # l'API Reepay (api.reepay.com) ; ajuster FRISBII_API_BASE_URL si besoin.
 _DEFAULT_BASE_URL = "https://api.frisbii.com"
+_DEFAULT_CHECKOUT_URL = "https://checkout-api.frisbii.com"
 _TIMEOUT = 15.0
 
 
@@ -24,13 +25,24 @@ def _base_url() -> str:
     return os.getenv("FRISBII_API_BASE_URL") or _DEFAULT_BASE_URL
 
 
-def _call(method: str, path: str, json: dict | None = None) -> dict:
+def _checkout_url() -> str:
+    return os.getenv("FRISBII_CHECKOUT_URL") or _DEFAULT_CHECKOUT_URL
+
+
+def _call(
+    method: str,
+    path: str,
+    json: dict | None = None,
+    base_url: str | None = None,
+    params: dict | None = None,
+) -> dict:
     try:
         resp = httpx.request(
             method,
-            f"{_base_url()}{path}",
+            f"{base_url or _base_url()}{path}",
             auth=(_api_key(), ""),
             json=json,
+            params=params,
             timeout=_TIMEOUT,
         )
     except httpx.RequestError as exc:
@@ -72,6 +84,37 @@ def create_subscription_session(
         body["no_trial"] = True
     data = _call("POST", "/v1/subscription", json=body)
     return data["hosted_page_links"]["payment_info"]
+
+
+def create_recurring_session(
+    customer_handle: str, accept_url: str, cancel_url: str
+) -> str:
+    data = _call(
+        "POST",
+        "/v1/session/recurring",
+        json={
+            "customer": customer_handle,
+            "accept_url": accept_url,
+            "cancel_url": cancel_url,
+            "show_terms": False,
+        },
+        base_url=_checkout_url(),
+    )
+    return data["url"]
+
+
+def get_customer_payment_methods(
+    customer_handle: str, reference: str | None = None
+) -> list[dict]:
+    p: dict = {"customer": customer_handle, "state": "active", "size": 10}
+    if reference:
+        p["reference"] = reference
+    data = _call("GET", "/v1/list/payment_method", params=p)
+    return data.get("content", [])
+
+
+def set_subscription_payment_method(sub_handle: str, pm_id: str) -> None:
+    _call("POST", f"/v1/subscription/{sub_handle}/pm", json={"source": pm_id})
 
 
 def cancel_subscription(subscription_handle: str) -> dict:

@@ -1,5 +1,5 @@
 import dash_bootstrap_components as dbc
-from dash import Input, Output, callback, dcc, html, register_page
+from dash import Input, Output, State, callback, dcc, html, register_page
 from flask_login import current_user
 
 from src.pages._compte_shell import account_guard, account_shell
@@ -130,7 +130,33 @@ def _explainer():
 def _active_view(row):
     meta = plans.plan_meta(row["plan"]) or {"label": row["plan"]}
     end = row["current_period_end"]
-    blocks = [html.H3(meta["label"]), html.P(f"Statut : {row['status']}")]
+    blocks = [html.H3(meta["label"], className="mb-3")]
+
+    if row["status"] == "pending":
+        blocks.extend(
+            [
+                dbc.Alert(
+                    "Sans méthode de paiement enregistrée, votre abonnement sera "
+                    "résilié à la fin de la période d'essai.",
+                    color="warning",
+                    className="mb-3",
+                ),
+                html.Form(
+                    method="POST",
+                    action="/subscriptions/add-payment",
+                    children=[
+                        _csrf_input(),
+                        html.Button(
+                            "Ajouter une méthode de paiement",
+                            type="submit",
+                            className="btn btn-primary",
+                        ),
+                    ],
+                ),
+            ]
+        )
+        return html.Div(blocks)
+
     if row["status"] == "trial":
         blocks.append(
             dbc.Alert(
@@ -143,20 +169,60 @@ def _active_view(row):
         )
     else:
         blocks.append(html.P(f"Prochain renouvellement : {end}"))
+
     if row["status"] in ("trial", "active"):
         blocks.append(
-            html.Form(
-                method="POST",
-                action="/subscriptions/cancel",
-                children=[
-                    _csrf_input(),
-                    html.Button(
-                        "Résilier", type="submit", className="btn btn-outline-danger"
-                    ),
-                ],
+            html.Button(
+                "Me désabonner",
+                id="resiliation-trigger",
+                n_clicks=0,
+                className="btn btn-outline-danger mt-3",
             )
         )
+
     return html.Div(blocks)
+
+
+def _resiliation_modal(end):
+    if end:
+        body_text = (
+            f"Êtes-vous sûr de vouloir mettre fin à votre abonnement ? "
+            f"Vous resterez abonné jusqu'à la date anniversaire, le {end}."
+        )
+    else:
+        body_text = "Êtes-vous sûr de vouloir mettre fin à votre abonnement ?"
+    return dbc.Modal(
+        [
+            dbc.ModalHeader(dbc.ModalTitle("Résilier l'abonnement")),
+            dbc.ModalBody(body_text),
+            dbc.ModalFooter(
+                [
+                    dbc.Button(
+                        "Annuler",
+                        id="resiliation-annuler",
+                        color="secondary",
+                        className="me-2",
+                        n_clicks=0,
+                    ),
+                    html.Form(
+                        method="POST",
+                        action="/subscriptions/cancel",
+                        children=[
+                            _csrf_input(),
+                            html.Button(
+                                "Je suis sûr",
+                                type="submit",
+                                className="btn btn-danger",
+                            ),
+                        ],
+                        style={"display": "inline"},
+                    ),
+                ]
+            ),
+        ],
+        id="resiliation-modal",
+        is_open=False,
+    )
 
 
 def _feedback(query):
@@ -202,6 +268,17 @@ def _open_salaire_modal(_):
     return True
 
 
+@callback(
+    Output("resiliation-modal", "is_open"),
+    Input("resiliation-trigger", "n_clicks"),
+    Input("resiliation-annuler", "n_clicks"),
+    State("resiliation-modal", "is_open"),
+    prevent_initial_call=True,
+)
+def _toggle_resiliation(_, __, is_open):
+    return not is_open
+
+
 def _tous_abonnes_banner():
     from src.utils import TOUS_ABONNES
 
@@ -221,12 +298,6 @@ def layout(**query):
         return guard
 
     row = db.get_by_user(current_user.id) if current_user.is_authenticated else None
-    has_access = (
-        db.has_active_subscription(current_user.id)
-        if current_user.is_authenticated
-        else False
-    )
-
     trial_used = (
         db.has_used_trial(current_user.id) if current_user.is_authenticated else False
     )
@@ -236,8 +307,10 @@ def layout(**query):
     if banner is not None:
         body.append(banner)
     body.extend(_feedback(query))
-    if has_access and row is not None:
+
+    if row is not None:
         body.append(_active_view(row))
+        body.append(_resiliation_modal(row["current_period_end"]))
     else:
         body.extend([_plan_cards(trial_used=trial_used), _explainer()])
 
