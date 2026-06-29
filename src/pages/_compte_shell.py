@@ -30,6 +30,12 @@ SECTIONS = [
         "require_subscription": True,
     },
     {
+        "key": "vues",
+        "label": "Mes vues",
+        "href": "/compte/vues",
+        "require_subscription": True,
+    },
+    {
         "key": "siret",
         "label": "Mon SIRET",
         "href": "/compte/siret",
