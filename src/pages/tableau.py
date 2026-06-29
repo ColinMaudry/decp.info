@@ -18,9 +18,13 @@ from dash import (
     no_update,
     register_page,
 )
+from flask_login import current_user
 
 from src.db import query_marches, schema
 from src.figures import DataTable, make_column_picker
+from src.pages._compte_shell import current_user_has_subscription
+from src.saved_views import db as saved_views_db
+from src.saved_views import ui as saved_views_ui
 from src.utils import get_data_update_timestamp, logger
 from src.utils.seo import META_CONTENT
 from src.utils.table import (
@@ -245,6 +249,50 @@ layout = [
                         id="tableau_columns_open",
                         className="column_list",
                         title="Choisir les colonnes à afficher et masquer",
+                    ),
+                    html.Div(
+                        id="saved-views-bar",
+                        style={"display": "none"},
+                        className="d-inline-flex align-items-center gap-2",
+                        children=[
+                            dbc.Button(
+                                "Sauvegarder la vue",
+                                id="btn-save-view",
+                                title="Enregistrer les filtres, tris et colonnes actuels sous un nom",
+                            ),
+                            dbc.DropdownMenu(
+                                id="saved-views-menu",
+                                label="Mes vues",
+                                children=[],
+                                className="d-inline-block",
+                            ),
+                        ],
+                    ),
+                    dcc.Store(id="saved-views-refresh"),
+                    dbc.Modal(
+                        id="save-view-modal",
+                        is_open=False,
+                        children=[
+                            dbc.ModalHeader(dbc.ModalTitle("Sauvegarder la vue")),
+                            dbc.ModalBody(
+                                [
+                                    dbc.Label("Nom de la vue"),
+                                    dcc.Input(
+                                        id="save-view-name",
+                                        type="text",
+                                        className="form-control",
+                                    ),
+                                    html.Div(id="save-view-feedback", className="mt-2"),
+                                ]
+                            ),
+                            dbc.ModalFooter(
+                                dbc.Button(
+                                    "Enregistrer",
+                                    id="btn-save-view-confirm",
+                                    color="primary",
+                                )
+                            ),
+                        ],
                     ),
                     html.P("lignes", id="nb_rows"),
                     html.Div(id="copy-container"),
@@ -537,3 +585,57 @@ def toggle_tableau_columns(click_open, click_close, is_open):
 )
 def reset_view(n_clicks):
     return "", []
+
+
+@callback(
+    Output("saved-views-bar", "style"),
+    Input("tableau_url", "pathname"),
+)
+def toggle_saved_views_bar(_pathname):
+    return saved_views_ui.bar_style(current_user_has_subscription())
+
+
+@callback(
+    Output("save-view-modal", "is_open"),
+    Input("btn-save-view", "n_clicks"),
+    Input("btn-save-view-confirm", "n_clicks"),
+    State("save-view-modal", "is_open"),
+    prevent_initial_call=True,
+)
+def toggle_save_view_modal(_open, _confirm, is_open):
+    return not is_open
+
+
+@callback(
+    Output("save-view-feedback", "children"),
+    Output("saved-views-refresh", "data"),
+    Input("btn-save-view-confirm", "n_clicks"),
+    State("save-view-name", "value"),
+    State("tableau_datatable", "filter_query"),
+    State("tableau_datatable", "sort_by"),
+    State("tableau_datatable", "hidden_columns"),
+    prevent_initial_call=True,
+)
+def save_view(_n, name, filter_query, sort_by, hidden_columns):
+    has_sub = current_user_has_subscription()
+    clean_name, error = saved_views_ui.prepare_view_to_save(has_sub, name)
+    if error:
+        return html.Span(error, style={"color": "red"}), no_update
+    query = build_view_query(filter_query, sort_by, hidden_columns)
+    saved_views_db.upsert(current_user.id, "tableau", clean_name, query)
+    return (
+        html.Span(f"Vue « {clean_name} » enregistrée.", style={"color": "green"}),
+        clean_name,
+    )
+
+
+@callback(
+    Output("saved-views-menu", "children"),
+    Input("tableau_url", "pathname"),
+    Input("saved-views-refresh", "data"),
+)
+def populate_saved_views_menu(_pathname, _refresh):
+    if not current_user_has_subscription():
+        return []
+    views = saved_views_db.list_views(current_user.id, "tableau")
+    return saved_views_ui.saved_views_items(views)
