@@ -1,4 +1,6 @@
+import json
 import os
+import urllib.parse
 import uuid
 
 import polars as pl
@@ -555,6 +557,23 @@ def invert_columns(columns):
         if column not in columns:
             inverted_columns.append(column)
     return inverted_columns
+
+
+def build_view_query(filter_query, sort_by, hidden_columns) -> str:
+    """
+    Construit la query string d'une vue Tableau (filtres + tris + colonnes),
+    identique à celle produite par le bouton « Partager la vue ».
+
+    hidden_columns : colonnes masquées ; on stocke les colonnes visibles.
+    """
+    params = {}
+    if filter_query:
+        params["filtres"] = filter_query
+    if sort_by:
+        params["tris"] = json.dumps(sort_by)
+    if hidden_columns:
+        params["colonnes"] = ",".join(invert_columns(hidden_columns))
+    return urllib.parse.urlencode(params)
 
 
 COLUMNS = schema.names()
