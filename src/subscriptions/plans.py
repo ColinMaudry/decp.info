@@ -17,7 +17,7 @@ PLANS = {
         "env": "FRISBII_PLAN_SIMPLE",
         "label": "Abonnement",
         "prix_ht": 20,
-        "description": "Accès à des fonctionnalités supplémentaires de decp.info.",
+        "description": "Accès aux fonctionnalités supplémentaires de decp.info.",
     },
     "soutien": {
         "env": "FRISBII_PLAN_SOUTIEN",

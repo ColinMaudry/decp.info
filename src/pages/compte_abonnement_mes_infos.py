@@ -301,6 +301,13 @@ def layout(**query):
         html.Div(
             [
                 html.H2("Mes informations de facturation", className="mb-4"),
+                dbc.Alert(
+                    "Informations récupérées depuis le prestataire de paiement, vous pouvez les modifier si besoin.",
+                    color="info",
+                    className="mb-4",
+                )
+                if prefill
+                else None,
                 form,
                 _cgu_modal(),
             ]

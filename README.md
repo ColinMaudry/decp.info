@@ -41,6 +41,18 @@ python -m src.backup restore backups/users-YYYYMMDDTHHMMSSZ.sqlite.gz.enc
 systemctl start decpinfo
 ```
 
+## Migrations de base de données
+
+Les migrations SQLite s'appliquent **automatiquement au démarrage de l'app** — aucune action manuelle requise. Il suffit de redémarrer le service après un déploiement.
+
+Pour vérifier quelles migrations ont été appliquées :
+
+```bash
+sqlite3 users.sqlite "SELECT id, applied_at FROM schema_migrations ORDER BY applied_at;"
+```
+
+Pour ajouter une migration, voir les instructions dans `src/migrations.py`.
+
 ## Liens connexes
 
 - [decp-processing](https://github.com/ColinMaudry/decp-processing) (traitement et publication des données)
