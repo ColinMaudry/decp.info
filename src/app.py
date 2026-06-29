@@ -105,6 +105,10 @@ from src.subscriptions.setup import init_subscriptions  # noqa: E402
 
 init_subscriptions(app.server)
 
+from src.saved_views import db as saved_views_db  # noqa: E402
+
+saved_views_db.init_schema()
+
 
 # robots.txt
 @app.server.route("/robots.txt")
