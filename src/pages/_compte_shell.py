@@ -18,27 +18,9 @@ SECTIONS = [
         "require_subscription": False,
     },
     {
-        "key": "archives",
-        "label": "Mes archives",
-        "href": "/compte/archives",
-        "require_subscription": True,
-    },
-    {
-        "key": "filtres",
-        "label": "Mes filtres",
-        "href": "/compte/filtres",
-        "require_subscription": True,
-    },
-    {
         "key": "vues",
         "label": "Mes vues",
         "href": "/compte/vues",
-        "require_subscription": True,
-    },
-    {
-        "key": "siret",
-        "label": "Mon SIRET",
-        "href": "/compte/siret",
         "require_subscription": True,
     },
 ]

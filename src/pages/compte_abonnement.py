@@ -158,7 +158,8 @@ def _active_view(row):
     elif row["status"] == "trial":
         blocks.append(
             dbc.Alert(
-                f"Essai gratuit jusqu'au {end}, puis débit automatique.", color="info"
+                f"Essai gratuit jusqu'au {end}, puis facturation et débit automatique à chaque date anniversaire.",
+                color="info",
             )
         )
     elif row["status"] == "cancelled":
@@ -174,7 +175,7 @@ def _active_view(row):
                 "Me désabonner",
                 id="resiliation-trigger",
                 n_clicks=0,
-                className="btn btn-outline-danger mt-3",
+                className="btn btn-outline-primary mt-3",
             )
         )
 
@@ -210,7 +211,7 @@ def _resiliation_modal(end):
                             html.Button(
                                 "Je suis sûr",
                                 type="submit",
-                                className="btn btn-danger",
+                                className="btn btn-outline-primary",
                             ),
                         ],
                         style={"display": "inline"},
@@ -240,7 +241,7 @@ def _feedback(query):
     if query.get("error") == "frisbii":
         out.append(
             dbc.Alert(
-                "Une erreur est survenue avec le service de paiement.", color="danger"
+                "Une erreur est survenue avec le service de paiement.", color="primary"
             )
         )
     return out
