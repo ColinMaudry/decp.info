@@ -25,6 +25,7 @@ from src.utils import get_data_update_timestamp, logger
 from src.utils.seo import META_CONTENT
 from src.utils.table import (
     COLUMNS,
+    build_view_query,
     filter_table_data,
     get_default_hidden_columns,
     invert_columns,
@@ -425,19 +426,7 @@ def sync_url_and_reset_button(filter_query, sort_by, hidden_columns, href):
     # Extract base URL (remove existing query params)
     base_url = href.split("?")[0]
 
-    params = {}
-    if filter_query:
-        params["filtres"] = filter_query
-
-    if sort_by:
-        params["tris"] = json.dumps(sort_by)
-
-    if hidden_columns:
-        table_columns = invert_columns(hidden_columns)
-        table_columns = ",".join(table_columns)
-        params["colonnes"] = table_columns
-
-    query_string = urllib.parse.urlencode(params)
+    query_string = build_view_query(filter_query, sort_by, hidden_columns)
     full_url = f"{base_url}?{query_string}" if query_string else base_url
 
     copy_button = dcc.Clipboard(
