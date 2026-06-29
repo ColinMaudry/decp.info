@@ -598,15 +598,14 @@ def toggle_saved_views_bar(_pathname):
 @callback(
     Output("save-view-modal", "is_open"),
     Input("btn-save-view", "n_clicks"),
-    Input("btn-save-view-confirm", "n_clicks"),
-    State("save-view-modal", "is_open"),
     prevent_initial_call=True,
 )
-def toggle_save_view_modal(_open, _confirm, is_open):
-    return not is_open
+def toggle_save_view_modal(_open):
+    return True
 
 
 @callback(
+    Output("save-view-modal", "is_open", allow_duplicate=True),
     Output("save-view-feedback", "children"),
     Output("saved-views-refresh", "data"),
     Input("btn-save-view-confirm", "n_clicks"),
@@ -620,10 +619,11 @@ def save_view(_n, name, filter_query, sort_by, hidden_columns):
     has_sub = current_user_has_subscription()
     clean_name, error = saved_views_ui.prepare_view_to_save(has_sub, name)
     if error:
-        return html.Span(error, style={"color": "red"}), no_update
+        return True, html.Span(error, style={"color": "red"}), no_update
     query = build_view_query(filter_query, sort_by, hidden_columns)
     saved_views_db.upsert(current_user.id, "tableau", clean_name, query)
     return (
+        False,
         html.Span(f"Vue « {clean_name} » enregistrée.", style={"color": "green"}),
         clean_name,
     )

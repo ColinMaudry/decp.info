@@ -98,6 +98,9 @@ def rename_view(_n, view_id, new_name):
     clean = saved_views_ui.clean_view_name(new_name)
     if not view_id or not clean:
         return no_update
-    saved_views_db.rename(int(view_id), current_user.id, clean)
+    try:
+        saved_views_db.rename(int(view_id), current_user.id, clean)
+    except Exception:
+        return no_update
     views = saved_views_db.list_views(current_user.id, "tableau")
     return saved_views_ui.views_table(views)
