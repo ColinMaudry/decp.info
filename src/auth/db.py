@@ -162,6 +162,22 @@ def update_password_hash(user_id: int, password_hash: str) -> None:
     )
 
 
+def get_siret(user_id: int) -> str | None:
+    row = (
+        get_conn()
+        .execute("SELECT siret FROM users WHERE id = ?", (user_id,))
+        .fetchone()
+    )
+    return row["siret"] if row else None
+
+
+def set_siret(user_id: int, siret: str) -> None:
+    get_conn().execute(
+        "UPDATE users SET siret = ?, updated_at = ? WHERE id = ?",
+        (siret, _now(), user_id),
+    )
+
+
 def set_pending_email(user_id: int, email: str) -> None:
     get_conn().execute(
         "UPDATE users SET pending_email = ?, updated_at = ? WHERE id = ?",

@@ -36,32 +36,38 @@ def _call(method: str, path: str, json: dict | None = None) -> dict:
     except httpx.RequestError as exc:
         raise FrisbiiError(0, str(exc)) from exc
     if resp.status_code >= 400:
+        print(resp.text)
         raise FrisbiiError(resp.status_code, resp.text)
     return resp.json()
 
 
-def get_or_create_customer(handle: str, email: str) -> dict:
-    try:
-        return _call("GET", f"/v1/customer/{handle}")
-    except FrisbiiError as exc:
-        if exc.status_code != 404:
-            raise
-        return _call("POST", "/v1/customer", json={"handle": handle, "email": email})
+def get_customer(handle: str) -> dict:
+    return _call("GET", f"/v1/customer/{handle}")
+
+
+def update_customer(handle: str, data: dict) -> dict:
+    return _call("PUT", f"/v1/customer/{handle}", json=data)
 
 
 def create_subscription_session(
     plan_handle: str,
-    customer_handle: str,
     accept_url: str,
     cancel_url: str,
     no_trial: bool = False,
+    customer_handle: str | None = None,
+    create_customer: dict | None = None,
 ) -> str:
     body: dict = {
         "plan": plan_handle,
-        "customer": customer_handle,
         "signup_method": "link",
         "generate_handle": True,
+        "accept_url": accept_url,
+        "cancel_url": cancel_url,
     }
+    if customer_handle:
+        body["customer"] = customer_handle
+    elif create_customer:
+        body["create_customer"] = create_customer
     if no_trial:
         body["no_trial"] = True
     data = _call("POST", "/v1/subscription", json=body)

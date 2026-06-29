@@ -54,7 +54,7 @@ La période d'essai est accordée une seule fois par utilisateur.
             dcc.Markdown(
                 """
 L'abonnement est facturé mensuellement, à la date anniversaire de la souscription.
-Le paiement est traité par [Frisbii](https://www.frisbii.com), prestataire de paiement en ligne.
+Le paiement est traité par [Frisbii](https://www.frisbii.com), prestataire européen de paiement en ligne.
 Les coordonnées bancaires sont conservées exclusivement par Frisbii et ne sont pas transmises à decp.info.
 """
             ),
@@ -65,26 +65,24 @@ L'abonnement peut être résilié à tout moment depuis l'espace [Mon compte](/c
 La résiliation prend effet à la fin de la période mensuelle en cours : l'accès aux fonctionnalités payantes est maintenu jusqu'à cette date, sans remboursement au prorata.
 """
             ),
-            html.H4("Droit de rétractation"),
-            dcc.Markdown(
-                """
-Conformément à l'article L221-18 du Code de la consommation, vous disposez d'un délai de 14 jours à compter de la souscription pour exercer votre droit de rétractation, sans motif à fournir.
-
-Si vous avez demandé l'accès immédiat au service et que vous l'avez effectivement utilisé, une partie proportionnelle à l'utilisation peut être déduite du remboursement.
-
-Pour exercer ce droit, [contactez-nous](/a-propos/contact).
-"""
-            ),
             html.H4("Données personnelles"),
             dcc.Markdown(
                 """
-La gestion de l'abonnement nécessite le traitement des données suivantes :
+La gestion de l'abonnement implique le traitement de données personnelles, réparties entre decp.info et Frisbii (prestataire de paiement).
 
-- adresse e-mail (identification du compte)
-- historique de facturation (fourni par Frisbii)
+**Données stockées par decp.info :**
+
+- Adresse e-mail (identification du compte)
+- Numéro SIRET (si renseigné, conservé pour pré-remplir les futures souscriptions)
+
+**Données stockées par Frisbii :**
+
+- Informations de facturation : prénom, nom, adresse postale, code postal, ville, pays, nom de l'entreprise
+- Informations de paiement : coordonnées bancaires (accessibles uniquement par Frisbii, jamais transmises à decp.info)
+- Historique des factures
 
 Ces données sont utilisées uniquement pour la gestion de votre abonnement et ne sont pas transmises à des tiers à des fins commerciales.
-Conformément au RGPD, vous pouvez demander l'accès, la rectification ou la suppression de vos données via la [page de contact](/a-propos/contact).
+Conformément au RGPD, vous pouvez demander l'accès, la rectification ou la suppression de vos données en [me contactant](/a-propos/contact).
 """
             ),
             html.H4("Contact"),

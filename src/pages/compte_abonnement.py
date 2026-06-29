@@ -31,7 +31,7 @@ def _plan_card(meta: dict, trial: int | None, trial_used: bool):
             className="text-muted mb-2",
         )
     elif trial:
-        badge = html.Div(f"{trial} jours d'essai gratuit", className="mb-2")
+        badge = html.Div(f"{trial} jours d'essai gratuit", className="mb-3")
     else:
         badge = None
     return dbc.Card(
@@ -41,23 +41,18 @@ def _plan_card(meta: dict, trial: int | None, trial_used: bool):
                 html.P(f"{meta['prix_ht']} € HT / mois", className="text-muted mb-3"),
                 html.P(meta["description"], className="mb-3"),
                 badge,
-                html.Form(
-                    method="POST",
-                    action="/subscriptions/subscribe",
-                    children=[
-                        _csrf_input(),
-                        dcc.Input(type="hidden", name="plan", value=meta["key"]),
-                        html.Button(
-                            "S'abonner",
-                            type="submit",
-                            className=(
-                                "btn btn-secondary disabled"
-                                if TOUS_ABONNES
-                                else "btn btn-primary"
-                            ),
-                            disabled=TOUS_ABONNES,
-                        ),
-                    ],
+                html.A(
+                    "S'abonner",
+                    href=(
+                        "#"
+                        if TOUS_ABONNES
+                        else f"/compte/abonnement/mes-infos?plan={meta['key']}"
+                    ),
+                    className=(
+                        "btn btn-secondary disabled"
+                        if TOUS_ABONNES
+                        else "btn btn-primary"
+                    ),
                 ),
             ],
             className="p-4",
@@ -166,7 +161,10 @@ def _active_view(row):
 
 def _feedback(query):
     msgs = {
-        "succes": ("Merci, votre abonnement est en cours d'activation.", "success"),
+        "succes": (
+            "Merci, votre abonnement est activé. Bonne exploration !",
+            "success",
+        ),
         "annule": ("Paiement annulé.", "secondary"),
     }
     out = []

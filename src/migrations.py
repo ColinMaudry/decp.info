@@ -16,6 +16,10 @@ _MIGRATIONS: list[tuple[str, str]] = [
         "0001_add_prix_ht_to_subscriptions",
         "ALTER TABLE subscriptions ADD COLUMN prix_ht REAL",
     ),
+    (
+        "0002_add_siret_to_users",
+        "ALTER TABLE users ADD COLUMN siret TEXT",
+    ),
 ]
 
 

@@ -3,6 +3,7 @@ import os
 from flask import Blueprint, redirect, request
 from flask_login import current_user, login_required
 
+from src.auth import db as auth_db
 from src.subscriptions import client, db, plans, webhooks
 from src.utils import logger
 
@@ -28,19 +29,55 @@ def subscribe():
     cust = _customer_handle(current_user.id)
     try:
         meta = plans.plan_meta(plan_key)
-        client.get_or_create_customer(cust, current_user.email)
         db.create_pending(
             current_user.id, cust, plan_key, meta["prix_ht"] if meta else None
         )
-        # Anti-abus : pas de nouvel essai si l'utilisateur en a déjà consommé un.
         no_trial = db.has_used_trial(current_user.id)
-        url = client.create_subscription_session(
-            handle,
-            cust,
-            f"{base}/compte/abonnement?paiement=succes",
-            f"{base}/compte/abonnement?paiement=annule",
-            no_trial=no_trial,
-        )
+        siret = (request.form.get("siret") or "").strip()
+        billing: dict = {
+            "email": current_user.email,
+            "first_name": request.form.get("first_name", ""),
+            "last_name": request.form.get("last_name", ""),
+            "address": request.form.get("address", ""),
+            "city": request.form.get("city", ""),
+            "postal_code": request.form.get("postal_code", ""),
+            "country": request.form.get("country", "FR"),
+        }
+        if request.form.get("address2"):
+            billing["address2"] = request.form["address2"]
+        if request.form.get("company"):
+            billing["company"] = request.form["company"]
+
+        if siret:
+            auth_db.set_siret(current_user.id, siret)
+
+        customer_exists = True
+        try:
+            client.update_customer(cust, billing)
+        except client.FrisbiiError as exc:
+            if exc.status_code != 404:
+                raise
+            customer_exists = False
+
+        if customer_exists:
+            url = client.create_subscription_session(
+                handle,
+                f"{base}/compte/abonnement?paiement=succes",
+                f"{base}/compte/abonnement?paiement=annule",
+                customer_handle=cust,
+                no_trial=no_trial,
+            )
+        else:
+            create_customer = {"handle": cust, **billing}
+            if siret:
+                create_customer["metadata"] = {"siret": siret}
+            url = client.create_subscription_session(
+                handle,
+                f"{base}/compte/abonnement?paiement=succes",
+                f"{base}/compte/abonnement?paiement=annule",
+                create_customer=create_customer,
+                no_trial=no_trial,
+            )
     except client.FrisbiiError:
         logger.exception("Échec de création de session d'abonnement Frisbii")
         return redirect("/compte/abonnement?error=frisbii")
