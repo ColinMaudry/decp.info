@@ -81,15 +81,18 @@ def layout(error: str | None = None, email: str | None = None, **kwargs):
                     dbc.Button("Se connecter", type="submit", color="primary"),
                 ],
             ),
+            dcc.Link(
+                "Mot de passe oublié ?",
+                href="/mot-de-passe-oublie",
+                className="small d-block mt-2",
+            ),
             html.Div("ou", className="text-center text-muted my-2"),
             linkedin_button(),
-            html.Hr(),
-            html.Div(
-                [
-                    dcc.Link("Créer un compte", href="/inscription"),
-                    html.Span(" · "),
-                    dcc.Link("Mot de passe oublié ?", href="/mot-de-passe-oublie"),
-                ]
+            html.Div("ou", className="text-center text-muted my-2"),
+            html.A(
+                "Créer un compte avec mon adresse email",
+                href="/inscription",
+                className="btn btn-primary w-100",
             ),
         ],
     )

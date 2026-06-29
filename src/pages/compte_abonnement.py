@@ -149,15 +149,13 @@ def _active_view(row):
                         html.Button(
                             "Ajouter une méthode de paiement",
                             type="submit",
-                            className="btn btn-primary",
+                            className="btn btn-primary mb-3",
                         ),
                     ],
                 ),
             ]
         )
-        return html.Div(blocks)
-
-    if row["status"] == "trial":
+    elif row["status"] == "trial":
         blocks.append(
             dbc.Alert(
                 f"Essai gratuit jusqu'au {end}, puis débit automatique.", color="info"
@@ -170,7 +168,7 @@ def _active_view(row):
     else:
         blocks.append(html.P(f"Prochain renouvellement : {end}"))
 
-    if row["status"] in ("trial", "active"):
+    if row["status"] in ("pending", "trial", "active"):
         blocks.append(
             html.Button(
                 "Me désabonner",
