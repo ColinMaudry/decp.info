@@ -34,6 +34,34 @@ def client(app):
 
 
 @pytest.fixture
+def csrf_app(users_db_path, monkeypatch):
+    """App Flask avec protection CSRF activée, comme en production."""
+    from flask import Flask
+    from flask_wtf.csrf import generate_csrf
+
+    from src.auth.setup import init_auth
+
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("LINKEDIN_CLIENT_ID", "test-client-id")
+    monkeypatch.setenv("LINKEDIN_CLIENT_SECRET", "test-client-secret")
+    monkeypatch.setenv("APP_BASE_URL", "http://localhost:8050")
+
+    app = Flask(__name__)
+    init_auth(app)
+
+    @app.route("/_test/csrf")
+    def _test_csrf():
+        return generate_csrf()
+
+    yield app
+
+
+@pytest.fixture
+def csrf_client(csrf_app):
+    return csrf_app.test_client()
+
+
+@pytest.fixture
 def mail_outbox(app, monkeypatch):
     from src.auth import mailer
 

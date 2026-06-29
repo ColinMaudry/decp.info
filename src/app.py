@@ -297,7 +297,6 @@ def _generate_csrf_token(*_):
 @callback(
     Output({"type": "csrf-input", "index": ALL}, "value"),
     Input("csrf-token", "data"),
-    prevent_initial_call=True,
 )
 def _fill_csrf_inputs(token):
     return [token] * len(ctx.outputs_list)

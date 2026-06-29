@@ -17,7 +17,7 @@ def test_login_success(client, users_db_path):
         data={"email": "a@b.c", "password": "password12"},
     )
     assert resp.status_code == 302
-    assert resp.headers["Location"].endswith("/compte/admin")
+    assert resp.headers["Location"].endswith("/compte/abonnement")
 
 
 def test_login_wrong_password(client, users_db_path):
@@ -63,7 +63,7 @@ def test_login_rejects_absolute_next(client, users_db_path):
             "next": "https://evil.com",
         },
     )
-    assert resp.headers["Location"].endswith("/compte/admin")
+    assert resp.headers["Location"].endswith("/compte/abonnement")
 
 
 def test_logout_clears_session(client, users_db_path):
@@ -72,3 +72,30 @@ def test_logout_clears_session(client, users_db_path):
     resp = client.post("/auth/logout")
     assert resp.status_code == 302
     assert resp.headers["Location"].endswith("/")
+
+
+# --- Tests CSRF (protection active, comme en production) ---
+
+
+def test_login_rejects_missing_csrf_token(csrf_client):
+    """POST /auth/login sans token CSRF → 400.
+
+    Régression : avec prevent_initial_call=True sur _fill_csrf_inputs, le token
+    n'était pas injecté dans le formulaire lors du chargement initial de /connexion.
+    """
+    resp = csrf_client.post(
+        "/auth/login",
+        data={"email": "a@b.c", "password": "password12"},
+    )
+    assert resp.status_code == 400
+
+
+def test_login_accepts_valid_csrf_token(csrf_client, users_db_path):
+    """POST /auth/login avec token CSRF valide → 302."""
+    _make_verified_user()
+    token = csrf_client.get("/_test/csrf").data.decode()
+    resp = csrf_client.post(
+        "/auth/login",
+        data={"email": "a@b.c", "password": "password12", "csrf_token": token},
+    )
+    assert resp.status_code == 302

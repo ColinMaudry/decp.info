@@ -28,6 +28,40 @@ def test_csrf_token_store_in_main_layout():
     )
 
 
+def test_fill_csrf_inputs_allows_initial_call():
+    """_fill_csrf_inputs ne doit pas avoir prevent_initial_call=True.
+
+    Avec prevent_initial_call=True, le callback n'est pas déclenché lors de la chaîne
+    initiale (_pages_location → _generate_csrf_token → csrf-token → _fill_csrf_inputs),
+    laissant le champ csrf_token vide → erreur 400 au premier chargement de /connexion.
+    """
+    import src.app  # noqa: F401 — enregistre les callbacks
+
+    found = False
+    for cb_info in dash._callback.GLOBAL_CALLBACK_MAP.values():
+        inputs = getattr(cb_info, "inputs", None) or cb_info.get("inputs", [])
+        for inp in inputs:
+            if hasattr(inp, "component_id"):
+                inp_id, inp_prop = inp.component_id, inp.component_property
+            else:
+                inp_id, inp_prop = inp.get("id"), inp.get("property")
+
+            if inp_id == "csrf-token" and inp_prop == "data":
+                pic = getattr(cb_info, "prevent_initial_call", None)
+                if pic is None:
+                    pic = cb_info.get("prevent_initial_call", False)
+                assert not pic, (
+                    "_fill_csrf_inputs a prevent_initial_call=True — le token CSRF "
+                    "ne sera pas injecté lors du premier chargement de /connexion."
+                )
+                found = True
+
+    assert found, (
+        "Callback avec Input('csrf-token', 'data') introuvable dans le registre Dash. "
+        "Vérifier que _fill_csrf_inputs est toujours enregistré dans src/app.py."
+    )
+
+
 def test_no_page_specific_csrf_callback_outputs():
     """Aucun callback CSRF ne doit cibler un ID string page-spécifique en Output."""
     old_ids = {
