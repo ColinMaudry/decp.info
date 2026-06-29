@@ -13,13 +13,16 @@ def _sign(secret, timestamp, event_id):
 
 def test_subscribe_redirects_to_hosted_url(logged_in_client, monkeypatch):
     client, uid = logged_in_client
-    monkeypatch.setattr(
-        frisbii_client, "get_or_create_customer", lambda h, e: {"handle": h}
-    )
+    monkeypatch.setattr(frisbii_client, "update_customer", lambda h, d: {})
     monkeypatch.setattr(
         frisbii_client,
         "create_subscription_session",
-        lambda plan, cust, ok, ko, no_trial=False: "https://pay.test/cs_1",
+        lambda plan,
+        ok,
+        ko,
+        no_trial=False,
+        customer_handle=None,
+        create_customer=None: "https://pay.test/cs_1",
     )
     resp = client.post("/subscriptions/subscribe", data={"plan": "simple"})
     assert resp.status_code == 303
@@ -39,11 +42,11 @@ def test_subscribe_disables_trial_after_first_use(logged_in_client, monkeypatch)
         "decpinfo-%d" % uid, "sub_42", "expired", "2020-01-01T00:00:00+00:00"
     )
     captured = {}
-    monkeypatch.setattr(
-        frisbii_client, "get_or_create_customer", lambda h, e: {"handle": h}
-    )
+    monkeypatch.setattr(frisbii_client, "update_customer", lambda h, d: {})
 
-    def fake_session(plan, cust, ok, ko, no_trial=False):
+    def fake_session(
+        plan, ok, ko, no_trial=False, customer_handle=None, create_customer=None
+    ):
         captured["no_trial"] = no_trial
         return "https://pay.test/cs_9"
 
@@ -62,10 +65,10 @@ def test_subscribe_unknown_plan(logged_in_client):
 def test_subscribe_api_error_redirects_with_error(logged_in_client, monkeypatch):
     client, _ = logged_in_client
 
-    def boom(h, e):
+    def boom(h, d):
         raise frisbii_client.FrisbiiError(500, "boom")
 
-    monkeypatch.setattr(frisbii_client, "get_or_create_customer", boom)
+    monkeypatch.setattr(frisbii_client, "update_customer", boom)
     resp = client.post("/subscriptions/subscribe", data={"plan": "simple"})
     assert resp.status_code == 302
     assert "error=frisbii" in resp.headers["Location"]
@@ -139,7 +142,7 @@ def test_subscribe_skips_if_already_active(logged_in_client, monkeypatch):
     )
     called = []
     monkeypatch.setattr(
-        frisbii_client, "get_or_create_customer", lambda h, e: called.append(h)
+        frisbii_client, "update_customer", lambda h, d: called.append(h)
     )
     resp = client.post("/subscriptions/subscribe", data={"plan": "simple"})
     # Doit rediriger vers la page abonnement, sans appeler Frisbii.

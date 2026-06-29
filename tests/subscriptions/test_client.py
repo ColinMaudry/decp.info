@@ -5,29 +5,27 @@ from src.subscriptions import client
 
 def test_auth_and_base_url_used(fake_httpx):
     fake_httpx["queue"].append(fake_httpx["Response"](200, {"handle": "decpinfo-1"}))
-    client.get_or_create_customer("decpinfo-1", "a@b.fr")
+    client.get_customer("decpinfo-1")
     call = fake_httpx["calls"][0]
     assert call["url"] == "https://api.test/v1/customer/decpinfo-1"
     assert call["auth"] == ("priv_test", "")
 
 
-def test_get_or_create_customer_existing(fake_httpx):
+def test_get_customer(fake_httpx):
     fake_httpx["queue"].append(fake_httpx["Response"](200, {"handle": "decpinfo-1"}))
-    result = client.get_or_create_customer("decpinfo-1", "a@b.fr")
+    result = client.get_customer("decpinfo-1")
     assert result == {"handle": "decpinfo-1"}
-    assert len(fake_httpx["calls"]) == 1  # pas de POST de création
 
 
-def test_get_or_create_customer_creates_on_404(fake_httpx):
-    fake_httpx["queue"].append(fake_httpx["Response"](404, {"error": "not found"}))
+def test_update_customer(fake_httpx):
     fake_httpx["queue"].append(fake_httpx["Response"](200, {"handle": "decpinfo-1"}))
-    result = client.get_or_create_customer("decpinfo-1", "a@b.fr")
-    assert result == {"handle": "decpinfo-1"}
-    assert fake_httpx["calls"][1]["method"] == "POST"
-    assert fake_httpx["calls"][1]["json"] == {"handle": "decpinfo-1", "email": "a@b.fr"}
+    client.update_customer("decpinfo-1", {"email": "a@b.fr"})
+    call = fake_httpx["calls"][0]
+    assert call["method"] == "PUT"
+    assert call["json"] == {"email": "a@b.fr"}
 
 
-def test_create_subscription_session_returns_url(fake_httpx):
+def test_create_subscription_session_with_customer_handle(fake_httpx):
     fake_httpx["queue"].append(
         fake_httpx["Response"](
             200,
@@ -39,7 +37,10 @@ def test_create_subscription_session_returns_url(fake_httpx):
         )
     )
     url = client.create_subscription_session(
-        "plan_simple", "decpinfo-1", "https://app/ok", "https://app/ko"
+        "plan_simple",
+        "https://app/ok",
+        "https://app/ko",
+        customer_handle="decpinfo-1",
     )
     assert url == "https://checkout.reepay.com/#/sub-1"
     body = fake_httpx["calls"][0]["json"]
@@ -47,7 +48,6 @@ def test_create_subscription_session_returns_url(fake_httpx):
     assert body["customer"] == "decpinfo-1"
     assert body["signup_method"] == "link"
     assert "prepare_subscription" not in body
-    assert "accept_url" not in body
 
 
 def test_create_subscription_session_no_trial(fake_httpx):
@@ -62,7 +62,11 @@ def test_create_subscription_session_no_trial(fake_httpx):
         )
     )
     client.create_subscription_session(
-        "plan_simple", "decpinfo-1", "https://app/ok", "https://app/ko", no_trial=True
+        "plan_simple",
+        "https://app/ok",
+        "https://app/ko",
+        no_trial=True,
+        customer_handle="decpinfo-1",
     )
     assert fake_httpx["calls"][0]["json"]["no_trial"] is True
 

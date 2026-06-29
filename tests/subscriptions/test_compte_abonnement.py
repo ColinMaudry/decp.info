@@ -29,7 +29,7 @@ def test_active_view_shows_cancel(monkeypatch):
         "current_period_end": "2099-01-01T00:00:00+00:00",
     }
     view = compte_abonnement._active_view(row)
-    assert "Résilier" in str(view)
+    assert "Me désabonner" in str(view)
 
 
 def test_active_view_trial_banner(monkeypatch):

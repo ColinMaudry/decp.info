@@ -6,9 +6,9 @@ import pytest
 # unitaires de pages (pas besoin du serveur complet — juste que CONFIG soit peuplé).
 from dash import Dash as _Dash
 
-from src.pages import compte_abonnement  # noqa: F401
+_Dash(__name__, use_pages=True, pages_folder="", assets_folder="assets")
 
-_Dash(__name__, assets_folder="assets")
+from src.pages import compte_abonnement  # noqa: F401, E402  # doit venir après Dash()
 
 
 class FakeResponse:
