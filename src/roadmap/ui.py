@@ -60,9 +60,10 @@ def _en_cours_items(en_cours: list[dict]) -> list:
 def roadmap_content(editable: bool, balance: int | None = None) -> html.Div:
     try:
         issues = github.fetch_roadmap_issues()
+        counts = roadmap_db.vote_counts()
     except Exception:
         issues = {"en_cours": [], "au_vote": []}
-    counts = roadmap_db.vote_counts()
+        counts = {}
 
     body: list = []
     if editable and balance is not None:
