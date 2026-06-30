@@ -33,6 +33,8 @@ def layout(**_):
     prevent_initial_call=True,
 )
 def cast_vote(n_clicks):
+    if not current_user.is_authenticated:
+        return no_update, no_update
     if not ctx.triggered_id or not any(n_clicks):
         return no_update, no_update
     issue_number = ctx.triggered_id["index"]
