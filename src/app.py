@@ -29,7 +29,7 @@ from dash import (
     page_registry,
 )
 from dotenv import load_dotenv
-from flask import Flask, Response
+from flask import Flask, Response, redirect
 from flask_login import current_user
 
 from src.auth.setup import init_auth
@@ -148,6 +148,11 @@ def sitemap():
         xml += "  </url>\n"
     xml += "</urlset>"
     return Response(xml, mimetype="text/xml")
+
+
+@app.server.route("/llms.txt")
+def llms():
+    return redirect("/assets/llms.md")
 
 
 with open("./pyproject.toml", "rb") as f:
