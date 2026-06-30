@@ -1,4 +1,4 @@
-##### 2.9.0
+### 3.0.0
 
 - Comptes utilisateurs : inscription avec vérification d'email, connexion, réinitialisation de mot de passe, page compte ([#73](https://github.com/ColinMaudry/colibre/issues/73))
 - Sauvegarde régulière de la base de données des utilisateurs ([#89](https://github.com/ColinMaudry/colibre/issues/89))
