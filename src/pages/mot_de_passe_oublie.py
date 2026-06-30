@@ -6,9 +6,9 @@ NAME = "Mot de passe oublié"
 register_page(
     __name__,
     path="/mot-de-passe-oublie",
-    title="Mot de passe oublié | decp.info",
+    title="Mot de passe oublié | colibre",
     name=NAME,
-    description="Réinitialiser votre mot de passe decp.info.",
+    description="Réinitialiser votre mot de passe colibre.",
 )
 
 ERROR_MESSAGES = {

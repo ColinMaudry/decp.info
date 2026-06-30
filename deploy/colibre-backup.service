@@ -1,0 +1,11 @@
+[Unit]
+Description=Sauvegarde horaire de users.sqlite (colibre) vers S3
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=colibre
+WorkingDirectory=/var/www/colibre
+EnvironmentFile=/var/www/colibre/.env
+ExecStart=/var/www/colibre/.venv/bin/python -m src.backup backup

@@ -8,9 +8,9 @@ from src.subscriptions import db, plans
 register_page(
     __name__,
     path="/compte/abonnement",
-    title="Abonnement | decp.info",
+    title="Abonnement | colibre",
     name="Abonnement",
-    description="Gestion de votre abonnement decp.info.",
+    description="Gestion de votre abonnement colibre.",
 )
 
 _PLAN_KEYS = ("simple", "soutien")

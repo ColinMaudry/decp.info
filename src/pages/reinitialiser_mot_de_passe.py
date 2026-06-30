@@ -8,7 +8,7 @@ NAME = "Réinitialiser le mot de passe"
 register_page(
     __name__,
     path="/reinitialiser-mot-de-passe",
-    title="Nouveau mot de passe | decp.info",
+    title="Nouveau mot de passe | colibre",
     name=NAME,
     description="Choisir un nouveau mot de passe.",
 )

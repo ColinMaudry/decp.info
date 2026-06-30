@@ -44,8 +44,8 @@ def get_title(acheteur_id: str | None = None) -> str:
         "acheteur_nom"
     )
     if acheteur_nom.height > 0:
-        return f"Marchés publics attribués par {acheteur_nom.item(0, 0)} | decp.info"
-    return "Marchés publics attribués | decp.info"
+        return f"Marchés publics attribués par {acheteur_nom.item(0, 0)} | colibre"
+    return "Marchés publics attribués | colibre"
 
 
 register_page(

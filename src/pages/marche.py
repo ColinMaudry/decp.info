@@ -12,7 +12,7 @@ from src.utils.table import format_values, unformat_montant
 
 
 def get_title(uid: str = None) -> str:
-    return f"Marché {uid} | decp.info"
+    return f"Marché {uid} | colibre"
 
 
 register_page(
@@ -231,7 +231,7 @@ def get_marche_jsonld(marche, titulaires) -> str:
         jsonld = {
             "@context": "https://schema.org",
             "@type": "Order",
-            "@id": f"https://decp.info/marches/{marche.get('uid')}",
+            "@id": f"https://colibre.fr/marches/{marche.get('uid')}",
             "name": f"{marche.get('nature')} conclu par {marche.get('acheteur_nom')} le {marche.get('dateNotification')}",
             "description": marche.get("objet"),
             "orderNumber": marche.get("uid"),

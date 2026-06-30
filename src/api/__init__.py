@@ -5,7 +5,7 @@ from src.api import routes
 
 def init_api(server) -> None:
     """Enregistre le blueprint d'API privée sur le serveur Flask."""
-    server.config.setdefault("API_TITLE", "decp.info API")
+    server.config.setdefault("API_TITLE", "colibre API")
     server.config.setdefault("API_VERSION", "v1")
     server.config.setdefault("OPENAPI_VERSION", "3.0.3")
     server.config.setdefault("OPENAPI_URL_PREFIX", "/api/v1")

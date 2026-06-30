@@ -19,7 +19,7 @@ from src.saved_views import ui as saved_views_ui
 register_page(
     __name__,
     path="/compte/vues",
-    title="Mes vues | decp.info",
+    title="Mes vues | colibre",
     name="Mes vues",
     description="Gérez vos vues enregistrées du tableau des marchés.",
 )

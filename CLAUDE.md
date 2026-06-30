@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**decp.info** is a French public procurement data explorer — a Dash (Python) web app for browsing, filtering, and visualizing _Données Essentielles de la Commande Publique_ (DECP). The UI is in French.
+**colibre** is a French public procurement data explorer — a Dash (Python) web app for browsing, filtering, and visualizing _Données Essentielles de la Commande Publique_ (DECP). The UI is in French.
 
 ## Commands
 
@@ -112,28 +112,28 @@ _MIGRATIONS = [
 
 ### Deployment
 
-- `main` branch → manual deploy to decp.info via GitHub Actions
-- `dev` branch → auto-deploy to test.decp.info via GitHub Actions
+- `main` branch → manual deploy to colibre.fr via GitHub Actions
+- `dev` branch → auto-deploy to test.colibre.fr via GitHub Actions
 
 #### Sauvegarde de la base utilisateurs
 
 `users.sqlite` est sauvegardée toutes les heures sur S3 par un timer systemd
-(voir `deploy/decpinfo-backup.{service,timer}`). Installation initiale (une fois,
+(voir `deploy/colibre-backup.{service,timer}`). Installation initiale (une fois,
 sur le serveur, en root) :
 
 ```bash
-cp deploy/decpinfo-backup.service deploy/decpinfo-backup.timer /etc/systemd/system/
+cp deploy/colibre-backup.service deploy/colibre-backup.timer /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now decpinfo-backup.timer
-systemctl list-timers decpinfo-backup.timer # vérifier le prochain déclenchement
+systemctl enable --now colibre-backup.timer
+systemctl list-timers colibre-backup.timer # vérifier le prochain déclenchement
 ```
 
 Restauration manuelle :
 
 ```bash
-cd /var/www/decpinfo && source .venv/bin/activate
+cd /var/www/colibre && source .venv/bin/activate
 python -m src.backup list
-systemctl stop decpinfo
+systemctl stop colibre
 python -m src.backup restore backups/users-YYYYMMDDTHHMMSSZ.sqlite.gz.enc
-systemctl start decpinfo
+systemctl start colibre
 ```

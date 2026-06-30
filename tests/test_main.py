@@ -33,8 +33,8 @@ def test_001_logo_and_search(dash_duo: DashComposite):
     from src.app import app
 
     dash_duo.start_server(app)
-    dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
-    assert dash_duo.find_element(".logo > h1").text == "decp.info"
+    dash_duo.wait_for_text_to_equal(".logo > h1", "colibre", timeout=4)
+    assert dash_duo.find_element(".logo > h1").text == "colibre"
 
     for org_type in ["acheteur", "titulaire"]:
         name = f"{org_type.upper()} 1"
@@ -64,7 +64,7 @@ def test_002_filter_persistence(dash_duo: DashComposite):
     from src.app import app
 
     dash_duo.start_server(app)
-    dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
+    dash_duo.wait_for_text_to_equal(".logo > h1", "colibre", timeout=4)
 
     def open_page_and_check_filter_input():
         dash_duo.wait_for_page(f"{dash_duo.server_url}/{page}")
@@ -172,7 +172,7 @@ def test_006_observatoire_url_to_input(dash_duo: DashComposite):
     from src.app import app
 
     dash_duo.start_server(app)
-    dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
+    dash_duo.wait_for_text_to_equal(".logo > h1", "colibre", timeout=4)
 
     # Navigate to observatoire with acheteur_id query param
     dash_duo.wait_for_page(f"{dash_duo.server_url}/observatoire?acheteur_id=123")
@@ -192,7 +192,7 @@ def test_007_observatoire_share_url(dash_duo: DashComposite):
     from src.app import app
 
     dash_duo.start_server(app)
-    dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
+    dash_duo.wait_for_text_to_equal(".logo > h1", "colibre", timeout=4)
 
     # Navigate to observatoire with acheteur_id query param
     dash_duo.wait_for_page(f"{dash_duo.server_url}/observatoire?acheteur_id=123")
@@ -214,7 +214,7 @@ def test_008_search_to_observatoire(dash_duo: DashComposite):
     from src.app import app
 
     dash_duo.start_server(app)
-    dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
+    dash_duo.wait_for_text_to_equal(".logo > h1", "colibre", timeout=4)
 
     # Search for an acheteur
     search_bar = dash_duo.find_element("#search")
@@ -251,7 +251,7 @@ def test_009_observatoire_filter_persistence(dash_duo: DashComposite):
     from src.app import app
 
     dash_duo.start_server(app)
-    dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
+    dash_duo.wait_for_text_to_equal(".logo > h1", "colibre", timeout=4)
 
     # Clear localStorage to start from a clean state
     dash_duo.driver.execute_script("localStorage.clear()")
@@ -298,7 +298,7 @@ def test_011_observatoire_multi_param_url(dash_duo: DashComposite):
     from src.app import app
 
     dash_duo.start_server(app)
-    dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
+    dash_duo.wait_for_text_to_equal(".logo > h1", "colibre", timeout=4)
 
     # Navigate with multiple filter params
     dash_duo.wait_for_page(
@@ -360,7 +360,7 @@ def test_015_tableau_filter_date(dash_duo: DashComposite):
     from src.app import app
 
     dash_duo.start_server(app)
-    dash_duo.wait_for_text_to_equal(".logo > h1", "decp.info", timeout=4)
+    dash_duo.wait_for_text_to_equal(".logo > h1", "colibre", timeout=4)
 
     for page in ["tableau", "acheteurs/123", "titulaires/345"]:
         dash_duo.wait_for_page(f"{dash_duo.server_url}/{page}")

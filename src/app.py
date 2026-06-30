@@ -45,7 +45,7 @@ META_TAGS = [
     {"name": "viewport", "content": "width=device-width, initial-scale=1"},
     {
         "name": "keywords",
-        "content": "commande publique, decp, marchés publics, données essentielles",
+        "content": "commande publique, decp, marchés publics, données essentielles, colibre",
     },
 ]
 
@@ -57,7 +57,7 @@ if DEVELOPMENT:
 # fonctions memoizées (@cache.memoize) dès l'import (ex. tableau.py).
 server = Flask(__name__)
 
-cache_dir = os.getenv("CACHE_DIR", "/tmp/decp-cache")
+cache_dir = os.getenv("CACHE_DIR", "/tmp/colibre-cache")
 
 if os.path.exists(cache_dir):
     rmtree(cache_dir)
@@ -83,7 +83,7 @@ app: Dash = Dash(
     # `src.pages.connexion` : deux identités, même URL → "duplicate paths" →
     # check_for_duplicate_pathnames lève à chaque requête → 500 sur toute l'app.
     name="src",
-    title="decp.info",
+    title="Colibre",
     use_pages=True,
     suppress_callback_exceptions=True,
     compress=True,
@@ -132,7 +132,7 @@ Allow: /
 
 @app.server.route("/sitemap.xml")
 def sitemap():
-    base_url = "https://decp.info"
+    base_url = "https://colibre.fr"
     pages = [
         "/",
         "/observatoire",
@@ -203,7 +203,7 @@ navbar = dbc.Navbar(
                 children=[
                     html.Div(
                         [
-                            dcc.Link(html.H1("decp.info"), href="/", className="logo"),
+                            dcc.Link(html.H1("colibre"), href="/", className="logo"),
                             html.P(
                                 [
                                     html.A(

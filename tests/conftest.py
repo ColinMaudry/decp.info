@@ -43,10 +43,10 @@ _TEST_DATA = [
 _PARQUET_PATH = Path(os.path.abspath("tests/test.parquet"))
 
 # Base DuckDB de test ISOLÉE : src.db lit le chemin via DUCKDB_PATH (défaut
-# ./decp.duckdb). On la place dans tests/ pour ne JAMAIS toucher au decp.duckdb
-# de dev/prod — plus besoin de sauvegarder/restaurer. Le nom decp.duckdb
-# correspond au motif **/decp.duckdb déjà présent dans .gitignore.
-_DB_PATH = Path(os.path.abspath("tests/decp.duckdb"))
+# ./colibre.duckdb). On la place dans tests/ pour ne JAMAIS toucher au colibre.duckdb
+# de dev/prod — plus besoin de sauvegarder/restaurer. Le nom colibre.duckdb
+# correspond au motif **/colibre.duckdb déjà présent dans .gitignore.
+_DB_PATH = Path(os.path.abspath("tests/colibre.duckdb"))
 os.environ["DUCKDB_PATH"] = str(_DB_PATH)
 
 # Schéma déterministe et hors-ligne : on COPIE le fixture committé vers un cache

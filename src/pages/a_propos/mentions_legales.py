@@ -6,8 +6,8 @@ from src.utils.seo import META_CONTENT
 register_page(
     __name__,
     path="/a-propos/mentions-legales",
-    title="Mentions légales | À propos | decp.info",
-    description="Mentions légales de decp.info : éditeur, hébergement, suivi d'audience, attributions.",
+    title="Mentions légales | À propos | colibre",
+    description="Mentions légales de colibre : éditeur, hébergement, suivi d'audience, attributions.",
     image_url=META_CONTENT["image_url"],
 )
 
@@ -29,7 +29,7 @@ Hébergement : serveur situé en France et administré par Scaleway, 8 rue de la
             html.H4("Suivi d'audience", id="audience"),
             dcc.Markdown(
                 """
-Ce site dépose un petit fichier texte (un « cookie ») sur votre ordinateur lorsque vous le consultez ([Wikipédia](https://fr.wikipedia.org/wiki/Cookie_(informatique))). Cela me permet de mesurer le nombre de visites, de distinguer les nouveaux visiteurs des utilisateurs réguliers et ainsi de communiquer sur l'impact de decp.info.
+Ce site dépose un petit fichier texte (un « cookie ») sur votre ordinateur lorsque vous le consultez ([Wikipédia](https://fr.wikipedia.org/wiki/Cookie_(informatique))). Cela me permet de mesurer le nombre de visites, de distinguer les nouveaux visiteurs des utilisateurs réguliers et ainsi de communiquer sur l'impact de colibre.
 
 **Ce site n'affiche pas de bannière de consentement aux cookies, pourquoi ?**
 

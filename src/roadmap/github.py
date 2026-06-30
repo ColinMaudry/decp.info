@@ -2,7 +2,7 @@ import httpx
 
 from src.utils.cache import cache
 
-GITHUB_REPO = "ColinMaudry/decp.info"
+GITHUB_REPO = "ColinMaudry/colibre"
 _LABEL_KEYS = {"en cours": "en_cours", "mis au vote": "au_vote"}
 
 

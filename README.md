@@ -1,8 +1,10 @@
-# decp.info
+# colibre
+
+> **Note:** Ce projet a été rebaptisé de **decp.info** à **colibre** en 2026.
 
 > Outil d'exploration et de téléchargement des données essentielles de la commande publique.
 
-=> [decp.info](https://decp.info)
+=> [colibre.fr](https://colibre.fr)
 
 ## Installation et lancement
 
@@ -20,8 +22,8 @@ uv run run.py
 
 ## Déploiement
 
-- **Production** (branche `main`, [decp.info](https://decp.info)) : déploiement manuel via un déclenchement de la Github Action [Déploiement](https://github.com/ColinMaudry/decp.info/actions/workflows/deploy.yaml)
-- **Test** (branche `dev`, [test.decp.info](https://test.decp.info)) : déploiement automatique à chaque push sur la branche `dev`, via la même Github Action.
+- **Production** (branche `main`, [colibre.fr](https://colibre.fr)) : déploiement manuel via un déclenchement de la Github Action [Déploiement](https://github.com/ColinMaudry/colibre/actions/workflows/deploy.yaml)
+- **Test** (branche `dev`, [test.colibre.fr](https://test.colibre.fr)) : déploiement automatique à chaque push sur la branche `dev`, via la même Github Action.
 
 Ne pas oublier de mettre à jour les fichier .env.
 
@@ -36,9 +38,9 @@ python -m src.backup list
 Pour restaurer une sauvegarde, arrêtez le service, restaurez la base, puis redémarrez :
 
 ```bash
-systemctl stop decpinfo
+systemctl stop colibre
 python -m src.backup restore backups/users-YYYYMMDDTHHMMSSZ.sqlite.gz.enc
-systemctl start decpinfo
+systemctl start colibre
 ```
 
 ## Migrations de base de données
@@ -60,4 +62,4 @@ Pour ajouter une migration, voir les instructions dans `src/migrations.py`.
 
 ## Notes de version
 
-Voir [CHANGELOG](https://github.com/ColinMaudry/decp.info/blob/main/CHANGELOG.md).
+Voir [CHANGELOG](https://github.com/ColinMaudry/colibre/blob/main/CHANGELOG.md).

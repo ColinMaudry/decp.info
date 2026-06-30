@@ -6,8 +6,8 @@ from src.utils.seo import META_CONTENT
 register_page(
     __name__,
     path="/a-propos/explorer",
-    title="Explorer le projet | À propos | decp.info",
-    description="Ressources pour explorer le projet decp.info : données, code source, blog.",
+    title="Explorer le projet | À propos | colibre",
+    description="Ressources pour explorer le projet colibre : données, code source, blog.",
     image_url=META_CONTENT["image_url"],
 )
 
@@ -23,7 +23,7 @@ def layout(**_):
 - 🗞️  [mon blog](https://colin.maudry.com)
 - 📔  [wiki du projet](https://github.com/ColinMaudry/decp-processing/wiki)
 - 🚰  code source
-    - [de decp.info](https://github.com/ColinMaudry/decp.info)
+    - [de colibre](https://github.com/ColinMaudry/colibre)
     - [du traitement des données](https://github.com/ColinMaudry/decp-processing)
 """
             ),

@@ -5,9 +5,9 @@ from src.utils.seo import META_CONTENT
 register_page(
     __name__,
     path="/a-propos",
-    title="À propos | decp.info",
+    title="À propos | colibre",
     name="À propos",
-    description="En savoir plus sur decp.info, l'outil d'exploration des données essentielles de la commande publique.",
+    description="En savoir plus sur colibre, l'outil d'exploration des données essentielles de la commande publique.",
     image_url=META_CONTENT["image_url"],
     order=5,
 )

@@ -43,8 +43,8 @@ def get_title(titulaire_id: str = None) -> str:
         "titulaire_nom"
     )
     if titulaire_nom.height > 0:
-        return f"Marchés publics remportés par {titulaire_nom.item(0, 0)} | decp.info"
-    return "Marchés publics remportés | decp.info"
+        return f"Marchés publics remportés par {titulaire_nom.item(0, 0)} | colibre"
+    return "Marchés publics remportés | colibre"
 
 
 register_page(

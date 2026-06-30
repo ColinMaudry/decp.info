@@ -34,15 +34,15 @@ DEVELOPMENT = os.getenv("DEVELOPMENT", "False").lower() == "true"
 # Accès gratuit temporaire à toutes les fonctionnalités d'abonné, le temps que
 # la plateforme de paiement Frisbii valide la réception de paiements.
 TOUS_ABONNES = os.getenv("TOUS_ABONNES", "False").lower() == "true"
-logger = logging.getLogger("decp.info")
+logger = logging.getLogger("colibre")
 
 if DEVELOPMENT:
     logger.setLevel(logging.DEBUG)
 
 DOMAIN_NAME = (
-    "test.decp.info"
+    "test.colibre.fr"
     if os.getenv("DEVELOPMENT", "False").lower() == "true"
-    else "decp.info"
+    else "colibre.fr"
 )
 
 

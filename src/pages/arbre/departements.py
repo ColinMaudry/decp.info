@@ -7,7 +7,7 @@ NAME = "Départements"
 register_page(
     __name__,
     path="/departements",
-    title="Marchés par département | decp.info",
+    title="Marchés par département | colibre",
     name="Départements",
     description="Tous les marchés publics, classés par départements",
 )

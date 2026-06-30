@@ -8,9 +8,9 @@ build
 .env
 
 # DuckDB runtime artifacts (regenerated from decp_prod.parquet at startup)
-**/decp.duckdb
-**/decp.duckdb.tmp
-**/decp.duckdb.lock
+**/colibre.duckdb
+**/colibre.duckdb.tmp
+**/colibre.duckdb.lock
 **/schema.cache.json
 
 # Runtime databases (never commit)

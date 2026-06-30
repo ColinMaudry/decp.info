@@ -6,8 +6,8 @@ from src.utils.seo import META_CONTENT
 register_page(
     __name__,
     path="/a-propos/contribuer",
-    title="Contribuer | À propos | decp.info",
-    description="Comment contribuer au projet decp.info.",
+    title="Contribuer | À propos | colibre",
+    description="Comment contribuer au projet colibre.",
     image_url=META_CONTENT["image_url"],
 )
 
@@ -18,7 +18,7 @@ def layout(**_):
             html.H2("Pour contribuer"),
             dcc.Markdown(
                 """
-- via l'achat d'une prestation de service (devis, prestation, facture), vous pouvez financer le développement de [fonctionnalités prévues](https://github.com/ColinMaudry/decp.info/issues), ou d'autres !
+- via l'achat d'une prestation de service (devis, prestation, facture), vous pouvez financer le développement de [fonctionnalités prévues](https://github.com/ColinMaudry/colibre/issues), ou d'autres !
 - ma société accepte aussi les dons (pas de réduction d'impôt possible)
 - écrivez-moi et on discute !
 """

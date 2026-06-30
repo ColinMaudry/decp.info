@@ -55,7 +55,7 @@ NAME = "Tableau"
 register_page(
     __name__,
     path="/tableau",
-    title="Tableau des marchés publics | decp.info",
+    title="Tableau des marchés publics | colibre",
     name=NAME,
     description="Consultez, filtrez et exportez les données essentielles de la commande publique sous forme de tableau.",
     image_url=META_CONTENT["image_url"],
@@ -149,7 +149,7 @@ layout = [
                     "@type": "Dataset",
                     "name": "Données essentielles des marchés publics français (DECP)",
                     "description": "Données de marchés publics exhaustives décrivant les marchés publics attribués en France depuis 2018.",
-                    "url": "https://decp.info",
+                    "url": "https://colibre.fr",
                     "sameAs": "https://www.data.gouv.fr/datasets/608c055b35eb4e6ee20eb325",
                     "keywords": [
                         "marchés publics",

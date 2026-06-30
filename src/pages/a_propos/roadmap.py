@@ -7,8 +7,8 @@ from src.utils.seo import META_CONTENT
 register_page(
     __name__,
     path="/a-propos/roadmap",
-    title="Roadmap | À propos | decp.info",
-    description="Les prochaines fonctionnalités de decp.info, soumises au vote des abonnés.",
+    title="Roadmap | À propos | colibre",
+    description="Les prochaines fonctionnalités de colibre, soumises au vote des abonnés.",
     image_url=META_CONTENT["image_url"],
 )
 

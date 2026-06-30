@@ -52,7 +52,7 @@ NAME = "Observatoire"
 register_page(
     __name__,
     path="/observatoire",
-    title="Observatoire | decp.info",
+    title="Observatoire | colibre",
     name=NAME,
     description="Visualisez l'état de la publication des données essentielles des marchés publics en France.",
     image_url=META_CONTENT["image_url"],

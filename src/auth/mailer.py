@@ -25,8 +25,8 @@ def _base_url() -> str:
 
 def _sender() -> SendTransacEmailRequestSender:
     return SendTransacEmailRequestSender(
-        email=os.getenv("MAIL_FROM", "noreply@decp.info"),
-        name=os.getenv("MAIL_FROM_NAME", "decp.info"),
+        email=os.getenv("MAIL_FROM", "noreply@colibre"),
+        name=os.getenv("MAIL_FROM_NAME", "colibre"),
     )
 
 

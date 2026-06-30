@@ -17,5 +17,5 @@ def test_send_verification_email_sandbox(monkeypatch):
     mailer.init_mailer()
     # Ne doit pas lever : l'API Brevo accepte la requête en sandbox.
     mailer.send_verification_email(
-        os.getenv("MAIL_FROM", "noreply@decp.info"), "INTEGRATION_TOKEN"
+        os.getenv("MAIL_FROM", "noreply@colibre"), "INTEGRATION_TOKEN"
     )

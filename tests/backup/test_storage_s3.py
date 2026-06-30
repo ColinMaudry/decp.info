@@ -4,7 +4,7 @@ from moto import mock_aws
 
 from src.backup.storage import S3Storage
 
-BUCKET = "decp-backups"
+BUCKET = "colibre-backups"
 
 
 @pytest.fixture

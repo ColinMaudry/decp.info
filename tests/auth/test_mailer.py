@@ -23,8 +23,8 @@ def fake_client(monkeypatch):
     monkeypatch.setenv("APP_BASE_URL", "http://localhost:8050")
     monkeypatch.setenv("BREVO_TEMPLATE_VERIFY_ID", "11")
     monkeypatch.setenv("BREVO_TEMPLATE_RESET_ID", "22")
-    monkeypatch.setenv("MAIL_FROM", "noreply@decp.info")
-    monkeypatch.setenv("MAIL_FROM_NAME", "decp.info")
+    monkeypatch.setenv("MAIL_FROM", "noreply@colibre")
+    monkeypatch.setenv("MAIL_FROM_NAME", "colibre")
     return client
 
 
@@ -35,7 +35,7 @@ def test_send_verification_email(fake_client):
     call = calls[0]
     assert call["template_id"] == 11
     assert call["to"][0].email == "a@b.c"
-    assert call["sender"].email == "noreply@decp.info"
+    assert call["sender"].email == "noreply@colibre"
     assert "/auth/verify-email?token=TOKEN123" in call["params"]["link"]
     assert call["headers"] == {"X-Sib-Sandbox": "drop"}  # DEVELOPMENT=true en tests
 

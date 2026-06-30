@@ -10,9 +10,9 @@ from src.subscriptions import db as subs_db
 register_page(
     __name__,
     path="/compte/roadmap",
-    title="Roadmap | decp.info",
+    title="Roadmap | colibre",
     name="Roadmap",
-    description="Votez pour les prochaines fonctionnalités de decp.info.",
+    description="Votez pour les prochaines fonctionnalités de colibre.",
 )
 
 

@@ -8,9 +8,9 @@ NAME = "Inscription"
 register_page(
     __name__,
     path="/inscription",
-    title="Inscription | decp.info",
+    title="Inscription | colibre",
     name=NAME,
-    description="Créer un compte decp.info.",
+    description="Créer un compte colibre.",
 )
 
 ERROR_MESSAGES = {

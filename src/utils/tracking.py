@@ -9,7 +9,7 @@ from src.utils import DEVELOPMENT
 
 def track_search(query, category):
     if len(query) >= 4 and not DEVELOPMENT and os.getenv("MATOMO_DOMAIN"):
-        url = "https://decp.info"
+        url = "https://colibre.fr"
         params = {
             "idsite": os.getenv("MATOMO_ID_SITE"),
             "url": url,

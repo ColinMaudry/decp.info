@@ -29,7 +29,7 @@ def make_org_jsonld(org_id, org_type, org_name=None, type_org_id="SIRET") -> dic
     jsonld = {
         "@type": org_types[org_type],
         "name": org_name,
-        "url": f"https://decp.info/{org_type}s/{org_id}",
+        "url": f"https://{DOMAIN_NAME}/{org_type}s/{org_id}",
         "sameAs": f"https://annuaire-entreprises.data.gouv.fr/etablissement/{org_id}",
         "identifier": {
             "@type": "PropertyValue",
@@ -45,8 +45,8 @@ def make_org_jsonld(org_id, org_type, org_name=None, type_org_id="SIRET") -> dic
 
 
 META_CONTENT = {
-    "image_url": f"https://{DOMAIN_NAME}/assets/decp.info.png",
-    "title": "decp.info - exploration des marchés publics français",
+    "image_url": f"https://{DOMAIN_NAME}/assets/colibre.png",
+    "title": "colibre - exploration des marchés publics français",
     "description": (
         "Explorez et analysez les données des marchés publics français avec cet outil libre et gratuit. "
         "Pour une commande publique accessible à toutes et tous."

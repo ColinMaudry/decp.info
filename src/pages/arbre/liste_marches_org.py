@@ -30,16 +30,16 @@ def make_org_nom_verbe(org_type, org_id) -> tuple:
 def get_title(code, org_type, org_id):
     if org_type:
         org_nom, verbe = make_org_nom_verbe(org_type, org_id)
-        return f"Marchés publics {verbe} par {org_nom} | decp.info"
+        return f"Marchés publics {verbe} par {org_nom} | colibre"
     else:
         logger.warning(f"Pas de org_type pour org_id: {org_id}")
-        return "Marchés publics | decp.info"
+        return "Marchés publics | colibre"
 
 
 def get_description(code, org_type, org_id):
     org_nom, verbe = make_org_nom_verbe(org_type, org_id)
 
-    return f"Liste complète des marchés publics {verbe} par {org_nom} et publiés par decp.info. Cliquez sur les liens pour consulter les détails de chaque marché."
+    return f"Liste complète des marchés publics {verbe} par {org_nom} et publiés par colibre. Cliquez sur les liens pour consulter les détails de chaque marché."
 
 
 register_page(

@@ -6,7 +6,7 @@ NAME = "Vérification email"
 register_page(
     __name__,
     path="/verification-email",
-    title="Vérification email | decp.info",
+    title="Vérification email | colibre",
     name=NAME,
     description="Vérification de l'adresse email.",
 )

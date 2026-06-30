@@ -13,7 +13,7 @@ bp = Blueprint(
     "api_v1",
     "api_v1",
     url_prefix="/api/v1",
-    description="API privée decp.info — accès tabulaire aux marchés publics.",
+    description="API privée colibre — accès tabulaire aux marchés publics.",
 )
 
 MAX_PAGE_SIZE = 1000

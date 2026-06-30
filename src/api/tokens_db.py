@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-TOKEN_PREFIX = "decpinfo_"
+TOKEN_PREFIX = "colibre_"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS api_tokens (

@@ -7,9 +7,9 @@ from src.pages._compte_shell import account_guard, account_shell
 register_page(
     __name__,
     path="/compte/admin",
-    title="Mon compte | decp.info",
+    title="Mon compte | colibre",
     name="Mon compte",
-    description="Gestion de votre compte decp.info.",
+    description="Gestion de votre compte colibre.",
 )
 
 ERROR_MESSAGES = {

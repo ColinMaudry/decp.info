@@ -7,7 +7,7 @@ NAME = "Quelles données pour quelles étapes et quels seuils dans les marchés 
 register_page(
     __name__,
     path="/etapes",
-    title=f"{NAME} | decp.info",
+    title=f"{NAME} | colibre",
     name="Étapes et données",
     description=(
         "À chaque étape d'un marché public (programmation, publicité, "

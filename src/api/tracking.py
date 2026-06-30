@@ -59,7 +59,7 @@ def enqueue_matomo_event(
     site_id = os.getenv("MATOMO_SITE_ID")
     if not url or not site_id:
         return
-    full_url = f"https://decp.info{path}"
+    full_url = f"https://colibre.fr{path}"
     if query_string:
         full_url += f"?{query_string}"
     params = {

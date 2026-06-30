@@ -6,8 +6,8 @@ from src.utils.seo import META_CONTENT
 register_page(
     __name__,
     path="/a-propos/contact",
-    title="Contact | À propos | decp.info",
-    description="Contactez Colin Maudry, développeur de decp.info.",
+    title="Contact | À propos | colibre",
+    description="Contactez Colin Maudry, développeur de colibre.",
     image_url=META_CONTENT["image_url"],
 )
 

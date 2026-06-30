@@ -7,11 +7,11 @@ NAME = "Département"
 
 
 def get_title(code):
-    return f"Marchés publics de {DEPARTEMENTS[code]['departement']} | decp.info"
+    return f"Marchés publics de {DEPARTEMENTS[code]['departement']} | colibre"
 
 
 def get_description(code):
-    return f"Marchés publics passés dans le département {DEPARTEMENTS[code]['departement']} | decp.info"
+    return f"Marchés publics passés dans le département {DEPARTEMENTS[code]['departement']} | colibre"
 
 
 register_page(

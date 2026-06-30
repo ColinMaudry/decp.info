@@ -1,7 +1,7 @@
 ##### 2.9.0
 
-- Comptes utilisateurs : inscription avec vérification d'email, connexion, réinitialisation de mot de passe, page compte ([#73](https://github.com/ColinMaudry/decp.info/issues/73))
-- Sauvegarde régulière de la base de données des utilisateurs ([#89](https://github.com/ColinMaudry/decp.info/issues/89))
+- Comptes utilisateurs : inscription avec vérification d'email, connexion, réinitialisation de mot de passe, page compte ([#73](https://github.com/ColinMaudry/colibre/issues/73))
+- Sauvegarde régulière de la base de données des utilisateurs ([#89](https://github.com/ColinMaudry/colibre/issues/89))
 - Ajout des codes et libellés NAF des titulaires
 - Affichage de l'activité (NAF) des titulaires sur leur page /titulaire
 
@@ -42,7 +42,7 @@
 
 ##### 2.7.4 (22 avril 2026)
 
-- Utilisation élargie de DuckDB au détriment de Polars => bien meilleure perf ([#72](https://github.com/ColinMaudry/decp.info/issues/72)
+- Utilisation élargie de DuckDB au détriment de Polars => bien meilleure perf ([#72](https://github.com/ColinMaudry/colibre/issues/72)
 
 ##### 2.7.3 (20 avril 2026)
 
@@ -51,7 +51,7 @@
 
 ##### 2.7.2 (19 avril 2026)
 
-- Chargement des données depuis une base DuckDB plutôt qu'en mémoire (plus de stabilité) ([#71](https://github.com/ColinMaudry/decp.info/issues/71))
+- Chargement des données depuis une base DuckDB plutôt qu'en mémoire (plus de stabilité) ([#71](https://github.com/ColinMaudry/colibre/issues/71))
 - Mise en cache des vue sur l'observatoire pour un chargement plus rapide (remise à zéro quotidienne)
 - Correction de bug : la liste de colonnes par défaut est bien appliquée plutôt qu'afficher toutes les colonnes
 - Quelques corrections de bugs d'affichage
@@ -86,7 +86,7 @@
 
 ##### 2.5.1 (29 janvier 2026)
 
-- Mise en production un peu hâtive ([#67](https://github.com/ColinMaudry/decp.info/issues/67), [#68](https://github.com/ColinMaudry/decp.info/issues/68))
+- Mise en production un peu hâtive ([#67](https://github.com/ColinMaudry/colibre/issues/67), [#68](https://github.com/ColinMaudry/colibre/issues/68))
 
 #### 2.5.0 (29 janvier 2026)
 
@@ -101,11 +101,11 @@
 
 #### 2.4.0 (22 janvier 2026)
 
-- Site à peu près utilisable sur petit écran (smartphone) ([#63](https://github.com/ColinMaudry/decp.info/issues/63))
+- Site à peu près utilisable sur petit écran (smartphone) ([#63](https://github.com/ColinMaudry/colibre/issues/63))
 - Ajout de nouvelles statistiques dans [/statistiques](https://decp.info/statistiques) (stats par année, doublons par source)
-- Amélioration du référencement Web (sitemap, titres, descriptions) ([#50](https://github.com/ColinMaudry/decp.info/issues/50))
+- Amélioration du référencement Web (sitemap, titres, descriptions) ([#50](https://github.com/ColinMaudry/colibre/issues/50))
 - Possibilité dans les champs non-numériques de filtrer le texte selon son début ou sa fin (`text*` et `*text`)
-- Ajout d'une table des matières dans la page [À propos](https://decp.infi/a-propos) ([#36](https://github.com/ColinMaudry/decp.info/issues/36))
+- Ajout d'une table des matières dans la page [À propos](https://decp.infi/a-propos) ([#36](https://github.com/ColinMaudry/colibre/issues/36))
 - Désactivation du bloquage des robot d'agents de LLM (robots.txt)
 
 ##### 2.3.1 (16 janvier 2026)
@@ -136,9 +136,9 @@
 
 #### 2.2.0 (13 novembre 2025)
 
-- Moteur de recherche (acheteurs et titulaires) en page d'accueil ([#58](https://github.com/ColinMaudry/decp.info/issues/58))
-- Top acheteurs / titulaires par montant attribué/remporté (([#55](https://github.com/ColinMaudry/decp.info/issues/55)))
-- Moins de colonnes affichées par défaut dans Tableau ([#54](https://github.com/ColinMaudry/decp.info/issues/54))
+- Moteur de recherche (acheteurs et titulaires) en page d'accueil ([#58](https://github.com/ColinMaudry/colibre/issues/58))
+- Top acheteurs / titulaires par montant attribué/remporté (([#55](https://github.com/ColinMaudry/colibre/issues/55)))
+- Moins de colonnes affichées par défaut dans Tableau ([#54](https://github.com/ColinMaudry/colibre/issues/54))
 
 ##### 2.1.7 (11 novembre 2025)
 
@@ -169,22 +169,22 @@
 
 ##### 2.1.1 (1er octobre 2025)
 
-- ajout d'une section dans À propos sur la qualité et l'exhaustivité des données ([#43](https://github.com/ColinMaudry/decp.info/issues/43))
+- ajout d'une section dans À propos sur la qualité et l'exhaustivité des données ([#43](https://github.com/ColinMaudry/colibre/issues/43))
 - ajout du nombre de marchés en plus du nombre de lignes dans la vue Tableau
 
 #### 2.1.0 (30 septembre 2025)
 
-- Ajout des vues [acheteur](https://decp.info/acheteurs/24350013900189) ([#28](https://github.com/ColinMaudry/decp.info/issues/28)), [titulaire](https://decp.info/titulaires/51903758414786) ([#35](https://github.com/ColinMaudry/decp.info/issues/35)) et [marché](https://decp.info/marches/532239472000482025S00004) ([#40](https://github.com/ColinMaudry/decp.info/issues/40)) 🔎
-- Ajout des balises HTML meta Open Graph et Twitter ([#39](https://github.com/ColinMaudry/decp.info/issues/39)) pour de beaux aperçus de liens 🖼️
-- Formulaire de contact ([#48](https://github.com/ColinMaudry/decp.info/issues/48)) 📨
-- Nom de colonnes plus_agréables ([#33](https://github.com/ColinMaudry/decp.info/issues/33)) 💅
-- Définition des colonnes quand vous passez votre souris sur les en-têtes ([#33](https://github.com/ColinMaudry/decp.info/issues/33)) 📖
+- Ajout des vues [acheteur](https://decp.info/acheteurs/24350013900189) ([#28](https://github.com/ColinMaudry/colibre/issues/28)), [titulaire](https://decp.info/titulaires/51903758414786) ([#35](https://github.com/ColinMaudry/colibre/issues/35)) et [marché](https://decp.info/marches/532239472000482025S00004) ([#40](https://github.com/ColinMaudry/colibre/issues/40)) 🔎
+- Ajout des balises HTML meta Open Graph et Twitter ([#39](https://github.com/ColinMaudry/colibre/issues/39)) pour de beaux aperçus de liens 🖼️
+- Formulaire de contact ([#48](https://github.com/ColinMaudry/colibre/issues/48)) 📨
+- Nom de colonnes plus_agréables ([#33](https://github.com/ColinMaudry/colibre/issues/33)) 💅
+- Définition des colonnes quand vous passez votre souris sur les en-têtes ([#33](https://github.com/ColinMaudry/colibre/issues/33)) 📖
 - Affichage du numéro de version près du logo et lien vers ici 🤓
 - Variables globales uniquement en lecture (😁)
 
 ##### 2.0.1 (23 septembre 2025)
 
-- Bloquage du bouton de téléchargement si trop de lignes (+ 65000) [#38](https://github.com/ColinMaudry/decp.info/issues/38)
+- Bloquage du bouton de téléchargement si trop de lignes (+ 65000) [#38](https://github.com/ColinMaudry/colibre/issues/38)
 - Amélioration du script de déploiement (deploy.sh)
 - Meilleures instructions d'installation et lancement
 - Coquilles 🐚
@@ -224,7 +224,7 @@
 
 - ajout d'une page "Notes de version"
 - meilleur lien pour la documentation des champs
-- déplacement du code de decp.info depuis [ColinMaudry/decp-table-schema-utils](https://github.com/ColinMaudry/decp-table-schema-utils) vers [ColinMaudry/decp.info](https://github.com/ColinMaudry/decp.info)
+- déplacement du code de decp.info depuis [ColinMaudry/decp-table-schema-utils](https://github.com/ColinMaudry/decp-table-schema-utils) vers [ColinMaudry/decp.info](https://github.com/ColinMaudry/colibre)
 
 ### 1.1.0 (25/05/2021)
 

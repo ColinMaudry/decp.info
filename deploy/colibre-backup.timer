@@ -1,5 +1,5 @@
 [Unit]
-Description=Déclenche la sauvegarde horaire de users.sqlite (decp.info)
+Description=Déclenche la sauvegarde horaire de users.sqlite (colibre)
 
 [Timer]
 OnCalendar=hourly

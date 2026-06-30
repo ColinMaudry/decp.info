@@ -9,8 +9,8 @@ from src.utils.seo import META_CONTENT
 register_page(
     __name__,
     path="/a-propos/sources",
-    title="Sources de données | À propos | decp.info",
-    description="Sources de données utilisées par decp.info pour consolider les marchés publics français.",
+    title="Sources de données | À propos | colibre",
+    description="Sources de données utilisées par colibre pour consolider les marchés publics français.",
     image_url=META_CONTENT["image_url"],
 )
 

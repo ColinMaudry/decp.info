@@ -1,16 +1,16 @@
 #!/usr/bin/env python
-"""Benchmark comparatif de l'endpoint /data : decp.info vs data.gouv.fr.
+"""Benchmark comparatif de l'endpoint /data : colibre vs data.gouv.fr.
 
 Les deux APIs partagent le même schéma de requête (mêmes opérateurs), donc
 chaque scénario est envoyé à l'identique aux deux et les temps de réponse
 sont comparés côte à côte.
 
 Usage :
-    python tests/api/benchmark.py --token decpinfo_xxx
-    python tests/api/benchmark.py --url http://localhost:8050/api/v1/data --token decpinfo_xxx
-    python tests/api/benchmark.py --decp-only --token decpinfo_xxx --runs 20
+    python tests/api/benchmark.py --token colibre_xxx
+    python tests/api/benchmark.py --url http://localhost:8050/api/v1/data --token colibre_xxx
+    python tests/api/benchmark.py --decp-only --token colibre_xxx --runs 20
 
-Par défaut, --url pointe vers la production decp.info ; data.gouv.fr est
+Par défaut, --url pointe vers la production colibre.fr ; data.gouv.fr est
 interrogé sans authentification.
 
 """
@@ -23,7 +23,7 @@ from urllib.parse import quote
 
 import httpx
 
-DECP_DEFAULT_URL = "https://decp.info/api/v1/data"
+DECP_DEFAULT_URL = "https://colibre.fr/api/v1/data"
 DATAGOUV_DEFAULT_URL = (
     "https://tabular-api.data.gouv.fr/api/resources/"
     "22847056-61df-452d-837d-8b8ceadbfc52/data/"
@@ -169,7 +169,7 @@ def measure(target: Target, query: str, runs: int) -> dict | None:
     }
 
 
-def run_benchmark(targets: list[Target], decp_label: str, runs: int) -> None:
+def run_benchmark(targets: list[Target], colibre_label: str, runs: int) -> None:
     print("\nAVERTISSEMENT : volumes de données différents entre les deux APIs.")
     print(f"Scénarios : {len(SCENARIOS)} | Répétitions : {runs}\n")
 
@@ -177,7 +177,7 @@ def run_benchmark(targets: list[Target], decp_label: str, runs: int) -> None:
     for scenario in SCENARIOS:
         query = build_query(scenario["params"])
         decp_only = scenario.get("decp_only", False)
-        active = [t for t in targets if not (decp_only and t.label != decp_label)]
+        active = [t for t in targets if not (decp_only and t.label != colibre_label)]
 
         measures = {t.label: measure(t, query, runs) for t in active}
         rows.append({"name": scenario["name"], "measures": measures})
@@ -191,7 +191,7 @@ def run_benchmark(targets: list[Target], decp_label: str, runs: int) -> None:
                 bits.append(f"{t.label}: méd {m['median']:.0f}ms [{m['status']}]")
         print(f"  {scenario['name'][:COL_NAME]:<{COL_NAME}}  " + " | ".join(bits))
 
-    _print_summary(rows, targets, decp_label)
+    _print_summary(rows, targets, colibre_label)
 
 
 def _fmt(m: dict | None, key: str) -> str:
@@ -202,8 +202,8 @@ def _fmt(m: dict | None, key: str) -> str:
     return f"{m[key]:.0f}"
 
 
-def _print_summary(rows: list[dict], targets: list[Target], decp_label: str) -> None:
-    dg = next((t.label for t in targets if t.label != decp_label), None)
+def _print_summary(rows: list[dict], targets: list[Target], colibre_label: str) -> None:
+    dg = next((t.label for t in targets if t.label != colibre_label), None)
 
     header = (
         f"{'Scénario':<{COL_NAME}}"
@@ -218,18 +218,18 @@ def _print_summary(rows: list[dict], targets: list[Target], decp_label: str) -> 
     print(f"{'=' * len(header)}\n{header}\n{sep}")
 
     for row in rows:
-        m_decp = row["measures"].get(decp_label)
+        m_colibre = row["measures"].get(colibre_label)
         m_dg = row["measures"].get(dg) if dg else None
 
         ratio = "—"
-        if m_decp and m_dg and "error" not in m_decp and "error" not in m_dg:
+        if m_colibre and m_dg and "error" not in m_colibre and "error" not in m_dg:
             if m_dg["median"] > 0:
-                ratio = f"{m_decp['median'] / m_dg['median']:.2f}"
+                ratio = f"{m_colibre['median'] / m_dg['median']:.2f}"
 
         print(
             f"{row['name'][:COL_NAME]:<{COL_NAME}}"
             f"  {_fmt(m_dg, 'median'):>{COL_STAT}}  {_fmt(m_dg, 'p95'):>{COL_STAT}}"
-            f"  {_fmt(m_decp, 'median'):>{COL_STAT}}  {_fmt(m_decp, 'p95'):>{COL_STAT}}"
+            f"  {_fmt(m_colibre, 'median'):>{COL_STAT}}  {_fmt(m_colibre, 'p95'):>{COL_STAT}}"
             f"  {ratio:>7}"
         )
     print(sep)
@@ -237,12 +237,12 @@ def _print_summary(rows: list[dict], targets: list[Target], decp_label: str) -> 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Benchmark comparatif decp.info vs data.gouv.fr (/data)"
+        description="Benchmark comparatif colibre vs data.gouv.fr (/data)"
     )
     parser.add_argument(
         "--url",
         default=DECP_DEFAULT_URL,
-        help=f"Endpoint /data de decp.info (défaut : {DECP_DEFAULT_URL})",
+        help=f"Endpoint /data de colibre (défaut : {DECP_DEFAULT_URL})",
     )
     parser.add_argument(
         "--datagouv-url",
@@ -252,7 +252,7 @@ def main() -> None:
     parser.add_argument(
         "--token",
         default=None,
-        help="Token Bearer decp.info (format decpinfo_xxx)",
+        help="Token Bearer colibre (format decpinfo_xxx)",
     )
     parser.add_argument(
         "--runs",
@@ -263,7 +263,7 @@ def main() -> None:
     parser.add_argument(
         "--decp-only",
         action="store_true",
-        help="Ne benchmarker que decp.info (saute data.gouv.fr)",
+        help="Ne benchmarker que colibre (saute data.gouv.fr)",
     )
     args = parser.parse_args()
 
@@ -271,16 +271,16 @@ def main() -> None:
         print("--runs doit être ≥ 1", file=sys.stderr)
         sys.exit(1)
 
-    decp_label = "decp.info"
+    colibre_label = "colibre"
     decp_headers = {"Authorization": f"Bearer {args.token}"} if args.token else {}
-    decp = Target(label=decp_label, base_url=args.url, headers=decp_headers)
+    decp = Target(label=colibre_label, base_url=args.url, headers=decp_headers)
 
     targets = [decp]
     if not args.decp_only:
         # data.gouv.fr d'abord pour l'affichage côte à côte
         targets.insert(0, Target(label="data.gouv.fr", base_url=args.datagouv_url))
 
-    run_benchmark(targets, decp_label, args.runs)
+    run_benchmark(targets, colibre_label, args.runs)
 
 
 if __name__ == "__main__":

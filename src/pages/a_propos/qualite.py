@@ -6,8 +6,8 @@ from src.utils.seo import META_CONTENT
 register_page(
     __name__,
     path="/a-propos/qualite",
-    title="Qualité des données | À propos | decp.info",
-    description="Informations sur la qualité et l'exhaustivité des données de marchés publics sur decp.info.",
+    title="Qualité des données | À propos | colibre",
+    description="Informations sur la qualité et l'exhaustivité des données de marchés publics sur colibre.",
     image_url=META_CONTENT["image_url"],
 )
 
@@ -24,7 +24,7 @@ def layout(**_):
                 peu aidé·es par la qualité des outils à leur disposition.
 
 Je pense que l'analyse de marchés
-individuels et le comptage de marchés sur des critères autres que financiers sont plutôt fiables. En revanche, certains montants de marché estimés à des valeurs farfelues ([1 euro](https://decp.info/marches/432766947000192025S01301), [1 milliard](https://decp.info/marches/2459004280001320210000000271)) faussent les calculs par aggrégation (sommes, moyennes, médianes) et donc la production de statistiques financières fiables. Acheteurs, acheteuses : s'il vous plaît, essayez d'estimer les montants des marchés publics attribués de manière plus précise.
+individuels et le comptage de marchés sur des critères autres que financiers sont plutôt fiables. En revanche, certains montants de marché estimés à des valeurs farfelues ([1 euro](https://colibre.fr/marches/432766947000192025S01301), [1 milliard](https://colibre.fr/marches/2459004280001320210000000271)) faussent les calculs par aggrégation (sommes, moyennes, médianes) et donc la production de statistiques financières fiables. Acheteurs, acheteuses : s'il vous plaît, essayez d'estimer les montants des marchés publics attribués de manière plus précise.
 
 Quant à l'exhaustivité, je consolide toutes les sources de données exploitables que j'ai pu identifier (voir [Sources de données](/a-propos/sources)). Je tiens à souligner la belle continuité de la publication par la DGFiP des données des marchés publics remontées via le [protocole PES](https://www.collectivites-locales.gouv.fr/finances-locales/le-protocole-dechange-standard-pes). Merci à leurs équipes."""
             ),
