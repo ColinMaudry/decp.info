@@ -175,7 +175,7 @@ def _active_view(row):
                 "Me désabonner",
                 id="resiliation-trigger",
                 n_clicks=0,
-                className="btn btn-outline-primary mt-3",
+                className="btn btn-outline-danger mt-3",
             )
         )
 
@@ -211,7 +211,7 @@ def _resiliation_modal(end):
                             html.Button(
                                 "Je suis sûr",
                                 type="submit",
-                                className="btn btn-outline-primary",
+                                className="btn btn-danger",
                             ),
                         ],
                         style={"display": "inline"},

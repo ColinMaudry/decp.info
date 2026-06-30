@@ -74,17 +74,17 @@ def test_data():
     _cleanup_db_artifacts()
 
 
-@pytest.fixture(scope="session")
-def chrome_options():
+def pytest_setup_options():
+    """Options Chrome pour les tests d'intégration Selenium.
+
+    dash.testing n'utilise PAS une fixture `chrome_options` (contrairement à
+    pytest-selenium) : il appelle ce hook `pytest_setup_options`. C'est donc le
+    seul point d'entrée qui a réellement un effet. On force `--headless=new`
+    pour qu'aucune fenêtre Chrome ne s'ouvre pendant les tests. Le dossier de
+    téléchargement, `--no-sandbox`, `--disable-gpu` et `--disable-dev-shm-usage`
+    sont déjà gérés par dash.testing.browser.
+    """
     options = Options()
-    options.add_argument("--window-size=1200,1200 ")
-    options.add_experimental_option(
-        "prefs",
-        {
-            "download.default_directory": "/home/colin/git/decp.info",
-            "download.prompt_for_download": False,
-            "download.directory_upgrade": True,
-            "safebrowsing.enabled": True,
-        },
-    )
+    options.add_argument("--headless=new")
+    options.add_argument("--window-size=1200,1200")
     return options

@@ -112,7 +112,7 @@ def _danger_section():
             dbc.Button(
                 "Supprimer mon compte",
                 id="delete-open",
-                color="primary",
+                color="danger",
                 outline=True,
             ),
             dbc.Modal(

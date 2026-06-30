@@ -39,21 +39,37 @@ h3 {
   margin: 36px 0 20px 0;
 }
 
-/* Base Button Styles
-button {
-  font-weight: 400;
-  background-color: #fff;
-  border-radius: 3px;
-  appearance: auto;
-  border: solid var(--primary-color) 1px;
-}  */
+/* ==========================================================================
+   Boutons — charte à 3 rôles (couleur = fonction, remplissage = emphase)
+   Voir docs/superpowers/specs/2026-06-30-charte-boutons-design.md
+   Override scopé aux classes .btn-* uniquement (n'affecte pas les alertes,
+   badges, ni text-danger qui héritent de la sémantique Simplex).
+   ========================================================================== */
 
+:root {
+  --btn-terracotta: #b33821;
+  --btn-terracotta-text: #fff;
+  --btn-secondary-text: #344054;
+  --btn-secondary-border: #5a6570;
+  --btn-secondary-hover-bg: #f1f3f5;
+  --btn-danger: #c0392b;
+  --btn-danger-text: #fff;
+}
+
+/* Base commune : rayon + typo */
+.btn {
+  border-radius: 3px;
+  font-family: "Inter", sans-serif;
+  font-weight: 400;
+}
+
+/* --- PRIMARY plein : action principale validante (1 par contexte) --- */
 button.btn.btn-primary,
+a.btn.btn-primary,
 button.show-hide {
   display: block;
-  border-radius: 3px;
   outline: 0;
-  color: #fff;
+  color: var(--btn-terracotta-text);
   border: 0;
   height: 30px;
   padding-top: 2px;
@@ -65,7 +81,9 @@ button.show-hide {
 }
 
 button.btn.btn-primary:hover,
+a.btn.btn-primary:hover,
 button.show-hide:hover {
+  color: var(--btn-terracotta-text);
   background-image: linear-gradient(
     rgb(239, 126, 103),
     rgb(209, 86, 63) 26%,
@@ -73,9 +91,82 @@ button.show-hide:hover {
   );
 }
 
+/* --- PRIMARY outline : action affirmative de moindre emphase --- */
+.btn.btn-outline-primary {
+  color: var(--btn-terracotta);
+  border: 1px solid var(--btn-terracotta);
+  background-color: transparent;
+  background-image: none;
+}
+
+.btn.btn-outline-primary:hover,
+.btn.btn-outline-primary:focus-visible {
+  color: var(--btn-terracotta-text);
+  background-color: var(--btn-terracotta);
+  border-color: var(--btn-terracotta);
+}
+
+/* --- SECONDARY : action neutre / alternative (gris ardoise) --- */
+.btn.btn-secondary,
+.btn.btn-outline-secondary {
+  color: var(--btn-secondary-text);
+  border: 1px solid var(--btn-secondary-border);
+  background-color: transparent;
+  background-image: none;
+}
+
+.btn.btn-secondary:hover,
+.btn.btn-secondary:focus-visible,
+.btn.btn-outline-secondary:hover,
+.btn.btn-outline-secondary:focus-visible {
+  color: var(--btn-secondary-text);
+  background-color: var(--btn-secondary-hover-bg);
+  border-color: var(--btn-secondary-border);
+}
+
+/* --- DANGER outline : action destructive dans le flux courant --- */
+.btn.btn-outline-danger {
+  color: var(--btn-danger);
+  border: 1px solid var(--btn-danger);
+  background-color: transparent;
+  background-image: none;
+}
+
+.btn.btn-outline-danger:hover,
+.btn.btn-outline-danger:focus-visible {
+  color: var(--btn-danger-text);
+  background-color: var(--btn-danger);
+  border-color: var(--btn-danger);
+}
+
+/* --- DANGER plein : confirmation finale destructive (modale) --- */
+.btn.btn-danger {
+  color: var(--btn-danger-text);
+  border: 1px solid var(--btn-danger);
+  background-color: var(--btn-danger);
+  background-image: none;
+}
+
+.btn.btn-danger:hover,
+.btn.btn-danger:focus-visible {
+  color: var(--btn-danger-text);
+  background-color: #a93226;
+  border-color: #a93226;
+}
+
+/* --- État désactivé commun (conserve l'existant) --- */
+.btn[disabled],
 button[disabled] {
   border-color: #ccc;
   color: #666;
+  background-image: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .btn {
+    transition: background-color 0.15s ease, color 0.15s ease,
+      border-color 0.15s ease;
+  }
 }
 
 /* ==========================================================================
