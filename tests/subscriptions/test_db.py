@@ -118,3 +118,12 @@ def test_trial_used_is_sticky_across_resubscribe(users_db_path):
     db.update_from_webhook("decpinfo-1", "sub_42", "expired", _past())
     db.create_pending(uid, "decpinfo-1", "soutien")
     assert db.has_used_trial(uid) is True
+
+
+def test_init_schema_creates_votes_columns(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.create_pending(uid, "decpinfo-1", "simple")
+    row = db.get_by_user(uid)
+    assert row["votes_balance"] == 0
+    assert row["votes_credited_until"] is None

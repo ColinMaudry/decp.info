@@ -20,6 +20,14 @@ _MIGRATIONS: list[tuple[str, str]] = [
         "0002_add_siret_to_users",
         "ALTER TABLE users ADD COLUMN siret TEXT",
     ),
+    (
+        "0003_add_votes_balance_to_subscriptions",
+        "ALTER TABLE subscriptions ADD COLUMN votes_balance INTEGER NOT NULL DEFAULT 0",
+    ),
+    (
+        "0004_add_votes_credited_until_to_subscriptions",
+        "ALTER TABLE subscriptions ADD COLUMN votes_credited_until TEXT",
+    ),
 ]
 
 

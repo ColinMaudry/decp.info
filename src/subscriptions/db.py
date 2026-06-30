@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     status                      TEXT,
     current_period_end          TEXT,
     trial_used                  INTEGER NOT NULL DEFAULT 0,
+    votes_balance               INTEGER NOT NULL DEFAULT 0,
+    votes_credited_until        TEXT,
     created_at                  TEXT NOT NULL,
     updated_at                  TEXT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
