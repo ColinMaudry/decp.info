@@ -23,6 +23,12 @@ SECTIONS = [
         "href": "/compte/vues",
         "require_subscription": True,
     },
+    {
+        "key": "roadmap",
+        "label": "Roadmap",
+        "href": "/compte/roadmap",
+        "require_subscription": True,
+    },
 ]
 
 
