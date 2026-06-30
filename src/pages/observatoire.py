@@ -461,32 +461,28 @@ Alors, on fait comment ?
         scrollable=True,
         style={"height": "75vh"},
         children=[
-            # Header row: title + "Colonnes affichées" button
-            dbc.Row(
+            # Header row: toolbar + meta
+            html.Div(
                 [
-                    dbc.Col(
-                        html.Div(
-                            className="table-menu",
-                            children=[
-                                dbc.Button(
-                                    "Choisir les colonnes",
-                                    id="observatoire-preview-columns-open",
-                                    className="btn btn-primary",
-                                ),
-                                html.P(id="nb_rows_observatoire"),
-                                dbc.Button(
-                                    "Télécharger au format Excel",
-                                    id="btn-download-observatoire",
-                                    disabled=True,
-                                    className="btn btn-primary",
-                                    outline=True,
-                                ),
-                            ],
-                        ),
-                        width="auto",
+                    dbc.Button(
+                        "Colonnes",
+                        id="observatoire-preview-columns-open",
+                        color="secondary",
+                        size="sm",
+                    ),
+                    dbc.Button(
+                        "Télécharger au format Excel",
+                        id="btn-download-observatoire",
+                        color="secondary",
+                        size="sm",
+                        disabled=True,
                     ),
                 ],
-                className="mb-2 align-items-center",
+                className="table-toolbar mb-2",
+            ),
+            html.Div(
+                html.Span(id="nb_rows_observatoire"),
+                className="table-meta",
             ),
             # Column picker modal
             dbc.Modal(

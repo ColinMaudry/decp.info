@@ -198,28 +198,35 @@ layout = [
                 children=[
                     html.Div(
                         [
-                            # Bouton modal des colonnes affichées
                             dbc.Button(
-                                "Colonnes affichées",
+                                "Colonnes",
                                 id="titulaire_columns_open",
+                                color="secondary",
+                                size="sm",
                                 className="column_list",
                             ),
-                            html.P("lignes", id="titulaire_nb_rows"),
-                            html.Button(
+                            dbc.Button(
                                 "Téléchargement désactivé au-delà de 65 000 lignes",
                                 id="btn-download-filtered-data-titulaire",
+                                color="secondary",
+                                size="sm",
                                 disabled=True,
-                                className="btn btn-primary",
                             ),
                             dcc.Download(id="titulaire-download-filtered-data"),
                             dbc.Button(
-                                "Remise à zéro",
+                                "Réinitialiser",
                                 title="Supprime tous les filtres et les tris. Autrement ils sont conservés même si vous fermez la page.",
                                 id="btn-titulaire-reset",
-                                className="btn btn-primary",
+                                color="danger",
+                                outline=True,
+                                size="sm",
                             ),
                         ],
-                        className="table-menu",
+                        className="table-toolbar",
+                    ),
+                    html.Div(
+                        html.Span(id="titulaire_nb_rows"),
+                        className="table-meta",
                     ),
                     dbc.Modal(
                         [
