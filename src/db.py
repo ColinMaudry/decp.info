@@ -55,9 +55,18 @@ def _load_source_frame() -> pl.DataFrame:
     )
 
     for col in ["acheteur_nom", "titulaire_nom"]:
+        id_col = col.replace("_nom", "_id")
         lff = lff.with_columns(
             pl.when(pl.col(col).is_null())
-            .then(pl.lit("[Identifiant non reconnu dans la base INSEE]"))
+            .then(
+                pl.concat_str(
+                    [
+                        pl.lit("[Inconnu de l'INSEE ("),
+                        pl.col(id_col).cast(pl.String),
+                        pl.lit(")]"),
+                    ]
+                )
+            )
             .otherwise(pl.col(col))
             .name.keep()
         )
