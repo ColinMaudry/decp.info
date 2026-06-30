@@ -191,3 +191,35 @@ def test_spend_vote_refused_when_balance_zero(users_db_path):
     _activate(uid, cursor_iso=None)
     # solde reste 0 tant que credit_pending n'est pas appelé
     assert db.spend_vote(uid) is False
+
+
+def test_reactivation_resets_cursor_without_regranting(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.create_pending(uid, "decpinfo-1", "simple")
+    _activate(uid, cursor_iso=None)
+    db.credit_pending(uid)  # +2, curseur posé
+    # désabonnement
+    db.update_from_webhook("decpinfo-1", "sub_1", "cancelled", _future())
+    # période sans abonnement simulée : on recule artificiellement le curseur
+    old_cursor = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    db.get_conn().execute(
+        "UPDATE subscriptions SET votes_credited_until = ? WHERE user_id = ?",
+        (old_cursor, uid),
+    )
+    # réabonnement
+    db.update_from_webhook("decpinfo-1", "sub_1", "active", _future())
+    row = db.get_by_user(uid)
+    assert row["votes_balance"] == 2  # pas de re-crédit des +2
+    # le curseur a été remis ~à maintenant → pas de crédit du gap de 30 jours
+    assert db.credit_pending(uid) == 2
+
+
+def test_trial_to_active_does_not_reset_then_grants_two(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.create_pending(uid, "decpinfo-1", "simple")
+    db.update_from_webhook("decpinfo-1", "sub_1", "trial", _future())
+    db.update_from_webhook("decpinfo-1", "sub_1", "active", _future())
+    # fin d'essai : credit_pending accorde les +2 initiaux
+    assert db.credit_pending(uid) == 2

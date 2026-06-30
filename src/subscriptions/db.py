@@ -73,12 +73,32 @@ def get_by_customer(customer_handle: str) -> sqlite3.Row | None:
     )
 
 
+def freeze_votes_cursor(user_id: int) -> None:
+    """Réactivation après une période sans abonnement : repart de maintenant.
+
+    Ne fait rien si le curseur est NULL (première activation jamais atteinte) :
+    les +2 initiaux restent gérés par credit_pending. Ne re-crédite jamais.
+    """
+    row = get_by_user(user_id)
+    if row is None or row["votes_credited_until"] is None:
+        return
+    now = _now()
+    get_conn().execute(
+        "UPDATE subscriptions SET votes_credited_until = ?, updated_at = ? "
+        "WHERE user_id = ?",
+        (now, now, user_id),
+    )
+
+
 def update_from_webhook(
     customer_handle: str,
     subscription_handle: str | None,
     status: str,
     current_period_end: str | None,
 ) -> None:
+    prev = get_by_customer(customer_handle)
+    if prev is not None and prev["status"] == "active" and status != "active":
+        credit_pending(prev["user_id"])  # banque les semaines acquises avant gel
     trial_flag = 1 if status in _ACCESS_STATUSES else 0
     get_conn().execute(
         "UPDATE subscriptions SET "
@@ -95,9 +115,14 @@ def update_from_webhook(
             customer_handle,
         ),
     )
+    if prev is not None and prev["status"] != "active" and status == "active":
+        freeze_votes_cursor(prev["user_id"])
 
 
 def set_cancelled(user_id: int, current_period_end: str | None) -> None:
+    credit_pending(
+        user_id
+    )  # banque les semaines pleines acquises (statut encore actif)
     get_conn().execute(
         "UPDATE subscriptions SET status = 'cancelled', current_period_end = ?, "
         "updated_at = ? WHERE user_id = ?",
