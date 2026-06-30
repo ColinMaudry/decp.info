@@ -1,4 +1,5 @@
 import datetime
+import importlib
 import os
 import time
 
@@ -6,6 +7,20 @@ import polars as pl
 import pytest
 
 from src.db import should_rebuild
+
+
+@pytest.fixture(autouse=True, scope="module")
+def _restore_global_db_after_module():
+    """test_query_marches recharge src.db (importlib.reload) en pointant sur une
+    DuckDB temporaire au schéma réduit. Sans restauration, le `conn` global de
+    src.db reste branché sur cette base et casse get_top_org_table dans les
+    tests Selenium suivants (ColumnNotFoundError: titulaire_distance). On
+    recharge src.db sur la base de test du conftest une fois ce module terminé."""
+    yield
+    import src.db
+
+    os.environ["DUCKDB_PATH"] = os.path.abspath("tests/decp.duckdb")
+    importlib.reload(src.db)
 
 
 @pytest.fixture
@@ -175,7 +190,7 @@ def test_build_replaces_null_org_names(built_db):
         titulaire_2 = c.execute(
             "SELECT titulaire_nom FROM decp WHERE uid = '2'"
         ).fetchone()
-    assert titulaire_2[0] == "[Identifiant non reconnu dans la base INSEE]"
+    assert titulaire_2[0] == "[Inconnu de l'INSEE (567)]"
 
 
 def test_build_creates_derived_tables(built_db):

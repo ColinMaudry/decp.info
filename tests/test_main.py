@@ -3,6 +3,30 @@ from dash.testing.composite import DashComposite
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.support.ui import WebDriverWait
+
+
+def _wait_input_value(dash_duo, element: WebElement, expected: str, timeout=8) -> None:
+    """Attend qu'un input atteigne la valeur attendue. La restauration de la
+    persistance des filtres est asynchrone après rechargement de page : sous
+    charge, lire la valeur immédiatement renvoie une chaîne vide."""
+    WebDriverWait(dash_duo.driver, timeout).until(
+        lambda _d: element.get_attribute("value") == expected
+    )
+
+
+def _filter_input_in_view(dash_duo, selector, timeout=6) -> WebElement:
+    """Attend la présence d'un input de filtre du marches_table et le ramène
+    dans le viewport. Le tableau a un défilement horizontal : sous charge
+    (suite complète), la colonne ciblée peut être hors écran, ce qui fait échouer
+    send_keys avec ElementNotInteractableException alors que l'élément est
+    pourtant rendu et visible."""
+    dash_duo.wait_for_element(selector, timeout=timeout)
+    el: WebElement = dash_duo.find_element(selector)
+    dash_duo.driver.execute_script(
+        "arguments[0].scrollIntoView({block: 'center', inline: 'center'});", el
+    )
+    return el
 
 
 def test_001_logo_and_search(dash_duo: DashComposite):
@@ -47,15 +71,21 @@ def test_002_filter_persistence(dash_duo: DashComposite):
         filter_input_selector = (
             '.marches_table th[data-dash-column="dateNotification"] input[type="text"]'
         )
-        dash_duo.wait_for_element(filter_input_selector, timeout=2)
-        _filter_input: WebElement = dash_duo.find_element(filter_input_selector)
-        return _filter_input
+        return _filter_input_in_view(dash_duo, filter_input_selector)
 
     for page in ["tableau", "acheteurs/123", "titulaires/345"]:
         filter_input = open_page_and_check_filter_input()
         filter_input.send_keys("11")  # valeur quelconque, on teste la persistance
         filter_input.send_keys(Keys.ENTER)
+        # Attendre que le filtre soit réellement appliqué (la table se vide :
+        # "11" ne matche aucune dateNotification) AVANT de re-naviguer. Sinon, on
+        # peut quitter la page avant que le callback de filtre ait écrit la
+        # persistance → la valeur n'est pas restaurée à la ré-ouverture.
+        dash_duo.wait_for_no_elements(
+            '.marches_table td[data-dash-column="dateNotification"] p'
+        )
         filter_input = open_page_and_check_filter_input()
+        _wait_input_value(dash_duo, filter_input, "11")
         assert filter_input.get_attribute("value") == "11"
 
 
@@ -336,8 +366,7 @@ def test_015_tableau_filter_date(dash_duo: DashComposite):
         dash_duo.wait_for_page(f"{dash_duo.server_url}/{page}")
         filter_input = '.marches_table th[data-dash-column="dateNotification"] input'
         filter_cell_result = '.marches_table td[data-dash-column="dateNotification"] p'
-        dash_duo.wait_for_element(filter_input, timeout=2)
-        _filter_input: WebElement = dash_duo.find_element(filter_input)
+        _filter_input: WebElement = _filter_input_in_view(dash_duo, filter_input)
         _filter_input.send_keys("3333")  # a dateNotification that doesn't exist
         _filter_input.send_keys(Keys.ENTER)
         # Le filtrage est asynchrone : attendre la mise à jour du tableau plutôt

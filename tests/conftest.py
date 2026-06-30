@@ -1,5 +1,6 @@
 import datetime
 import os
+import shutil
 from pathlib import Path
 
 import polars as pl
@@ -40,16 +41,24 @@ _TEST_DATA = [
     }
 ]
 _PARQUET_PATH = Path(os.path.abspath("tests/test.parquet"))
-_DB_PATH = Path(os.path.abspath("decp.duckdb"))
 
-# Schéma déterministe et hors-ligne pour les tests : on pointe le cache sur un
-# fixture commité et on désactive la récupération distante.
+# Base DuckDB de test ISOLÉE : src.db lit le chemin via DUCKDB_PATH (défaut
+# ./decp.duckdb). On la place dans tests/ pour ne JAMAIS toucher au decp.duckdb
+# de dev/prod — plus besoin de sauvegarder/restaurer. Le nom decp.duckdb
+# correspond au motif **/decp.duckdb déjà présent dans .gitignore.
+_DB_PATH = Path(os.path.abspath("tests/decp.duckdb"))
+os.environ["DUCKDB_PATH"] = str(_DB_PATH)
+
+# Schéma déterministe et hors-ligne : on COPIE le fixture committé vers un cache
+# de test jetable (nom schema.cache.json déjà gitignoré) et on pointe
+# DATA_SCHEMA_CACHE dessus. Ainsi, toute écriture du cache par le code testé ne
+# mute pas tests/schema.fixture.json (versionné). DATA_SCHEMA_PATH est retiré
+# pour désactiver toute récupération distante.
 _SCHEMA_FIXTURE = Path(os.path.abspath("tests/schema.fixture.json"))
-os.environ["DATA_SCHEMA_CACHE"] = str(_SCHEMA_FIXTURE)
+_SCHEMA_CACHE = Path(os.path.abspath("tests/schema.cache.json"))
+shutil.copyfile(_SCHEMA_FIXTURE, _SCHEMA_CACHE)
+os.environ["DATA_SCHEMA_CACHE"] = str(_SCHEMA_CACHE)
 os.environ.pop("DATA_SCHEMA_PATH", None)
-
-
-_DB_BACKUP = _DB_PATH.with_suffix(".duckdb.pytest-backup")
 
 
 def _cleanup_db_artifacts() -> None:
@@ -62,30 +71,18 @@ def _cleanup_db_artifacts() -> None:
             artifact.unlink()
 
 
-def _backup_db() -> None:
-    if _DB_PATH.exists():
-        _DB_PATH.rename(_DB_BACKUP)
-
-
-def _restore_db() -> None:
-    _cleanup_db_artifacts()
-    if _DB_BACKUP.exists():
-        _DB_BACKUP.rename(_DB_PATH)
-
-
 # Runs at conftest import, before test modules import src.db (which builds the
-# DuckDB at import time). Guarantees the test parquet exists and the stale DB
-# from a previous `python run.py` is wiped so src.db rebuilds from test data.
+# DuckDB at import time depuis DUCKDB_PATH). Garantit un parquet de test frais et
+# une base de test vierge (reconstruite à partir des données de test).
 pl.DataFrame(_TEST_DATA).write_parquet(_PARQUET_PATH)
-_backup_db()
 _cleanup_db_artifacts()
 
 
 @pytest.fixture(scope="session", autouse=True)
 def test_data():
     yield str(_PARQUET_PATH)
-    # Teardown: restore the original DuckDB so the next `python run.py` finds it.
-    _restore_db()
+    # Teardown : on nettoie la base de test isolée (jamais le decp.duckdb de dev).
+    _cleanup_db_artifacts()
 
 
 def pytest_setup_options():
@@ -100,5 +97,8 @@ def pytest_setup_options():
     """
     options = Options()
     options.add_argument("--headless=new")
-    options.add_argument("--window-size=1200,1200")
+    # 1600px de large : le marches_table est large (défilement horizontal) ; un
+    # viewport étroit laisse les colonnes de droite hors champ → éléments non
+    # interactifs pour Selenium.
+    options.add_argument("--window-size=1600,1200")
     return options

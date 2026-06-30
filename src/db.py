@@ -68,7 +68,10 @@ def _load_source_frame() -> pl.DataFrame:
                 )
             )
             .otherwise(pl.col(col))
-            .name.keep()
+            # .alias(col) explicite : avec .name.keep(), Polars nomme le résultat
+            # d'après id_col (référencé dans concat_str), ce qui écrasait la
+            # colonne *_id et laissait *_nom inchangé au lieu de l'inverse.
+            .alias(col)
         )
 
     return lff.collect()
