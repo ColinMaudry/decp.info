@@ -81,7 +81,7 @@ Migrations ajoutées dans `src/migrations.py` (`_MIGRATIONS`) :
 
 ## Intégration GitHub & cache
 
-Nouveau module `src/util/roadmap.py` :
+Nouveau module `src/utils/roadmap.py` :
 
 - `fetch_roadmap_issues()`, décoré `@cache.memoize(timeout=3600)` (cache 1 h) :
   `httpx.get` sur `GET /repos/ColinMaudry/decp.info/issues?state=open`, puis
@@ -92,7 +92,7 @@ Nouveau module `src/util/roadmap.py` :
 - On reste sur `httpx`, déjà dépendance du projet (Dash, `src/utils/data.py`,
   `src/utils/tracking.py`) — pas d'ajout de `requests`.
 
-`src/util/roadmap.py` centralise aussi :
+`src/utils/roadmap.py` centralise aussi :
 
 - la récupération des décomptes (`COUNT` groupé depuis `feature_votes`) ;
 - un constructeur de composants `render_roadmap(editable: bool)` partagé par les
