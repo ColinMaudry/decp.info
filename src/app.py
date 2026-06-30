@@ -203,7 +203,7 @@ navbar = dbc.Navbar(
                                 [
                                     html.A(
                                         version,
-                                        href="https://github.com/ColinMaudry/decp.info/blob/main/CHANGELOG.md",
+                                        href="/a-propos/roadmap",
                                     )
                                 ],
                                 className="version",
