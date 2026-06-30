@@ -45,7 +45,7 @@ def test_002_filter_persistence(dash_duo: DashComposite):
     def open_page_and_check_filter_input():
         dash_duo.wait_for_page(f"{dash_duo.server_url}/{page}")
         filter_input_selector = (
-            '.marches_table th[data-dash-column="uid"] input[type="text"]'
+            '.marches_table th[data-dash-column="dateNotification"] input[type="text"]'
         )
         dash_duo.wait_for_element(filter_input_selector, timeout=2)
         _filter_input: WebElement = dash_duo.find_element(filter_input_selector)
@@ -53,17 +53,17 @@ def test_002_filter_persistence(dash_duo: DashComposite):
 
     for page in ["tableau", "acheteurs/123", "titulaires/345"]:
         filter_input = open_page_and_check_filter_input()
-        filter_input.send_keys("11")  # a UID that doesn't exist
+        filter_input.send_keys("11")  # valeur quelconque, on teste la persistance
         filter_input.send_keys(Keys.ENTER)
         filter_input = open_page_and_check_filter_input()
         assert filter_input.get_attribute("value") == "11"
 
 
 def test_003_tableau_download(dash_duo: DashComposite):
-    from pages.acheteur import download_acheteur_data
-    from pages.tableau import download_data
-    from pages.titulaire import download_titulaire_data
     from src.app import app
+    from src.pages.acheteur import download_acheteur_data
+    from src.pages.tableau import download_data
+    from src.pages.titulaire import download_titulaire_data
 
     # Juste pour instancier l'app
     print(app.server.name)
@@ -340,5 +340,6 @@ def test_015_tableau_filter_date(dash_duo: DashComposite):
         _filter_input: WebElement = dash_duo.find_element(filter_input)
         _filter_input.send_keys("3333")  # a dateNotification that doesn't exist
         _filter_input.send_keys(Keys.ENTER)
-        _filter_result: list[WebElement] = dash_duo.find_elements(filter_cell_result)
-        assert len(_filter_result) == 0, f"Page : {page}"
+        # Le filtrage est asynchrone : attendre la mise à jour du tableau plutôt
+        # que de lire les lignes immédiatement (sinon on lit l'état pré-filtre).
+        dash_duo.wait_for_no_elements(filter_cell_result, timeout=4)

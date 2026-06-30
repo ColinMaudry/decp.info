@@ -49,6 +49,9 @@ os.environ["DATA_SCHEMA_CACHE"] = str(_SCHEMA_FIXTURE)
 os.environ.pop("DATA_SCHEMA_PATH", None)
 
 
+_DB_BACKUP = _DB_PATH.with_suffix(".duckdb.pytest-backup")
+
+
 def _cleanup_db_artifacts() -> None:
     for artifact in (
         _DB_PATH,
@@ -59,19 +62,30 @@ def _cleanup_db_artifacts() -> None:
             artifact.unlink()
 
 
+def _backup_db() -> None:
+    if _DB_PATH.exists():
+        _DB_PATH.rename(_DB_BACKUP)
+
+
+def _restore_db() -> None:
+    _cleanup_db_artifacts()
+    if _DB_BACKUP.exists():
+        _DB_BACKUP.rename(_DB_PATH)
+
+
 # Runs at conftest import, before test modules import src.db (which builds the
 # DuckDB at import time). Guarantees the test parquet exists and the stale DB
 # from a previous `python run.py` is wiped so src.db rebuilds from test data.
 pl.DataFrame(_TEST_DATA).write_parquet(_PARQUET_PATH)
+_backup_db()
 _cleanup_db_artifacts()
 
 
 @pytest.fixture(scope="session", autouse=True)
 def test_data():
     yield str(_PARQUET_PATH)
-    # Teardown: remove the test DuckDB so the next `python run.py` rebuilds
-    # from decp_prod.parquet.
-    _cleanup_db_artifacts()
+    # Teardown: restore the original DuckDB so the next `python run.py` finds it.
+    _restore_db()
 
 
 def pytest_setup_options():

@@ -20,7 +20,7 @@ def _make_user(email="u@ex.fr"):
 def _activate(uid, cursor_iso=None):
     """Met l'abonnement en statut actif avec un curseur d'accumulation donné."""
     db.get_conn().execute(
-        "UPDATE subscriptions SET status = 'active', votes_credited_until = ? "
+        "UPDATE subscriptions SET status = 'active', votes_last_credited_at = ? "
         "WHERE user_id = ?",
         (cursor_iso, uid),
     )
@@ -135,7 +135,7 @@ def test_init_schema_creates_votes_columns(users_db_path):
     db.create_pending(uid, "decpinfo-1", "simple")
     row = db.get_by_user(uid)
     assert row["votes_balance"] == 0
-    assert row["votes_credited_until"] is None
+    assert row["votes_last_credited_at"] is None
 
 
 def test_credit_pending_grants_initial_two_on_first_active(users_db_path):
@@ -144,8 +144,8 @@ def test_credit_pending_grants_initial_two_on_first_active(users_db_path):
     db.create_pending(uid, "decpinfo-1", "simple")
     _activate(uid, cursor_iso=None)
     balance = db.credit_pending(uid)
-    assert balance == 2
-    assert db.get_by_user(uid)["votes_credited_until"] is not None
+    assert balance == db.INITIAL_VOTES
+    assert db.get_by_user(uid)["votes_last_credited_at"] is not None
 
 
 def test_credit_pending_is_idempotent_same_day(users_db_path):
@@ -154,17 +154,17 @@ def test_credit_pending_is_idempotent_same_day(users_db_path):
     db.create_pending(uid, "decpinfo-1", "simple")
     _activate(uid, cursor_iso=None)
     db.credit_pending(uid)
-    assert db.credit_pending(uid) == 2  # aucun crédit supplémentaire
+    assert db.credit_pending(uid) == db.INITIAL_VOTES  # aucun crédit supplémentaire
 
 
-def test_credit_pending_adds_one_vote_per_full_week(users_db_path):
+def test_credit_pending_capped_at_votes_per_week(users_db_path):
     db.init_schema()
     uid = _make_user()
     db.create_pending(uid, "decpinfo-1", "simple")
     fifteen_days_ago = (datetime.now(timezone.utc) - timedelta(days=15)).isoformat()
     _activate(uid, cursor_iso=fifteen_days_ago)
-    # 15 jours = 2 semaines pleines
-    assert db.credit_pending(uid) == 2
+    # 15 jours = 2 semaines pleines, mais le solde est cappé à VOTES_PER_WEEK
+    assert db.credit_pending(uid) == db.VOTES_PER_WEEK
 
 
 def test_credit_pending_no_credit_when_not_active(users_db_path):
@@ -179,9 +179,9 @@ def test_spend_vote_decrements_when_balance_positive(users_db_path):
     uid = _make_user()
     db.create_pending(uid, "decpinfo-1", "simple")
     _activate(uid, cursor_iso=None)
-    db.credit_pending(uid)  # solde = 2
+    db.credit_pending(uid)  # solde = INITIAL_VOTES
     assert db.spend_vote(uid) is True
-    assert db.get_by_user(uid)["votes_balance"] == 1
+    assert db.get_by_user(uid)["votes_balance"] == db.INITIAL_VOTES - 1
 
 
 def test_spend_vote_refused_when_balance_zero(users_db_path):
@@ -198,21 +198,21 @@ def test_reactivation_resets_cursor_without_regranting(users_db_path):
     uid = _make_user()
     db.create_pending(uid, "decpinfo-1", "simple")
     _activate(uid, cursor_iso=None)
-    db.credit_pending(uid)  # +2, curseur posé
+    db.credit_pending(uid)  # +3, curseur posé
     # désabonnement
     db.update_from_webhook("decpinfo-1", "sub_1", "cancelled", _future())
     # période sans abonnement simulée : on recule artificiellement le curseur
     old_cursor = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
     db.get_conn().execute(
-        "UPDATE subscriptions SET votes_credited_until = ? WHERE user_id = ?",
+        "UPDATE subscriptions SET votes_last_credited_at = ? WHERE user_id = ?",
         (old_cursor, uid),
     )
     # réabonnement
     db.update_from_webhook("decpinfo-1", "sub_1", "active", _future())
     row = db.get_by_user(uid)
-    assert row["votes_balance"] == 2  # pas de re-crédit des +2
+    assert row["votes_balance"] == db.INITIAL_VOTES  # pas de re-crédit des +3
     # le curseur a été remis ~à maintenant → pas de crédit du gap de 30 jours
-    assert db.credit_pending(uid) == 2
+    assert db.credit_pending(uid) == db.INITIAL_VOTES
 
 
 def test_trial_to_active_does_not_reset_then_grants_two(users_db_path):
@@ -221,5 +221,5 @@ def test_trial_to_active_does_not_reset_then_grants_two(users_db_path):
     db.create_pending(uid, "decpinfo-1", "simple")
     db.update_from_webhook("decpinfo-1", "sub_1", "trial", _future())
     db.update_from_webhook("decpinfo-1", "sub_1", "active", _future())
-    # fin d'essai : credit_pending accorde les +2 initiaux
-    assert db.credit_pending(uid) == 2
+    # fin d'essai : credit_pending accorde les +INITIAL_VOTES initiaux
+    assert db.credit_pending(uid) == db.INITIAL_VOTES

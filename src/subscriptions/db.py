@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     current_period_end          TEXT,
     trial_used                  INTEGER NOT NULL DEFAULT 0,
     votes_balance               INTEGER NOT NULL DEFAULT 0,
-    votes_credited_until        TEXT,
+    votes_last_credited_at        TEXT,
     created_at                  TEXT NOT NULL,
     updated_at                  TEXT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -30,7 +30,8 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-INITIAL_VOTES = 2
+INITIAL_VOTES = 3
+VOTES_PER_WEEK = 3
 WEEK_SECONDS = 7 * 24 * 3600
 
 
@@ -80,11 +81,11 @@ def freeze_votes_cursor(user_id: int) -> None:
     les +2 initiaux restent gérés par credit_pending. Ne re-crédite jamais.
     """
     row = get_by_user(user_id)
-    if row is None or row["votes_credited_until"] is None:
+    if row is None or row["votes_last_credited_at"] is None:
         return
     now = _now()
     get_conn().execute(
-        "UPDATE subscriptions SET votes_credited_until = ?, updated_at = ? "
+        "UPDATE subscriptions SET votes_last_credited_at = ?, updated_at = ? "
         "WHERE user_id = ?",
         (now, now, user_id),
     )
@@ -154,7 +155,7 @@ def has_used_trial(user_id: int) -> bool:
 
 def _set_votes(user_id: int, balance: int, cursor_iso: str) -> None:
     get_conn().execute(
-        "UPDATE subscriptions SET votes_balance = ?, votes_credited_until = ?, "
+        "UPDATE subscriptions SET votes_balance = ?, votes_last_credited_at = ?, "
         "updated_at = ? WHERE user_id = ?",
         (balance, cursor_iso, _now(), user_id),
     )
@@ -163,8 +164,9 @@ def _set_votes(user_id: int, balance: int, cursor_iso: str) -> None:
 def credit_pending(user_id: int) -> int:
     """Crédite paresseusement les votes acquis et renvoie le solde courant.
 
-    +2 à la première activation (fin d'essai), puis +1 par semaine pleine tant
-    que l'abonnement est actif. Idempotent : ne crédite que des semaines pleines.
+    +VOTES_PER_WEEK à la première activation, puis +VOTES_PER_WEEK par semaine
+    pleine. Le solde est cappé à VOTES_PER_WEEK (pas d'accumulation).
+    Idempotent : ne crédite que des semaines pleines.
     """
     row = get_by_user(user_id)
     if row is None:
@@ -173,15 +175,15 @@ def credit_pending(user_id: int) -> int:
     if row["status"] != "active":
         return balance
     now = datetime.now(timezone.utc)
-    cursor = row["votes_credited_until"]
+    cursor = row["votes_last_credited_at"]
     if cursor is None:
-        balance += INITIAL_VOTES
+        balance = min(balance + INITIAL_VOTES, VOTES_PER_WEEK)
         _set_votes(user_id, balance, now.isoformat())
         return balance
     cur = datetime.fromisoformat(cursor)
     weeks = int((now - cur).total_seconds() // WEEK_SECONDS)
     if weeks > 0:
-        balance += weeks
+        balance = min(balance + weeks * VOTES_PER_WEEK, VOTES_PER_WEEK)
         new_cursor = cur + timedelta(seconds=weeks * WEEK_SECONDS)
         _set_votes(user_id, balance, new_cursor.isoformat())
     return balance
@@ -195,3 +197,12 @@ def spend_vote(user_id: int) -> bool:
         (_now(), user_id),
     )
     return cur.rowcount > 0
+
+
+def next_recharge_at(user_id: int) -> datetime | None:
+    """Retourne la date du prochain rechargement de votes, ou None si non applicable."""
+    row = get_by_user(user_id)
+    if not row or not row["votes_last_credited_at"]:
+        return None
+    cursor = datetime.fromisoformat(row["votes_last_credited_at"])
+    return cursor + timedelta(seconds=WEEK_SECONDS)

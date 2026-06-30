@@ -21,27 +21,37 @@ def layout(**_):
     if guard is not None:
         return guard
     balance = subs_db.credit_pending(current_user.id)
+    next_recharge = subs_db.next_recharge_at(current_user.id)
     return account_shell(
-        "roadmap", roadmap_ui.roadmap_content(editable=True, balance=balance)
+        "roadmap",
+        roadmap_ui.roadmap_content(
+            editable=True, balance=balance, next_recharge=next_recharge
+        ),
     )
 
 
 @callback(
     Output("roadmap-vote-list", "children"),
-    Output("roadmap-balance", "children"),
     Input({"type": "roadmap-vote", "index": ALL}, "n_clicks"),
     prevent_initial_call=True,
 )
 def cast_vote(n_clicks):
     if not current_user.is_authenticated:
-        return no_update, no_update
+        return no_update
     if not ctx.triggered_id or not any(n_clicks):
-        return no_update, no_update
+        return no_update
     issue_number = ctx.triggered_id["index"]
     if subs_db.spend_vote(current_user.id):
         roadmap_db.record_vote(current_user.id, issue_number)
     balance = subs_db.credit_pending(current_user.id)
+    next_recharge = subs_db.next_recharge_at(current_user.id)
     issues = github.fetch_roadmap_issues()
     counts = roadmap_db.vote_counts()
-    items = roadmap_ui.vote_items(issues["au_vote"], counts, editable=True)
-    return items, roadmap_ui.balance_text(balance)
+    return roadmap_ui.vote_items(
+        issues["au_vote"],
+        counts,
+        editable=True,
+        can_vote=balance > 0,
+        balance=balance,
+        next_recharge=next_recharge,
+    )

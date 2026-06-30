@@ -3,11 +3,6 @@ from dash import dcc, html
 from src.roadmap import ui
 
 
-def test_balance_text_singular_plural():
-    assert ui.balance_text(1) == "Il te reste 1 vote."
-    assert ui.balance_text(3) == "Il te reste 3 votes."
-
-
 def test_vote_items_sorted_by_count_desc():
     au_vote = [
         {"number": 1, "title": "A", "html_url": "u1"},
@@ -22,8 +17,8 @@ def test_vote_items_sorted_by_count_desc():
 
 def test_vote_items_buttons_only_when_editable():
     au_vote = [{"number": 1, "title": "A", "html_url": "u1"}]
-    assert "Voter" in str(ui.vote_items(au_vote, {1: 0}, editable=True))
-    assert "Voter" not in str(ui.vote_items(au_vote, {1: 0}, editable=False))
+    assert "roadmap-vote" in str(ui.vote_items(au_vote, {1: 0}, editable=True))
+    assert "roadmap-vote" not in str(ui.vote_items(au_vote, {1: 0}, editable=False))
 
 
 def test_changelog_markdown_returns_component():
@@ -47,4 +42,5 @@ def test_roadmap_content_renders(monkeypatch):
     assert isinstance(content, html.Div)
     assert "En cours X" in s
     assert "Au vote Y" in s
-    assert "Il te reste 2 votes." in s
+    assert "Votes restants" in s
+    assert "value='2'" in s

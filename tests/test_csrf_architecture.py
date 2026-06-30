@@ -35,10 +35,18 @@ def test_fill_csrf_inputs_allows_initial_call():
     initiale (_pages_location → _generate_csrf_token → csrf-token → _fill_csrf_inputs),
     laissant le champ csrf_token vide → erreur 400 au premier chargement de /connexion.
     """
-    import src.app  # noqa: F401 — enregistre les callbacks
+    from src.app import app  # enregistre les callbacks et expose callback_map
 
+    # Tant que l'app n'a pas été servie, les callbacks vivent dans
+    # dash._callback.GLOBAL_CALLBACK_MAP. Dès la première requête (qu'un test
+    # précédent a pu déclencher), Dash les déplace dans app.callback_map et vide
+    # le registre global. On inspecte donc les deux pour ne pas dépendre de
+    # l'ordre des tests.
     found = False
-    for cb_info in dash._callback.GLOBAL_CALLBACK_MAP.values():
+    registries = list(dash._callback.GLOBAL_CALLBACK_MAP.values()) + list(
+        app.callback_map.values()
+    )
+    for cb_info in registries:
         inputs = getattr(cb_info, "inputs", None) or cb_info.get("inputs", [])
         for inp in inputs:
             if hasattr(inp, "component_id"):

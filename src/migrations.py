@@ -25,8 +25,12 @@ _MIGRATIONS: list[tuple[str, str]] = [
         "ALTER TABLE subscriptions ADD COLUMN votes_balance INTEGER NOT NULL DEFAULT 0",
     ),
     (
-        "0004_add_votes_credited_until_to_subscriptions",
-        "ALTER TABLE subscriptions ADD COLUMN votes_credited_until TEXT",
+        "0004_add_votes_last_credited_at_to_subscriptions",
+        "ALTER TABLE subscriptions ADD COLUMN votes_last_credited_at TEXT",
+    ),
+    (
+        "0005_rename_votes_credited_until_to_votes_last_credited_at",
+        "ALTER TABLE subscriptions RENAME COLUMN votes_credited_until TO votes_last_credited_at",
     ),
 ]
 
@@ -46,9 +50,11 @@ def apply_pending() -> None:
             try:
                 conn.execute(sql)
             except sqlite3.OperationalError as exc:
-                # SQLite ne supporte pas ALTER TABLE … ADD COLUMN IF NOT EXISTS.
-                # Sur une DB fraîche (schéma déjà à jour), on ignore l'erreur.
-                if "duplicate column name" not in str(exc):
+                # Sur une DB fraîche (schéma déjà à jour), certaines migrations
+                # sont sans effet : ADD COLUMN → "duplicate column name",
+                # RENAME COLUMN → "no such column". On les ignore.
+                err = str(exc)
+                if "duplicate column name" not in err and "no such column" not in err:
                     raise
             conn.execute(
                 "INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)",

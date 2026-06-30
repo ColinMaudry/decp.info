@@ -2,13 +2,17 @@ import json as _json
 
 import pytest
 
-# Initialise un Dash minimal pour que register_page() fonctionne dans les tests
-# unitaires de pages (pas besoin du serveur complet — juste que CONFIG soit peuplé).
-from dash import Dash as _Dash
-
-_Dash(__name__, use_pages=True, pages_folder="", assets_folder="assets")
-
-from src.pages import compte_abonnement  # noqa: F401, E402  # doit venir après Dash()
+# Importer l'app complète à la collecte : sa découverte use_pages enregistre
+# chaque page (et ses @callback) exactement une fois, en contexte propre.
+#
+# Ne PAS créer un Dash minimal ad hoc puis importer la page séparément : Dash
+# ré-exécute chaque module de page via exec_module pendant la découverte (sans
+# vérifier sys.modules). Si la page a déjà été importée (donc ses @callback déjà
+# enregistrés), elle est ré-enregistrée → "Duplicate callback outputs"
+# (salaire-modal, resiliation-modal) qui casse le rendu de TOUTES les pages dans
+# la suite Selenium complète. En important src.app ici, la découverte tourne en
+# premier et les imports ultérieurs de compte_abonnement sont mis en cache.
+from src.app import app  # noqa: F401, E402
 
 
 class FakeResponse:
@@ -67,11 +71,11 @@ def sub_app(users_db_path, monkeypatch):
     monkeypatch.setenv("FRISBII_PLAN_SIMPLE", "plan_simple")
     monkeypatch.setenv("FRISBII_PLAN_SOUTIEN", "plan_soutien")
     monkeypatch.setenv("FRISBII_WEBHOOK_SECRET", "s3cr3t")
-    app = Flask(__name__)
-    app.config["WTF_CSRF_ENABLED"] = False
-    init_auth(app)
-    init_subscriptions(app)
-    return app
+    flask_app = Flask(__name__)
+    flask_app.config["WTF_CSRF_ENABLED"] = False
+    init_auth(flask_app)
+    init_subscriptions(flask_app)
+    return flask_app
 
 
 @pytest.fixture

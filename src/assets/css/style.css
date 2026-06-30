@@ -968,6 +968,11 @@ input[type="number"] {
   display: none;
 }
 
+/* Roadmap */
+
+.roadmap-vote-list input[type="text"] {
+}
+
 /* --- Bascule desktop / mobile au point de rupture 768 px --- */
 
 @media (max-width: 768px) {

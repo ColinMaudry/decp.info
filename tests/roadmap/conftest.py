@@ -1,10 +1,14 @@
 import pytest
 
-# Dash minimal pour que register_page() fonctionne dans les tests de pages de ce
-# répertoire (CONFIG peuplé). Instancié une seule fois, ici, avant tout import de page.
-from dash import Dash as _Dash
-
-_Dash(__name__, use_pages=True, pages_folder="", assets_folder="assets")
+# Importer l'app complète à la collecte : sa découverte use_pages enregistre
+# chaque page (et ses @callback) exactement une fois, en contexte propre. Un Dash
+# minimal ad hoc suivi d'imports de pages dans les tests provoque un double
+# enregistrement des @callback (Dash ré-exécute chaque page via exec_module
+# pendant la découverte de src.app), d'où "Duplicate callback outputs" qui casse
+# le rendu de toutes les pages dans la suite Selenium. En important src.app ici,
+# la découverte tourne en premier et les imports ultérieurs de pages sont mis en
+# cache. Voir aussi tests/subscriptions/conftest.py.
+from src.app import app  # noqa: F401, E402
 
 
 @pytest.fixture
