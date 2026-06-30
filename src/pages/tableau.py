@@ -78,6 +78,62 @@ DATATABLE = html.Div(
     ),
 )
 
+
+def _help_button_legend():
+    """Légende en tête du mode d'emploi : chaque bouton de la barre d'outils,
+    reproduit à l'identique (mais inerte), en face de sa fonction."""
+    rows = [
+        (
+            dbc.Button("Colonnes", color="secondary", size="sm"),
+            "Choisir les colonnes affichées.",
+        ),
+        (
+            dbc.Button("Sauvegarder la vue", color="secondary", size="sm"),
+            "Enregistrer les filtres, tris et colonnes actuels sous un nom (abonnés).",
+        ),
+        (
+            dbc.Button("Mes vues ▾", color="secondary", size="sm"),
+            "Rouvrir une vue que vous avez enregistrée (abonnés).",
+        ),
+        (
+            dbc.Button("Partager la vue", color="secondary", size="sm"),
+            "Copier l'adresse de la vue actuelle pour la partager ou la conserver.",
+        ),
+        (
+            dbc.Button("Télécharger (Excel)", color="secondary", size="sm"),
+            "Télécharger les données filtrées et triées au format Excel.",
+        ),
+        (
+            dbc.Button("Réinitialiser", color="danger", outline=True, size="sm"),
+            "Supprimer tous les filtres et tris.",
+        ),
+        (
+            dbc.Button("Mode d'emploi", color="secondary", outline=True, size="sm"),
+            "Ouvrir cette aide.",
+        ),
+    ]
+    return html.Div(
+        className="help-legend",
+        children=[
+            html.P("Les boutons de la barre d'outils", className="fw-bold mb-2"),
+            html.Table(
+                className="help-legend-table",
+                children=html.Tbody(
+                    [
+                        html.Tr(
+                            [
+                                html.Td(btn, className="help-legend-btn"),
+                                html.Td(desc, className="help-legend-desc"),
+                            ]
+                        )
+                        for btn, desc in rows
+                    ]
+                ),
+            ),
+        ],
+    )
+
+
 layout = [
     dcc.Location(id="tableau_url", refresh=False),
     dcc.Store(id="filter-cleanup-trigger-tableau"),
@@ -160,14 +216,23 @@ layout = [
             html.Div(
                 [
                     # Modal du mode d'emploi
-                    dbc.Button("Mode d'emploi", id="tableau_help_open"),
+                    dbc.Button(
+                        "Mode d'emploi",
+                        id="tableau_help_open",
+                        color="secondary",
+                        outline=True,
+                        size="sm",
+                    ),
                     dbc.Modal(
                         [
                             dbc.ModalHeader(dbc.ModalTitle("Mode d'emploi")),
                             dbc.ModalBody(
-                                dcc.Markdown(
-                                    dangerously_allow_html=True,
-                                    children=f"""
+                                [
+                                    _help_button_legend(),
+                                    html.Hr(),
+                                    dcc.Markdown(
+                                        dangerously_allow_html=True,
+                                        children=f"""
             ##### Définition des colonnes
 
             Pour voir la définition d'une colonne, passez votre souris sur son en-tête.
@@ -226,7 +291,8 @@ layout = [
             (informations, marchés attribués/remportés, etc.)
 
             """,
-                                ),
+                                    ),
+                                ],
                             ),
                             dbc.ModalFooter(
                                 dbc.Button(
@@ -245,8 +311,10 @@ layout = [
                     ),
                     # Bouton modal des colonnes affichées
                     dbc.Button(
-                        "Choisir les colonnes",
+                        "Colonnes",
                         id="tableau_columns_open",
+                        color="secondary",
+                        size="sm",
                         className="column_list",
                         title="Choisir les colonnes à afficher et masquer",
                     ),
@@ -258,11 +326,15 @@ layout = [
                             dbc.Button(
                                 "Sauvegarder la vue",
                                 id="btn-save-view",
+                                color="secondary",
+                                size="sm",
                                 title="Enregistrer les filtres, tris et colonnes actuels sous un nom",
                             ),
                             dbc.DropdownMenu(
                                 id="saved-views-menu",
                                 label="Mes vues",
+                                color="secondary",
+                                size="sm",
                                 children=[],
                                 className="d-inline-block",
                             ),
@@ -294,24 +366,35 @@ layout = [
                             ),
                         ],
                     ),
-                    html.P("lignes", id="nb_rows"),
                     html.Div(id="copy-container"),
                     dcc.Input(id="share-url", readOnly=True, style={"display": "none"}),
                     dbc.Button(
-                        "Téléchargement désactivé au-delà de 65 000 lignes",
+                        "Télécharger (Excel)",
                         id="btn-download-data",
+                        color="secondary",
+                        size="sm",
                         disabled=True,
                     ),
                     dcc.Download(id="download-data"),
                     dcc.Store(id="filtered_data", storage_type="memory"),
-                    html.P("Données mises à jour le " + str(update_date)),
                     dbc.Button(
-                        "Remettre à zéro",
-                        title="Supprime tous les filtres et les tris. Autrement ils sont conservés même si vous fermez la page.",
+                        "Réinitialiser",
                         id="btn-tableau-reset",
+                        color="danger",
+                        outline=True,
+                        size="sm",
+                        title="Supprime tous les filtres et les tris. Autrement ils sont conservés même si vous fermez la page.",
                     ),
                 ],
-                className="table-menu",
+                className="table-toolbar",
+            ),
+            html.Div(
+                className="table-meta",
+                children=[
+                    html.Span(id="nb_rows"),
+                    html.Span(" · Données mises à jour le " + str(update_date)),
+                    html.Span(id="download-hint", className="dl-hint"),
+                ],
             ),
             dbc.Modal(
                 [
@@ -351,6 +434,7 @@ layout = [
     Output("btn-download-data", "children"),
     Output("btn-download-data", "title"),
     Output("filter-cleanup-trigger-tableau", "data", allow_duplicate=True),
+    Output("download-hint", "children"),
     Input("tableau_url", "href"),
     Input("tableau_datatable", "page_current"),
     Input("tableau_datatable", "page_size"),
@@ -360,13 +444,29 @@ layout = [
     prevent_initial_call=True,
 )
 def update_table(href, page_current, page_size, filter_query, sort_by, data_timestamp):
-    # if ctx.triggered_id != "url":
-    #     search_params = None
-    # else:
-    #     search_params = urllib.parse.parse_qs(search_params.lstrip("?"))
-    return prepare_table_data(
-        None, data_timestamp, filter_query, page_current, page_size, sort_by, "tableau"
+    result = list(
+        prepare_table_data(
+            None,
+            data_timestamp,
+            filter_query,
+            page_current,
+            page_size,
+            sort_by,
+            "tableau",
+        )
     )
+    # Libellé court et constant ; la raison d'un éventuel blocage est affichée
+    # en clair dans la ligne d'infos (fiable cross-browser, contrairement à une
+    # infobulle sur bouton désactivé). index 5 = disabled, 6 = children, 7 = title.
+    result[6] = "Télécharger (Excel)"
+    download_blocked_too_many = result[5] and result[7]
+    download_hint = (
+        " · Filtrez sous 65 000 lignes pour activer le téléchargement"
+        if download_blocked_too_many
+        else ""
+    )
+    result.append(download_hint)
+    return tuple(result)
 
 
 @callback(
@@ -491,7 +591,8 @@ def sync_url_and_reset_button(filter_query, sort_by, hidden_columns, href):
         children=[
             dbc.Button(
                 "Partager la vue",
-                className="btn btn-primary",
+                color="secondary",
+                size="sm",
                 title="Copier l'adresse de cette vue (filtres, tris, choix de colonnes) pour la partager.",
             )
         ],

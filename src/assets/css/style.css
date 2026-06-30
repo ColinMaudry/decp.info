@@ -320,6 +320,55 @@ input[type="email"] {
   margin: 8px 16px 8px 0;
 }
 
+/* Barre d'outils du tableau (/tableau) : une rangée d'actions compactes
+   au-dessus d'une ligne d'infos discrète. .table-menu (autres pages) intacte. */
+.table-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 14px 0 6px 0;
+}
+
+.table-toolbar > * {
+  margin: 0 12px 8px 0;
+}
+
+/* Mode d'emploi : aide auxiliaire, rejetée en fin de barre sans toucher au DOM */
+.table-toolbar #tableau_help_open {
+  order: 1;
+}
+
+.table-meta {
+  margin: 0 0 16px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Raison du téléchargement bloqué : visible (pas une infobulle), mise en avant
+   sobrement avec la couleur terracotta de la marque. */
+.table-meta .dl-hint {
+  color: #b33821;
+}
+
+/* Légende des boutons en tête du mode d'emploi : boutons reproduits à
+   l'identique mais inertes, alignés en face de leur fonction. */
+.help-legend-table {
+  border-collapse: collapse;
+}
+
+.help-legend-table td {
+  padding: 4px 16px 4px 0;
+  vertical-align: middle;
+}
+
+.help-legend-btn {
+  white-space: nowrap;
+}
+
+.help-legend .btn {
+  pointer-events: none;
+}
+
 #source_table {
   margin-bottom: 25px;
 }
