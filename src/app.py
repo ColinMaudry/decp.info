@@ -126,28 +126,31 @@ roadmap_db.init_schema()
 def robots():
     text = """User-agent: *
 Allow: /
-    """
+Sitemap: https://colibre.fr/sitemap.xml
+"""
     return Response(text, mimetype="text/plain")
+
+
+# Index de sitemaps + sous-sitemaps paginés (voir src.utils.sitemap).
+from src.utils import sitemap as _sitemap  # noqa: E402  # src.db doit être prêt
 
 
 @app.server.route("/sitemap.xml")
 def sitemap():
-    base_url = "https://colibre.fr"
-    pages = [
-        "/",
-        "/observatoire",
-        "/tableau",
-        "/a-propos",
-        "/etapes",
-    ]
-    xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
-    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-    for page in pages:
-        xml += "  <url>\n"
-        xml += f"    <loc>{base_url}{page}</loc>\n"
-        xml += "  </url>\n"
-    xml += "</urlset>"
-    return Response(xml, mimetype="text/xml")
+    return Response(_sitemap.build_index(), mimetype="application/xml")
+
+
+@app.server.route("/sitemap-pages.xml")
+def sitemap_pages():
+    return Response(_sitemap.build_pages(), mimetype="application/xml")
+
+
+@app.server.route("/sitemap-<segment>-<int:page>.xml")
+def sitemap_org(segment: str, page: int):
+    xml = _sitemap.build_org_page(segment, page)
+    if xml is None:
+        return Response("Not found", status=404)
+    return Response(xml, mimetype="application/xml")
 
 
 @app.server.route("/llms.txt")
@@ -172,7 +175,15 @@ app.index_string = """
         <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png">
         <link rel="manifest" href="/assets/icons/site.webmanifest">
         {%css%}
-        <!-- canonical link -->
+        <!-- canonical auto-référent : l'index_string Dash est partagé par toutes
+             les pages, donc on pose le href côté client d'après l'URL courante
+             (sans query string). Google exécute le JS au rendu. -->
+        <link rel="canonical" id="canonical-link">
+        <script type="application/javascript">
+            document.getElementById('canonical-link').setAttribute(
+                'href', window.location.origin + window.location.pathname
+            );
+        </script>
     </head>
     <body>
         {%app_entry%}
