@@ -1,6 +1,6 @@
-# decp.info
+# colibre
 
-decp.info est une plateforme permettant d'explorer, filtrer et visualiser les données des marchés publics français. Elle est alimentée par des données publiées en Open Data et propose également une API REST JSON accessible sur abonnement (contacter <colin@colmo.tech>).
+colibre est une plateforme permettant d'explorer, filtrer et visualiser les données des marés publics français. Elle est alimentée par des données publiées en Open Data et propose également une API REST JSON accessible sur abonnement (contacter <colin@colmo.tech>).
 
 ## Schéma des données
 
@@ -17,9 +17,9 @@ Les données sont publiées en Open Data aux formats Parquet et CSV :
 
 L'API nécessite un jeton d'authentification pour se connecter. Elle utilise le même schéma que les données et renvoie les données au format JSON.
 
-- Point d'accès : <https://decp.info/api/v1/data>
-- Spec Open API : <https://decp.info/api/v1/openapi.json>
-- Health : <https://decp.info/api/v1/health>
+- Point d'accès : <https://colibre.fr/api/v1/data>
+- Spec Open API : <https://colibre.fr/api/v1/openapi.json>
+- Health : <https://colibre.fr/api/v1/health>
 
 ## Sources de données
 
