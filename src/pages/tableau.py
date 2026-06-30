@@ -356,6 +356,13 @@ layout = [
                                         type="text",
                                         className="form-control",
                                     ),
+                                    html.Hr(className="my-3"),
+                                    dbc.Label("Ou remplacer une vue existante"),
+                                    dbc.Select(
+                                        id="overwrite-view-select",
+                                        options=[],
+                                        placeholder="Sélectionner une vue…",
+                                    ),
                                     html.Div(id="save-view-feedback", className="mt-2"),
                                 ]
                             ),
@@ -742,3 +749,22 @@ def populate_saved_views_menu(_pathname, _refresh):
         return []
     views = saved_views_db.list_views(current_user.id, "tableau")
     return saved_views_ui.saved_views_items(views)
+
+
+@callback(
+    Output("overwrite-view-select", "options"),
+    Input("save-view-modal", "is_open"),
+)
+def populate_overwrite_select(is_open):
+    if not is_open or not current_user_has_subscription():
+        return []
+    views = saved_views_db.list_views(current_user.id, "tableau")
+    return [{"label": v["name"], "value": v["name"]} for v in views]
+
+
+clientside_callback(
+    "function(val) { return val != null ? val : window.dash_clientside.no_update; }",
+    Output("save-view-name", "value"),
+    Input("overwrite-view-select", "value"),
+    prevent_initial_call=True,
+)
