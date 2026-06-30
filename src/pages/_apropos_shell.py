@@ -23,6 +23,11 @@ SECTIONS = [
         "label": "Abonnement",
         "href": "/a-propos/abonnement",
     },
+    {
+        "key": "roadmap",
+        "label": "Roadmap",
+        "href": "/a-propos/roadmap",
+    },
 ]
 
 
