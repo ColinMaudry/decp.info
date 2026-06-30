@@ -17,6 +17,15 @@ def _make_user(email="u@ex.fr"):
     return auth_db.create_user(email, "hash")
 
 
+def _activate(uid, cursor_iso=None):
+    """Met l'abonnement en statut actif avec un curseur d'accumulation donné."""
+    db.get_conn().execute(
+        "UPDATE subscriptions SET status = 'active', votes_credited_until = ? "
+        "WHERE user_id = ?",
+        (cursor_iso, uid),
+    )
+
+
 def test_init_schema_creates_table(users_db_path):
     db.init_schema()
     conn = auth_db.get_conn()
@@ -127,3 +136,58 @@ def test_init_schema_creates_votes_columns(users_db_path):
     row = db.get_by_user(uid)
     assert row["votes_balance"] == 0
     assert row["votes_credited_until"] is None
+
+
+def test_credit_pending_grants_initial_two_on_first_active(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.create_pending(uid, "decpinfo-1", "simple")
+    _activate(uid, cursor_iso=None)
+    balance = db.credit_pending(uid)
+    assert balance == 2
+    assert db.get_by_user(uid)["votes_credited_until"] is not None
+
+
+def test_credit_pending_is_idempotent_same_day(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.create_pending(uid, "decpinfo-1", "simple")
+    _activate(uid, cursor_iso=None)
+    db.credit_pending(uid)
+    assert db.credit_pending(uid) == 2  # aucun crédit supplémentaire
+
+
+def test_credit_pending_adds_one_vote_per_full_week(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.create_pending(uid, "decpinfo-1", "simple")
+    fifteen_days_ago = (datetime.now(timezone.utc) - timedelta(days=15)).isoformat()
+    _activate(uid, cursor_iso=fifteen_days_ago)
+    # 15 jours = 2 semaines pleines
+    assert db.credit_pending(uid) == 2
+
+
+def test_credit_pending_no_credit_when_not_active(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.create_pending(uid, "decpinfo-1", "simple")  # statut 'pending'
+    assert db.credit_pending(uid) == 0
+
+
+def test_spend_vote_decrements_when_balance_positive(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.create_pending(uid, "decpinfo-1", "simple")
+    _activate(uid, cursor_iso=None)
+    db.credit_pending(uid)  # solde = 2
+    assert db.spend_vote(uid) is True
+    assert db.get_by_user(uid)["votes_balance"] == 1
+
+
+def test_spend_vote_refused_when_balance_zero(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.create_pending(uid, "decpinfo-1", "simple")
+    _activate(uid, cursor_iso=None)
+    # solde reste 0 tant que credit_pending n'est pas appelé
+    assert db.spend_vote(uid) is False

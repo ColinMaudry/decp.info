@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from src.auth.db import get_conn
 
@@ -28,6 +28,10 @@ _ACCESS_STATUSES = ("trial", "active")
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+INITIAL_VOTES = 2
+WEEK_SECONDS = 7 * 24 * 3600
 
 
 def init_schema() -> None:
@@ -121,3 +125,48 @@ def has_active_subscription(user_id: int) -> bool:
 def has_used_trial(user_id: int) -> bool:
     row = get_by_user(user_id)
     return bool(row and row["trial_used"])
+
+
+def _set_votes(user_id: int, balance: int, cursor_iso: str) -> None:
+    get_conn().execute(
+        "UPDATE subscriptions SET votes_balance = ?, votes_credited_until = ?, "
+        "updated_at = ? WHERE user_id = ?",
+        (balance, cursor_iso, _now(), user_id),
+    )
+
+
+def credit_pending(user_id: int) -> int:
+    """Crédite paresseusement les votes acquis et renvoie le solde courant.
+
+    +2 à la première activation (fin d'essai), puis +1 par semaine pleine tant
+    que l'abonnement est actif. Idempotent : ne crédite que des semaines pleines.
+    """
+    row = get_by_user(user_id)
+    if row is None:
+        return 0
+    balance = row["votes_balance"] or 0
+    if row["status"] != "active":
+        return balance
+    now = datetime.now(timezone.utc)
+    cursor = row["votes_credited_until"]
+    if cursor is None:
+        balance += INITIAL_VOTES
+        _set_votes(user_id, balance, now.isoformat())
+        return balance
+    cur = datetime.fromisoformat(cursor)
+    weeks = int((now - cur).total_seconds() // WEEK_SECONDS)
+    if weeks > 0:
+        balance += weeks
+        new_cursor = cur + timedelta(seconds=weeks * WEEK_SECONDS)
+        _set_votes(user_id, balance, new_cursor.isoformat())
+    return balance
+
+
+def spend_vote(user_id: int) -> bool:
+    """Débite 1 vote si le solde le permet. Renvoie True si un vote a été débité."""
+    cur = get_conn().execute(
+        "UPDATE subscriptions SET votes_balance = votes_balance - 1, updated_at = ? "
+        "WHERE user_id = ? AND votes_balance > 0",
+        (_now(), user_id),
+    )
+    return cur.rowcount > 0
