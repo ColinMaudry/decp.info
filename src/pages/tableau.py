@@ -201,7 +201,7 @@ layout = [
         ],
     ),
     dcc.Markdown(
-        f"Ce tableau contient tous les marchés attribués en France. Il vous permet d'appliquer un filtre sur une ou plusieurs colonnes, et ainsi produire la liste de marchés dont vous avez besoin (exemples : [marchés de voirie < 40 k€ en 2025](/tableau?filtres=%7Bacheteur_id%7D+icontains+24350013900189+%26%26+%7BdateNotification%7D+icontains+2025%2A+%26%26+%7Bmontant%7D+i%3C+40000+%26%26+%7Bobjet%7D+icontains+voirie&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2Cacheteur_departement_code%2CsourceDataset), [marchés > 500 k€ avec clause sociale attribués à des PME à plus de 100 km dans le Var](/tableau?filtres=%7Btitulaire_categorie%7D+icontains+PME+%26%26+%7Btitulaire_distance%7D+i%3E+100+%26%26+%7Bmontant%7D+i%3E+500000+%26%26+%7Bacheteur_departement_code%7D+icontains+83+%26%26+%7BconsiderationsSociales%7D+icontains+clause&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2CconsiderationsSociales%2Ctitulaire_distance%2Cacheteur_departement_code%2Ctitulaire_categorie%2CsourceDataset)). Par défaut seules quelques colonnes sont affichées, mais vous pouvez en afficher jusqu'à {len(schema.names())} en cliquant sur le bouton **Choisir les colonnes**. Cet outil est assez puissant, je vous recommande de lire le mode d'emploi pour en tirer pleinement partie.",
+        f"Ce tableau contient tous les marchés attribués en France. Il vous permet d'appliquer un filtre sur une ou plusieurs colonnes, et ainsi produire la liste de marchés dont vous avez besoin (exemples : [marchés de voirie < 40 k€ en 2025](/tableau?filtres=%7Bacheteur_id%7D+icontains+24350013900189+%26%26+%7BdateNotification%7D+icontains+2025%2A+%26%26+%7Bmontant%7D+i%3C+40000+%26%26+%7Bobjet%7D+icontains+voirie&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2Cacheteur_departement_code%2CsourceDataset), [marchés > 500 k€ avec clause sociale attribués à des PME à plus de 100 km dans le Var](/tableau?filtres=%7Btitulaire_categorie%7D+icontains+PME+%26%26+%7Btitulaire_distance%7D+i%3E+100+%26%26+%7Bmontant%7D+i%3E+500000+%26%26+%7Bacheteur_departement_code%7D+icontains+83+%26%26+%7BconsiderationsSociales%7D+icontains+clause&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2CconsiderationsSociales%2Ctitulaire_distance%2Cacheteur_departement_code%2Ctitulaire_categorie%2CsourceDataset)). Par défaut seules quelques colonnes sont affichées, mais vous pouvez en afficher jusqu'à {len(schema.names())} en cliquant sur le bouton **Colonnes**. Cet outil est assez puissant, je vous recommande de lire le mode d'emploi pour en tirer pleinement partie.",
         style={"maxWidth": "1000px"},
     ),
     html.Div(
@@ -217,7 +217,7 @@ layout = [
                 [
                     # Modal du mode d'emploi
                     dbc.Button(
-                        "Mode d'emploi",
+                        "⍰ Mode d'emploi",
                         id="tableau_help_open",
                         color="secondary",
                         outline=True,
@@ -268,6 +268,8 @@ layout = [
             1. tri croissant
             2. tri décroissant
             3. pas de tri
+
+            Les tris sont appliqués dans l'ordre : la première colonne que vous triez a la priorité sur la seconde, qui triera uniquement au sein des groupes de valeurs de la première colonne.
 
             ##### Afficher plus de colonnes
 
@@ -393,7 +395,7 @@ layout = [
                 children=[
                     html.Span(id="nb_rows"),
                     html.Span(" · Données mises à jour le " + str(update_date)),
-                    html.Span(id="download-hint", className="dl-hint"),
+                    html.Span(id="download-hint"),
                 ],
             ),
             dbc.Modal(
