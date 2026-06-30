@@ -76,6 +76,13 @@ cache.init_app(
 
 app: Dash = Dash(
     server=server,
+    # name="src" (et non "src.app") pour que use_pages enregistre les pages sous
+    # le namespace `src.pages.*`, identique aux imports inter-pages (ex.
+    # inscription.py: `from src.pages.connexion import linkedin_button`). Sinon
+    # Dash découvre `pages.connexion` tandis que l'import explicite crée
+    # `src.pages.connexion` : deux identités, même URL → "duplicate paths" →
+    # check_for_duplicate_pathnames lève à chaque requête → 500 sur toute l'app.
+    name="src",
     title="decp.info",
     use_pages=True,
     suppress_callback_exceptions=True,
@@ -108,6 +115,10 @@ init_subscriptions(app.server)
 from src.saved_views import db as saved_views_db  # noqa: E402
 
 saved_views_db.init_schema()
+
+from src.roadmap import db as roadmap_db  # noqa: E402
+
+roadmap_db.init_schema()
 
 
 # robots.txt
