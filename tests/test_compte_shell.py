@@ -19,7 +19,7 @@ def test_visible_sections_hides_gated_without_subscription():
 
 def test_visible_sections_shows_all_with_subscription():
     keys = {s["key"] for s in shell.visible_sections(has_subscription=True)}
-    assert "archives" in keys
+    assert "roadmap" in keys
 
 
 def test_guard_redirect_anonymous_goes_to_login():
