@@ -13,8 +13,8 @@ def test_init_schema_creates_table(temp_db):
 
 def test_create_token_returns_plaintext_and_stores_hash(temp_db):
     token, token_id = tokens_db.create_token(temp_db, "test-label")
-    assert token.startswith("decpinfo_")
-    assert len(token) == len("decpinfo_") + 64  # 32 octets hex = 64 chars
+    assert token.startswith("colibre_")
+    assert len(token) == len("colibre_") + 64  # 32 octets hex = 64 chars
     assert token_id >= 1
 
     with sqlite3.connect(str(temp_db)) as conn:
@@ -38,7 +38,7 @@ def test_get_token_by_plaintext_returns_row(temp_db):
 
 
 def test_get_token_unknown_returns_none(temp_db):
-    assert tokens_db.get_token_by_plaintext(temp_db, "decpinfo_zzz") is None
+    assert tokens_db.get_token_by_plaintext(temp_db, "colibre_zzz") is None
 
 
 def test_revoke_token_sets_revoked_at(temp_db):

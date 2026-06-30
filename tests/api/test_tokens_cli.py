@@ -9,7 +9,7 @@ def test_create_prints_plaintext_token_once(temp_db, capsys):
     rc = _run(["create", "--label", "alice"], env={"USERS_DB_PATH": str(temp_db)})
     out = capsys.readouterr().out
     assert rc == 0
-    assert "decpinfo_" in out
+    assert "colibre_" in out
     tokens = tokens_db.list_tokens(temp_db)
     assert len(tokens) == 1
     assert tokens[0]["label"] == "alice"
