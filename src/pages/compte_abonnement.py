@@ -294,12 +294,16 @@ def _tous_abonnes_banner():
     )
 
 
+def _show_active_view(row) -> bool:
+    return row is not None and row["status"] != "failed"
+
+
 def layout(**query):
     guard = account_guard("/compte/abonnement", require_subscription=False)
     if guard is not None:
         return guard
 
-    row = db.get_by_user(current_user.id) if current_user.is_authenticated else None
+    row = db.get_current(current_user.id) if current_user.is_authenticated else None
     trial_used = (
         db.has_used_trial(current_user.id) if current_user.is_authenticated else False
     )
@@ -310,7 +314,7 @@ def layout(**query):
         body.append(banner)
     body.extend(_feedback(query))
 
-    if row is not None:
+    if _show_active_view(row):
         body.append(_active_view(row))
         body.append(_resiliation_modal(row["current_period_end"]))
     else:
