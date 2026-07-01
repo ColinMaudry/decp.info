@@ -63,6 +63,7 @@ def update_customer(handle: str, data: dict) -> dict:
 
 def create_subscription_session(
     plan_handle: str,
+    handle: str,
     accept_url: str,
     cancel_url: str,
     no_trial: bool = False,
@@ -72,7 +73,7 @@ def create_subscription_session(
     body: dict = {
         "plan": plan_handle,
         "signup_method": "link",
-        "generate_handle": True,
+        "handle": handle,
         "accept_url": accept_url,
         "cancel_url": cancel_url,
     }

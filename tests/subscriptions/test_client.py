@@ -38,6 +38,7 @@ def test_create_subscription_session_with_customer_handle(fake_httpx):
     )
     url = client.create_subscription_session(
         "plan_simple",
+        "abo-1-1",
         "https://app/ok",
         "https://app/ko",
         customer_handle="colibre-1",
@@ -45,8 +46,10 @@ def test_create_subscription_session_with_customer_handle(fake_httpx):
     assert url == "https://checkout.reepay.com/#/sub-1"
     body = fake_httpx["calls"][0]["json"]
     assert body["plan"] == "plan_simple"
+    assert body["handle"] == "abo-1-1"
     assert body["customer"] == "colibre-1"
     assert body["signup_method"] == "link"
+    assert "generate_handle" not in body
     assert "prepare_subscription" not in body
 
 
@@ -63,6 +66,7 @@ def test_create_subscription_session_no_trial(fake_httpx):
     )
     client.create_subscription_session(
         "plan_simple",
+        "abo-1-2",
         "https://app/ok",
         "https://app/ko",
         no_trial=True,
