@@ -54,6 +54,7 @@ def _plan_card(meta: dict, trial: int | None, trial_used: bool):
                         if TOUS_ABONNES
                         else "btn btn-primary"
                     ),
+                    style={"width": "fit-content"},
                 ),
             ],
             className="p-4",
