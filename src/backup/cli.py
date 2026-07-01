@@ -46,11 +46,11 @@ def main(argv=None, env=None, storage=None) -> int:
         return 0
 
     if args.cmd == "restore":
-        print("⚠ Arrêtez d'abord le service : systemctl stop decpinfo")
+        print("⚠ Arrêtez d'abord le service : systemctl stop colibre")
         backup_copy = service.restore(config, storage, args.key, now)
         print(f"restauré depuis : {args.key}")
         print(f"copie de secours de l'ancienne base : {backup_copy}")
-        print("Redémarrez ensuite le service : systemctl start decpinfo")
+        print("Redémarrez ensuite le service : systemctl start colibre")
         return 0
 
 

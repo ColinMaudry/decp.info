@@ -11,7 +11,7 @@ subscriptions_bp = Blueprint("subscriptions", __name__)
 
 
 def _customer_handle(user_id: int) -> str:
-    return f"decpinfo-{user_id}"
+    return f"colibre-{user_id}"
 
 
 @subscriptions_bp.route("/subscriptions/subscribe", methods=["POST"])

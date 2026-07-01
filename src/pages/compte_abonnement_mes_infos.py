@@ -113,7 +113,7 @@ def layout(**query):
 
     prefill: dict = {}
     try:
-        prefill = frisbii_client.get_customer(f"decpinfo-{current_user.id}")
+        prefill = frisbii_client.get_customer(f"colibre-{current_user.id}")
     except frisbii_client.FrisbiiError:
         prefill = {}
     stored_siret = auth_db.get_siret(current_user.id) or ""
