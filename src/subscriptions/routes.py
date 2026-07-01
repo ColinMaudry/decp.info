@@ -109,7 +109,7 @@ def add_payment():
 def add_payment_callback():
     session_id = request.args.get("id", "")
     cust = _customer_handle(current_user.id)
-    row = db.get_by_user(current_user.id)
+    row = db.get_current(current_user.id)
     sub_handle = row["frisbii_subscription_handle"] if row else None
     if not sub_handle:
         return redirect("/compte/abonnement?paiement=succes")
@@ -132,7 +132,7 @@ def add_payment_callback():
 @subscriptions_bp.route("/subscriptions/cancel", methods=["POST"])
 @login_required
 def cancel():
-    row = db.get_by_user(current_user.id)
+    row = db.get_current(current_user.id)
     if row is None or not row["frisbii_subscription_handle"]:
         return "Aucun abonnement à résilier", 400
     try:
@@ -140,7 +140,7 @@ def cancel():
     except client.FrisbiiError:
         logger.exception("Échec de résiliation Frisbii")
         return redirect("/compte/abonnement?error=frisbii")
-    db.set_cancelled(current_user.id, sub.get("expires"))
+    db.set_cancelled(row["id"], sub.get("expires"))
     return redirect("/compte/abonnement?resiliation=ok")
 
 
@@ -152,7 +152,7 @@ def webhook():
 
     customer = payload.get("customer")
     sub_handle = payload.get("subscription")
-    if not customer or db.get_by_customer(customer) is None:
+    if not customer or not db.customer_known(customer):
         return "", 200  # rien à rapprocher
     try:
         sub = client.get_subscription(sub_handle) if sub_handle else None
@@ -162,5 +162,5 @@ def webhook():
     if sub is None:
         return "", 200
     status, current_period_end = webhooks.map_subscription(sub)
-    db.update_from_webhook(customer, sub_handle, status, current_period_end)
+    db.update_from_webhook(sub_handle, status, current_period_end)
     return "", 200

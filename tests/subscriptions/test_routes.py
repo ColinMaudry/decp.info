@@ -84,10 +84,8 @@ def test_subscribe_requires_login(sub_app):
 
 def test_cancel_calls_api_and_marks_cancelled(logged_in_client, monkeypatch):
     client, uid = logged_in_client
-    db.create_pending(uid, "colibre-%d" % uid, "simple")
-    db.update_from_webhook(
-        "colibre-%d" % uid, "sub_42", "active", "2099-01-01T00:00:00+00:00"
-    )
+    handle, _ = db.create_pending(uid, "colibre-%d" % uid, "simple")
+    db.update_from_webhook(handle, "active", "2099-01-01T00:00:00+00:00")
     monkeypatch.setattr(
         frisbii_client,
         "cancel_subscription",
@@ -96,7 +94,7 @@ def test_cancel_calls_api_and_marks_cancelled(logged_in_client, monkeypatch):
     resp = client.post("/subscriptions/cancel")
     assert resp.status_code == 302
     assert "resiliation=ok" in resp.headers["Location"]
-    row = db.get_by_user(uid)
+    row = db.get_current(uid)
     assert row["status"] == "cancelled"
     assert row["current_period_end"] == "2099-02-01T00:00:00+00:00"
 
@@ -113,7 +111,7 @@ def test_webhook_updates_subscription(sub_app, monkeypatch):
 
     auth_db.init_schema()
     uid = auth_db.create_user("wh@ex.fr", "hash")
-    db.create_pending(uid, "colibre-%d" % uid, "simple")
+    handle, _ = db.create_pending(uid, "colibre-%d" % uid, "simple")
     monkeypatch.setattr(
         frisbii_client,
         "get_subscription",
@@ -124,14 +122,14 @@ def test_webhook_updates_subscription(sub_app, monkeypatch):
         "timestamp": "2026-06-25T10:00:00Z",
         "event_type": "subscription_created",
         "customer": "colibre-%d" % uid,
-        "subscription": "sub_42",
+        "subscription": handle,
     }
     payload["signature"] = _sign("s3cr3t", payload["timestamp"], payload["id"])
     resp = sub_app.test_client().post("/frisbii/webhook", json=payload)
     assert resp.status_code == 200
-    row = db.get_by_user(uid)
+    row = db.get_current(uid)
     assert row["status"] == "active"
-    assert row["frisbii_subscription_handle"] == "sub_42"
+    assert row["frisbii_subscription_handle"] == handle
 
 
 def test_subscribe_skips_if_already_active(logged_in_client, monkeypatch):
