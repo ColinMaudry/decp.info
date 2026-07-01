@@ -199,3 +199,12 @@ nécessitent une réécriture significative (nouvelles signatures, statut
   réconciliation périodique automatique » du design initial.
 - **Scoping des colonnes des `SELECT *`** dans `subscriptions/db.py` /
   `auth/db.py` (évoqué en discussion, explicitement écarté de cette tâche).
+- **Vérifier une vraie méthode de paiement (Frisbii) avant d'afficher le
+  bandeau « Ajouter une méthode de paiement »** dans `_active_view` pour
+  `status == "pending"`. Aujourd'hui le bandeau s'affiche pour tout `pending`,
+  y compris juste après un ajout de méthode de paiement via
+  `/subscriptions/add-payment` si le webhook n'a pas encore fait passer le
+  statut à `trial`/`active`. `client.get_customer_payment_methods` existe déjà
+  pour ça. Orthogonal à ce design (ne dépend d'aucune décision ci-dessus) —
+  traité comme tâche de suivi séparée, avec son propre petit design (gestion
+  d'erreur API, message si paiement déjà présent mais webhook en retard).
