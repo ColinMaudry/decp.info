@@ -1,5 +1,4 @@
 import datetime
-from typing import Any
 
 import dash_bootstrap_components as dbc
 import polars as pl
@@ -15,7 +14,7 @@ from dash import (
     register_page,
 )
 
-from src.db import query_marches, schema
+from src.db import aggregate_marches, count_marches, query_marches, schema
 from src.figures import (
     DataTable,
     get_distance_histogram,
@@ -47,6 +46,17 @@ def get_title(titulaire_id: str = None) -> str:
     return "Marchés publics remportés | colibre"
 
 
+def _titulaire_scope(pathname: str, titulaire_year: str | None) -> tuple[str, list]:
+    """WHERE SQL scopant les requêtes à ce titulaire (et éventuellement une année)."""
+    titulaire_siret = pathname.split("/")[-1]
+    where_sql = "titulaire_id = ? AND titulaire_typeIdentifiant = 'SIRET'"
+    params: list = [titulaire_siret]
+    if titulaire_year and titulaire_year != "Toutes les années":
+        where_sql += ' AND YEAR("dateNotification") = ?'
+        params.append(int(titulaire_year))
+    return where_sql, params
+
+
 register_page(
     __name__,
     path_template="/titulaires/<titulaire_id>",
@@ -74,7 +84,6 @@ DATATABLE = html.Div(
 )
 
 layout = [
-    dcc.Store(id="titulaire_data", storage_type="memory"),
     dcc.Store(id="titulaire-hidden-columns", storage_type="local"),
     dcc.Store(id="filter-cleanup-trigger-titulaire"),
     dcc.Location(id="titulaire_url", refresh="callback-nav"),
@@ -167,6 +176,7 @@ layout = [
                             dbc.Col(
                                 id="titulaire_map",
                                 width=4,
+                                style={"minHeight": "300px"},
                             ),
                         ],
                     ),
@@ -179,12 +189,17 @@ layout = [
                                         html.Div(
                                             className="marches_table",
                                             id="top10_acheteurs",
+                                            style={"minHeight": "420px"},
                                         ),
                                     ],
                                 ),
                                 width=8,
                             ),
-                            dbc.Col(id="titulaire-distance-histogram", width=4),
+                            dbc.Col(
+                                id="titulaire-distance-histogram",
+                                width=4,
+                                style={"minHeight": "450px"},
+                            ),
                         ],
                     ),
                 ],
@@ -334,26 +349,25 @@ def update_titulaire_infos(url):
     Output(
         component_id="titulaire_acheteurs_differents", component_property="children"
     ),
-    Input(component_id="titulaire_data", component_property="data"),
+    Input(component_id="titulaire_url", component_property="pathname"),
+    Input(component_id="titulaire_year", component_property="value"),
 )
-def update_titulaire_stats(data):
-    dff = pl.DataFrame(data, strict=False, infer_schema_length=5000)
-    if dff.height == 0:
-        nb_marches = 0
-        nb_acheteurs = 0
-    else:
-        df_marches = dff.unique("uid")
-        nb_marches = format_number(df_marches.height)
-        nb_acheteurs = dff.unique("acheteur_id").height
+def update_titulaire_stats(pathname, titulaire_year):
+    where_sql, params = _titulaire_scope(pathname, titulaire_year)
+    agg = aggregate_marches(
+        "COUNT(DISTINCT uid) AS n, COUNT(DISTINCT acheteur_id) AS nb_acheteurs",
+        where_sql,
+        params,
+    )
+    nb_marches = format_number(int(agg["n"][0])) if agg.height else "0"
+    nb_acheteurs = format_number(int(agg["nb_acheteurs"][0])) if agg.height else "0"
 
     texte_marches_remportes = [
         html.Strong(nb_marches),
         " marchés et accord-cadres remportés",
     ]
-    # + ", pour un total de ", html.Strong(somme_marches + " €")]
-
     texte_nb_acheteurs = [
-        html.Strong(format_number(nb_acheteurs)),
+        html.Strong(nb_acheteurs),
         " acheteurs (SIRET) différents",
     ]
 
@@ -361,29 +375,15 @@ def update_titulaire_stats(data):
 
 
 @callback(
-    Output(component_id="titulaire_data", component_property="data"),
     Output("btn-download-data-titulaire", "disabled"),
     Output("btn-download-data-titulaire", "children"),
     Output("btn-download-data-titulaire", "title"),
     Input(component_id="titulaire_url", component_property="pathname"),
     Input(component_id="titulaire_year", component_property="value"),
 )
-def get_titulaire_marches_data(url, titulaire_year: str) -> tuple:
-    titulaire_siret = url.split("/")[-1]
-    lff = query_marches(
-        "titulaire_id = ? AND titulaire_typeIdentifiant = 'SIRET'",
-        (titulaire_siret,),
-    ).lazy()
-    if titulaire_year and titulaire_year != "Toutes les années":
-        lff = lff.filter(
-            pl.col("dateNotification").cast(pl.String).str.starts_with(titulaire_year)
-        )
-    lff = lff.sort(["dateNotification", "uid"], descending=True, nulls_last=True)
-    lff = lff.fill_null("")
-    dff: pl.DataFrame = lff.collect(engine="streaming")
-    download_disabled, download_text, download_title = get_button_properties(dff.height)
-    data = dff.to_dicts()
-    return data, download_disabled, download_text, download_title
+def update_download_button_titulaire(pathname, titulaire_year):
+    where_sql, params = _titulaire_scope(pathname, titulaire_year)
+    return get_button_properties(count_marches(where_sql, params))
 
 
 @callback(
@@ -396,8 +396,8 @@ def get_titulaire_marches_data(url, titulaire_year: str) -> tuple:
     Output("btn-download-filtered-data-titulaire", "children"),
     Output("btn-download-filtered-data-titulaire", "title"),
     Output("filter-cleanup-trigger-titulaire", "data"),
-    Input(component_id="titulaire_url", component_property="href"),
-    Input("titulaire_data", "data"),
+    Input("titulaire_url", "pathname"),
+    Input("titulaire_year", "value"),
     Input("titulaire_datatable", "page_current"),
     Input("titulaire_datatable", "page_size"),
     Input("titulaire_datatable", "filter_query"),
@@ -405,42 +405,58 @@ def get_titulaire_marches_data(url, titulaire_year: str) -> tuple:
     State("titulaire_datatable", "data_timestamp"),
 )
 def get_last_marches_data(
-    href, data, page_current, page_size, filter_query, sort_by, data_timestamp
+    pathname,
+    titulaire_year,
+    page_current,
+    page_size,
+    filter_query,
+    sort_by,
+    data_timestamp,
 ) -> list[dict]:
+    where_sql, params = _titulaire_scope(pathname, titulaire_year)
     return prepare_table_data(
-        data,
+        None,
         data_timestamp,
         filter_query,
         page_current,
         page_size,
         sort_by,
         "titulaire",
+        base_where_sql=where_sql,
+        base_params=params,
     )
 
 
 @callback(
     Output(component_id="top10_acheteurs", component_property="children"),
-    Input(component_id="titulaire_data", component_property="data"),
+    Input(component_id="titulaire_url", component_property="pathname"),
+    Input(component_id="titulaire_year", component_property="value"),
 )
-def get_top_acheteurs(data):
-    return get_top_org_table(data, "acheteur", ["titulaire_distance"])
+def get_top_acheteurs(pathname, titulaire_year):
+    where_sql, params = _titulaire_scope(pathname, titulaire_year)
+    return get_top_org_table(
+        query_marches(where_sql, params).lazy(), "acheteur", ["titulaire_distance"]
+    )
 
 
 @callback(
     Output("download-data-titulaire", "data"),
     Input("btn-download-data-titulaire", "n_clicks"),
-    State(component_id="titulaire_data", component_property="data"),
-    State(component_id="titulaire_nom", component_property="children"),
+    State(component_id="titulaire_url", component_property="pathname"),
     State(component_id="titulaire_year", component_property="value"),
+    State(component_id="titulaire_nom", component_property="children"),
     prevent_initial_call=True,
 )
 def download_titulaire_data(
     n_clicks,
-    data: list[dict[str, Any]],
-    titulaire_nom: str,
+    pathname: str,
     annee: str,
+    titulaire_nom: str,
 ):
-    df_to_download = pl.DataFrame(data)
+    where_sql, params = _titulaire_scope(pathname, annee)
+    df_to_download = query_marches(
+        where_sql, params, order_by='"dateNotification" DESC, uid DESC'
+    ).fill_null("")
 
     def to_bytes(buffer):
         write_styled_excel(
@@ -455,8 +471,9 @@ def download_titulaire_data(
 
 @callback(
     Output("titulaire-download-filtered-data", "data"),
-    State("titulaire_data", "data"),
     Input("btn-download-filtered-data-titulaire", "n_clicks"),
+    State("titulaire_url", "pathname"),
+    State("titulaire_year", "value"),
     State("titulaire_nom", "children"),
     State("titulaire_datatable", "filter_query"),
     State("titulaire_datatable", "sort_by"),
@@ -464,16 +481,16 @@ def download_titulaire_data(
     prevent_initial_call=True,
 )
 def download_filtered_titulaire_data(
-    data,
     n_clicks,
+    pathname,
+    titulaire_year,
     titulaire_nom,
     filter_query,
     sort_by,
     hidden_columns: list | None = None,
 ):
-    lff: pl.LazyFrame = pl.LazyFrame(
-        data
-    )  # start from the full titulaire data, not from paginated table data
+    where_sql, params = _titulaire_scope(pathname, titulaire_year)
+    lff: pl.LazyFrame = query_marches(where_sql, params).lazy()
 
     # Les colonnes masquées sont supprimées
     if hidden_columns:
@@ -572,10 +589,12 @@ def reset_view(n_clicks):
 
 @callback(
     Output("titulaire-distance-histogram", "children"),
-    Input("titulaire_data", "data"),
+    Input("titulaire_url", "pathname"),
+    Input("titulaire_year", "value"),
 )
-def update_titulaire_distance_histogram(data):
-    lff = pl.LazyFrame(data)
+def update_titulaire_distance_histogram(pathname, titulaire_year):
+    where_sql, params = _titulaire_scope(pathname, titulaire_year)
+    lff = query_marches(where_sql, params).lazy()
     if "titulaire_distance" in lff.collect_schema().names():
         lff = lff.with_columns(
             pl.col("titulaire_distance").cast(pl.Float64, strict=False)

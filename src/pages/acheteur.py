@@ -1,5 +1,4 @@
 import datetime
-from typing import Any
 
 import dash_bootstrap_components as dbc
 import polars as pl
@@ -15,7 +14,7 @@ from dash import (
     register_page,
 )
 
-from src.db import query_marches, schema
+from src.db import aggregate_marches, count_marches, query_marches, schema
 from src.figures import (
     DataTable,
     get_distance_histogram,
@@ -48,6 +47,17 @@ def get_title(acheteur_id: str | None = None) -> str:
     return "Marchés publics attribués | colibre"
 
 
+def _acheteur_scope(pathname: str, ach_year: str | None) -> tuple[str, list]:
+    """WHERE SQL scopant les requêtes à cet acheteur (et éventuellement une année)."""
+    acheteur_siret = pathname.split("/")[-1]
+    where_sql = "acheteur_id = ?"
+    params: list = [acheteur_siret]
+    if ach_year and ach_year != "Toutes les années":
+        where_sql += ' AND YEAR("dateNotification") = ?'
+        params.append(int(ach_year))
+    return where_sql, params
+
+
 register_page(
     __name__,
     path_template="/acheteurs/<acheteur_id>",
@@ -75,7 +85,6 @@ DATATABLE = html.Div(
 )
 
 layout = [
-    dcc.Store(id="acheteur_data", storage_type="memory"),
     dcc.Store(id="acheteur-hidden-columns", storage_type="local"),
     dcc.Store(id="filter-cleanup-trigger-acheteur"),
     dcc.Location(id="acheteur_url", refresh="callback-nav"),
@@ -159,6 +168,7 @@ layout = [
                             dbc.Col(
                                 id="acheteur_map",
                                 width=4,
+                                style={"minHeight": "300px"},
                             ),
                         ],
                     ),
@@ -168,8 +178,13 @@ layout = [
                                 className="marches_table",
                                 id="top10_titulaires",
                                 width=8,
+                                style={"minHeight": "420px"},
                             ),
-                            dbc.Col(id="acheteur-distance-histogram", width=4),
+                            dbc.Col(
+                                id="acheteur-distance-histogram",
+                                width=4,
+                                style={"minHeight": "450px"},
+                            ),
                         ],
                     ),
                 ],
@@ -310,48 +325,38 @@ def update_acheteur_infos(url):
     Output(
         component_id="acheteur_titulaires_differents", component_property="children"
     ),
-    Input(component_id="acheteur_data", component_property="data"),
+    Input(component_id="acheteur_url", component_property="pathname"),
+    Input(component_id="acheteur_year", component_property="value"),
 )
-def update_acheteur_stats(data):
-    dff = pl.DataFrame(data, strict=False, infer_schema_length=5000)
-    if dff.height == 0:
-        dff = pl.DataFrame(schema=schema)
-    df_marches = dff.unique("id")
-    nb_marches = format_number(df_marches.height)
-    # somme_marches = format_number(int(df_marches.select(pl.sum("montant")).item()))
-    marches_attribues = [html.Strong(nb_marches), " marchés et accord-cadres attribués"]
-    # + ", pour un total de ", html.Strong(somme_marches + " €")]
-    del df_marches
+def update_acheteur_stats(pathname, ach_year):
+    where_sql, params = _acheteur_scope(pathname, ach_year)
+    agg = aggregate_marches(
+        "COUNT(*) AS n, COUNT(DISTINCT titulaire_id) AS nb_titulaires",
+        where_sql,
+        params,
+    )
+    nb_marches = format_number(int(agg["n"][0])) if agg.height else "0"
+    nb_titulaires = format_number(int(agg["nb_titulaires"][0])) if agg.height else "0"
 
-    nb_titulaires = dff.unique("titulaire_id").height
+    marches_attribues = [html.Strong(nb_marches), " marchés et accord-cadres attribués"]
     nb_titulaires = [
-        html.Strong(format_number(nb_titulaires)),
+        html.Strong(nb_titulaires),
         " titulaires (SIRET) différents",
     ]
-    del dff
 
     return marches_attribues, nb_titulaires
 
 
 @callback(
-    Output(component_id="acheteur_data", component_property="data"),
     Output("btn-download-data-acheteur", "disabled"),
     Output("btn-download-data-acheteur", "children"),
     Output("btn-download-data-acheteur", "title"),
     Input(component_id="acheteur_url", component_property="pathname"),
     Input(component_id="acheteur_year", component_property="value"),
 )
-def get_acheteur_marches_data(url, ach_year: str) -> tuple:
-    acheteur_siret = url.split("/")[-1]
-    lff = query_marches("acheteur_id = ?", (acheteur_siret,)).lazy()
-    if ach_year and ach_year != "Toutes les années":
-        ach_year = int(ach_year)
-        lff = lff.filter(pl.col("dateNotification").dt.year() == ach_year)
-    lff = lff.sort(["dateNotification", "uid"], descending=True, nulls_last=True)
-    dff: pl.DataFrame = lff.collect(engine="streaming")
-    download_disabled, download_text, download_title = get_button_properties(dff.height)
-    data = dff.to_dicts()
-    return data, download_disabled, download_text, download_title
+def update_download_button_acheteur(pathname, ach_year):
+    where_sql, params = _acheteur_scope(pathname, ach_year)
+    return get_button_properties(count_marches(where_sql, params))
 
 
 @callback(
@@ -364,8 +369,8 @@ def get_acheteur_marches_data(url, ach_year: str) -> tuple:
     Output("btn-download-filtered-data-acheteur", "children"),
     Output("btn-download-filtered-data-acheteur", "title"),
     Output("filter-cleanup-trigger-acheteur", "data"),
-    Input("acheteur_url", "href"),
-    Input("acheteur_data", "data"),
+    Input("acheteur_url", "pathname"),
+    Input("acheteur_year", "value"),
     Input("acheteur_datatable", "page_current"),
     Input("acheteur_datatable", "page_size"),
     Input("acheteur_datatable", "filter_query"),
@@ -373,37 +378,59 @@ def get_acheteur_marches_data(url, ach_year: str) -> tuple:
     State("acheteur_datatable", "data_timestamp"),
 )
 def get_last_marches_data(
-    href, data, page_current, page_size, filter_query, sort_by, data_timestamp
+    pathname,
+    ach_year,
+    page_current,
+    page_size,
+    filter_query,
+    sort_by,
+    data_timestamp,
 ) -> tuple:
+    where_sql, params = _acheteur_scope(pathname, ach_year)
     return prepare_table_data(
-        data, data_timestamp, filter_query, page_current, page_size, sort_by, "acheteur"
+        None,
+        data_timestamp,
+        filter_query,
+        page_current,
+        page_size,
+        sort_by,
+        "acheteur",
+        base_where_sql=where_sql,
+        base_params=params,
     )
 
 
 @callback(
     Output(component_id="top10_titulaires", component_property="children"),
-    Input(component_id="acheteur_data", component_property="data"),
+    Input(component_id="acheteur_url", component_property="pathname"),
+    Input(component_id="acheteur_year", component_property="value"),
 )
-def get_top_titulaires(data):
-    table = get_top_org_table(data, "titulaire", ["titulaire_distance"])
+def get_top_titulaires(pathname, ach_year):
+    where_sql, params = _acheteur_scope(pathname, ach_year)
+    table = get_top_org_table(
+        query_marches(where_sql, params).lazy(), "titulaire", ["titulaire_distance"]
+    )
     return make_card(fig=table, title="Top titulaires", lg=12, xl=12)
 
 
 @callback(
     Output("download-data-acheteur", "data"),
     Input("btn-download-data-acheteur", "n_clicks"),
-    State(component_id="acheteur_data", component_property="data"),
-    State(component_id="acheteur_nom", component_property="children"),
+    State(component_id="acheteur_url", component_property="pathname"),
     State(component_id="acheteur_year", component_property="value"),
+    State(component_id="acheteur_nom", component_property="children"),
     prevent_initial_call=True,
 )
 def download_acheteur_data(
     n_clicks,
-    data: list[dict[str, Any]],
-    acheteur_nom: str,
+    pathname: str,
     annee: str,
+    acheteur_nom: str,
 ):
-    df_to_download = pl.DataFrame(data)
+    where_sql, params = _acheteur_scope(pathname, annee)
+    df_to_download = query_marches(
+        where_sql, params, order_by='"dateNotification" DESC, uid DESC'
+    )
 
     def to_bytes(buffer):
         write_styled_excel(
@@ -418,8 +445,9 @@ def download_acheteur_data(
 
 @callback(
     Output("acheteur-download-filtered-data", "data"),
-    State("acheteur_data", "data"),
     Input("btn-download-filtered-data-acheteur", "n_clicks"),
+    State("acheteur_url", "pathname"),
+    State("acheteur_year", "value"),
     State("acheteur_nom", "children"),
     State("acheteur_datatable", "filter_query"),
     State("acheteur_datatable", "sort_by"),
@@ -427,16 +455,16 @@ def download_acheteur_data(
     prevent_initial_call=True,
 )
 def download_filtered_acheteur_data(
-    data,
     n_clicks,
+    pathname,
+    ach_year,
     acheteur_nom,
     filter_query,
     sort_by,
     hidden_columns: list | None = None,
 ):
-    lff: pl.LazyFrame = pl.LazyFrame(
-        data
-    )  # start from the full acheteur data, not from paginated table data
+    where_sql, params = _acheteur_scope(pathname, ach_year)
+    lff: pl.LazyFrame = query_marches(where_sql, params).lazy()
 
     # Les colonnes masquées sont supprimées
     if hidden_columns:
@@ -535,10 +563,12 @@ def reset_view(n_clicks):
 
 @callback(
     Output("acheteur-distance-histogram", "children"),
-    Input("acheteur_data", "data"),
+    Input("acheteur_url", "pathname"),
+    Input("acheteur_year", "value"),
 )
-def update_acheteur_distance_histogram(data):
-    lff = pl.LazyFrame(data, strict=False, infer_schema_length=5000)
+def update_acheteur_distance_histogram(pathname, ach_year):
+    where_sql, params = _acheteur_scope(pathname, ach_year)
+    lff = query_marches(where_sql, params).lazy()
     fig = get_distance_histogram(lff)
     return make_card(
         title="Distance acheteur–titulaire",

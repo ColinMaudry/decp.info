@@ -98,12 +98,10 @@ def test_003_tableau_download(dash_duo: DashComposite):
     # Juste pour instancier l'app
     print(app.server.name)
 
-    dicts = pl.read_parquet("tests/test.parquet").to_dicts()
-
     outputs = [
         download_data(1, "", [], None),
-        download_acheteur_data(1, dicts, "123", "2025"),
-        download_titulaire_data(1, dicts, "345", "2025"),
+        download_acheteur_data(1, "/acheteurs/123", "2025", "ACHETEUR 1"),
+        download_titulaire_data(1, "/titulaires/345", "2025", "TITULAIRE 1"),
     ]
     for output in outputs:
         assert isinstance(output, dict)
@@ -118,8 +116,6 @@ def test_003_tableau_download(dash_duo: DashComposite):
 
 
 def test_004_add_links_observatoire_acheteur():
-    import polars as pl
-
     from src.utils.table import add_links
 
     dff = pl.DataFrame(
@@ -143,8 +139,6 @@ def test_004_add_links_observatoire_acheteur():
 
 
 def test_005_add_links_observatoire_titulaire():
-    import polars as pl
-
     from src.utils.table import add_links
 
     dff = pl.DataFrame(
@@ -323,7 +317,6 @@ def test_011_observatoire_multi_param_url(dash_duo: DashComposite):
 
 
 def test_012_get_distance_histogram_returns_graph():
-    import polars as pl
     from dash import dcc
 
     from src.figures import get_distance_histogram
@@ -334,7 +327,6 @@ def test_012_get_distance_histogram_returns_graph():
 
 
 def test_013_get_distance_histogram_handles_nulls():
-    import polars as pl
     from dash import dcc
 
     from src.figures import get_distance_histogram
@@ -345,7 +337,6 @@ def test_013_get_distance_histogram_handles_nulls():
 
 
 def test_014_get_distance_histogram_all_nulls():
-    import polars as pl
     from dash import dcc
 
     from src.figures import get_distance_histogram

@@ -427,8 +427,13 @@ def _fetch_page_sql(
     sort_by_key: tuple,
     page_current: int,
     page_size: int,
+    base_where_sql: str = "TRUE",
+    base_params: tuple = (),
 ) -> tuple[pl.DataFrame, int, int]:
     """Chemin rapide : filtre/tri/pagine dans DuckDB, post-traite la page seule.
+
+    `base_where_sql`/`base_params` permettent de scoper la requête (ex : un
+    acheteur ou un titulaire précis) en plus du filtre saisi dans la table.
 
     Retourne (page_dataframe_post_traitée, total_count, total_unique_count).
     """
@@ -441,7 +446,9 @@ def _fetch_page_sql(
         f"page={page_current} size={page_size}"
     )
 
-    where_sql, params = filter_query_to_sql(filter_query or "", schema)
+    filter_where_sql, filter_params = filter_query_to_sql(filter_query or "", schema)
+    where_sql = f"({base_where_sql}) AND ({filter_where_sql})"
+    params = [*base_params, *filter_params]
 
     sort_by_dash = [
         {"column_id": col, "direction": direction} for col, direction in sort_by_key
@@ -464,7 +471,15 @@ def _fetch_page_sql(
 
 
 def prepare_table_data(
-    data, data_timestamp, filter_query, page_current, page_size, sort_by, source_table
+    data,
+    data_timestamp,
+    filter_query,
+    page_current,
+    page_size,
+    sort_by,
+    source_table,
+    base_where_sql: str = "TRUE",
+    base_params: tuple = (),
 ):
     """
     Fonction de préparation des données pour les datatables, afin de permettre une gestion fine des logiques,
@@ -476,6 +491,8 @@ def prepare_table_data(
     :param page_size:
     :param sort_by:
     :param source_table:
+    :param base_where_sql: scope SQL additionnel (ex : un acheteur/titulaire précis)
+    :param base_params: paramètres liés à base_where_sql
     :return:
     """
     logger.debug(" + + + + + + + + + + + + + + + + + + ")
@@ -486,13 +503,16 @@ def prepare_table_data(
     trigger_cleanup = no_update if source_table == "tableau" else str(uuid.uuid4())
 
     if data is None:
-        # Probablement car il s'agit de la page Tableau
+        # Chemin rapide SQL : tableau, acheteur, titulaire (scope éventuel via
+        # base_where_sql/base_params)
         sort_by_key = normalize_sort_by(sort_by)
         dff, height, total_unique = _fetch_page_sql(
             filter_query=filter_query,
             sort_by_key=sort_by_key,
             page_current=page_current,
             page_size=page_size,
+            base_where_sql=base_where_sql,
+            base_params=tuple(base_params),
         )
     else:
         if isinstance(data, list):
