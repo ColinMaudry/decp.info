@@ -22,3 +22,4 @@ users.sqlite
 # LLM plugins
 .superpowers/
 .codegraph/
+.claude

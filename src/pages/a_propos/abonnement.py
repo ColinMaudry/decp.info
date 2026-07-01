@@ -11,6 +11,11 @@ register_page(
     image_url=META_CONTENT["image_url"],
 )
 
+abonnement_features = dcc.Markdown("""
+    - sauvegarde de vues dans la page Tableau
+    - vote pour les fonctionnalités à développer en priorité (une fois la période d'essai terminée)
+      """)
+
 
 def layout(**_):
     contenu = html.Div(
@@ -18,42 +23,46 @@ def layout(**_):
             html.H2("Abonnement"),
             dcc.Markdown(
                 """
-L'accès aux fonctionnalités de base de colibre est gratuit et sans inscription.
-Un abonnement payant donne accès à des fonctionnalités supplémentaires qui nécessitent la création d'un compte.
+L'accès aux fonctionnalités de base de colibre est gratuit et sans inscription. Il est également possible de créer un compte gratuitement via le menu [Connexion](/connexion). Une fois le compte créé,
+il est possible de souscrire à un abonnement mensuel qui donne accès à des fonctionnalités supplémentaires. Cet abonnement s'adresse tant aux professionnel·les qu'aux particuliers.
 """
             ),
             html.H4("Fonctionnalités incluses"),
             dcc.Markdown(
                 """
-Les fonctionnalités accessibles aux abonnés évoluent au fil du développement du service.
-La liste à jour est visible depuis la [page d'abonnement](/compte/abonnement).
+Les fonctionnalités accessibles aux abonné·es évoluent au fil du développement du service.
+
+Fonctionnalités réservées aux abonné·es :
 """
             ),
+            abonnement_features,
+            dcc.Markdown("""
+            Les fonctionnalités en cours de développement et soumises au vote sont visibles dans la section [Roadmap](/a-propos/roadmap)."""),
             html.H4("Tarifs"),
             dcc.Markdown(
                 """
 Deux formules sont proposées :
 
 - **Abonnement** — 20 € HT / mois (soit 24 € TTC)
-- **Abonnement de soutien** — 50 € HT / mois (soit 60 € TTC) — mêmes fonctionnalités, contribution renforcée au projet
+- **Abonnement de soutien ✊** — 50 € HT / mois (soit 60 € TTC) — mêmes fonctionnalités, contribution renforcée au projet
 
-La TVA applicable est de 20 %. Les prix TTC sont affichés lors de la souscription.
+La TVA applicable en France est de 20 %.
 """
             ),
             html.H4("Période d'essai"),
             dcc.Markdown(
                 """
-Une période d'essai gratuite peut être proposée lors de la souscription.
+Une période d'essai gratuite est proposée lors de la souscription.
 Sa durée est indiquée avant validation. Aucun prélèvement n'est effectué pendant cette période.
 À son terme, l'abonnement est activé et facturé automatiquement.
 
-La période d'essai est accordée une seule fois par utilisateur.
+La période d'essai est accordée une seule fois par compte.
 """
             ),
             html.H4("Facturation et paiement"),
             dcc.Markdown(
                 """
-L'abonnement est facturé mensuellement, à la date anniversaire de la souscription.
+L'abonnement est facturé mensuellement, à la date anniversaire de la souscription, et donne lieu à l'émission d'une facture visible sur le compte de l'abonné·e.
 Le paiement est traité par [Frisbii](https://www.frisbii.com), prestataire européen de paiement en ligne.
 Les coordonnées bancaires sont conservées exclusivement par Frisbii et ne sont pas transmises à colibre.
 """
@@ -65,15 +74,16 @@ L'abonnement peut être résilié à tout moment depuis l'espace [Mon compte](/c
 La résiliation prend effet à la fin de la période mensuelle en cours : l'accès aux fonctionnalités payantes est maintenu jusqu'à cette date, sans remboursement au prorata.
 """
             ),
-            html.H4("Données personnelles"),
+            html.H4("Données recueillies"),
             dcc.Markdown(
                 """
-La gestion de l'abonnement implique le traitement de données personnelles, réparties entre colibre et Frisbii (prestataire de paiement).
+La gestion de l'abonnement implique le traitement de données, réparties entre colibre et Frisbii (prestataire de paiement). Conformément au RGPD, colibre ne receuille que les données strictement nécessaire
+au bon fonctionnement du site et de la facturation.
 
 **Données stockées par colibre :**
 
 - Adresse e-mail (identification du compte)
-- Numéro SIRET (si renseigné, conservé pour pré-remplir les futures souscriptions)
+- Numéro SIRET (optionnel, si renseigné, conservé pour pré-remplir les futures souscriptions)
 
 **Données stockées par Frisbii :**
 

@@ -1,4 +1,41 @@
+from datetime import datetime
+
 from src.utils.data import DATA_SCHEMA
+
+
+def format_date_french(date_input) -> str:
+    """Format a date as 'jour mois' (e.g., '1er janvier', '15 décembre')."""
+    if isinstance(date_input, str):
+        try:
+            date_obj = datetime.fromisoformat(date_input)
+        except (ValueError, TypeError):
+            return str(date_input)
+    elif isinstance(date_input, datetime):
+        date_obj = date_input
+    else:
+        return str(date_input)
+
+    day = date_obj.day
+    month_names = [
+        "janvier",
+        "février",
+        "mars",
+        "avril",
+        "mai",
+        "juin",
+        "juillet",
+        "août",
+        "septembre",
+        "octobre",
+        "novembre",
+        "décembre",
+    ]
+    month = month_names[date_obj.month - 1]
+
+    if day == 1:
+        return f"1er {month}"
+    else:
+        return f"{day} {month}"
 
 
 def get_button_properties(height):

@@ -312,8 +312,9 @@ def toggle_navbar_collapse(n, is_open):
 )
 def _auth_nav(_):
     if current_user.is_authenticated:
-        email = current_user.email
-        display = email if len(email) <= 30 else email[:27] + "..."
+        # email = current_user.email
+        # display = email if len(email) <= 30 else email[:27] + "..."
+        display = "★★★"
         return dbc.NavItem(dbc.NavLink(display, href="/compte/admin"))
     return dbc.NavItem(dbc.NavLink("Connexion", href="/connexion"))
 

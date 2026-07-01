@@ -4,20 +4,8 @@ from dash import Input, Output, State, callback, html
 SECTIONS = [
     {"key": "presentation", "label": "Présentation", "href": "/a-propos/presentation"},
     {"key": "explorer", "label": "Explorer le projet", "href": "/a-propos/explorer"},
-    {"key": "sources", "label": "Sources de données", "href": "/a-propos/sources"},
-    {"key": "qualite", "label": "Qualité des données", "href": "/a-propos/qualite"},
-    {
-        "key": "donnees-brutes",
-        "label": "Données brutes",
-        "href": "/a-propos/donnees-brutes",
-    },
-    {"key": "contribuer", "label": "Contribuer", "href": "/a-propos/contribuer"},
-    {"key": "contact", "label": "Contact", "href": "/a-propos/contact"},
-    {
-        "key": "mentions-legales",
-        "label": "Mentions légales",
-        "href": "/a-propos/mentions-legales",
-    },
+    {"key": "donnees", "label": "Données", "href": "/a-propos/donnees"},
+    # {"key": "contribuer", "label": "Contribuer", "href": "/a-propos/contribuer"},
     {
         "key": "abonnement",
         "label": "Abonnement",
@@ -27,6 +15,12 @@ SECTIONS = [
         "key": "roadmap",
         "label": "Roadmap",
         "href": "/a-propos/roadmap",
+    },
+    {"key": "contact", "label": "Contact", "href": "/a-propos/contact"},
+    {
+        "key": "mentions-legales",
+        "label": "Mentions légales",
+        "href": "/a-propos/mentions-legales",
     },
 ]
 

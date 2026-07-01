@@ -132,10 +132,14 @@ def get_sources_tables(source_path) -> html.Div:
             + pl.lit('">')
             + pl.col("nom")
             + pl.lit("</a>")
-        ).alias("nom")
+        ).alias("nom"),
     )
     dff = dff.drop("url", "unique")
     dff = dff.sort(by=["nb_marchés"], descending=True)
+    dff = dff.with_columns(
+        pl.col("nb_marchés").map_elements(format_number, return_dtype=pl.String),
+        pl.col("nb_acheteurs").map_elements(format_number, return_dtype=pl.String),
+    )
 
     columns = {
         "nom": "Nom de la source",

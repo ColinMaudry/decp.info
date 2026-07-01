@@ -122,6 +122,11 @@ def roadmap_content(
     can_vote = editable and balance is not None and balance > 0
     body.append(html.H3("Au vote"))
     body.append(
+        html.P(
+            "Les abonné·es votent pour les fonctionnalités à développer en priorité."
+        )
+    )
+    body.append(
         html.Div(
             dbc.ListGroup(
                 vote_items(

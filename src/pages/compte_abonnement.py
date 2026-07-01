@@ -4,6 +4,7 @@ from flask_login import current_user
 
 from src.pages._compte_shell import account_guard, account_shell
 from src.subscriptions import db, plans
+from src.utils.frontend import format_date_french
 
 register_page(
     __name__,
@@ -129,7 +130,7 @@ def _explainer():
 
 def _active_view(row):
     meta = plans.plan_meta(row["plan"]) or {"label": row["plan"]}
-    end = row["current_period_end"]
+    end = format_date_french(row["current_period_end"])
     blocks = [html.H3(meta["label"], className="mb-3")]
 
     if row["status"] == "pending":
@@ -167,7 +168,7 @@ def _active_view(row):
             dbc.Alert(f"Abonnement résilié, actif jusqu'au {end}.", color="warning")
         )
     else:
-        blocks.append(html.P(f"Prochain renouvellement : {end}"))
+        blocks.append(html.P(f"Prochaine facturation : {end}"))
 
     if row["status"] in ("pending", "trial", "active"):
         blocks.append(
@@ -182,7 +183,8 @@ def _active_view(row):
     return html.Div(blocks)
 
 
-def _resiliation_modal(end):
+def _resiliation_modal(end_raw):
+    end = format_date_french(end_raw) if end_raw else None
     if end:
         body_text = (
             f"Êtes-vous sûr de vouloir mettre fin à votre abonnement ? "
