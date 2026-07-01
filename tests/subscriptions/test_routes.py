@@ -33,13 +33,13 @@ def test_subscribe_redirects_to_hosted_url(logged_in_client, monkeypatch):
 def test_subscribe_disables_trial_after_first_use(logged_in_client, monkeypatch):
     client, uid = logged_in_client
     # L'utilisateur a déjà consommé un essai par le passé (abonnement maintenant expiré).
-    db.create_pending(uid, "decpinfo-%d" % uid, "simple")
+    db.create_pending(uid, "colibre-%d" % uid, "simple")
     db.update_from_webhook(
-        "decpinfo-%d" % uid, "sub_42", "trial", "2099-01-01T00:00:00+00:00"
+        "colibre-%d" % uid, "sub_42", "trial", "2099-01-01T00:00:00+00:00"
     )
     # L'essai est terminé : abonnement expiré, trial_used reste à 1.
     db.update_from_webhook(
-        "decpinfo-%d" % uid, "sub_42", "expired", "2020-01-01T00:00:00+00:00"
+        "colibre-%d" % uid, "sub_42", "expired", "2020-01-01T00:00:00+00:00"
     )
     captured = {}
     monkeypatch.setattr(frisbii_client, "update_customer", lambda h, d: {})
@@ -83,9 +83,9 @@ def test_subscribe_requires_login(sub_app):
 
 def test_cancel_calls_api_and_marks_cancelled(logged_in_client, monkeypatch):
     client, uid = logged_in_client
-    db.create_pending(uid, "decpinfo-%d" % uid, "simple")
+    db.create_pending(uid, "colibre-%d" % uid, "simple")
     db.update_from_webhook(
-        "decpinfo-%d" % uid, "sub_42", "active", "2099-01-01T00:00:00+00:00"
+        "colibre-%d" % uid, "sub_42", "active", "2099-01-01T00:00:00+00:00"
     )
     monkeypatch.setattr(
         frisbii_client,
@@ -112,7 +112,7 @@ def test_webhook_updates_subscription(sub_app, monkeypatch):
 
     auth_db.init_schema()
     uid = auth_db.create_user("wh@ex.fr", "hash")
-    db.create_pending(uid, "decpinfo-%d" % uid, "simple")
+    db.create_pending(uid, "colibre-%d" % uid, "simple")
     monkeypatch.setattr(
         frisbii_client,
         "get_subscription",
@@ -122,7 +122,7 @@ def test_webhook_updates_subscription(sub_app, monkeypatch):
         "id": "evt_1",
         "timestamp": "2026-06-25T10:00:00Z",
         "event_type": "subscription_created",
-        "customer": "decpinfo-%d" % uid,
+        "customer": "colibre-%d" % uid,
         "subscription": "sub_42",
     }
     payload["signature"] = _sign("s3cr3t", payload["timestamp"], payload["id"])
@@ -136,9 +136,9 @@ def test_webhook_updates_subscription(sub_app, monkeypatch):
 def test_subscribe_skips_if_already_active(logged_in_client, monkeypatch):
     """Fix 1 : un abonné actif ne doit pas voir son statut remis à 'pending'."""
     client, uid = logged_in_client
-    db.create_pending(uid, "decpinfo-%d" % uid, "simple")
+    db.create_pending(uid, "colibre-%d" % uid, "simple")
     db.update_from_webhook(
-        "decpinfo-%d" % uid, "sub_42", "active", "2099-01-01T00:00:00+00:00"
+        "colibre-%d" % uid, "sub_42", "active", "2099-01-01T00:00:00+00:00"
     )
     called = []
     monkeypatch.setattr(
@@ -156,9 +156,9 @@ def test_subscribe_skips_if_already_active(logged_in_client, monkeypatch):
 def test_subscribe_skips_if_trial_active(logged_in_client, monkeypatch):
     """Fix 1 : un abonné en période d'essai est protégé de la même façon."""
     client, uid = logged_in_client
-    db.create_pending(uid, "decpinfo-%d" % uid, "simple")
+    db.create_pending(uid, "colibre-%d" % uid, "simple")
     db.update_from_webhook(
-        "decpinfo-%d" % uid, "sub_42", "trial", "2099-01-01T00:00:00+00:00"
+        "colibre-%d" % uid, "sub_42", "trial", "2099-01-01T00:00:00+00:00"
     )
     resp = client.post("/subscriptions/subscribe", data={"plan": "simple"})
     assert resp.status_code == 302

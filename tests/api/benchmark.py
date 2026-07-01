@@ -252,7 +252,7 @@ def main() -> None:
     parser.add_argument(
         "--token",
         default=None,
-        help="Token Bearer colibre (format decpinfo_xxx)",
+        help="Token Bearer colibre (format colibre_xxx)",
     )
     parser.add_argument(
         "--runs",

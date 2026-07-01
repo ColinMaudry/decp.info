@@ -32,7 +32,7 @@ def test_bearer_without_value_returns_401(temp_db):
 def test_invalid_token_returns_401(temp_db):
     app = _make_app()
     resp = app.test_client().get(
-        "/protected", headers={"Authorization": "Bearer decpinfo_unknown"}
+        "/protected", headers={"Authorization": "Bearer colibre_unknown"}
     )
     assert resp.status_code == 401
     assert resp.get_json()["message"] == "invalid_token"
