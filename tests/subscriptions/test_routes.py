@@ -18,6 +18,7 @@ def test_subscribe_redirects_to_hosted_url(logged_in_client, monkeypatch):
         frisbii_client,
         "create_subscription_session",
         lambda plan,
+        handle,
         ok,
         ko,
         no_trial=False,
@@ -27,25 +28,23 @@ def test_subscribe_redirects_to_hosted_url(logged_in_client, monkeypatch):
     resp = client.post("/subscriptions/subscribe", data={"plan": "simple"})
     assert resp.status_code == 303
     assert resp.headers["Location"] == "https://pay.test/cs_1"
-    assert db.get_by_user(uid)["status"] == "pending"
+    row = db.get_current(uid)
+    assert row["status"] == "pending"
+    assert row["frisbii_subscription_handle"] == f"abo-{uid}-1"
 
 
 def test_subscribe_disables_trial_after_first_use(logged_in_client, monkeypatch):
     client, uid = logged_in_client
     # L'utilisateur a déjà consommé un essai par le passé (abonnement maintenant expiré).
-    db.create_pending(uid, "colibre-%d" % uid, "simple")
-    db.update_from_webhook(
-        "colibre-%d" % uid, "sub_42", "trial", "2099-01-01T00:00:00+00:00"
-    )
+    handle, _ = db.create_pending(uid, "colibre-%d" % uid, "simple")
+    db.update_from_webhook(handle, "trial", "2099-01-01T00:00:00+00:00")
     # L'essai est terminé : abonnement expiré, trial_used reste à 1.
-    db.update_from_webhook(
-        "colibre-%d" % uid, "sub_42", "expired", "2020-01-01T00:00:00+00:00"
-    )
+    db.update_from_webhook(handle, "expired", "2020-01-01T00:00:00+00:00")
     captured = {}
     monkeypatch.setattr(frisbii_client, "update_customer", lambda h, d: {})
 
     def fake_session(
-        plan, ok, ko, no_trial=False, customer_handle=None, create_customer=None
+        plan, handle, ok, ko, no_trial=False, customer_handle=None, create_customer=None
     ):
         captured["no_trial"] = no_trial
         return "https://pay.test/cs_9"
@@ -62,8 +61,8 @@ def test_subscribe_unknown_plan(logged_in_client):
     assert resp.status_code == 400
 
 
-def test_subscribe_api_error_redirects_with_error(logged_in_client, monkeypatch):
-    client, _ = logged_in_client
+def test_subscribe_api_error_marks_failed_and_redirects(logged_in_client, monkeypatch):
+    client, uid = logged_in_client
 
     def boom(h, d):
         raise frisbii_client.FrisbiiError(500, "boom")
@@ -72,6 +71,8 @@ def test_subscribe_api_error_redirects_with_error(logged_in_client, monkeypatch)
     resp = client.post("/subscriptions/subscribe", data={"plan": "simple"})
     assert resp.status_code == 302
     assert "error=frisbii" in resp.headers["Location"]
+    row = db.get_current(uid)
+    assert row["status"] == "failed"
 
 
 def test_subscribe_requires_login(sub_app):
@@ -136,10 +137,8 @@ def test_webhook_updates_subscription(sub_app, monkeypatch):
 def test_subscribe_skips_if_already_active(logged_in_client, monkeypatch):
     """Fix 1 : un abonné actif ne doit pas voir son statut remis à 'pending'."""
     client, uid = logged_in_client
-    db.create_pending(uid, "colibre-%d" % uid, "simple")
-    db.update_from_webhook(
-        "colibre-%d" % uid, "sub_42", "active", "2099-01-01T00:00:00+00:00"
-    )
+    handle, _ = db.create_pending(uid, "colibre-%d" % uid, "simple")
+    db.update_from_webhook(handle, "active", "2099-01-01T00:00:00+00:00")
     called = []
     monkeypatch.setattr(
         frisbii_client, "update_customer", lambda h, d: called.append(h)
@@ -150,17 +149,15 @@ def test_subscribe_skips_if_already_active(logged_in_client, monkeypatch):
     assert "compte/abonnement" in resp.headers["Location"]
     assert called == [], "Frisbii ne doit pas être appelé pour un abonné actif"
     # Le statut DB ne doit pas avoir été écrasé.
-    assert db.get_by_user(uid)["status"] == "active"
+    assert db.get_current(uid)["status"] == "active"
 
 
 def test_subscribe_skips_if_trial_active(logged_in_client, monkeypatch):
     """Fix 1 : un abonné en période d'essai est protégé de la même façon."""
     client, uid = logged_in_client
-    db.create_pending(uid, "colibre-%d" % uid, "simple")
-    db.update_from_webhook(
-        "colibre-%d" % uid, "sub_42", "trial", "2099-01-01T00:00:00+00:00"
-    )
+    handle, _ = db.create_pending(uid, "colibre-%d" % uid, "simple")
+    db.update_from_webhook(handle, "trial", "2099-01-01T00:00:00+00:00")
     resp = client.post("/subscriptions/subscribe", data={"plan": "simple"})
     assert resp.status_code == 302
     assert "compte/abonnement" in resp.headers["Location"]
-    assert db.get_by_user(uid)["status"] == "trial"
+    assert db.get_current(uid)["status"] == "trial"

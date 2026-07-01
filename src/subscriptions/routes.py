@@ -18,8 +18,8 @@ def _customer_handle(user_id: int) -> str:
 @login_required
 def subscribe():
     plan_key = request.form.get("plan") or ""
-    handle = plans.resolve_handle(plan_key)
-    if handle is None:
+    plan_handle = plans.resolve_handle(plan_key)
+    if plan_handle is None:
         return "Plan inconnu", 400
 
     base = os.getenv("APP_BASE_URL", "")
@@ -27,11 +27,11 @@ def subscribe():
         return redirect(f"{base}/compte/abonnement")
 
     cust = _customer_handle(current_user.id)
+    meta = plans.plan_meta(plan_key)
+    sub_handle, subscription_id = db.create_pending(
+        current_user.id, cust, plan_key, meta["prix_ht"] if meta else None
+    )
     try:
-        meta = plans.plan_meta(plan_key)
-        db.create_pending(
-            current_user.id, cust, plan_key, meta["prix_ht"] if meta else None
-        )
         no_trial = db.has_used_trial(current_user.id)
         siret = (request.form.get("siret") or "").strip()
         billing: dict = {
@@ -61,7 +61,8 @@ def subscribe():
 
         if customer_exists:
             url = client.create_subscription_session(
-                handle,
+                plan_handle,
+                sub_handle,
                 f"{base}/compte/abonnement?paiement=succes",
                 f"{base}/compte/abonnement?paiement=annule",
                 customer_handle=cust,
@@ -72,7 +73,8 @@ def subscribe():
             if siret:
                 create_customer["metadata"] = {"siret": siret}
             url = client.create_subscription_session(
-                handle,
+                plan_handle,
+                sub_handle,
                 f"{base}/compte/abonnement?paiement=succes",
                 f"{base}/compte/abonnement?paiement=annule",
                 create_customer=create_customer,
@@ -80,6 +82,7 @@ def subscribe():
             )
     except client.FrisbiiError:
         logger.exception("Échec de création de session d'abonnement Frisbii")
+        db.mark_failed(subscription_id)
         return redirect("/compte/abonnement?error=frisbii")
     return redirect(url, code=303)
 
