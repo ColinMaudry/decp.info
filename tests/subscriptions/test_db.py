@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 from src.auth import db as auth_db
+from src.auth.db import get_conn
 from src.subscriptions import db
 
 
@@ -19,14 +20,17 @@ def _make_user(email="u@ex.fr"):
 
 def _activate(uid, cursor_iso=None):
     """Met l'abonnement en statut actif avec un curseur d'accumulation donné."""
-    db.get_conn().execute(
-        "UPDATE subscriptions SET status = 'active', votes_last_credited_at = ? "
-        "WHERE user_id = ?",
+    row = db.get_current(uid)
+    get_conn().execute(
+        "UPDATE subscriptions SET status = 'active' WHERE id = ?", (row["id"],)
+    )
+    get_conn().execute(
+        "UPDATE subscriber_state SET votes_last_credited_at = ? WHERE user_id = ?",
         (cursor_iso, uid),
     )
 
 
-def test_init_schema_creates_table(users_db_path):
+def test_init_schema_creates_tables(users_db_path):
     db.init_schema()
     conn = auth_db.get_conn()
     tables = {
@@ -34,55 +38,136 @@ def test_init_schema_creates_table(users_db_path):
         for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
     }
     assert "subscriptions" in tables
+    assert "subscriber_state" in tables
 
 
-def test_create_pending_and_get_by_user(users_db_path):
+def test_init_schema_migrates_old_single_row_subscriptions(users_db_path):
+    auth_db.init_schema()
+    uid = auth_db.create_user("legacy@ex.fr", "hash")
+    conn = get_conn()
+    conn.execute("DROP TABLE IF EXISTS subscriptions")
+    conn.execute("DROP TABLE IF EXISTS subscriber_state")
+    conn.execute(
+        """
+        CREATE TABLE subscriptions (
+            user_id                     INTEGER PRIMARY KEY,
+            frisbii_customer_handle     TEXT,
+            frisbii_subscription_handle TEXT,
+            plan                        TEXT,
+            prix_ht                     REAL,
+            status                      TEXT,
+            current_period_end          TEXT,
+            trial_used                  INTEGER NOT NULL DEFAULT 0,
+            votes_balance               INTEGER NOT NULL DEFAULT 0,
+            votes_last_credited_at      TEXT,
+            created_at                  TEXT NOT NULL,
+            updated_at                  TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        """
+    )
+    conn.execute(
+        "INSERT INTO subscriptions (user_id, frisbii_customer_handle, "
+        "frisbii_subscription_handle, plan, status, trial_used, votes_balance, "
+        "votes_last_credited_at, created_at, updated_at) "
+        "VALUES (?, 'colibre-legacy', 'sub_legacy', 'simple', 'active', 1, 2, "
+        "'2026-01-01T00:00:00+00:00', '2026-01-01T00:00:00+00:00', "
+        "'2026-01-01T00:00:00+00:00')",
+        (uid,),
+    )
+
+    db.init_schema()
+
+    cols = {row["name"] for row in conn.execute("PRAGMA table_info(subscriptions)")}
+    assert "id" in cols
+
+    row = db.get_current(uid)
+    assert row["frisbii_subscription_handle"] == "sub_legacy"
+    assert row["status"] == "active"
+
+    state = conn.execute(
+        "SELECT * FROM subscriber_state WHERE user_id = ?", (uid,)
+    ).fetchone()
+    assert state["trial_used"] == 1
+    assert state["votes_balance"] == 2
+    assert state["votes_last_credited_at"] == "2026-01-01T00:00:00+00:00"
+
+
+def test_create_pending_and_get_current(users_db_path):
     db.init_schema()
     uid = _make_user()
-    db.create_pending(uid, "colibre-1", "simple")
-    row = db.get_by_user(uid)
+    handle, subscription_id = db.create_pending(uid, "colibre-1", "simple")
+    assert handle == f"abo-{uid}-1"
+    row = db.get_current(uid)
+    assert row["id"] == subscription_id
     assert row["status"] == "pending"
     assert row["plan"] == "simple"
     assert row["frisbii_customer_handle"] == "colibre-1"
+    assert row["frisbii_subscription_handle"] == handle
 
 
-def test_update_from_webhook_sets_status_and_handle(users_db_path):
+def test_create_pending_generates_incrementing_handle_per_user(users_db_path):
     db.init_schema()
     uid = _make_user()
-    db.create_pending(uid, "colibre-1", "simple")
-    db.update_from_webhook("colibre-1", "sub_42", "trial", _future())
-    row = db.get_by_user(uid)
+    first_handle, first_id = db.create_pending(uid, "colibre-1", "simple")
+    db.mark_failed(first_id)
+    second_handle, _ = db.create_pending(uid, "colibre-1", "simple")
+    assert first_handle == f"abo-{uid}-1"
+    assert second_handle == f"abo-{uid}-2"
+
+
+def test_mark_failed_sets_status_and_keeps_handle(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    handle, subscription_id = db.create_pending(uid, "colibre-1", "simple")
+    db.mark_failed(subscription_id)
+    row = db.get_current(uid)
+    assert row["status"] == "failed"
+    assert row["frisbii_subscription_handle"] == handle
+
+
+def test_update_from_webhook_sets_status(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    handle, _ = db.create_pending(uid, "colibre-1", "simple")
+    db.update_from_webhook(handle, "trial", _future())
+    row = db.get_current(uid)
     assert row["status"] == "trial"
-    assert row["frisbii_subscription_handle"] == "sub_42"
-    assert db.get_by_customer("colibre-1")["user_id"] == uid
+    assert row["frisbii_subscription_handle"] == handle
+    assert db.customer_known("colibre-1") is True
+
+
+def test_customer_known_false_for_unknown_customer(users_db_path):
+    db.init_schema()
+    assert db.customer_known("colibre-inconnu") is False
 
 
 def test_has_active_subscription_by_status(users_db_path):
     db.init_schema()
     uid = _make_user()
-    db.create_pending(uid, "colibre-1", "simple")
+    handle, _ = db.create_pending(uid, "colibre-1", "simple")
     # pending → faux
     assert db.has_active_subscription(uid) is False
     for status in ("trial", "active"):
-        db.update_from_webhook("colibre-1", "sub_42", status, _future())
+        db.update_from_webhook(handle, status, _future())
         assert db.has_active_subscription(uid) is True
     # cancelled futur → vrai, cancelled passé → faux
-    db.update_from_webhook("colibre-1", "sub_42", "cancelled", _future())
+    db.update_from_webhook(handle, "cancelled", _future())
     assert db.has_active_subscription(uid) is True
-    db.update_from_webhook("colibre-1", "sub_42", "cancelled", _past())
+    db.update_from_webhook(handle, "cancelled", _past())
     assert db.has_active_subscription(uid) is False
-    db.update_from_webhook("colibre-1", "sub_42", "expired", None)
+    db.update_from_webhook(handle, "expired", None)
     assert db.has_active_subscription(uid) is False
 
 
 def test_set_cancelled(users_db_path):
     db.init_schema()
     uid = _make_user()
-    db.create_pending(uid, "colibre-1", "simple")
-    db.update_from_webhook("colibre-1", "sub_42", "active", _future())
+    handle, subscription_id = db.create_pending(uid, "colibre-1", "simple")
+    db.update_from_webhook(handle, "active", _future())
     end = _future()
-    db.set_cancelled(uid, end)
-    row = db.get_by_user(uid)
+    db.set_cancelled(subscription_id, end)
+    row = db.get_current(uid)
     assert row["status"] == "cancelled"
     assert row["current_period_end"] == end
 
@@ -91,11 +176,10 @@ def test_has_active_subscription_z_suffix_datetime(users_db_path):
     """Fix 2 : suffix 'Z' dans current_period_end doit être parsé correctement."""
     db.init_schema()
     uid = _make_user()
-    db.create_pending(uid, "colibre-1", "simple")
-    # Frisbii peut renvoyer des dates avec 'Z' au lieu de '+00:00'.
-    db.update_from_webhook("colibre-1", "sub_42", "cancelled", "2099-12-31T23:59:59Z")
+    handle, _ = db.create_pending(uid, "colibre-1", "simple")
+    db.update_from_webhook(handle, "cancelled", "2099-12-31T23:59:59Z")
     assert db.has_active_subscription(uid) is True
-    db.update_from_webhook("colibre-1", "sub_42", "cancelled", "2020-01-01T00:00:00Z")
+    db.update_from_webhook(handle, "cancelled", "2020-01-01T00:00:00Z")
     assert db.has_active_subscription(uid) is False
 
 
@@ -103,14 +187,12 @@ def test_has_active_subscription_bad_datetime_returns_false(users_db_path):
     """Fix 2 : une date invalide ne doit pas lever d'exception, juste retourner False."""
     db.init_schema()
     uid = _make_user()
-    db.create_pending(uid, "colibre-1", "simple")
+    handle, subscription_id = db.create_pending(uid, "colibre-1", "simple")
     # Injection directe d'une valeur invalide via update bas-niveau.
-    from src.auth.db import get_conn
-
     get_conn().execute(
         "UPDATE subscriptions SET status='cancelled', current_period_end='not-a-date' "
-        "WHERE user_id=?",
-        (uid,),
+        "WHERE id=?",
+        (subscription_id,),
     )
     assert db.has_active_subscription(uid) is False
 
@@ -118,24 +200,28 @@ def test_has_active_subscription_bad_datetime_returns_false(users_db_path):
 def test_trial_used_is_sticky_across_resubscribe(users_db_path):
     db.init_schema()
     uid = _make_user()
-    db.create_pending(uid, "colibre-1", "simple")
+    handle, _ = db.create_pending(uid, "colibre-1", "simple")
     assert db.has_used_trial(uid) is False
     # l'abonnement entre en essai → trial_used positionné
-    db.update_from_webhook("colibre-1", "sub_42", "trial", _future())
+    db.update_from_webhook(handle, "trial", _future())
     assert db.has_used_trial(uid) is True
     # essai abandonné, puis nouvelle souscription : trial_used reste vrai
-    db.update_from_webhook("colibre-1", "sub_42", "expired", _past())
+    db.update_from_webhook(handle, "expired", _past())
     db.create_pending(uid, "colibre-1", "soutien")
     assert db.has_used_trial(uid) is True
 
 
-def test_init_schema_creates_votes_columns(users_db_path):
+def test_create_pending_initializes_subscriber_state(users_db_path):
     db.init_schema()
     uid = _make_user()
     db.create_pending(uid, "colibre-1", "simple")
-    row = db.get_by_user(uid)
-    assert row["votes_balance"] == 0
-    assert row["votes_last_credited_at"] is None
+    state = (
+        get_conn()
+        .execute("SELECT * FROM subscriber_state WHERE user_id = ?", (uid,))
+        .fetchone()
+    )
+    assert state["votes_balance"] == 0
+    assert state["votes_last_credited_at"] is None
 
 
 def test_credit_pending_grants_initial_two_on_first_active(users_db_path):
@@ -145,7 +231,15 @@ def test_credit_pending_grants_initial_two_on_first_active(users_db_path):
     _activate(uid, cursor_iso=None)
     balance = db.credit_pending(uid)
     assert balance == db.INITIAL_VOTES
-    assert db.get_by_user(uid)["votes_last_credited_at"] is not None
+    state = (
+        get_conn()
+        .execute(
+            "SELECT votes_last_credited_at FROM subscriber_state WHERE user_id = ?",
+            (uid,),
+        )
+        .fetchone()
+    )
+    assert state["votes_last_credited_at"] is not None
 
 
 def test_credit_pending_is_idempotent_same_day(users_db_path):
@@ -181,7 +275,12 @@ def test_spend_vote_decrements_when_balance_positive(users_db_path):
     _activate(uid, cursor_iso=None)
     db.credit_pending(uid)  # solde = INITIAL_VOTES
     assert db.spend_vote(uid) is True
-    assert db.get_by_user(uid)["votes_balance"] == db.INITIAL_VOTES - 1
+    state = (
+        get_conn()
+        .execute("SELECT votes_balance FROM subscriber_state WHERE user_id = ?", (uid,))
+        .fetchone()
+    )
+    assert state["votes_balance"] == db.INITIAL_VOTES - 1
 
 
 def test_spend_vote_refused_when_balance_zero(users_db_path):
@@ -196,21 +295,25 @@ def test_spend_vote_refused_when_balance_zero(users_db_path):
 def test_reactivation_resets_cursor_without_regranting(users_db_path):
     db.init_schema()
     uid = _make_user()
-    db.create_pending(uid, "colibre-1", "simple")
+    handle, _ = db.create_pending(uid, "colibre-1", "simple")
     _activate(uid, cursor_iso=None)
     db.credit_pending(uid)  # +3, curseur posé
     # désabonnement
-    db.update_from_webhook("colibre-1", "sub_1", "cancelled", _future())
+    db.update_from_webhook(handle, "cancelled", _future())
     # période sans abonnement simulée : on recule artificiellement le curseur
     old_cursor = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
-    db.get_conn().execute(
-        "UPDATE subscriptions SET votes_last_credited_at = ? WHERE user_id = ?",
+    get_conn().execute(
+        "UPDATE subscriber_state SET votes_last_credited_at = ? WHERE user_id = ?",
         (old_cursor, uid),
     )
     # réabonnement
-    db.update_from_webhook("colibre-1", "sub_1", "active", _future())
-    row = db.get_by_user(uid)
-    assert row["votes_balance"] == db.INITIAL_VOTES  # pas de re-crédit des +3
+    db.update_from_webhook(handle, "active", _future())
+    state = (
+        get_conn()
+        .execute("SELECT votes_balance FROM subscriber_state WHERE user_id = ?", (uid,))
+        .fetchone()
+    )
+    assert state["votes_balance"] == db.INITIAL_VOTES  # pas de re-crédit des +3
     # le curseur a été remis ~à maintenant → pas de crédit du gap de 30 jours
     assert db.credit_pending(uid) == db.INITIAL_VOTES
 
@@ -218,8 +321,8 @@ def test_reactivation_resets_cursor_without_regranting(users_db_path):
 def test_trial_to_active_does_not_reset_then_grants_two(users_db_path):
     db.init_schema()
     uid = _make_user()
-    db.create_pending(uid, "colibre-1", "simple")
-    db.update_from_webhook("colibre-1", "sub_1", "trial", _future())
-    db.update_from_webhook("colibre-1", "sub_1", "active", _future())
+    handle, _ = db.create_pending(uid, "colibre-1", "simple")
+    db.update_from_webhook(handle, "trial", _future())
+    db.update_from_webhook(handle, "active", _future())
     # fin d'essai : credit_pending accorde les +INITIAL_VOTES initiaux
     assert db.credit_pending(uid) == db.INITIAL_VOTES
