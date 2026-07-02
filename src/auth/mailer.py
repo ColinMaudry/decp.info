@@ -37,9 +37,29 @@ def _template_id(env_var: str) -> int:
     return int(raw)
 
 
+def _suppress_send() -> bool:
+    raw = os.getenv("MAIL_SUPPRESS_SEND")
+    if raw is not None:
+        return raw.lower() == "true"
+    return DEVELOPMENT
+
+
 def _send_template(template_id: int, recipient: str, params: dict) -> None:
     assert _client is not None, "Mailer non initialisé (init_mailer() non appelé)"
-    sandbox_headers = {"X-Sib-Sandbox": "drop"} if DEVELOPMENT else None
+    suppress = _suppress_send()
+    if suppress:
+        cause = (
+            "MAIL_SUPPRESS_SEND=true"
+            if os.getenv("MAIL_SUPPRESS_SEND") is not None
+            else "DEVELOPMENT=true"
+        )
+        logger.warning(
+            "Email en mode sandbox (%s) — non délivré à %s (template %s)",
+            cause,
+            recipient,
+            template_id,
+        )
+    sandbox_headers = {"X-Sib-Sandbox": "drop"} if suppress else None
     try:
         _client.transactional_emails.send_transac_email(
             template_id=template_id,

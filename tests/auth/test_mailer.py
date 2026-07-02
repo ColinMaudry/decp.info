@@ -40,6 +40,26 @@ def test_send_verification_email(fake_client):
     assert call["headers"] == {"X-Sib-Sandbox": "drop"}  # DEVELOPMENT=true en tests
 
 
+def test_mail_suppress_send_true_forces_sandbox_even_outside_development(
+    fake_client, monkeypatch
+):
+    monkeypatch.setattr(mailer, "DEVELOPMENT", False)
+    monkeypatch.setenv("MAIL_SUPPRESS_SEND", "true")
+    mailer.send_verification_email("a@b.c", "TOKEN123")
+    call = fake_client.transactional_emails.calls[0]
+    assert call["headers"] == {"X-Sib-Sandbox": "drop"}
+
+
+def test_mail_suppress_send_false_disables_sandbox_even_in_development(
+    fake_client, monkeypatch
+):
+    monkeypatch.setattr(mailer, "DEVELOPMENT", True)
+    monkeypatch.setenv("MAIL_SUPPRESS_SEND", "false")
+    mailer.send_verification_email("a@b.c", "TOKEN123")
+    call = fake_client.transactional_emails.calls[0]
+    assert call["headers"] is None
+
+
 def test_send_reset_email(fake_client):
     mailer.send_reset_email("a@b.c", "RESET456")
     calls = fake_client.transactional_emails.calls
