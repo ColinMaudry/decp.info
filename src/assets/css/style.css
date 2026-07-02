@@ -983,3 +983,19 @@ input[type="number"] {
     display: block;
   }
 }
+
+/* Écran de chargement initial (avant hydratation de l'app Dash) */
+
+._dash-loading {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0;
+}
+
+._dash-loading::after {
+  content: "Chargement...";
+  font-size: 1.1rem;
+  color: #ccc;
+}
