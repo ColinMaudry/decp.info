@@ -82,12 +82,13 @@ def test_banner_absent_when_flag_off(monkeypatch):
 def test_show_active_view_true_for_live_statuses(monkeypatch):
     from src.pages.compte import abonnement as compte_abonnement
 
-    for status in ("pending", "trial", "active", "cancelled", "expired"):
+    for status in ("pending", "trial", "active", "cancelled"):
         assert compte_abonnement._show_active_view({"status": status}) is True
 
 
-def test_show_active_view_false_for_failed_or_none(monkeypatch):
+def test_show_active_view_false_for_failed_expired_or_none(monkeypatch):
     from src.pages.compte import abonnement as compte_abonnement
 
     assert compte_abonnement._show_active_view({"status": "failed"}) is False
+    assert compte_abonnement._show_active_view({"status": "expired"}) is False
     assert compte_abonnement._show_active_view(None) is False

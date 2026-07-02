@@ -151,7 +151,7 @@ def _active_view(row):
         blocks.append(
             dbc.Alert(f"Abonnement résilié, actif jusqu'au {end}.", color="warning")
         )
-    else:
+    elif row["status"] == "active":
         blocks.append(html.P(f"Prochaine facturation : {end}"))
 
     if row["status"] in ("pending", "trial", "active"):
@@ -278,7 +278,7 @@ def _tous_abonnes_banner():
 
 
 def _show_active_view(row) -> bool:
-    return row is not None and row["status"] != "failed"
+    return row is not None and row["status"] not in ("failed", "expired")
 
 
 def layout(**query):
@@ -301,6 +301,12 @@ def layout(**query):
         body.append(_active_view(row))
         body.append(_resiliation_modal(row["current_period_end"]))
     else:
+        if row is not None and row["status"] == "expired":
+            body.append(
+                dbc.Alert(
+                    "Votre abonnement a expiré.", color="warning", className="mb-4"
+                )
+            )
         body.extend([_plan_cards(trial_used=trial_used), _explainer()])
 
     body.append(_salaire_modal)
