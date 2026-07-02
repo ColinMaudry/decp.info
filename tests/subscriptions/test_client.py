@@ -26,14 +26,11 @@ def test_update_customer(fake_httpx):
 
 
 def test_create_subscription_session_with_customer_handle(fake_httpx):
+    fake_httpx["queue"].append(fake_httpx["Response"](200, {"handle": "abo-1-1"}))
     fake_httpx["queue"].append(
         fake_httpx["Response"](
             200,
-            {
-                "hosted_page_links": {
-                    "payment_info": "https://checkout.reepay.com/#/sub-1"
-                }
-            },
+            {"id": "cs_1", "url": "https://checkout.reepay.com/#/subscription/cs_1"},
         )
     )
     url = client.create_subscription_session(
@@ -43,33 +40,37 @@ def test_create_subscription_session_with_customer_handle(fake_httpx):
         "https://app/ko",
         customer_handle="colibre-1",
     )
-    assert url == (
-        "https://checkout.reepay.com/"
-        "?accept_url=https%3A%2F%2Fapp%2Fok&cancel_url=https%3A%2F%2Fapp%2Fko"
-        "#/sub-1"
+    assert url == "https://checkout.reepay.com/#/subscription/cs_1"
+
+    create_body = fake_httpx["calls"][0]["json"]
+    assert create_body["plan"] == "plan_simple"
+    assert create_body["handle"] == "abo-1-1"
+    assert create_body["customer"] == "colibre-1"
+    assert create_body["signup_method"] == "link"
+    assert "generate_handle" not in create_body
+    assert "prepare_subscription" not in create_body
+    # accept_url/cancel_url n'existent pas dans CreateSubscription : ils
+    # doivent passer par la session de checkout dédiée, pas ce body.
+    assert "accept_url" not in create_body
+    assert "cancel_url" not in create_body
+
+    session_call = fake_httpx["calls"][1]
+    assert (
+        session_call["url"]
+        == "https://checkout-api.frisbii.com/v1/session/subscription"
     )
-    body = fake_httpx["calls"][0]["json"]
-    assert body["plan"] == "plan_simple"
-    assert body["handle"] == "abo-1-1"
-    assert body["customer"] == "colibre-1"
-    assert body["signup_method"] == "link"
-    assert "generate_handle" not in body
-    assert "prepare_subscription" not in body
-    # accept_url/cancel_url ne sont pas des champs de CreateSubscription :
-    # Frisbii les ignore silencieusement s'ils sont dans le body.
-    assert "accept_url" not in body
-    assert "cancel_url" not in body
+    assert session_call["json"] == {
+        "subscription": "abo-1-1",
+        "accept_url": "https://app/ok",
+        "cancel_url": "https://app/ko",
+    }
 
 
 def test_create_subscription_session_no_trial(fake_httpx):
+    fake_httpx["queue"].append(fake_httpx["Response"](200, {"handle": "abo-1-2"}))
     fake_httpx["queue"].append(
         fake_httpx["Response"](
-            200,
-            {
-                "hosted_page_links": {
-                    "payment_info": "https://checkout.reepay.com/#/sub-2"
-                }
-            },
+            200, {"url": "https://checkout.reepay.com/#/subscription/cs_2"}
         )
     )
     client.create_subscription_session(
