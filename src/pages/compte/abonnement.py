@@ -40,7 +40,10 @@ def _plan_card(meta: dict, trial: int | None, trial_used: bool):
         dbc.CardBody(
             [
                 html.H4(meta["label"], className="mb-1"),
-                html.P(f"{meta['prix_ht']} € HT / mois", className="text-muted mb-3"),
+                html.P(
+                    f"{meta['prix_ht']} € HT / mois ({str(int(meta['prix_ht']) * 1.2).replace('.0', '')} € TTC)",
+                    className="text-muted mb-3",
+                ),
                 html.P(meta["description"], className="mb-3"),
                 badge,
                 html.A(
@@ -75,7 +78,7 @@ def _plan_cards(trial_used=False, trial_for=plans.trial_days):
 
 def _explainer():
     col_left = dbc.Col(
-        [html.H4("Fonctionnalités réservées aux abonné•es :"), abonnement_features],
+        [html.H4("Fonctionnalités réservées aux abonné·es :"), abonnement_features],
         md=6,
         style={
             "borderRight": "1px solid var(--bs-border-color)",
@@ -84,16 +87,19 @@ def _explainer():
     )
     col_right = dbc.Col(
         [
-            html.H4("Ce que les abonnements de soutien permettent"),
+            html.H4("Ce que les abonnements permettent"),
             html.Ul(
                 [
                     html.Li(
-                        "Rédaction d'études à partir des données, par exemple sur les "
+                        "passer plus de temps à développer colibre et moins de temps à chercher des missions"
+                    ),
+                    html.Li(
+                        "rédaction d'études à partir des données, par exemple sur les "
                         "acheteurs dont les données sont introuvables et les raisons de "
                         "cette non-publication."
                     ),
                     html.Li(
-                        "Fédération des bonnes volontés souhaitant militer pour une "
+                        "fédération des bonnes volontés souhaitant militer pour une "
                         "législation plus ambitieuse sur la transparence de la commande "
                         "publique."
                     ),

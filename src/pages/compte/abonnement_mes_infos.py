@@ -4,6 +4,7 @@ from flask_login import current_user
 
 from src.auth import db as auth_db
 from src.pages._compte_shell import account_guard, account_shell
+from src.pages.a_propos.abonnement import subscription_terms
 from src.subscriptions import client as frisbii_client
 from src.utils.data import get_annuaire_data
 
@@ -15,65 +16,7 @@ register_page(
     description="Informations de facturation pour votre abonnement colibre.",
 )
 
-_CGU_MARKDOWN = """
-L'accès aux fonctionnalités de base de colibre est gratuit et sans inscription.
-Un abonnement payant donne accès à des fonctionnalités supplémentaires qui nécessitent la création d'un compte.
-
-#### Fonctionnalités incluses
-
-Les fonctionnalités accessibles aux abonnés évoluent au fil du développement du service.
-La liste à jour est visible depuis la [page d'abonnement](/compte/abonnement).
-
-#### Tarifs
-
-Deux formules sont proposées :
-
-- **Abonnement** — 20 € HT / mois (soit 24 € TTC)
-- **Abonnement de soutien** — 50 € HT / mois (soit 60 € TTC) — mêmes fonctionnalités, contribution renforcée au projet
-
-La TVA applicable est de 20 %. Les prix TTC sont affichés lors de la souscription.
-
-#### Période d'essai
-
-Une période d'essai gratuite peut être proposée lors de la souscription.
-Sa durée est indiquée avant validation. Aucun prélèvement n'est effectué pendant cette période.
-À son terme, l'abonnement est activé et facturé automatiquement.
-
-La période d'essai est accordée une seule fois par utilisateur.
-
-#### Facturation et paiement
-
-L'abonnement est facturé mensuellement, à la date anniversaire de la souscription.
-Le paiement est traité par [Frisbii](https://www.frisbii.com), prestataire européen de paiement en ligne.
-Les coordonnées bancaires sont conservées exclusivement par Frisbii et ne sont pas transmises à colibre.
-
-#### Résiliation
-
-L'abonnement peut être résilié à tout moment depuis l'espace [Mon compte](/compte/abonnement).
-La résiliation prend effet à la fin de la période mensuelle en cours : l'accès aux fonctionnalités payantes est maintenu jusqu'à cette date, sans remboursement au prorata.
-
-#### Données stockées
-
-La gestion de l'abonnement implique le traitement de données personnelles, réparties entre colibre et Frisbii (prestataire de paiement).
-
-**Données stockées par colibre :**
-
-- Adresse e-mail (identification du compte)
-- Numéro SIRET (si renseigné, conservé pour pré-remplir les futures souscriptions et alimenter des fonctionnalités)
-
-**Données stockées par Frisbii :**
-
-- Informations de facturation : prénom, nom, adresse postale, code postal, ville, pays, nom de l'entreprise
-- Informations de paiement : coordonnées bancaires (accessibles uniquement par Frisbii, jamais transmises à colibre)
-- Historique des factures
-
-Ces données sont utilisées uniquement pour la gestion de votre abonnement et ne sont pas transmises à des tiers à des fins commerciales.
-Conformément au RGPD, vous pouvez demander l'accès, la rectification ou la suppression de vos données en [me contactant](/a-propos/contact).
-
-#### Contact
-
-Pour toute question relative à votre abonnement : [page de contact](/a-propos/contact).
-"""
+_CGU_MARKDOWN = subscription_terms
 
 
 def _csrf_input():
@@ -244,6 +187,9 @@ def layout(**query):
 
     checkboxes = html.Div(
         [
+            dcc.Markdown(
+                "Si vous préférez régler par virement bancaire et une facturation annuelle plutôt qu'un réglement mensuel automatique par carte bancaire, [contactez-moi](/a-propos/contact)."
+            ),
             dcc.Checklist(
                 id="inf-cb-retractation",
                 options=[
@@ -287,7 +233,7 @@ def layout(**query):
             dbc.Row([col1, col2], className="g-4 mb-4"),
             checkboxes,
             html.Button(
-                "Suivant",
+                "Ajout d'une carte de paiement",
                 id="inf-submit",
                 type="submit",
                 className="btn btn-primary",
