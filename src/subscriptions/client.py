@@ -1,4 +1,5 @@
 import os
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import httpx
 
@@ -61,6 +62,13 @@ def update_customer(handle: str, data: dict) -> dict:
     return _call("PUT", f"/v1/customer/{handle}", json=data)
 
 
+def _with_query(url: str, **params: str) -> str:
+    parts = urlsplit(url)
+    query = dict(parse_qsl(parts.query))
+    query.update(params)
+    return urlunsplit(parts._replace(query=urlencode(query)))
+
+
 def create_subscription_session(
     plan_handle: str,
     handle: str,
@@ -70,12 +78,13 @@ def create_subscription_session(
     customer_handle: str | None = None,
     create_customer: dict | None = None,
 ) -> str:
+    # CreateSubscription (POST /v1/subscription) n'a pas de champs accept_url/
+    # cancel_url : ils doivent être ajoutés en query string sur le lien
+    # hosted_page_links.payment_info renvoyé, pas dans le body (cf. doc Frisbii).
     body: dict = {
         "plan": plan_handle,
         "signup_method": "link",
         "handle": handle,
-        "accept_url": accept_url,
-        "cancel_url": cancel_url,
     }
     if customer_handle:
         body["customer"] = customer_handle
@@ -84,7 +93,8 @@ def create_subscription_session(
     if no_trial:
         body["no_trial"] = True
     data = _call("POST", "/v1/subscription", json=body)
-    return data["hosted_page_links"]["payment_info"]
+    payment_info = data["hosted_page_links"]["payment_info"]
+    return _with_query(payment_info, accept_url=accept_url, cancel_url=cancel_url)
 
 
 def create_recurring_session(

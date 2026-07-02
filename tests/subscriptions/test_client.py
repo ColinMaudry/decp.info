@@ -43,7 +43,11 @@ def test_create_subscription_session_with_customer_handle(fake_httpx):
         "https://app/ko",
         customer_handle="colibre-1",
     )
-    assert url == "https://checkout.reepay.com/#/sub-1"
+    assert url == (
+        "https://checkout.reepay.com/"
+        "?accept_url=https%3A%2F%2Fapp%2Fok&cancel_url=https%3A%2F%2Fapp%2Fko"
+        "#/sub-1"
+    )
     body = fake_httpx["calls"][0]["json"]
     assert body["plan"] == "plan_simple"
     assert body["handle"] == "abo-1-1"
@@ -51,6 +55,10 @@ def test_create_subscription_session_with_customer_handle(fake_httpx):
     assert body["signup_method"] == "link"
     assert "generate_handle" not in body
     assert "prepare_subscription" not in body
+    # accept_url/cancel_url ne sont pas des champs de CreateSubscription :
+    # Frisbii les ignore silencieusement s'ils sont dans le body.
+    assert "accept_url" not in body
+    assert "cancel_url" not in body
 
 
 def test_create_subscription_session_no_trial(fake_httpx):

@@ -148,6 +148,9 @@ def cancel():
 def webhook():
     payload = request.get_json(silent=True) or {}
     if not webhooks.verify_signature(payload, os.getenv("FRISBII_WEBHOOK_SECRET", "")):
+        logger.warning(
+            "Webhook Frisbii : signature invalide (event %s)", payload.get("id")
+        )
         return "", 403
 
     customer = payload.get("customer")
