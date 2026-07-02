@@ -49,6 +49,14 @@ Deux formules sont proposées :
 La TVA applicable en France est de 20 %.
 """
             ),
+            html.H4("Modes de paiement"),
+            dcc.Markdown(
+                """
+Les cartes bancaires des réseaux Visa et Mastercard sont acceptées.
+
+Il est également possible de payer par virement bancaire à condition de payer un an d'abonnement.
+"""
+            ),
             html.H4("Période d'essai"),
             dcc.Markdown(
                 """
