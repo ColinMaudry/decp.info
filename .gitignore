@@ -16,6 +16,7 @@ build
 # Runtime databases (never commit)
 users.sqlite
 *.sqlite
+*.sqlite-*
 !tests/*.sqlite
 !tests/**/*.sqlite
 
@@ -23,3 +24,4 @@ users.sqlite
 .superpowers/
 .codegraph/
 .claude
+*.duckdb*

@@ -3,6 +3,7 @@ from dash import Input, Output, State, callback, dcc, html, register_page
 from flask_login import current_user
 
 from src.pages._compte_shell import account_guard, account_shell
+from src.pages.a_propos.abonnement import abonnement_features
 from src.subscriptions import db, plans
 from src.utils.frontend import format_date_french
 
@@ -74,31 +75,7 @@ def _plan_cards(trial_used=False, trial_for=plans.trial_days):
 
 def _explainer():
     col_left = dbc.Col(
-        [
-            html.H4("Ce que les abonnements financent"),
-            html.Ul(
-                [
-                    html.Li("Abonnement Frisbii (solution de paiement) : 50 €"),
-                    html.Li("Serveur Scaleway : 40 €"),
-                    html.Li("Espace de coworking : 250 €"),
-                    html.Li(
-                        [
-                            "Salaire médian (",
-                            html.Span(
-                                "coût employeur",
-                                id="salaire-modal-trigger",
-                                style={
-                                    "cursor": "pointer",
-                                    "textDecoration": "underline",
-                                    "color": "var(--bs-link-color)",
-                                },
-                            ),
-                            ") : 3 840 €",
-                        ]
-                    ),
-                ]
-            ),
-        ],
+        [html.H4("Fonctionnalités réservées aux abonné•es :"), abonnement_features],
         md=6,
         style={
             "borderRight": "1px solid var(--bs-border-color)",

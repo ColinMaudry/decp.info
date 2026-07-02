@@ -11,7 +11,7 @@ import pytest
 # enregistrés), elle est ré-enregistrée → "Duplicate callback outputs"
 # (salaire-modal, resiliation-modal) qui casse le rendu de TOUTES les pages dans
 # la suite Selenium complète. En important src.app ici, la découverte tourne en
-# premier et les imports ultérieurs de compte_abonnement sont mis en cache.
+# premier et les imports ultérieurs de src.pages.compte.abonnement sont mis en cache.
 from src.app import app  # noqa: F401, E402
 
 
