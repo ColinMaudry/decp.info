@@ -1,23 +1,31 @@
 window.dash_clientside = Object.assign({}, window.dash_clientside, {
   leaflet: {
     pointToLayer: function (feature, latlng, context) {
-      const isHome = Boolean(feature.properties.is_home);
-      const marker = L.circleMarker(latlng, {
-        radius: isHome ? 8 : 5,
+      // Le point de l'organisme consulté (is_home) est rendu comme une
+      // icône (comme les clusters), pas comme un circleMarker SVG : les
+      // icônes vivent dans le markerPane, toujours au-dessus du overlayPane
+      // (SVG) où se trouvent les circleMarkers, et gardent une taille CSS
+      // fixe (contrairement aux tracés SVG, redimensionnés visuellement
+      // pendant l'animation de zoom).
+      if (feature.properties.is_home) {
+        const size = 16;
+        const icon = L.divIcon({
+          html: `<div style="background-color: ${feature.properties.marker_color}; width: ${size}px; height: ${size}px; border-radius: 50%; border: 2px solid white; box-sizing: border-box;"></div>`,
+          className: "org-home-marker",
+          iconSize: L.point(size, size),
+        });
+        return L.marker(latlng, { icon: icon, zIndexOffset: 1000 }).bindTooltip(
+          feature.properties.tooltip
+        );
+      }
+      return L.circleMarker(latlng, {
+        radius: 5,
         fillColor: feature.properties.marker_color,
         color: "white",
         weight: 1,
         opacity: 1,
         fillOpacity: 0.8,
       }).bindTooltip(feature.properties.tooltip);
-      // Le point de l'organisme consulté (is_home) doit toujours passer
-      // au-dessus de ses contreparties, quel que soit l'ordre des couches.
-      if (isHome) {
-        marker.on("add", function () {
-          marker.bringToFront();
-        });
-      }
-      return marker;
     },
     clusterToLayer: function (feature, latlng, index, context) {
       console.log(feature);
