@@ -616,11 +616,7 @@ def get_org_location_map(
         lats = [lat for lat, _ in all_points]
         lons = [lon for _, lon in all_points]
         map_kwargs["bounds"] = [[min(lats), min(lons)], [max(lats), max(lons)]]
-        map_kwargs["boundsOptions"] = {
-            "padding": [30, 30],
-            "maxZoom": 12,
-            "animate": False,
-        }
+        map_kwargs["boundsOptions"] = {"padding": [30, 30], "maxZoom": 12}
     else:
         map_kwargs["center"] = [46.6, 2.2]
         map_kwargs["zoom"] = 5
