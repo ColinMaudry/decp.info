@@ -18,10 +18,10 @@ from src.db import aggregate_marches, count_marches, query_marches, schema
 from src.figures import (
     DataTable,
     get_distance_histogram,
+    get_org_location_map,
     get_top_org_table,
     make_card,
     make_column_picker,
-    point_on_map,
 )
 from src.utils.data import DF_ACHETEURS, get_annuaire_data, get_departement_region
 from src.utils.frontend import get_button_properties
@@ -264,7 +264,6 @@ layout = [
     Output(component_id="acheteur_siret", component_property="children"),
     Output(component_id="acheteur_nom", component_property="children"),
     Output(component_id="acheteur_commune", component_property="children"),
-    Output(component_id="acheteur_map", component_property="children"),
     Output(component_id="acheteur_departement", component_property="children"),
     Output(component_id="acheteur_region", component_property="children"),
     Output(component_id="acheteur_lien_annuaire", component_property="href"),
@@ -272,25 +271,11 @@ layout = [
 )
 def update_acheteur_infos(url):
     acheteur_siret = url.split("/")[-1]
-    # if len(acheteur_siret) != 14:
-    #     acheteur_siret = (
-    #         f"Le SIRET renseigné doit faire 14 caractères ({acheteur_siret})"
-    #     )
     data = get_annuaire_data(acheteur_siret)
     data_etablissement = data.get("matching_etablissements") if data else None
     if data_etablissement:
         data_etablissement = data_etablissement[0]
 
-        # Extraction du code département à partir du code postal
-        code_postal = data_etablissement.get("code_postal", "")
-        departement_code = code_postal[:2] if code_postal else None
-
-        # Création de la carte avec le code département pour un centrage approprié
-        acheteur_map = point_on_map(
-            data_etablissement["latitude"],
-            data_etablissement["longitude"],
-            departement_code,
-        )
         code_departement, nom_departement, nom_region = get_departement_region(
             data_etablissement["code_postal"]
         )
@@ -302,7 +287,6 @@ def update_acheteur_infos(url):
         libelle_commune = data_etablissement["libelle_commune"]
 
     else:
-        acheteur_map = html.Div()
         code_departement, nom_departement, nom_region = "", "", ""
         departement = ""
         lien_annuaire = ""
@@ -313,11 +297,34 @@ def update_acheteur_infos(url):
         acheteur_siret,
         raison_sociale,
         libelle_commune,
-        acheteur_map,
         departement,
         nom_region,
         lien_annuaire,
     )
+
+
+@callback(
+    Output(component_id="acheteur_map", component_property="children"),
+    Input(component_id="acheteur_url", component_property="pathname"),
+    Input(component_id="acheteur_year", component_property="value"),
+)
+def update_acheteur_map(pathname, ach_year):
+    where_sql, params = _acheteur_scope(pathname, ach_year)
+    geo_columns = [
+        col
+        for col in [
+            "uid",
+            "acheteur_longitude",
+            "acheteur_latitude",
+            "acheteur_nom",
+            "titulaire_longitude",
+            "titulaire_latitude",
+            "titulaire_nom",
+        ]
+        if col in schema.names()
+    ]
+    dff = query_marches(where_sql, params, columns=geo_columns)
+    return get_org_location_map(dff, "acheteur", "acheteur_map_leaflet")
 
 
 @callback(
