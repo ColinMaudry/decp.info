@@ -8,7 +8,7 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
       // fixe (contrairement aux tracés SVG, redimensionnés visuellement
       // pendant l'animation de zoom).
       if (feature.properties.is_home) {
-        const size = 26;
+        const size = 22;
         const icon = L.divIcon({
           html: `<div style="background-color: ${feature.properties.marker_color}; width: ${size}px; height: ${size}px; border-radius: 50%; border: 2px solid white; box-sizing: border-box;"></div>`,
           className: "org-home-marker",

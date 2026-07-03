@@ -19,8 +19,8 @@
 - Refonte et mise en page pleine largeur de la page À propos
 - Ajout des conditions générales d'utilisation (CGU) ([#93](https://github.com/ColinMaudry/colibre/issues/93))
 - Amélioration du référencement (sitemaps acheteurs/titulaires)
-- Nouvelle page d'erreur personnalisée (500)
 - Amélioration des performances des pages acheteur et titulaire
+- Ajout des organismes liés sur la carte des pages acheteur et titulaire
 - decp.info devient **colibre** : nouveau nom, nouvelles icônes ([#57](https://github.com/ColinMaudry/colibre/issues/57))
 
 **Bugs résolus**
