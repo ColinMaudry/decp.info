@@ -202,3 +202,27 @@ def test_promote_pending_email_noop_when_empty(users_db_path):
     uid = db.create_user("a@b.c", generate_password_hash("password12"))
     assert db.promote_pending_email(uid) is None
     assert db.get_user_by_id(uid)["email"] == "a@b.c"
+
+
+def test_list_users_orders_by_created_at_desc(users_db_path):
+    from src.auth import db
+
+    db.init_schema()
+    db.create_user("first@ex.fr", "hash")
+    db.create_user("second@ex.fr", "hash")
+
+    rows = db.list_users()
+
+    assert [r["email"] for r in rows] == ["second@ex.fr", "first@ex.fr"]
+
+
+def test_list_users_respects_limit(users_db_path):
+    from src.auth import db
+
+    db.init_schema()
+    for i in range(3):
+        db.create_user(f"user{i}@ex.fr", "hash")
+
+    rows = db.list_users(limit=2)
+
+    assert len(rows) == 2

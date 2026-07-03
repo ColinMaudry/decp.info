@@ -148,6 +148,14 @@ def get_user_by_id(user_id: int) -> sqlite3.Row | None:
     return get_conn().execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
 
 
+def list_users(limit: int = 1000) -> list[sqlite3.Row]:
+    return (
+        get_conn()
+        .execute("SELECT * FROM users ORDER BY created_at DESC LIMIT ?", (limit,))
+        .fetchall()
+    )
+
+
 def set_email_verified(user_id: int) -> None:
     get_conn().execute(
         "UPDATE users SET email_verified = 1, updated_at = ? WHERE id = ?",
