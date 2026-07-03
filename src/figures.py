@@ -582,6 +582,8 @@ def get_org_location_map(
         "acheteur": build_org_markers(lff, "acheteur"),
         "titulaire": build_org_markers(lff, "titulaire"),
     }
+    for marker in markers_by_type[home_type]:
+        marker["is_home"] = True
 
     ns = Namespace("dash_clientside", "leaflet")
     point_to_layer = ns("pointToLayer")
@@ -589,8 +591,9 @@ def get_org_location_map(
 
     layers: list = [dl.TileLayer()]
     all_points: list[tuple[float, float]] = []
-    # Ordre fixe (titulaire puis acheteur), comme sur /observatoire : la
-    # couche acheteur est toujours peinte au-dessus, quel que soit home_type.
+    # Ordre fixe (titulaire puis acheteur), comme sur /observatoire. Le point
+    # de l'organisme consulté (is_home) est de toute façon toujours ramené au
+    # premier plan côté client (pointToLayer, dash_clientside.js).
     for org_type in ("titulaire", "acheteur"):
         markers = markers_by_type[org_type]
         if not markers:

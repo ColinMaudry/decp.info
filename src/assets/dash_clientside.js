@@ -1,14 +1,23 @@
 window.dash_clientside = Object.assign({}, window.dash_clientside, {
   leaflet: {
     pointToLayer: function (feature, latlng, context) {
-      return L.circleMarker(latlng, {
-        radius: 5,
+      const isHome = Boolean(feature.properties.is_home);
+      const marker = L.circleMarker(latlng, {
+        radius: isHome ? 8 : 5,
         fillColor: feature.properties.marker_color,
         color: "white",
         weight: 1,
         opacity: 1,
         fillOpacity: 0.8,
       }).bindTooltip(feature.properties.tooltip);
+      // Le point de l'organisme consulté (is_home) doit toujours passer
+      // au-dessus de ses contreparties, quel que soit l'ordre des couches.
+      if (isHome) {
+        marker.on("add", function () {
+          marker.bringToFront();
+        });
+      }
+      return marker;
     },
     clusterToLayer: function (feature, latlng, index, context) {
       console.log(feature);

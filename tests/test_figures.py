@@ -238,12 +238,8 @@ def test_build_org_markers_missing_columns_returns_empty():
     assert build_org_markers(lff, "titulaire") == []
 
 
-def test_get_org_location_map_bounds_cover_home_and_counterpart():
-    import dash_leaflet as dl
-
-    from src.figures import get_org_location_map
-
-    dff = pl.DataFrame(
+def _org_map_dff():
+    return pl.DataFrame(
         [
             {
                 "uid": "u1",
@@ -257,7 +253,13 @@ def test_get_org_location_map_bounds_cover_home_and_counterpart():
         ]
     )
 
-    leaflet_map = get_org_location_map(dff, "acheteur", "test-map")
+
+def test_get_org_location_map_bounds_cover_home_and_counterpart():
+    import dash_leaflet as dl
+
+    from src.figures import get_org_location_map
+
+    leaflet_map = get_org_location_map(_org_map_dff(), "acheteur", "test-map")
 
     assert isinstance(leaflet_map, dl.Map)
     assert leaflet_map.bounds == [[48.11, -1.68], [48.85, 2.35]]
@@ -267,6 +269,44 @@ def test_get_org_location_map_bounds_cover_home_and_counterpart():
         "test-map-acheteur",
         "test-map-titulaire",
     }
+
+
+def test_get_org_location_map_marks_home_org_marker_acheteur():
+    import dash_leaflet as dl
+
+    from src.figures import get_org_location_map
+
+    leaflet_map = get_org_location_map(_org_map_dff(), "acheteur", "test-map")
+
+    geojson_layers = {
+        layer.id: layer
+        for layer in leaflet_map.children
+        if isinstance(layer, dl.GeoJSON)
+    }
+    acheteur_features = geojson_layers["test-map-acheteur"].data["features"]
+    titulaire_features = geojson_layers["test-map-titulaire"].data["features"]
+
+    assert all(f["properties"]["is_home"] for f in acheteur_features)
+    assert all(not f["properties"].get("is_home") for f in titulaire_features)
+
+
+def test_get_org_location_map_marks_home_org_marker_titulaire():
+    import dash_leaflet as dl
+
+    from src.figures import get_org_location_map
+
+    leaflet_map = get_org_location_map(_org_map_dff(), "titulaire", "test-map")
+
+    geojson_layers = {
+        layer.id: layer
+        for layer in leaflet_map.children
+        if isinstance(layer, dl.GeoJSON)
+    }
+    acheteur_features = geojson_layers["test-map-acheteur"].data["features"]
+    titulaire_features = geojson_layers["test-map-titulaire"].data["features"]
+
+    assert all(f["properties"]["is_home"] for f in titulaire_features)
+    assert all(not f["properties"].get("is_home") for f in acheteur_features)
 
 
 def test_get_org_location_map_defaults_to_france_view_without_coordinates():
