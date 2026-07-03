@@ -84,18 +84,19 @@ La résiliation prend effet à la fin de la période mensuelle en cours : l'acc�
         html.H4("Données recueillies"),
         dcc.Markdown(
             """
-La gestion de l'abonnement implique le traitement de données, réparties entre colibre et Frisbii (prestataire de paiement). Conformément au RGPD, colibre ne receuille que les données strictement nécessaire
+La gestion de l'abonnement implique le traitement de données, réparties entre colibre et Frisbii (prestataire de paiement). Conformément au RGPD,
+colibre ne receuille que les données strictement nécessaires
 au bon fonctionnement du site et de la facturation.
 
-**Données stockées par colibre :**
+**Données stockées par Colmo pour l'administration de colibre :**
 
 - Adresse e-mail (identification du compte)
 - Numéro SIRET (optionnel, si renseigné, conservé pour pré-remplir les futures souscriptions)
 
 **Données stockées par Frisbii :**
 
-- Informations de facturation : prénom, nom, adresse postale, code postal, ville, pays, nom de l'entreprise
-- Informations de paiement : coordonnées bancaires (accessibles uniquement par Frisbii, jamais transmises à colibre)
+- Informations de facturation : prénom et nom (ou nom de l'entreprise), adresse postale, code postal, ville, pays, nom de l'entreprise (ou prénom et nom)
+- Informations de paiement : coordonnées bancaires
 - Historique des factures
 
 Ces données sont utilisées uniquement pour la gestion de votre abonnement et ne sont pas transmises à des tiers à des fins commerciales.
