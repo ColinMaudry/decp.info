@@ -32,6 +32,16 @@ _MIGRATIONS: list[tuple[str, str]] = [
         "0005_rename_votes_credited_until_to_votes_last_credited_at",
         "ALTER TABLE subscriptions RENAME COLUMN votes_credited_until TO votes_last_credited_at",
     ),
+    (
+        "0006_create_admin_actions",
+        "CREATE TABLE IF NOT EXISTS admin_actions ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "admin_email TEXT NOT NULL, "
+        "action TEXT NOT NULL, "
+        "target_user_id INTEGER, "
+        "details TEXT, "
+        "created_at TEXT NOT NULL)",
+    ),
 ]
 
 
