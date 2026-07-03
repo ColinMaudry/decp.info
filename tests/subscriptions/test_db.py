@@ -326,3 +326,51 @@ def test_trial_to_active_does_not_reset_then_grants_two(users_db_path):
     db.update_from_webhook(handle, "active", _future())
     # fin d'essai : credit_pending accorde les +INITIAL_VOTES initiaux
     assert db.credit_pending(uid) == db.INITIAL_VOTES
+
+
+def test_list_by_user_returns_most_recent_first(users_db_path):
+    uid = _make_user()
+    db.init_schema()
+    _handle1, sub_id1 = db.create_pending(uid, "cust-1", "simple")
+    _handle2, sub_id2 = db.create_pending(uid, "cust-1", "soutien")
+
+    rows = db.list_by_user(uid)
+
+    assert [r["id"] for r in rows] == [sub_id2, sub_id1]
+
+
+def test_set_status_updates_status(users_db_path):
+    uid = _make_user()
+    db.init_schema()
+    _handle, sub_id = db.create_pending(uid, "cust-1", "simple")
+
+    db.set_status(sub_id, "active")
+
+    row = db.get_current(uid)
+    assert row["status"] == "active"
+
+
+def test_get_subscriber_state_returns_row_after_create_pending(users_db_path):
+    uid = _make_user()
+    db.init_schema()
+    db.create_pending(uid, "cust-1", "simple")
+
+    state = db.get_subscriber_state(uid)
+
+    assert state is not None
+    assert state["user_id"] == uid
+
+
+def test_get_subscriber_state_returns_none_for_unknown_user(users_db_path):
+    db.init_schema()
+    assert db.get_subscriber_state(999999) is None
+
+
+def test_subscription_statuses_constant():
+    assert db.SUBSCRIPTION_STATUSES == (
+        "active",
+        "trial",
+        "cancelled",
+        "expired",
+        "pending",
+    )

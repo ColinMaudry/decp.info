@@ -123,6 +123,27 @@ def get_current(user_id: int) -> sqlite3.Row | None:
     )
 
 
+SUBSCRIPTION_STATUSES = ("active", "trial", "cancelled", "expired", "pending")
+
+
+def list_by_user(user_id: int) -> list[sqlite3.Row]:
+    return (
+        get_conn()
+        .execute(
+            "SELECT * FROM subscriptions WHERE user_id = ? ORDER BY id DESC",
+            (user_id,),
+        )
+        .fetchall()
+    )
+
+
+def set_status(subscription_id: int, status: str) -> None:
+    get_conn().execute(
+        "UPDATE subscriptions SET status = ?, updated_at = ? WHERE id = ?",
+        (status, _now(), subscription_id),
+    )
+
+
 def get_by_handle(subscription_handle: str) -> sqlite3.Row | None:
     return (
         get_conn()
@@ -208,6 +229,10 @@ def _get_state(user_id: int) -> sqlite3.Row | None:
         .execute("SELECT * FROM subscriber_state WHERE user_id = ?", (user_id,))
         .fetchone()
     )
+
+
+def get_subscriber_state(user_id: int) -> sqlite3.Row | None:
+    return _get_state(user_id)
 
 
 def freeze_votes_cursor(user_id: int) -> None:
