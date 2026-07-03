@@ -407,6 +407,46 @@ def get_duplicate_matrix() -> dcc.Graph:
     return dcc.Graph(figure=fig)
 
 
+ORG_COLORS = {
+    "acheteur": "#E69F00",  # orange
+    "titulaire": "#56B4E9",  # bleu ciel
+}
+
+
+def build_org_markers(
+    lff: pl.LazyFrame, org_type: Literal["acheteur", "titulaire"]
+) -> list[dict]:
+    """Regroupe les marchés par point géographique pour un type d'organisme.
+
+    Renvoie [] (sans exception) si les colonnes longitude/latitude de ce
+    type sont absentes du LazyFrame (ex: tests/test.parquet).
+    """
+    lon_col = f"{org_type}_longitude"
+    lat_col = f"{org_type}_latitude"
+    nom_col = f"{org_type}_nom"
+
+    available = set(lff.collect_schema().names())
+    if lon_col not in available or lat_col not in available:
+        return []
+
+    lff_org = (
+        lff.select("uid", lon_col, lat_col, nom_col)
+        .group_by(lon_col, lat_col, nom_col)
+        .len("nb_marches")
+        .filter(pl.col(lat_col).is_not_null() & pl.col(lon_col).is_not_null())
+    )
+
+    return [
+        {
+            "lat": row[lat_col],
+            "lon": row[lon_col],
+            "tooltip": f"{row[nom_col]} ({row['nb_marches']} marchés)",
+            "marker_color": ORG_COLORS[org_type],
+        }
+        for row in lff_org.collect().to_dicts()
+    ]
+
+
 def get_geographic_maps(dff: pl.DataFrame) -> list[dbc.Col] | list:
     """
     Génère les cartes géographiques pour l'hexagone et les DOM-TOM.
@@ -489,43 +529,7 @@ def get_geographic_maps(dff: pl.DataFrame) -> list[dbc.Col] | list:
         else:
             _map_type: str = "clusters"
             for org_type in ["acheteur", "titulaire"]:
-                lff_org = (
-                    lff.select(
-                        "uid",
-                        f"{org_type}_longitude",
-                        f"{org_type}_latitude",
-                        f"{org_type}_nom",
-                    )
-                    .group_by(
-                        f"{org_type}_longitude",
-                        f"{org_type}_latitude",
-                        f"{org_type}_nom",
-                    )
-                    .len("nb_marches")
-                    .filter(
-                        pl.col(f"{org_type}_latitude").is_not_null()
-                        & pl.col(f"{org_type}_longitude").is_not_null()
-                    )
-                )
-
-                markers = []
-
-                # Couleurs accessibles (Okabe-Ito)
-                colors = {
-                    "acheteur": "#E69F00",  # orange
-                    "titulaire": "#56B4E9",  # bleu ciel
-                }
-
-                for row in lff_org.collect().to_dicts():
-                    markers.append(
-                        {
-                            "lat": row[f"{org_type}_latitude"],
-                            "lon": row[f"{org_type}_longitude"],
-                            "tooltip": f"{row[f'{org_type}_nom']} ({row['nb_marches']} marchés)",
-                            "marker_color": colors[org_type],
-                        }
-                    )
-                dfs.append(markers)
+                dfs.append(build_org_markers(lff, org_type))
 
         return dfs, _map_type
 
@@ -592,8 +596,8 @@ def make_clusters_map(region: dict) -> dl.Map:
     region_titulaires = region["data"][1]
 
     # Couleurs
-    color_acheteur = region_acheteurs[0]["marker_color"]
-    color_titulaire = region_titulaires[0]["marker_color"]
+    color_acheteur = ORG_COLORS["acheteur"]
+    color_titulaire = ORG_COLORS["titulaire"]
 
     acheteurs_geojson_data = dlx.dicts_to_geojson(region_acheteurs)
     titulaires_geojson_data = dlx.dicts_to_geojson(region_titulaires)

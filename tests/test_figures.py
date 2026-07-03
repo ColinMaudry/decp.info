@@ -165,3 +165,74 @@ def test_get_considerations_card_content_returns_three_progress_bars():
     # Bar 3 : env parmi renseignés (u2 != "Sans objet" -> 1/2 = 50%, vert)
     assert bar_env.value == 50
     assert bar_env.color == "#117733"
+
+
+def test_build_org_markers_groups_and_counts():
+    from src.figures import build_org_markers
+
+    lff = pl.LazyFrame(
+        [
+            {
+                "uid": "u1",
+                "acheteur_longitude": 2.35,
+                "acheteur_latitude": 48.85,
+                "acheteur_nom": "ACHETEUR A",
+            },
+            {
+                "uid": "u2",
+                "acheteur_longitude": 2.35,
+                "acheteur_latitude": 48.85,
+                "acheteur_nom": "ACHETEUR A",
+            },
+            {
+                "uid": "u3",
+                "acheteur_longitude": -1.68,
+                "acheteur_latitude": 48.11,
+                "acheteur_nom": "ACHETEUR B",
+            },
+        ]
+    )
+
+    markers = build_org_markers(lff, "acheteur")
+
+    assert len(markers) == 2
+    marker_a = next(m for m in markers if m["tooltip"].startswith("ACHETEUR A"))
+    assert marker_a["tooltip"] == "ACHETEUR A (2 marchés)"
+    assert marker_a["lat"] == 48.85
+    assert marker_a["lon"] == 2.35
+    assert marker_a["marker_color"] == "#E69F00"
+
+
+def test_build_org_markers_filters_null_coordinates():
+    from src.figures import build_org_markers
+
+    lff = pl.LazyFrame(
+        [
+            {
+                "uid": "u1",
+                "acheteur_longitude": None,
+                "acheteur_latitude": None,
+                "acheteur_nom": "ACHETEUR A",
+            },
+            {
+                "uid": "u2",
+                "acheteur_longitude": 2.35,
+                "acheteur_latitude": 48.85,
+                "acheteur_nom": "ACHETEUR B",
+            },
+        ]
+    )
+
+    markers = build_org_markers(lff, "acheteur")
+
+    assert len(markers) == 1
+    assert markers[0]["tooltip"] == "ACHETEUR B (1 marchés)"
+
+
+def test_build_org_markers_missing_columns_returns_empty():
+    from src.figures import build_org_markers
+
+    lff = pl.LazyFrame([{"uid": "u1", "acheteur_nom": "ACHETEUR A"}])
+
+    assert build_org_markers(lff, "acheteur") == []
+    assert build_org_markers(lff, "titulaire") == []
