@@ -13,7 +13,9 @@ def _setup():
 def test_log_action_then_list_actions_returns_it(users_db_path):
     _setup()
 
-    admin_db.log_action("admin@ex.fr", "subscription_status_change", 42, "active → cancelled")
+    admin_db.log_action(
+        "admin@ex.fr", "subscription_status_change", 42, "active → cancelled"
+    )
 
     rows = admin_db.list_actions()
     assert len(rows) == 1
