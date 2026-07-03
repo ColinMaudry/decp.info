@@ -637,6 +637,68 @@ def make_clusters_map(region: dict) -> dl.Map:
     return leaflet_map
 
 
+def get_org_location_map(
+    dff: pl.DataFrame,
+    home_type: Literal["acheteur", "titulaire"],
+    map_id: str,
+) -> dl.Map:
+    """Carte cluster (dash-leaflet) d'un organisme et de sa contrepartie.
+
+    Affiche les marchés de `home_type` (fiche /acheteur ou /titulaire
+    consultée) ainsi que ceux de son type complémentaire, clusterisés et
+    colorés comme sur /observatoire. Cadrage automatique (fitBounds) sur
+    l'ensemble des points ; repli sur une vue France fixe si aucun point
+    n'est disponible.
+    """
+    lff = dff.lazy()
+    markers_by_type = {
+        "acheteur": build_org_markers(lff, "acheteur"),
+        "titulaire": build_org_markers(lff, "titulaire"),
+    }
+
+    ns = Namespace("dash_clientside", "leaflet")
+    point_to_layer = ns("pointToLayer")
+    cluster_to_layer = ns("clusterToLayer")
+
+    layers: list = [dl.TileLayer()]
+    all_points: list[tuple[float, float]] = []
+    # Ordre fixe (titulaire puis acheteur) pour que l'organisme consulté
+    # soit toujours peint au-dessus de sa contrepartie, comme sur /observatoire.
+    for org_type in ("titulaire", "acheteur"):
+        markers = markers_by_type[org_type]
+        if not markers:
+            continue
+        all_points.extend((m["lat"], m["lon"]) for m in markers)
+        layers.append(
+            dl.GeoJSON(
+                data=dlx.dicts_to_geojson(markers),
+                cluster=True,
+                zoomToBoundsOnClick=True,
+                pointToLayer=point_to_layer,
+                clusterToLayer=cluster_to_layer,
+                id=f"{map_id}-{org_type}",
+                options={"fillColor": ORG_COLORS[org_type]},
+            )
+        )
+
+    map_kwargs: dict = {}
+    if all_points:
+        lats = [lat for lat, _ in all_points]
+        lons = [lon for _, lon in all_points]
+        map_kwargs["bounds"] = [[min(lats), min(lons)], [max(lats), max(lons)]]
+        map_kwargs["boundsOptions"] = {"padding": [30, 30], "maxZoom": 12}
+    else:
+        map_kwargs["center"] = [46.6, 2.2]
+        map_kwargs["zoom"] = 5
+
+    return dl.Map(
+        layers,
+        style={"width": "100%", "height": "300px"},
+        id=map_id,
+        **map_kwargs,
+    )
+
+
 def get_distance_histogram(lff: pl.LazyFrame) -> dcc.Graph:
     if "titulaire_distance" not in lff.collect_schema().names():
         dff = pl.DataFrame({"titulaire_distance": pl.Series([], dtype=pl.Float64)})

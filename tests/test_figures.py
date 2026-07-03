@@ -236,3 +236,47 @@ def test_build_org_markers_missing_columns_returns_empty():
 
     assert build_org_markers(lff, "acheteur") == []
     assert build_org_markers(lff, "titulaire") == []
+
+
+def test_get_org_location_map_bounds_cover_home_and_counterpart():
+    import dash_leaflet as dl
+
+    from src.figures import get_org_location_map
+
+    dff = pl.DataFrame(
+        [
+            {
+                "uid": "u1",
+                "acheteur_longitude": 2.35,
+                "acheteur_latitude": 48.85,
+                "acheteur_nom": "ACHETEUR A",
+                "titulaire_longitude": -1.68,
+                "titulaire_latitude": 48.11,
+                "titulaire_nom": "TITULAIRE A",
+            }
+        ]
+    )
+
+    leaflet_map = get_org_location_map(dff, "acheteur", "test-map")
+
+    assert isinstance(leaflet_map, dl.Map)
+    assert leaflet_map.bounds == [[48.11, -1.68], [48.85, 2.35]]
+
+    geojson_layers = [c for c in leaflet_map.children if isinstance(c, dl.GeoJSON)]
+    assert {layer.id for layer in geojson_layers} == {
+        "test-map-acheteur",
+        "test-map-titulaire",
+    }
+
+
+def test_get_org_location_map_defaults_to_france_view_without_coordinates():
+    from src.figures import get_org_location_map
+
+    dff = pl.DataFrame(
+        [{"uid": "u1", "acheteur_nom": "ACHETEUR A", "titulaire_nom": "TITULAIRE A"}]
+    )
+
+    leaflet_map = get_org_location_map(dff, "acheteur", "test-map")
+
+    assert leaflet_map.center == [46.6, 2.2]
+    assert leaflet_map.zoom == 5
