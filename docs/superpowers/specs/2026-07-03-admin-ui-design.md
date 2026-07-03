@@ -1,7 +1,9 @@
 # Panneau admin interne (`/admin`)
 
 Date : 2026-07-03
-Statut : design validé
+Statut : **remplacé** — voir [2026-07-03-admin-table-editor-design.md](2026-07-03-admin-table-editor-design.md).
+Implémenté (9 tâches, revue finale approuvée) mais jamais mergé sur `main` ;
+abandonné avant fusion au profit d'un éditeur de tables générique.
 
 ## Contexte
 
