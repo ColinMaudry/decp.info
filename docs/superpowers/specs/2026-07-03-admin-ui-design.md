@@ -146,12 +146,12 @@ def list_actions(limit: int = 200) -> list[sqlite3.Row]: ...
 ### `/admin` (liste)
 
 - Garde d'accès en tête de `layout()`.
-- `dash_table.DataTable(filter_action="native", sort_action="native", ...)`
-  alimenté par `list_users()` — filtrage/tri par colonne entièrement côté
-  navigateur (pas de callback serveur), à la différence de `/tableau` dont le
-  `filter_action="custom"` (`src/pages/tableau.py:74`) n'existe que pour
-  déléguer le filtrage à DuckDB sur ~1,5M lignes ; ici quelques centaines de
-  lignes au plus, le mode natif suffit.
+- `dash_table.DataTable(filter_action="native", sort_action="native", page_action="native", page_size=20, ...)` alimenté par `list_users()` —
+  filtrage/tri/pagination entièrement côté navigateur (pas de callback
+  serveur), à la différence de `/tableau` dont le `filter_action="custom"`
+  (`src/pages/tableau.py:74`) n'existe que pour déléguer le filtrage à DuckDB
+  sur ~1,5M lignes ; ici quelques centaines de lignes au plus, le mode natif
+  suffit pour les trois (20 lignes par page).
 - Colonnes : email, email vérifié, plan courant, statut courant, créé le.
 - Lien "Voir" par ligne vers `/admin/user/<id>`.
 - Lien vers `/admin/journal` dans l'en-tête de page.
@@ -232,5 +232,7 @@ Nouveau dossier `tests/admin/`, calqué sur les conventions existantes :
 - Plusieurs administrateurs (`ADMIN_EMAIL` unique pour l'instant — passer à
   une liste serait un changement d'une ligne dans `is_admin()` si besoin
   futur).
-- Pagination de `/admin` et `/admin/journal` au-delà des limites fixes
-  (1000 users, 200 actions) — à revoir si le volume le justifie.
+- Pagination de `/admin/journal` (reste une liste plate limitée à 200 lignes) ;
+  et pagination de `/admin` au-delà de la limite fixe de `list_users()`
+  (1000 users) — la pagination native ne pagine que les lignes déjà chargées,
+  pas la requête SQL ; à revoir si le volume le justifie.
