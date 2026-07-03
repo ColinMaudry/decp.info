@@ -18,9 +18,9 @@ from src.db import aggregate_marches, count_marches, query_marches, schema
 from src.figures import (
     DataTable,
     get_distance_histogram,
+    get_org_location_map,
     get_top_org_table,
     make_column_picker,
-    point_on_map,
 )
 from src.utils.data import DF_TITULAIRES, get_annuaire_data, get_departement_region
 from src.utils.frontend import get_button_properties
@@ -279,7 +279,6 @@ layout = [
     Output(component_id="titulaire_siret", component_property="children"),
     Output(component_id="titulaire_nom", component_property="children"),
     Output(component_id="titulaire_commune", component_property="children"),
-    Output(component_id="titulaire_map", component_property="children"),
     Output(component_id="titulaire_departement", component_property="children"),
     Output(component_id="titulaire_region", component_property="children"),
     Output(component_id="titulaire_lien_annuaire", component_property="href"),
@@ -302,16 +301,6 @@ def update_titulaire_infos(url):
     if data_etablissement:
         data_etablissement = data_etablissement[0]
 
-        # Extraction du code département à partir du code postal
-        code_postal = data_etablissement.get("code_postal", "")
-        departement_code = code_postal[:2] if code_postal else None
-
-        # Création de la carte avec le code département pour un centrage approprié
-        titulaire_map = point_on_map(
-            data_etablissement["latitude"],
-            data_etablissement["longitude"],
-            departement_code,
-        )
         code_departement, nom_departement, nom_region = get_departement_region(
             data_etablissement["code_postal"]
         )
@@ -323,7 +312,6 @@ def update_titulaire_infos(url):
         libelle_commune = data_etablissement["libelle_commune"]
 
     else:
-        titulaire_map = html.Div()
         code_departement, nom_departement, nom_region = "", "", ""
         departement = ""
         lien_annuaire = ""
@@ -336,12 +324,35 @@ def update_titulaire_infos(url):
         titulaire_siret,
         raison_sociale,
         libelle_commune,
-        titulaire_map,
         departement,
         nom_region,
         lien_annuaire,
         activite_libelle,
     )
+
+
+@callback(
+    Output(component_id="titulaire_map", component_property="children"),
+    Input(component_id="titulaire_url", component_property="pathname"),
+    Input(component_id="titulaire_year", component_property="value"),
+)
+def update_titulaire_map(pathname, titulaire_year):
+    where_sql, params = _titulaire_scope(pathname, titulaire_year)
+    geo_columns = [
+        col
+        for col in [
+            "uid",
+            "acheteur_longitude",
+            "acheteur_latitude",
+            "acheteur_nom",
+            "titulaire_longitude",
+            "titulaire_latitude",
+            "titulaire_nom",
+        ]
+        if col in schema.names()
+    ]
+    dff = query_marches(where_sql, params, columns=geo_columns)
+    return get_org_location_map(dff, "titulaire", "titulaire_map_leaflet")
 
 
 @callback(
