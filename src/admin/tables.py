@@ -144,6 +144,10 @@ def find_changed_cell(
 ) -> tuple[int, str, object, object] | None:
     if data_previous is None or len(data) != len(data_previous):
         return None
+    if not data or not data_previous:
+        return None
+    if set(data[0].keys()) != set(data_previous[0].keys()):
+        return None
     for i, (new_row, old_row) in enumerate(zip(data, data_previous)):
         for col, new_val in new_row.items():
             old_val = old_row.get(col)

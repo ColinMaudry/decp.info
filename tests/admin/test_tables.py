@@ -99,6 +99,16 @@ def test_find_changed_cell_returns_none_when_identical():
     assert tables.find_changed_cell(data, data_previous) is None
 
 
+def test_find_changed_cell_returns_none_when_schemas_differ():
+    # Mimics switching from "users" to "admin_actions" mid-callback: the two
+    # tables' row lists happen to have the same length but different
+    # columns, so this must not be mistaken for a genuine cell edit.
+    data = [{"id": 1, "email": "a@ex.fr"}]
+    data_previous = [{"id": 1, "admin_email": "x@ex.fr"}]
+
+    assert tables.find_changed_cell(data, data_previous) is None
+
+
 def test_find_changed_cell_returns_none_when_previous_is_none():
     assert tables.find_changed_cell([{"id": 1}], None) is None
 
