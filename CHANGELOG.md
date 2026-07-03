@@ -1,9 +1,36 @@
 ### 3.0.0
 
-- Comptes utilisateurs : inscription avec vérification d'email, connexion, réinitialisation de mot de passe, page compte ([#73](https://github.com/ColinMaudry/colibre/issues/73))
-- Sauvegarde régulière de la base de données des utilisateurs ([#89](https://github.com/ColinMaudry/colibre/issues/89))
-- Ajout des codes et libellés NAF des titulaires
-- Affichage de l'activité (NAF) des titulaires sur leur page /titulaire
+**Fonctionnalités par abonnement**
+
+- Abonnement payant à colibre : période d'essai gratuite, souscription et gestion du moyen de paiement, résiliation, historique de facturation ([#90](https://github.com/ColinMaudry/colibre/issues/90))
+- Sauvegarde de vues personnalisées (filtres, tris, colonnes) dans la page Tableau, réservée aux abonné·es ([#95](https://github.com/ColinMaudry/colibre/issues/95))
+- Vote pour prioriser les fonctionnalités de la roadmap, réservé aux abonné·es une fois leur période d'essai terminée, avec une page roadmap publique en lecture seule ([#94](https://github.com/ColinMaudry/colibre/issues/94))
+
+**Autres améliorations**
+
+- Comptes utilisateurs : inscription avec vérification d'email, connexion (email/mot de passe ou LinkedIn), réinitialisation de mot de passe, gestion du compte ([#73](https://github.com/ColinMaudry/colibre/issues/73), [#88](https://github.com/ColinMaudry/colibre/issues/88))
+- Nouvel espace "Mon compte" avec navigation par sections
+- Sauvegarde régulière et chiffrée de la base des utilisateurs ([#89](https://github.com/ColinMaudry/colibre/issues/89))
+- Ajout des codes et libellés NAF des titulaires, affichés sur leur page /titulaire
+- Scroll horizontal ergonomique et en-têtes de colonnes collants dans la page Tableau ([#82](https://github.com/ColinMaudry/colibre/issues/82))
+- Export Excel mis en forme (styles) ([#83](https://github.com/ColinMaudry/colibre/issues/83))
+- Réduction du nombre de colonnes affichées par défaut et ajout de la colonne "Marché" dans la page Tableau ([#84](https://github.com/ColinMaudry/colibre/issues/84))
+- Barre d'outils de la page Tableau plus compacte, avec légende d'aide
+- Refonte et mise en page pleine largeur de la page À propos
+- Ajout des conditions générales d'utilisation (CGU) ([#93](https://github.com/ColinMaudry/colibre/issues/93))
+- Amélioration du référencement (sitemaps acheteurs/titulaires)
+- Nouvelle page d'erreur personnalisée (500)
+- Amélioration des performances des pages acheteur et titulaire
+- decp.info devient **colibre** : nouveau nom, nouvelles icônes ([#57](https://github.com/ColinMaudry/colibre/issues/57))
+
+**Bugs résolus**
+
+- Redirection Frisbii corrigée après l'ajout d'un moyen de paiement lors du premier abonnement
+- Un abonnement en échec ne bloque plus une nouvelle tentative de réabonnement
+- Meilleure gestion de l'affichage d'un abonnement expiré
+- Correction de l'affichage du nombre de jours d'essai restants
+- Correction d'une erreur lors du renommage d'une vue sauvegardée, avec un meilleur retour visuel
+- Le champ de filtrage n'apparaît plus sur la colonne "Marché" (non filtrable)
 
 ##### 2.8.1 (25 juin 2026)
 
