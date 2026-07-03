@@ -1,3 +1,4 @@
+import math
 from datetime import datetime
 from typing import Literal
 
@@ -564,6 +565,53 @@ def make_clusters_map(region: dict) -> dl.Map:
     return leaflet_map
 
 
+_MERCATOR_TILE_SIZE = 256
+
+
+def _mercator_y(lat: float) -> float:
+    lat_rad = math.radians(lat)
+    return math.log(math.tan(math.pi / 4 + lat_rad / 2)) / (2 * math.pi)
+
+
+def bounds_to_center_zoom(
+    min_lat: float,
+    min_lon: float,
+    max_lat: float,
+    max_lon: float,
+    container_width_px: float = 350,
+    container_height_px: float = 300,
+    padding_px: float = 30,
+    max_zoom: int = 12,
+) -> tuple[list[float], int]:
+    """Calcule un centre et un niveau de zoom (projection Web Mercator) pour
+    cadrer une bounding box dans un conteneur de taille donnée.
+
+    Approximation côté serveur d'un fitBounds Leaflet : la taille réelle du
+    conteneur navigateur n'est pas connue côté Python, `container_width_px`
+    est une estimation raisonnable (la carte occupe une colonne étroite de
+    la page). Le résultat n'est donc pas pixel-perfect, contrairement à un
+    fitBounds() exécuté côté client, mais évite d'utiliser la prop `bounds`
+    de dash-leaflet (bug connu : exception au premier montage du composant).
+    """
+    avail_w = max(container_width_px - 2 * padding_px, 1)
+    avail_h = max(container_height_px - 2 * padding_px, 1)
+
+    dx_norm = (max_lon - min_lon) / 360
+    dy_norm = abs(_mercator_y(max_lat) - _mercator_y(min_lat))
+
+    zoom_candidates = []
+    if dx_norm > 0:
+        zoom_candidates.append(math.log2(avail_w / (_MERCATOR_TILE_SIZE * dx_norm)))
+    if dy_norm > 0:
+        zoom_candidates.append(math.log2(avail_h / (_MERCATOR_TILE_SIZE * dy_norm)))
+
+    zoom = math.floor(min(zoom_candidates)) if zoom_candidates else max_zoom
+    zoom = max(0, min(zoom, max_zoom))
+
+    center = [(min_lat + max_lat) / 2, (min_lon + max_lon) / 2]
+    return center, zoom
+
+
 def get_org_location_map(
     dff: pl.DataFrame,
     home_type: Literal["acheteur", "titulaire"],
@@ -573,9 +621,11 @@ def get_org_location_map(
 
     Affiche les marchés de `home_type` (fiche /acheteur ou /titulaire
     consultée) ainsi que ceux de son type complémentaire, clusterisés et
-    colorés comme sur /observatoire. Cadrage automatique (fitBounds) sur
-    l'ensemble des points ; repli sur une vue France fixe si aucun point
-    n'est disponible.
+    colorés comme sur /observatoire. Cadrage calculé côté serveur
+    (`bounds_to_center_zoom`) sur l'ensemble des points ; repli sur une vue
+    France fixe si aucun point n'est disponible. Un center/zoom statiques
+    sont utilisés plutôt que la prop `bounds` de dash-leaflet, qui lève une
+    exception au premier montage du composant (bug connu de la librairie).
     """
     lff = dff.lazy()
     markers_by_type = {
@@ -611,21 +661,19 @@ def get_org_location_map(
             )
         )
 
-    map_kwargs: dict = {}
     if all_points:
         lats = [lat for lat, _ in all_points]
         lons = [lon for _, lon in all_points]
-        map_kwargs["bounds"] = [[min(lats), min(lons)], [max(lats), max(lons)]]
-        map_kwargs["boundsOptions"] = {"padding": [30, 30], "maxZoom": 12}
+        center, zoom = bounds_to_center_zoom(min(lats), min(lons), max(lats), max(lons))
     else:
-        map_kwargs["center"] = [46.6, 2.2]
-        map_kwargs["zoom"] = 5
+        center, zoom = [46.6, 2.2], 5
 
     return dl.Map(
         layers,
+        center=center,
+        zoom=zoom,
         style={"width": "100%", "height": "300px"},
         id=map_id,
-        **map_kwargs,
     )
 
 

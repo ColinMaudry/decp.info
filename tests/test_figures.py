@@ -1,4 +1,5 @@
 import polars as pl
+import pytest
 
 
 def _make_lff(rows):
@@ -254,7 +255,7 @@ def _org_map_dff():
     )
 
 
-def test_get_org_location_map_bounds_cover_home_and_counterpart():
+def test_get_org_location_map_centers_on_home_and_counterpart():
     import dash_leaflet as dl
 
     from src.figures import get_org_location_map
@@ -262,7 +263,9 @@ def test_get_org_location_map_bounds_cover_home_and_counterpart():
     leaflet_map = get_org_location_map(_org_map_dff(), "acheteur", "test-map")
 
     assert isinstance(leaflet_map, dl.Map)
-    assert leaflet_map.bounds == [[48.11, -1.68], [48.85, 2.35]]
+    # Centre = milieu du point acheteur (2.35, 48.85) et titulaire (-1.68, 48.11).
+    assert leaflet_map.center == pytest.approx([48.48, 0.335])
+    assert leaflet_map.zoom == 6
 
     geojson_layers = [c for c in leaflet_map.children if isinstance(c, dl.GeoJSON)]
     assert {layer.id for layer in geojson_layers} == {
@@ -320,3 +323,29 @@ def test_get_org_location_map_defaults_to_france_view_without_coordinates():
 
     assert leaflet_map.center == [46.6, 2.2]
     assert leaflet_map.zoom == 5
+
+
+def test_bounds_to_center_zoom_single_point_uses_max_zoom():
+    from src.figures import bounds_to_center_zoom
+
+    center, zoom = bounds_to_center_zoom(48.85, 2.35, 48.85, 2.35, max_zoom=12)
+
+    assert center == [48.85, 2.35]
+    assert zoom == 12
+
+
+def test_bounds_to_center_zoom_wider_bounds_give_smaller_zoom():
+    from src.figures import bounds_to_center_zoom
+
+    _, zoom_narrow = bounds_to_center_zoom(48.11, -1.68, 48.85, 2.35)
+    _, zoom_wide = bounds_to_center_zoom(16.23, -61.55, 51.0, 8.0)
+
+    assert zoom_wide < zoom_narrow
+
+
+def test_bounds_to_center_zoom_center_is_bbox_midpoint():
+    from src.figures import bounds_to_center_zoom
+
+    center, _ = bounds_to_center_zoom(40.0, 0.0, 50.0, 4.0)
+
+    assert center == [45.0, 2.0]
