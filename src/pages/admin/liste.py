@@ -1,10 +1,21 @@
 import dash_bootstrap_components as dbc
-from dash import dash_table, html, register_page
+from dash import (
+    Input,
+    Output,
+    State,
+    callback,
+    ctx,
+    dash_table,
+    html,
+    no_update,
+    register_page,
+)
+from flask_login import current_user
 
+from src.admin.db import log_action
 from src.admin.guard import is_admin
-from src.auth.db import list_users
-from src.pages.admin._shell import admin_nav, not_admin
-from src.subscriptions.db import get_current
+from src.admin.tables import TABLES, find_changed_cell, get_rows, set_cell
+from src.pages.admin._shell import not_admin
 
 register_page(
     __name__,
@@ -14,22 +25,28 @@ register_page(
     description="Panneau d'administration interne.",
 )
 
+DEFAULT_TABLE = "users"
 
-def _rows():
-    rows = []
-    for user in list_users():
-        sub = get_current(user["id"])
-        rows.append(
-            {
-                "email": user["email"],
-                "vérifié": "oui" if user["email_verified"] else "non",
-                "plan": sub["plan"] if sub else "",
-                "statut": sub["status"] if sub else "",
-                "créé le": user["created_at"],
-                "voir": f"[Voir](/admin/user/{user['id']})",
-            }
-        )
-    return rows
+
+def _columns_for(table: str):
+    cfg = TABLES[table]
+    return [
+        {
+            "name": col,
+            "id": col,
+            "editable": col in cfg.editable_columns,
+            **({"presentation": "dropdown"} if col in cfg.dropdowns else {}),
+        }
+        for col in cfg.columns
+    ]
+
+
+def _dropdown_for(table: str):
+    cfg = TABLES[table]
+    return {
+        col: {"options": [{"label": v, "value": v} for v in values]}
+        for col, values in cfg.dropdowns.items()
+    }
 
 
 def layout(**_):
@@ -38,25 +55,76 @@ def layout(**_):
     return dbc.Container(
         [
             html.H2("Panneau admin"),
-            admin_nav("liste"),
+            html.Div(id="admin-alerts"),
+            dbc.Select(
+                id="admin-table-select",
+                options=[{"label": name, "value": name} for name in TABLES],
+                value=DEFAULT_TABLE,
+                className="mb-3",
+                style={"maxWidth": "300px"},
+            ),
             dash_table.DataTable(
-                id="admin-users-table",
-                columns=[
-                    {"name": "Email", "id": "email"},
-                    {"name": "Vérifié", "id": "vérifié"},
-                    {"name": "Plan", "id": "plan"},
-                    {"name": "Statut", "id": "statut"},
-                    {"name": "Créé le", "id": "créé le"},
-                    {"name": "", "id": "voir", "presentation": "markdown"},
-                ],
-                data=_rows(),
+                id="admin-table",
+                columns=_columns_for(DEFAULT_TABLE),
+                data=get_rows(DEFAULT_TABLE),
+                dropdown=_dropdown_for(DEFAULT_TABLE),
+                editable=True,
                 filter_action="native",
                 sort_action="native",
                 page_action="native",
                 page_size=20,
-                markdown_options={"link_target": "_self"},
             ),
         ],
         fluid=True,
         className="py-4",
+    )
+
+
+@callback(
+    Output("admin-table", "data"),
+    Output("admin-table", "columns"),
+    Output("admin-table", "dropdown"),
+    Output("admin-alerts", "children"),
+    Input("admin-table-select", "value"),
+    Input("admin-table", "data"),
+    State("admin-table", "data_previous"),
+    prevent_initial_call=True,
+)
+def _update_table(selected_table, data, data_previous):
+    if ctx.triggered_id == "admin-table-select":
+        return (
+            get_rows(selected_table),
+            _columns_for(selected_table),
+            _dropdown_for(selected_table),
+            None,
+        )
+
+    change = find_changed_cell(data, data_previous)
+    if change is None:
+        return no_update, no_update, no_update, None
+
+    row_index, column, old_value, new_value = change
+    pk_value = data[row_index][TABLES[selected_table].pk]
+    try:
+        set_cell(selected_table, pk_value, column, new_value)
+    except ValueError as exc:
+        return (
+            no_update,
+            no_update,
+            no_update,
+            dbc.Alert(str(exc), color="danger", dismissable=True),
+        )
+
+    target_user_id = TABLES[selected_table].target_user_id(data[row_index])
+    log_action(
+        current_user.email,
+        f"edit_{selected_table}",
+        target_user_id,
+        f"{column}: {old_value!r} → {new_value!r}",
+    )
+    return (
+        no_update,
+        no_update,
+        no_update,
+        dbc.Alert("Modification enregistrée.", color="success", dismissable=True),
     )

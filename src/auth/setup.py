@@ -48,10 +48,6 @@ def init_auth(app: Flask) -> None:
 
     app.register_blueprint(auth_bp)
 
-    from src.admin.routes import admin_bp
-
-    app.register_blueprint(admin_bp)
-
     init_oauth(app)
 
     _csrf = CSRFProtect(app)
