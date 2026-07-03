@@ -1,3 +1,4 @@
+import sqlite3
 from dataclasses import dataclass
 from typing import Callable
 
@@ -134,9 +135,19 @@ def set_cell(table: str, pk_value, column: str, value) -> None:
         raise ValueError(f"Table inconnue : {table}")
     cfg = TABLES[table]
     coerced = _coerce_value(table, column, value)
-    get_conn().execute(
-        f"UPDATE {table} SET {column} = ? WHERE {cfg.pk} = ?", (coerced, pk_value)
-    )
+    try:
+        cursor = get_conn().execute(
+            f"UPDATE {table} SET {column} = ? WHERE {cfg.pk} = ?", (coerced, pk_value)
+        )
+    except sqlite3.IntegrityError as exc:
+        raise ValueError(
+            f"Écriture refusée pour {column} (contrainte violée) : {value!r}"
+        ) from exc
+    if cursor.rowcount == 0:
+        raise ValueError(
+            f"Ligne introuvable (table={table}, {cfg.pk}={pk_value!r}) — "
+            "probablement supprimée entre-temps."
+        )
 
 
 def find_changed_cell(

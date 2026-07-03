@@ -68,6 +68,28 @@ def test_set_cell_writes_valid_value(users_db_path):
     assert rows[0]["siret"] == "12345678900011"
 
 
+def test_set_cell_raises_valueerror_on_unique_constraint_violation(users_db_path):
+    from src.auth import db as auth_db
+
+    auth_db.init_schema()
+    auth_db.create_user("first@ex.fr", "hash")
+    second_uid = auth_db.create_user("second@ex.fr", "hash")
+
+    with pytest.raises(ValueError):
+        tables.set_cell("users", second_uid, "email", "first@ex.fr")
+
+
+def test_set_cell_raises_valueerror_when_row_missing(users_db_path):
+    from src.auth import db as auth_db
+
+    auth_db.init_schema()
+    uid = auth_db.create_user("a@ex.fr", "hash")
+    auth_db.delete_user(uid)
+
+    with pytest.raises(ValueError):
+        tables.set_cell("users", uid, "email", "new@ex.fr")
+
+
 def test_set_cell_coerces_numeric_type(users_db_path):
     from src.auth import db as auth_db
     from src.subscriptions import db as sub_db
