@@ -589,8 +589,8 @@ def get_org_location_map(
 
     layers: list = [dl.TileLayer()]
     all_points: list[tuple[float, float]] = []
-    # Ordre fixe (titulaire puis acheteur) pour que l'organisme consulté
-    # soit toujours peint au-dessus de sa contrepartie, comme sur /observatoire.
+    # Ordre fixe (titulaire puis acheteur), comme sur /observatoire : la
+    # couche acheteur est toujours peinte au-dessus, quel que soit home_type.
     for org_type in ("titulaire", "acheteur"):
         markers = markers_by_type[org_type]
         if not markers:
