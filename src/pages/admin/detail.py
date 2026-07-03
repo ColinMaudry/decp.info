@@ -101,6 +101,7 @@ def _history_section(user_id, current_id):
                 [
                     html.Td([sub["plan"] or "—", badge]),
                     html.Td(sub["status"] or "—"),
+                    html.Td(sub["frisbii_subscription_handle"] or "—"),
                     html.Td(sub["prix_ht"] if sub["prix_ht"] is not None else "—"),
                     html.Td(sub["current_period_end"] or "—"),
                     html.Td(sub["created_at"]),
@@ -119,6 +120,7 @@ def _history_section(user_id, current_id):
                                 for h in (
                                     "Plan",
                                     "Statut",
+                                    "Handle Frisbii",
                                     "Prix HT",
                                     "Fin de période",
                                     "Créé le",
