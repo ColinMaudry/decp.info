@@ -67,6 +67,16 @@ def test_admin_non_admin_gets_404(dash_duo: DashComposite, monkeypatch):
     try:
         dash_duo.start_server(app)
         _login(dash_duo, email)
+        # Confirm login actually succeeded before relying on the admin guard.
+        # A failed login (bad credentials, unverified email, ...) redirects
+        # back to /connexion rather than raising, leaving the session
+        # anonymous — which would also yield a 404 at /admin and make this
+        # test indistinguishable from test_admin_anonymous_gets_404. Since
+        # this user has no subscription, a successful login redirects to
+        # /compte/abonnement (see _post_login_url in src/auth/routes.py).
+        dash_duo.wait_for_text_to_equal("h2", "Abonnement", timeout=8)
+        assert "/connexion" not in dash_duo.driver.current_url
+
         dash_duo.driver.get(dash_duo.server_url + "/admin")
         dash_duo.wait_for_text_to_equal("#admin-404-heading", "404", timeout=8)
     finally:
