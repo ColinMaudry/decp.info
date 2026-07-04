@@ -1,11 +1,13 @@
 import dash_bootstrap_components as dbc
-from dash import Input, Output, State, callback, dcc, html, register_page
+from dash import Input, Output, State, callback, ctx, dcc, html, register_page
 from flask_login import current_user
 
 from src.auth import db as auth_db
 from src.pages._compte_shell import account_guard, account_shell
-from src.pages.a_propos.abonnement import subscription_terms
+from src.pages.a_propos.abonnement import _plan_card, subscription_terms
 from src.subscriptions import client as frisbii_client
+from src.subscriptions import db as sub_db
+from src.subscriptions import plans
 from src.utils.data import get_annuaire_data
 
 register_page(
@@ -23,6 +25,55 @@ def _csrf_input():
     from flask_wtf.csrf import generate_csrf
 
     return dcc.Input(type="hidden", name="csrf_token", value=generate_csrf())
+
+
+def _trial_for(user_id):
+    used = sub_db.has_used_trial(user_id)
+    return lambda key: None if used else plans.trial_days(key)
+
+
+def _selectable_cards(trial_for):
+    cols = []
+    for key in ("simple", "soutien"):
+        meta = plans.plan_meta(key)
+        if not meta:
+            continue
+        cols.append(
+            dbc.Col(
+                html.Div(
+                    _plan_card(meta, trial_for(key)),
+                    id=f"plan-card-{key}",
+                    n_clicks=0,
+                    className="plan-selectable",
+                ),
+                md=6,
+            )
+        )
+    return dbc.Row(cols, className="g-4 mb-2")
+
+
+def _selection_state(selected):
+    base = "plan-selectable"
+    return (
+        selected,
+        f"{base} selected" if selected == "simple" else base,
+        f"{base} selected" if selected == "soutien" else base,
+        "d-none",
+    )
+
+
+@callback(
+    Output("inf-plan-hidden", "value"),
+    Output("plan-card-simple", "className"),
+    Output("plan-card-soutien", "className"),
+    Output("inf-plan-invite", "className"),
+    Input("plan-card-simple", "n_clicks"),
+    Input("plan-card-soutien", "n_clicks"),
+    prevent_initial_call=True,
+)
+def _select_plan(_n_simple, _n_soutien):
+    selected = "simple" if ctx.triggered_id == "plan-card-simple" else "soutien"
+    return _selection_state(selected)
 
 
 def _cgu_modal():
@@ -49,10 +100,6 @@ def layout(**query):
     guard = account_guard("/compte/abonnement/mes-infos", require_subscription=False)
     if guard is not None:
         return guard
-
-    plan = query.get("plan", "")
-    if not plan:
-        return dcc.Location(href="/compte/abonnement", id="inf-no-plan-redirect")
 
     prefill: dict = {}
     try:
@@ -229,7 +276,13 @@ def layout(**query):
         action="/subscriptions/subscribe",
         children=[
             _csrf_input(),
-            dcc.Input(type="hidden", name="plan", value=plan),
+            html.Div(
+                "Choisissez votre formule :",
+                id="inf-plan-invite",
+                className="fw-bold mb-2",
+            ),
+            _selectable_cards(_trial_for(current_user.id)),
+            dcc.Input(type="hidden", id="inf-plan-hidden", name="plan", value=""),
             dbc.Row([col1, col2], className="g-4 mb-4"),
             checkboxes,
             html.Button(
@@ -305,9 +358,10 @@ def _lookup_siret(_, siret):
     Output("inf-submit", "disabled"),
     Input("inf-cb-retractation", "value"),
     Input("inf-cb-cgu", "value"),
+    Input("inf-plan-hidden", "value"),
 )
-def _toggle_submit(retractation, cgu):
-    return not (retractation and cgu)
+def _toggle_submit(retractation, cgu, plan):
+    return not (retractation and cgu and plan)
 
 
 @callback(

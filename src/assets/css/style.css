@@ -1010,3 +1010,14 @@ input[type="number"] {
   font-size: 1.1rem;
   color: #ccc;
 }
+
+.plan-selectable {
+  cursor: pointer;
+}
+.plan-selectable .card {
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.plan-selectable.selected .card {
+  background-color: var(--bs-primary-bg-subtle);
+  border-color: var(--bs-primary);
+}
