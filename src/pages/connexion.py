@@ -28,10 +28,13 @@ INFO_MESSAGES = {
 }
 
 
-def linkedin_button():
+def linkedin_button(next_url: str | None = None):
+    href = "/auth/linkedin"
+    if next_url:
+        href += f"?next={next_url}"
     return html.A(
         "Connexion avec LinkedIn",
-        href="/auth/linkedin",
+        href=href,
         className="btn w-100 mb-2",
         style={"backgroundColor": "rgb(10, 102, 194)", "color": "white"},
     )

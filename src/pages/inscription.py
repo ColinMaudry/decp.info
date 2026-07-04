@@ -70,7 +70,7 @@ def layout(error: str | None = None, email: str | None = None, **_):
                 ],
             ),
             html.Div("ou", className="text-center text-muted my-2"),
-            linkedin_button(),
+            linkedin_button("/compte/abonnement/mes-infos"),
             html.Hr(),
             dcc.Link("Déjà un compte ? Se connecter", href="/connexion"),
         ],
