@@ -318,16 +318,21 @@ def get_duplicate_matrix() -> dcc.Graph:
         )
     )
 
+    # Hauteur adaptée au nombre de sources pour que chaque libellé ait sa
+    # propre ligne (sinon Plotly n'affiche qu'un libellé sur deux faute de
+    # place).
+    height = max(1000, 22 * len(y_labels) + 150)
+
     # Update layout: make it wider and taller
     fig.update_layout(
         title="",
         xaxis_title="Sources de données",
         yaxis_title="Sources de données",
-        yaxis=dict(autorange="reversed"),
+        yaxis=dict(autorange="reversed", tickmode="linear", dtick=1),
         xaxis=dict(tickangle=45, tickfont=dict(size=10)),  # Smaller x-tick labels
         coloraxis_colorbar=dict(title="Percentage", tickfont=dict(size=10)),
         width=1000,  # Wider
-        height=1000,  # Taller
+        height=height,
         font=dict(size=11),  # Overall font size
         margin=dict(l=100, r=50, t=80, b=100),  # Add margin for labels
     )
