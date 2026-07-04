@@ -1,23 +1,18 @@
-def test_plan_cards_present_when_no_subscription(monkeypatch):
-    monkeypatch.setenv("FRISBII_PLAN_SIMPLE", "plan_simple")
-    monkeypatch.setenv("FRISBII_PLAN_SOUTIEN", "plan_soutien")
+def test_reabo_button_never_subscribed():
     from src.pages.compte import abonnement as compte_abonnement
 
-    cards = compte_abonnement._plan_cards(trial_for=lambda key: 2)
-    text = str(cards)
-    assert "Abonnement" in text
-    assert "Abonnement de soutien" in text
-    assert "2 jours d'essai gratuit" in text
+    text = str(compte_abonnement._reabo_button(has_used_trial=False))
+    assert "M'abonner" in text
+    assert "Me réabonner" not in text
+    assert "href='/a-propos/abonnement'" in text
 
 
-def test_plan_cards_no_trial_when_trial_used(monkeypatch):
-    monkeypatch.setenv("FRISBII_PLAN_SIMPLE", "plan_simple")
-    monkeypatch.setenv("FRISBII_PLAN_SOUTIEN", "plan_soutien")
+def test_reabo_button_former_subscriber():
     from src.pages.compte import abonnement as compte_abonnement
 
-    text = str(compte_abonnement._plan_cards(trial_used=True, trial_for=lambda key: 2))
-    assert "Sans période d'essai" in text
-    assert "2 jours d'essai gratuit" not in text
+    text = str(compte_abonnement._reabo_button(has_used_trial=True))
+    assert "Me réabonner" in text
+    assert "href='/a-propos/abonnement'" in text
 
 
 def test_active_view_shows_cancel(monkeypatch):
@@ -41,27 +36,6 @@ def test_active_view_trial_banner(monkeypatch):
         "current_period_end": "2099-01-01T00:00:00+00:00",
     }
     assert "Essai gratuit" in str(compte_abonnement._active_view(row))
-
-
-def test_subscribe_buttons_disabled_when_tous_abonnes(monkeypatch):
-    monkeypatch.setenv("FRISBII_PLAN_SIMPLE", "plan_simple")
-    monkeypatch.setenv("FRISBII_PLAN_SOUTIEN", "plan_soutien")
-    monkeypatch.setattr("src.utils.TOUS_ABONNES", True)
-    from src.pages.compte import abonnement as compte_abonnement
-
-    text = str(compte_abonnement._plan_cards(trial_for=lambda key: 2))
-    assert "btn-secondary disabled" in text
-    assert "btn-primary" not in text
-
-
-def test_subscribe_buttons_active_when_flag_off(monkeypatch):
-    monkeypatch.setenv("FRISBII_PLAN_SIMPLE", "plan_simple")
-    monkeypatch.setenv("FRISBII_PLAN_SOUTIEN", "plan_soutien")
-    monkeypatch.setattr("src.utils.TOUS_ABONNES", False)
-    from src.pages.compte import abonnement as compte_abonnement
-
-    text = str(compte_abonnement._plan_cards(trial_for=lambda key: 2))
-    assert "btn-primary" in text
 
 
 def test_banner_present_when_tous_abonnes(monkeypatch):

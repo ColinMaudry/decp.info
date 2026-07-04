@@ -3,7 +3,6 @@ from dash import Input, Output, State, callback, dcc, html, register_page
 from flask_login import current_user
 
 from src.pages._compte_shell import account_guard, account_shell
-from src.pages.a_propos.abonnement import abonnement_features
 from src.subscriptions import db, plans
 from src.utils.frontend import format_date_french
 
@@ -15,8 +14,6 @@ register_page(
     description="Gestion de votre abonnement colibre.",
 )
 
-_PLAN_KEYS = ("simple", "soutien")
-
 
 def _csrf_input():
     from flask_wtf.csrf import generate_csrf
@@ -24,92 +21,23 @@ def _csrf_input():
     return dcc.Input(type="hidden", name="csrf_token", value=generate_csrf())
 
 
-def _plan_card(meta: dict, trial: int | None, trial_used: bool):
-    from src.utils import TOUS_ABONNES
-
-    if trial_used:
-        badge = html.Div(
-            "Sans période d'essai (déjà utilisée) — débit immédiat",
-            className="text-muted mb-2",
-        )
-    elif trial:
-        badge = html.Div(f"{trial} jours d'essai gratuit", className="mb-3")
-    else:
-        badge = None
-    return dbc.Card(
-        dbc.CardBody(
-            [
-                html.H4(meta["label"], className="mb-1"),
-                html.P(
-                    f"{meta['prix_ht']} € HT / mois ({str(int(meta['prix_ht']) * 1.2).replace('.0', '')} € TTC)",
-                    className="text-muted mb-3",
-                ),
-                html.P(meta["description"], className="mb-3"),
-                badge,
-                html.A(
-                    "S'abonner",
-                    href=(
-                        "#"
-                        if TOUS_ABONNES
-                        else f"/compte/abonnement/mes-infos?plan={meta['key']}"
-                    ),
-                    className=(
-                        "btn btn-secondary disabled"
-                        if TOUS_ABONNES
-                        else "btn btn-primary"
-                    ),
-                    style={"width": "fit-content"},
-                ),
-            ],
-            className="p-4",
-        ),
-        className="h-100",
-    )
-
-
-def _plan_cards(trial_used=False, trial_for=plans.trial_days):
-    cards = []
-    for key in _PLAN_KEYS:
-        meta = plans.plan_meta(key)
-        if meta:
-            cards.append(_plan_card(meta, trial_for(key), trial_used))
-    return dbc.Row([dbc.Col(c, md=6) for c in cards], className="g-4 mb-5")
-
-
-def _explainer():
-    col_left = dbc.Col(
-        [html.H4("Fonctionnalités réservées aux abonné·es :"), abonnement_features],
-        md=6,
-        style={
-            "borderRight": "1px solid var(--bs-border-color)",
-            "paddingRight": "2rem",
-        },
-    )
-    col_right = dbc.Col(
+def _reabo_button(has_used_trial: bool):
+    label = "Me réabonner" if has_used_trial else "M'abonner"
+    return html.Div(
         [
-            html.H4("Ce que les abonnements permettent"),
-            html.Ul(
-                [
-                    html.Li(
-                        "passer plus de temps à développer colibre et moins de temps à chercher des missions"
-                    ),
-                    html.Li(
-                        "rédaction d'études à partir des données, par exemple sur les "
-                        "acheteurs dont les données sont introuvables et les raisons de "
-                        "cette non-publication."
-                    ),
-                    html.Li(
-                        "fédération des bonnes volontés souhaitant militer pour une "
-                        "législation plus ambitieuse sur la transparence de la commande "
-                        "publique."
-                    ),
-                ]
+            html.P(
+                "Abonnez-vous pour accéder aux fonctionnalités réservées "
+                "aux abonné·es.",
+                className="mb-3",
+            ),
+            html.A(
+                label,
+                href="/a-propos/abonnement",
+                className="btn btn-primary",
             ),
         ],
-        md=6,
-        style={"paddingLeft": "2rem"},
+        className="mb-4",
     )
-    return dbc.Row([col_left, col_right], className="align-items-start pt-2")
 
 
 def _active_view(row):
@@ -287,9 +215,6 @@ def layout(**query):
         return guard
 
     row = db.get_current(current_user.id) if current_user.is_authenticated else None
-    trial_used = (
-        db.has_used_trial(current_user.id) if current_user.is_authenticated else False
-    )
 
     body = [html.H2("Abonnement", className="mb-4")]
     banner = _tous_abonnes_banner()
@@ -307,7 +232,7 @@ def layout(**query):
                     "Votre abonnement a expiré.", color="warning", className="mb-4"
                 )
             )
-        body.extend([_plan_cards(trial_used=trial_used), _explainer()])
+        body.append(_reabo_button(db.has_used_trial(current_user.id)))
 
     body.append(_salaire_modal)
     return account_shell("abonnement", html.Div(body))
