@@ -4,6 +4,7 @@ from dash import dcc, html, register_page
 
 from src.figures import get_sources_tables
 from src.pages._apropos_shell import apropos_shell
+from src.pages.etapes import build_chart, build_mobile
 from src.utils.seo import META_CONTENT
 
 register_page(
@@ -18,14 +19,23 @@ register_page(
 def layout(**_):
     contenu = html.Div(
         [
-            html.H2("Consommer les données brutes"),
             dcc.Markdown(
                 """
+Les données présentées sur ce site sont publiées par les acheteurs publics dans le cadre de la réglementation DECP (Données Essentielles de la Commande Publique).
+Ces données couvrent principalement l'étape d'attribution des marchés publics, qui suit l'étape d'appel d'offres.
+
+**Données publiées par étape de passsation du marché et par seuil selon la valeur du marché** :
+
+"""
+            ),
+            build_mobile(),
+            build_chart(),
+            html.H2("Consommer les données brutes"),
+            dcc.Markdown("""
 Vous pouvez consommer les données qui alimentent colibre en les téléchargeant [sur data.gouv.fr](https://www.data.gouv.fr/datasets/donnees-essentielles-de-la-commande-publique-consolidees-format-tabulaire) (Parquet, CSV), pensez à lire la description du jeu de données
 
 Une API REST tabulaire (JSON) est également disponible par abonnement mensuel pour accéder aux mêmes données et alimenter une application.
-Documentation interactive : [Swagger UI](/api/v1/swagger). Si cela vous intéresse, [contactez-moi](/a-propos/contact)."""
-            ),
+Documentation interactive : [Swagger UI](/api/v1/swagger). Si cela vous intéresse, [contactez-moi](/a-propos/contact)."""),
             html.H2("Qualité et exhaustivité des données", className="mt-4"),
             dcc.Markdown(
                 """Les données visibles sur ce site proviennent exclusivement de la publication de données

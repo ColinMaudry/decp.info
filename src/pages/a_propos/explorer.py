@@ -22,7 +22,7 @@ def layout(**_):
 - 💾  [données consolidées en Open Data](https://www.data.gouv.fr/datasets/donnees-essentielles-de-la-commande-publique-consolidees-format-tabulaire/)
 - 🗞️  [mon blog](https://colin.maudry.com)
 - 📔  [wiki du projet](https://github.com/ColinMaudry/decp-processing/wiki)
-- 🚰  code source
+- 🚰  code source (licence GPL v3)
     - [de colibre](https://github.com/ColinMaudry/colibre)
     - [du traitement des données](https://github.com/ColinMaudry/decp-processing)
 """

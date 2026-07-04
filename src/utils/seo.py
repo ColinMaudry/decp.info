@@ -48,7 +48,7 @@ META_CONTENT = {
     "image_url": f"https://{DOMAIN_NAME}/assets/colibre.png",
     "title": "colibre - exploration des marchés publics français",
     "description": (
-        "Explorez et analysez les données des marchés publics français avec cet outil libre et gratuit. "
+        "Explorez et analysez les données des marchés publics français. "
         "Pour une commande publique accessible à toutes et tous."
     ),
 }
