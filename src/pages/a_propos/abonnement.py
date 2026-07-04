@@ -32,7 +32,7 @@ def _plan_card(meta: dict, trial: int | None):
                 html.H4(meta["label"], className="mb-1"),
                 html.P(
                     f"{meta['prix_ht']} € HT / mois "
-                    f"({str(int(meta['prix_ht']) * 1.2).replace('.0', '')} € TTC)",
+                    f"({round(meta['prix_ht'] * 1.2, 2):g} € TTC)",
                     className="text-muted mb-3",
                 ),
                 html.P(meta["description"], className="mb-3"),

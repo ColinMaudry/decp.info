@@ -60,3 +60,50 @@ def test_cgu_terms_trimmed_of_features_section():
     assert "Fonctionnalités incluses" not in text
     assert "Résiliation" in text
     assert "Tarifs" in text
+
+
+def test_plan_card_ttc_price_for_current_real_prices():
+    from src.app import app  # noqa: F401
+    from src.pages.a_propos import abonnement as page
+
+    simple = str(
+        page._plan_card(
+            {
+                "label": "Abonnement",
+                "prix_ht": 20,
+                "description": "desc",
+            },
+            None,
+        )
+    )
+    assert "24 € TTC" in simple
+
+    soutien = str(
+        page._plan_card(
+            {
+                "label": "Abonnement de soutien",
+                "prix_ht": 50,
+                "description": "desc",
+            },
+            None,
+        )
+    )
+    assert "60 € TTC" in soutien
+
+
+def test_plan_card_ttc_price_avoids_float_artifacts():
+    from src.app import app  # noqa: F401
+    from src.pages.a_propos import abonnement as page
+
+    text = str(
+        page._plan_card(
+            {
+                "label": "Abonnement non-rond",
+                "prix_ht": 24,
+                "description": "desc",
+            },
+            None,
+        )
+    )
+    assert "28.8 € TTC" in text
+    assert "28.799999999999997" not in text
