@@ -93,8 +93,8 @@ def layout(error: str | None = None, email: str | None = None, **kwargs):
             linkedin_button(),
             html.Div("ou", className="text-center text-muted my-2"),
             html.A(
-                "Créer un compte avec mon adresse email",
-                href="/inscription",
+                "Pas encore de compte ? Voir les abonnements",
+                href="/a-propos/abonnement",
                 className="btn btn-primary w-100",
             ),
         ],
