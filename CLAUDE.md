@@ -10,15 +10,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Setup
 
-Setting up the virtual environment:
-
-```bash
-python -m venv .venv # s'il n'existe pas déjà
-source .venv/bin/activate
-rtk pip install -U pip > /dev/null 2>&1
-rtk pip install -e . --group=dev
-```
-
 Environment variables:
 
 ```bash
@@ -28,23 +19,27 @@ cp .template.env .env   # then customize .env
 ### Development
 
 ```bash
-python run.py         # starts Dash app
+uv run run.py         # starts Dash app
 ```
 
 ### Production
 
 ```bash
-gunicorn app:server
+gunicorn run:server
 ```
 
 ### Tests
 
 ```bash
-rtk pytest                  # run all tests (some are Selenium-based integration tests)
-rtk pytest tests/test_main.py::test_001_logo_and_search   # run a single test
+uv run pytest                  # run all tests (some are Selenium-based integration tests)
+uv run pytest tests/test_main.py::test_001_logo_and_search   # run a single test
 ```
 
 Tests require a running Chrome/Chromium browser. They use `DashComposite` from `dash[testing]` with Selenium WebDriver.
+
+## Ajouts git
+
+Avant d'ajouter des fichier dans git (`git add` ou `git commit -a`), exécute `pre-commit` pour que ruff formate les fichiers.
 
 ## Architecture
 
