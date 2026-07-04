@@ -116,19 +116,29 @@ Bouton centré, `btn btn-primary`, largeur ajustée.
 
 - **Retirer** la redirection « pas de `?plan=` » (lignes 53-55) : la page est
   accessible directement.
-- **Ajouter en tête de formulaire** un sélecteur de formule avec rappel des tarifs
-  (20 € HT / 50 € HT). Contrainte technique Dash 3.4 : `html.Input` n'existe pas et
-  ni `dbc.Input` ni `dcc.Input` n'exposent `checked` ; un « radio natif »
-  présélectionnable n'est donc pas réalisable directement. Mécanisme retenu :
-  - un `dcc.RadioItems(id="inf-plan", value="simple")` pour l'UX (styled, défaut) ;
-  - un `dcc.Input(type="hidden", id="inf-plan-hidden", name="plan", value="simple")`
-    — c'est CE champ, natif, qui est soumis dans le POST du `html.Form` (même
-    mécanisme que le champ caché `plan` actuel, déjà lu par `subscribe()`) ;
-  - un callback `Output("inf-plan-hidden","value"), Input("inf-plan","value")` qui
-    recopie la formule choisie dans le champ caché.
-- **Remplacer** le `dcc.Input(type="hidden", name="plan", value=plan)` fixe (ligne 232) par le champ caché synchronisé ci-dessus.
-- Le reste (prefill Frisbii, SIRET, cases rétractation/CGU, `_toggle_submit`) est
-  inchangé. `subscribe()` lit toujours `request.form.get("plan")` → compatible.
+- **Ajouter en tête de formulaire** une sélection de formule sous forme de **cartes
+  cliquables** (réutilisation de `_plan_card` de la page publique), avec rappel des
+  tarifs (20 € HT / 50 € HT). UX voulue : aucune formule sélectionnée par défaut, un
+  texte « Choisissez votre formule » invite l'utilisateur ; la carte sélectionnée
+  prend un fond légèrement teinté. Mécanisme (le POST du `html.Form` ne soumet
+  nativement qu'un champ portant `name`) :
+  - deux cartes, chacune enveloppée dans un `html.Div` cliquable
+    (`id="plan-card-simple"|"plan-card-soutien"`, `n_clicks`, classe `plan-selectable`) ;
+  - un `dcc.Input(type="hidden", id="inf-plan-hidden", name="plan", value="")` — vide
+    au départ ; c'est CE champ, natif, qui est soumis (même mécanisme que le champ
+    caché `plan` actuel, déjà lu par `subscribe()`) ;
+  - un callback sur le `n_clicks` des deux cartes qui écrit la formule dans le champ
+    caché, applique la classe `selected` à la carte choisie (retirée de l'autre) et
+    masque l'invite ;
+  - un texte d'invite `id="inf-plan-invite"` visible tant qu'aucune formule n'est choisie.
+- **Style** : ajouter dans `src/assets/css/style.css`
+  `.plan-selectable { cursor: pointer }` et
+  `.plan-selectable.selected .card { background-color: var(--bs-primary-bg-subtle); border-color: var(--bs-primary) }`.
+- **Gating du bouton d'envoi** : `_toggle_submit` exige désormais aussi qu'une formule
+  soit sélectionnée (en plus des deux cases rétractation/CGU). Sans plan → désactivé.
+- **Remplacer** le `dcc.Input(type="hidden", name="plan", value=plan)` fixe (ligne 232) par le champ caché vide synchronisé ci-dessus.
+- Le reste (prefill Frisbii, SIRET, cases rétractation/CGU) est inchangé.
+  `subscribe()` lit toujours `request.form.get("plan")` → compatible.
 
 ### 5. `src/auth/routes.py` — `verify_email()`
 

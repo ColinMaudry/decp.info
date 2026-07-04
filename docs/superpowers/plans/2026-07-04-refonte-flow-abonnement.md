@@ -14,9 +14,10 @@
 - Imports du code applicatif toujours préfixés `src.` (ex. `src.pages.compte.abonnement`).
 - Lancer les tests avec `uv run pytest` (l'activation de venv via Bash n'est pas fiable ici).
 - **Soumission de formulaire native** : seul un `dcc.Input`/`dbc.Input` portant un
-  attribut `name` est soumis dans le POST d'un `html.Form`. Un `dcc.RadioItems` n'est
-  **pas** soumis nativement — le relier à un `dcc.Input(type="hidden", name=...)` via
-  callback. `html.Input` n'existe pas en Dash 3.4.
+  attribut `name` est soumis dans le POST d'un `html.Form`. Une interaction Dash
+  contrôlée (clic sur carte, `RadioItems`…) n'est **pas** soumise nativement — la
+  relier à un `dcc.Input(type="hidden", name=...)` via callback. `html.Input` n'existe
+  pas en Dash 3.4.
 - Boutons : classes Bootstrap existantes (`btn btn-primary`, `btn btn-outline-danger`…), cohérentes avec le reste du site.
 - Chaque commit doit passer `uv run pytest` (au minimum les tests touchés).
 
@@ -585,22 +586,29 @@ git commit -m "feat(abonnement): CTA connexion vers /a-propos/abonnement"
 
 ---
 
-### Task 6 : Sélecteur de formule dans `mes-infos`
+### Task 6 : Sélection de la formule par cartes cliquables dans `mes-infos`
 
-Le formulaire `mes-infos` n'exige plus de paramètre `?plan=` : la formule se choisit
-via un `dcc.RadioItems` relié à un champ caché natif soumis dans le POST.
+Le formulaire `mes-infos` n'exige plus de paramètre `?plan=`. La formule se choisit en
+cliquant l'une des deux cartes (réutilisées de la page publique). Aucune sélection par
+défaut : un texte invite l'utilisateur ; la carte choisie prend un fond teinté. Un
+callback recopie la valeur dans un champ caché natif soumis dans le POST.
 
 **Files:**
 
 - Modify: `src/pages/compte/abonnement_mes_infos.py`
+- Modify: `src/assets/css/style.css`
 - Test: `tests/subscriptions/test_mes_infos_plan.py` (créer)
 
 **Interfaces:**
 
+- Consumes: `_plan_card` (Task 3, depuis `src.pages.a_propos.abonnement`),
+  `plans.plan_meta`, `plans.trial_days`, `sub_db.has_used_trial`.
 - Produces:
 
-  - `_plan_choices() -> list[dict]` (options `{"label", "value"}` pour « simple » et « soutien »)
-  - `_sync_plan(value: str | None) -> str` (callback : recopie la formule choisie, défaut « simple »)
+  - `_selectable_cards(trial_for) -> dbc.Row`
+  - `_selection_state(selected: str) -> tuple[str, str, str, str]` (valeur cachée, classe carte simple, classe carte soutien, classe invite) — pur, testable
+  - callback `_select_plan` (déclenché par `n_clicks` des cartes via `ctx.triggered_id`)
+  - `_toggle_submit(retractation, cgu, plan) -> bool` (désactive tant qu'une case ou la formule manque)
 
 - [ ] **Step 1 : Écrire les tests qui échouent**
 
@@ -615,86 +623,125 @@ def _plan_env(monkeypatch):
     monkeypatch.setenv("FRISBII_PLAN_SOUTIEN", "plan_soutien")
 
 
-def test_plan_choices_lists_both_with_prices():
+def test_selectable_cards_render_both_plans():
     from src.pages.compte import abonnement_mes_infos as m
 
-    choices = m._plan_choices()
-    assert [c["value"] for c in choices] == ["simple", "soutien"]
-    assert any("20" in c["label"] for c in choices)
-    assert any("50" in c["label"] for c in choices)
+    text = str(m._selectable_cards(trial_for=lambda key: 2))
+    assert "plan-card-simple" in text
+    assert "plan-card-soutien" in text
+    assert "plan-selectable" in text
+    assert "Abonnement de soutien" in text
 
 
-def test_sync_plan_returns_selection():
+def test_selection_state_simple():
     from src.pages.compte import abonnement_mes_infos as m
 
-    assert m._sync_plan("soutien") == "soutien"
+    value, cls_simple, cls_soutien, cls_invite = m._selection_state("simple")
+    assert value == "simple"
+    assert "selected" in cls_simple
+    assert "selected" not in cls_soutien
+    assert cls_invite == "d-none"
 
 
-def test_sync_plan_defaults_to_simple_when_empty():
+def test_selection_state_soutien():
     from src.pages.compte import abonnement_mes_infos as m
 
-    assert m._sync_plan(None) == "simple"
+    value, cls_simple, cls_soutien, _ = m._selection_state("soutien")
+    assert value == "soutien"
+    assert "selected" in cls_soutien
+    assert "selected" not in cls_simple
+
+
+def test_submit_disabled_without_plan():
+    from src.pages.compte import abonnement_mes_infos as m
+
+    assert m._toggle_submit(["ok"], ["ok"], "") is True
+    assert m._toggle_submit(["ok"], ["ok"], "simple") is False
+    assert m._toggle_submit([], ["ok"], "simple") is True
 ```
 
 - [ ] **Step 2 : Lancer les tests pour vérifier l'échec**
 
 Run: `uv run pytest tests/subscriptions/test_mes_infos_plan.py -v`
-Expected: FAIL (`_plan_choices` / `_sync_plan` inexistants)
+Expected: FAIL (`_selectable_cards` / `_selection_state` inexistants)
 
 - [ ] **Step 3 : Implémenter**
 
-Dans `src/pages/compte/abonnement_mes_infos.py` :
-
-3a. Ajouter l'import `plans` et le callback en tête (à côté des imports existants) :
+3a. Dans `src/pages/compte/abonnement_mes_infos.py`, compléter les imports :
+ajouter `ctx` à l'import `from dash import ...`, ajouter `_plan_card` à l'import
+existant depuis `src.pages.a_propos.abonnement`, et ajouter :
 
 ```python
+from src.subscriptions import db as sub_db
 from src.subscriptions import plans
 ```
 
-3b. Ajouter les helpers + callback (par ex. juste après `_csrf_input`) :
+3b. Ajouter les helpers + callback de sélection (par ex. juste après `_csrf_input`) :
 
 ```python
-def _plan_choices():
-    choices = []
+def _trial_for(user_id):
+    used = sub_db.has_used_trial(user_id)
+    return lambda key: None if used else plans.trial_days(key)
+
+
+def _selectable_cards(trial_for):
+    cols = []
     for key in ("simple", "soutien"):
         meta = plans.plan_meta(key)
-        if meta:
-            choices.append(
-                {
-                    "label": f" {meta['label']} — {meta['prix_ht']} € HT / mois",
-                    "value": key,
-                }
+        if not meta:
+            continue
+        cols.append(
+            dbc.Col(
+                html.Div(
+                    _plan_card(meta, trial_for(key)),
+                    id=f"plan-card-{key}",
+                    n_clicks=0,
+                    className="plan-selectable",
+                ),
+                md=6,
             )
-    return choices
+        )
+    return dbc.Row(cols, className="g-4 mb-2")
 
 
-def _plan_selector(default="simple"):
-    return html.Div(
-        [
-            dbc.Label("Formule *"),
-            dcc.RadioItems(
-                id="inf-plan",
-                options=_plan_choices(),
-                value=default,
-                className="mb-3",
-                labelStyle={"display": "block"},
-            ),
-            dcc.Input(
-                type="hidden", id="inf-plan-hidden", name="plan", value=default
-            ),
-        ]
+def _selection_state(selected):
+    base = "plan-selectable"
+    return (
+        selected,
+        f"{base} selected" if selected == "simple" else base,
+        f"{base} selected" if selected == "soutien" else base,
+        "d-none",
     )
 
 
 @callback(
     Output("inf-plan-hidden", "value"),
-    Input("inf-plan", "value"),
+    Output("plan-card-simple", "className"),
+    Output("plan-card-soutien", "className"),
+    Output("inf-plan-invite", "className"),
+    Input("plan-card-simple", "n_clicks"),
+    Input("plan-card-soutien", "n_clicks"),
+    prevent_initial_call=True,
 )
-def _sync_plan(value):
-    return value or "simple"
+def _select_plan(_n_simple, _n_soutien):
+    selected = "simple" if ctx.triggered_id == "plan-card-simple" else "soutien"
+    return _selection_state(selected)
 ```
 
-3c. Dans `layout`, **supprimer** la garde `?plan=` (lignes 53-55) :
+3c. Modifier le callback `_toggle_submit` existant pour exiger aussi une formule :
+
+```python
+@callback(
+    Output("inf-submit", "disabled"),
+    Input("inf-cb-retractation", "value"),
+    Input("inf-cb-cgu", "value"),
+    Input("inf-plan-hidden", "value"),
+)
+def _toggle_submit(retractation, cgu, plan):
+    return not (retractation and cgu and plan)
+```
+
+3d. Dans `layout`, **supprimer** la garde `?plan=` (lignes 53-55) :
 
 ```python
     plan = query.get("plan", "")
@@ -702,14 +749,20 @@ def _sync_plan(value):
         return dcc.Location(href="/compte/abonnement", id="inf-no-plan-redirect")
 ```
 
-3d. Dans le `html.Form` (`children=`), **remplacer** la ligne
-`dcc.Input(type="hidden", name="plan", value=plan),` par un appel au sélecteur en tête
-de formulaire :
+3e. Dans le `html.Form` (`children=`), **remplacer** la ligne
+`dcc.Input(type="hidden", name="plan", value=plan),` par l'invite, les cartes
+sélectionnables et le champ caché vide :
 
 ```python
         children=[
             _csrf_input(),
-            _plan_selector(),
+            html.Div(
+                "Choisissez votre formule :",
+                id="inf-plan-invite",
+                className="fw-bold mb-2",
+            ),
+            _selectable_cards(_trial_for(current_user.id)),
+            dcc.Input(type="hidden", id="inf-plan-hidden", name="plan", value=""),
             dbc.Row([col1, col2], className="g-4 mb-4"),
             checkboxes,
             html.Button(
@@ -722,10 +775,25 @@ de formulaire :
         ],
 ```
 
+3f. Ajouter à la fin de `src/assets/css/style.css` :
+
+```css
+.plan-selectable {
+  cursor: pointer;
+}
+.plan-selectable .card {
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.plan-selectable.selected .card {
+  background-color: var(--bs-primary-bg-subtle);
+  border-color: var(--bs-primary);
+}
+```
+
 - [ ] **Step 4 : Lancer les tests pour vérifier le succès**
 
 Run: `uv run pytest tests/subscriptions/test_mes_infos_plan.py -v`
-Expected: PASS (3 tests)
+Expected: PASS (4 tests)
 
 - [ ] **Step 5 : Vérifier qu'aucun test existant ne dépendait de la garde `?plan=`**
 
@@ -735,8 +803,8 @@ Expected: PASS
 - [ ] **Step 6 : Commit**
 
 ```bash
-git add src/pages/compte/abonnement_mes_infos.py tests/subscriptions/test_mes_infos_plan.py
-git commit -m "feat(abonnement): sélecteur de formule dans mes-infos, plus de param plan requis"
+git add src/pages/compte/abonnement_mes_infos.py src/assets/css/style.css tests/subscriptions/test_mes_infos_plan.py
+git commit -m "feat(abonnement): sélection de formule par cartes cliquables dans mes-infos"
 ```
 
 ---
@@ -767,7 +835,7 @@ montre « M'abonner ».
 - §1 page publique cards/explainer/bouton/trim CGU → Task 3 ✓
 - §2 bouton conditionnel (4 états) → Task 3 (`_subscribe_button`) ✓
 - §3 `/compte/abonnement` M'abonner/Me réabonner via `has_used_trial` → Task 4 ✓
-- §4 mes-infos sélecteur de formule + suppression garde `?plan=` → Task 6 ✓
+- §4 mes-infos cartes cliquables + gating submit + suppression garde `?plan=` → Task 6 ✓
 - §5 `verify_email` auto-login → Task 2 ✓
 - §6 CTA connexion → Task 5 ✓
 - §7 `linkedin_button(next)` + inscription → Task 1 ✓
@@ -775,5 +843,7 @@ montre « M'abonner ».
 **Placeholders :** aucun ; tout le code est fourni.
 
 **Cohérence des types :** `_subscribe_button(bool, bool, bool)`, `_reabo_button(bool)`,
-`_plan_choices() -> list[dict]`, `_sync_plan(str|None) -> str`, `_plan_cards(trial_for)`
-— noms et signatures cohérents entre tâches et tests.
+`_plan_cards(trial_for)` / `_plan_card(meta, trial)` (Task 3, réutilisé par Task 6),
+`_selectable_cards(trial_for) -> dbc.Row`, `_selection_state(str) -> tuple[str,str,str,str]`,
+`_toggle_submit(retractation, cgu, plan) -> bool` — noms et signatures cohérents entre
+tâches et tests.
