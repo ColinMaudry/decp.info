@@ -116,13 +116,17 @@ Bouton centré, `btn btn-primary`, largeur ajustée.
 
 - **Retirer** la redirection « pas de `?plan=` » (lignes 53-55) : la page est
   accessible directement.
-- **Ajouter en tête de formulaire** un groupe de boutons radio **HTML natifs**
-  (`html.Input(type="radio", name="plan", value="simple"|"soutien")`, « simple »
-  `checked` par défaut), avec un rappel des tarifs (20 € HT / 50 € HT) à côté de
-  chaque option. → radio natif, **pas** `dcc.RadioItems`, pour que le champ `plan`
-  soit bien soumis dans le POST natif du `html.Form` (cohérent avec les `dbc.Input`
-  déjà utilisés).
-- **Supprimer** le `dcc.Input(type="hidden", name="plan", value=plan)` (ligne 232).
+- **Ajouter en tête de formulaire** un sélecteur de formule avec rappel des tarifs
+  (20 € HT / 50 € HT). Contrainte technique Dash 3.4 : `html.Input` n'existe pas et
+  ni `dbc.Input` ni `dcc.Input` n'exposent `checked` ; un « radio natif »
+  présélectionnable n'est donc pas réalisable directement. Mécanisme retenu :
+  - un `dcc.RadioItems(id="inf-plan", value="simple")` pour l'UX (styled, défaut) ;
+  - un `dcc.Input(type="hidden", id="inf-plan-hidden", name="plan", value="simple")`
+    — c'est CE champ, natif, qui est soumis dans le POST du `html.Form` (même
+    mécanisme que le champ caché `plan` actuel, déjà lu par `subscribe()`) ;
+  - un callback `Output("inf-plan-hidden","value"), Input("inf-plan","value")` qui
+    recopie la formule choisie dans le champ caché.
+- **Remplacer** le `dcc.Input(type="hidden", name="plan", value=plan)` fixe (ligne 232) par le champ caché synchronisé ci-dessus.
 - Le reste (prefill Frisbii, SIRET, cases rétractation/CGU, `_toggle_submit`) est
   inchangé. `subscribe()` lit toujours `request.form.get("plan")` → compatible.
 
