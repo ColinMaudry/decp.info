@@ -98,7 +98,8 @@ def verify_email():
     if user_id is None:
         return redirect("/verification-email?error=invalid_token")
     db.set_email_verified(user_id)
-    return redirect("/connexion?verified=1")
+    login_user(User(db.get_user_by_id(user_id)), remember=True)
+    return redirect("/compte/abonnement/mes-infos")
 
 
 @auth_bp.route("/login", methods=["POST"])

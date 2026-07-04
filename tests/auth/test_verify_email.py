@@ -1,15 +1,19 @@
 from src.auth import db, tokens
 
 
-def test_verify_email_valid_token_marks_user_verified(client, users_db_path):
+def test_verify_email_valid_token_logs_in_and_redirects_to_mes_infos(
+    client, users_db_path
+):
     db.init_schema()
     uid = db.create_user("a@b.c", "hash")
     token = tokens.create_verification_token(uid)
 
     resp = client.get(f"/auth/verify-email?token={token}")
     assert resp.status_code == 302
-    assert "/connexion?verified=1" in resp.headers["Location"]
+    assert "/compte/abonnement/mes-infos" in resp.headers["Location"]
     assert db.get_user_by_id(uid)["email_verified"] == 1
+    with client.session_transaction() as sess:
+        assert sess.get("_user_id") == str(uid)
 
 
 def test_verify_email_invalid_token(client):
