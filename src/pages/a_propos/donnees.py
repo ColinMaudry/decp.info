@@ -2,7 +2,7 @@ import os
 
 from dash import dcc, html, register_page
 
-from src.figures import get_sources_tables
+from src.figures import get_duplicate_matrix, get_sources_tables
 from src.pages._apropos_shell import apropos_shell
 from src.pages.etapes import build_chart, build_mobile
 from src.utils.seo import META_CONTENT
@@ -51,6 +51,10 @@ Quant à l'exhaustivité, je consolide toutes les sources de données exploitabl
             ),
             html.H2("Sources de données", className="mt-4"),
             get_sources_tables(os.getenv("SOURCE_STATS_CSV_PATH")),
+            html.P(
+                "Ce graphique illustre les doublons de marchés publics entre sources, c'est-à-dire la proportion de marchés publiés par plus d'une source."
+            ),
+            get_duplicate_matrix(),
         ]
     )
     return apropos_shell("donnees", contenu)

@@ -23,7 +23,6 @@ from src.figures import (
     get_considerations_card_content,
     get_dashboard_summary_table,
     get_distance_histogram,
-    get_duplicate_matrix,
     get_geographic_maps,
     get_top_org_table,
     make_card,
@@ -761,17 +760,6 @@ def _compute_dashboard_children(filter_params_normalized: tuple):
             title="Sources de données",
             subtitle="Nombre de marchés attribués par mois de notification et source de données",
             fig=sources_barchart,
-            lg=12,
-            xl=8,
-        )
-    )
-
-    duplicate_matrix = get_duplicate_matrix()
-    other_cards.append(
-        make_card(
-            title="Matrice de doublons entre sources de données",
-            subtitle="Ce graphique illustre les doublons de marchés publics entre sources, c'est-à-dire la proportion de marchés publiés par plus d'une source.",
-            fig=duplicate_matrix,
             lg=12,
             xl=8,
         )
