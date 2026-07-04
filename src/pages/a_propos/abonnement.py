@@ -1,6 +1,11 @@
+import dash_bootstrap_components as dbc
 from dash import dcc, html, register_page
+from flask_login import current_user
 
 from src.pages._apropos_shell import apropos_shell
+from src.subscriptions import db as sub_db
+from src.subscriptions import plans
+from src.utils import TOUS_ABONNES
 from src.utils.seo import META_CONTENT
 
 register_page(
@@ -17,6 +22,106 @@ abonnement_features = dcc.Markdown("""
       """)
 
 
+def _plan_card(meta: dict, trial: int | None):
+    badge = (
+        html.Div(f"{trial} jours d'essai gratuit", className="mb-3") if trial else None
+    )
+    return dbc.Card(
+        dbc.CardBody(
+            [
+                html.H4(meta["label"], className="mb-1"),
+                html.P(
+                    f"{meta['prix_ht']} € HT / mois "
+                    f"({str(int(meta['prix_ht']) * 1.2).replace('.0', '')} € TTC)",
+                    className="text-muted mb-3",
+                ),
+                html.P(meta["description"], className="mb-3"),
+                badge,
+            ],
+            className="p-4",
+        ),
+        className="h-100",
+    )
+
+
+def _plan_cards(trial_for=plans.trial_days):
+    cards = []
+    for key in ("simple", "soutien"):
+        meta = plans.plan_meta(key)
+        if meta:
+            cards.append(_plan_card(meta, trial_for(key)))
+    return dbc.Row([dbc.Col(c, md=6) for c in cards], className="g-4 mb-4")
+
+
+def _explainer():
+    col_left = dbc.Col(
+        [html.H4("Fonctionnalités réservées aux abonné·es :"), abonnement_features],
+        md=6,
+        style={
+            "borderRight": "1px solid var(--bs-border-color)",
+            "paddingRight": "2rem",
+        },
+    )
+    col_right = dbc.Col(
+        [
+            html.H4("Ce que les abonnements permettent"),
+            html.Ul(
+                [
+                    html.Li(
+                        "passer plus de temps à développer colibre et moins de temps "
+                        "à chercher des missions"
+                    ),
+                    html.Li(
+                        "rédaction d'études à partir des données, par exemple sur les "
+                        "acheteurs dont les données sont introuvables et les raisons "
+                        "de cette non-publication."
+                    ),
+                    html.Li(
+                        "fédération des bonnes volontés souhaitant militer pour une "
+                        "législation plus ambitieuse sur la transparence de la "
+                        "commande publique."
+                    ),
+                ]
+            ),
+        ],
+        md=6,
+        style={"paddingLeft": "2rem"},
+    )
+    return dbc.Row([col_left, col_right], className="align-items-start pt-2 mb-4")
+
+
+def _subscribe_button(
+    authenticated: bool, has_active_subscription: bool, tous_abonnes: bool
+):
+    if tous_abonnes:
+        return html.Div(
+            [
+                dbc.Alert(
+                    "Les fonctionnalités normalement accessibles contre un abonnement "
+                    "de 20 € HT par mois sont accessibles à tous et toutes en attendant "
+                    "la validation de mon dossier pour recevoir des paiements.",
+                    color="info",
+                ),
+                html.A(
+                    "Je m'abonne",
+                    href="#",
+                    className="btn btn-secondary disabled",
+                ),
+            ],
+            className="text-center my-4",
+        )
+    if authenticated and has_active_subscription:
+        label, href = "Gérer mon abonnement", "/compte/abonnement"
+    elif authenticated:
+        label, href = "Je m'abonne", "/compte/abonnement/mes-infos"
+    else:
+        label, href = "Je m'abonne", "/inscription"
+    return html.Div(
+        html.A(label, href=href, className="btn btn-primary btn-lg"),
+        className="text-center my-4",
+    )
+
+
 subscription_terms = html.Div(
     [
         html.H2("Abonnement"),
@@ -26,17 +131,6 @@ L'accès aux fonctionnalités de base de colibre est gratuit et sans inscription
 il est possible de souscrire à un abonnement mensuel qui donne accès à des fonctionnalités supplémentaires. Cet abonnement s'adresse tant aux professionnel·les qu'aux particuliers.
 """
         ),
-        html.H4("Fonctionnalités incluses"),
-        dcc.Markdown(
-            """
-Les fonctionnalités accessibles aux abonné·es évoluent au fil du développement du service.
-
-Fonctionnalités réservées aux abonné·es :
-"""
-        ),
-        abonnement_features,
-        dcc.Markdown("""
-            Les fonctionnalités en cours de développement et soumises au vote sont visibles dans la section [Roadmap](/a-propos/roadmap)."""),
         html.H4("Tarifs"),
         dcc.Markdown(
             """
@@ -112,4 +206,14 @@ Conformément au RGPD, vous pouvez demander l'accès, la rectification ou la sup
 
 
 def layout(**_):
-    return apropos_shell("abonnement", subscription_terms)
+    authenticated = current_user.is_authenticated
+    has_active = authenticated and sub_db.has_active_subscription(current_user.id)
+    body = html.Div(
+        [
+            _plan_cards(),
+            _explainer(),
+            _subscribe_button(authenticated, has_active, TOUS_ABONNES),
+            subscription_terms,
+        ]
+    )
+    return apropos_shell("abonnement", body)
