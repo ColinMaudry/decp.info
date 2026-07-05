@@ -9,6 +9,7 @@ from src.subscriptions import client as frisbii_client
 from src.subscriptions import db as sub_db
 from src.subscriptions import plans
 from src.utils.data import get_annuaire_data
+from src.utils.frontend import format_date_french
 
 register_page(
     __name__,
@@ -32,19 +33,41 @@ def _trial_for(user_id):
     return lambda key: None if used else plans.trial_days(key)
 
 
-def _selectable_cards(trial_for):
+def _mode_for(row) -> str:
+    if row is not None and row["status"] in ("active", "trial", "pending"):
+        return "configure"
+    return "subscribe"
+
+
+def _submit_button(mode: str):
+    label = (
+        "Mettre à jour mon abonnement"
+        if mode == "configure"
+        else "Ajouter une carte de paiement"
+    )
+    return html.Button(
+        label,
+        id="inf-submit",
+        type="submit",
+        className="btn btn-primary",
+        disabled=(mode == "subscribe"),
+    )
+
+
+def _selectable_cards(trial_for, selected=None):
     cols = []
     for key in ("simple", "soutien"):
         meta = plans.plan_meta(key)
         if not meta:
             continue
+        base = "plan-selectable selected" if key == selected else "plan-selectable"
         cols.append(
             dbc.Col(
                 html.Div(
                     _plan_card(meta, trial_for(key)),
                     id=f"plan-card-{key}",
                     n_clicks=0,
-                    className="plan-selectable",
+                    className=base,
                 ),
                 md=6,
             )
@@ -76,6 +99,50 @@ def _select_plan(_n_simple, _n_soutien):
     return _selection_state(selected)
 
 
+def _legal_note():
+    return dcc.Markdown(
+        """\\* Champ obligatoire
+
+ Si vous préférez régler par virement bancaire et une facturation annuelle plutôt qu'un réglement mensuel automatique par carte bancaire, [contactez-moi](/a-propos/contact)."""
+    )
+
+
+def _consent_checklists():
+    return [
+        dcc.Checklist(
+            id="inf-cb-retractation",
+            options=[
+                {
+                    "label": "Je renonce à mon droit de rétractation légal de 14 jours.",
+                    "value": "ok",
+                }
+            ],
+            value=[],
+            className="mb-2",
+        ),
+        dcc.Checklist(
+            id="inf-cb-cgu",
+            options=[
+                {
+                    "label": [
+                        "J'ai lu et accepte les ",
+                        html.A(
+                            "conditions générales d'utilisation du service",
+                            href="#",
+                            id="inf-cgu-link",
+                            style={"cursor": "pointer"},
+                        ),
+                        ".",
+                    ],
+                    "value": "ok",
+                }
+            ],
+            value=[],
+            className="mb-4",
+        ),
+    ]
+
+
 def _cgu_modal():
     return dbc.Modal(
         [
@@ -100,6 +167,20 @@ def layout(**query):
     guard = account_guard("/compte/abonnement/mes-infos", require_subscription=False)
     if guard is not None:
         return guard
+
+    row = sub_db.get_current(current_user.id)
+    mode = _mode_for(row)
+    selected = row["plan"] if mode == "configure" else None
+    echeance = (
+        format_date_french(row["current_period_end"])
+        if mode == "configure" and row["current_period_end"]
+        else None
+    )
+    sub_info = (
+        {"current_plan": selected, "status": row["status"], "echeance": echeance}
+        if mode == "configure"
+        else {}
+    )
 
     prefill: dict = {}
     try:
@@ -232,66 +313,30 @@ def layout(**query):
         md=6,
     )
 
-    checkboxes = html.Div(
-        [
-            dcc.Markdown(
-                "Si vous préférez régler par virement bancaire et une facturation annuelle plutôt qu'un réglement mensuel automatique par carte bancaire, [contactez-moi](/a-propos/contact)."
-            ),
-            dcc.Checklist(
-                id="inf-cb-retractation",
-                options=[
-                    {
-                        "label": "Je renonce à mon droit de rétractation légal de 14 jours.",
-                        "value": "ok",
-                    }
-                ],
-                value=[],
-                className="mb-2",
-            ),
-            dcc.Checklist(
-                id="inf-cb-cgu",
-                options=[
-                    {
-                        "label": [
-                            "J'ai lu et accepte les ",
-                            html.A(
-                                "conditions générales d'utilisation du service",
-                                href="#",
-                                id="inf-cgu-link",
-                                style={"cursor": "pointer"},
-                            ),
-                            ".",
-                        ],
-                        "value": "ok",
-                    }
-                ],
-                value=[],
-                className="mb-4",
-            ),
-        ]
-    )
-
     form = html.Form(
         method="POST",
-        action="/subscriptions/subscribe",
+        action="/subscriptions/subscribe"
+        if mode == "subscribe"
+        else "/subscriptions/update",
         children=[
             _csrf_input(),
             html.Div(
-                "Choisissez votre formule :",
+                "Choisissez votre formule :"
+                if mode == "subscribe"
+                else "Votre formule :",
                 id="inf-plan-invite",
                 className="fw-bold mb-2",
             ),
-            _selectable_cards(_trial_for(current_user.id)),
-            dcc.Input(type="hidden", id="inf-plan-hidden", name="plan", value=""),
-            dbc.Row([col1, col2], className="g-4 mb-4"),
-            checkboxes,
-            html.Button(
-                "Ajout d'une carte de paiement",
-                id="inf-submit",
-                type="submit",
-                className="btn btn-primary",
-                disabled=True,
+            _selectable_cards(_trial_for(current_user.id), selected=selected),
+            html.Div(id="inf-change-hint", className="d-none"),
+            dcc.Store(id="inf-sub-info", data=sub_info),
+            dcc.Input(
+                type="hidden", id="inf-plan-hidden", name="plan", value=selected or ""
             ),
+            dbc.Row([col1, col2], className="g-4 mb-4"),
+            _legal_note(),
+            *(_consent_checklists() if mode == "subscribe" else []),
+            _submit_button(mode),
         ],
     )
 
@@ -308,7 +353,7 @@ def layout(**query):
                 if prefill
                 else None,
                 form,
-                _cgu_modal(),
+                _cgu_modal() if mode == "subscribe" else None,
             ]
         ),
     )

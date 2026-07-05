@@ -42,3 +42,38 @@ def test_submit_disabled_without_plan():
     assert m._toggle_submit(["ok"], ["ok"], "") is True
     assert m._toggle_submit(["ok"], ["ok"], "simple") is False
     assert m._toggle_submit([], ["ok"], "simple") is True
+
+
+def test_mode_for_derives_from_status():
+    from src.pages.compte import abonnement_mes_infos as m
+
+    for status in ("active", "trial", "pending"):
+        assert m._mode_for({"status": status}) == "configure"
+    assert m._mode_for({"status": "cancelled"}) == "subscribe"
+    assert m._mode_for({"status": "expired"}) == "subscribe"
+    assert m._mode_for(None) == "subscribe"
+
+
+def test_submit_button_subscribe_mode():
+    from src.pages.compte import abonnement_mes_infos as m
+
+    text = str(m._submit_button("subscribe"))
+    assert "Ajouter une carte de paiement" in text
+    assert "disabled" in text
+
+
+def test_submit_button_configure_mode():
+    from src.pages.compte import abonnement_mes_infos as m
+
+    btn = m._submit_button("configure")
+    text = str(btn)
+    assert "Mettre à jour mon abonnement" in text
+    assert btn.disabled is False
+
+
+def test_selectable_cards_preselects_current_plan():
+    from src.pages.compte import abonnement_mes_infos as m
+
+    text = str(m._selectable_cards(trial_for=lambda key: None, selected="soutien"))
+    # la card soutien est marquée sélectionnée, pas la card simple
+    assert "plan-selectable selected" in text
