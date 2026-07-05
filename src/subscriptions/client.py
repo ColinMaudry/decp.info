@@ -1,4 +1,5 @@
 import os
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import httpx
 
@@ -135,6 +136,21 @@ def cancel_subscription(subscription_handle: str) -> dict:
 
 def get_subscription(subscription_handle: str) -> dict:
     return _call("GET", f"/v1/subscription/{subscription_handle}")
+
+
+def get_payment_info_url(sub_handle: str, accept_url: str, cancel_url: str) -> str:
+    sub = get_subscription(sub_handle)
+    url = sub["hosted_page_links"]["payment_info"]
+    parts = urlsplit(url)
+    query = dict(parse_qsl(parts.query))
+    query["accept_url"] = accept_url
+    query["cancel_url"] = cancel_url
+    new_query = urlencode(query)
+    # If URL has a fragment (hash-based routing), append params to fragment
+    if parts.fragment:
+        return f"{urlunsplit((parts.scheme, parts.netloc, parts.path, '', ''))}#{parts.fragment}?{new_query}"
+    else:
+        return urlunsplit(parts._replace(query=new_query))
 
 
 def get_plan(plan_handle: str) -> dict:
