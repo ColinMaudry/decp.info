@@ -66,3 +66,63 @@ def test_show_active_view_false_for_failed_expired_or_none(monkeypatch):
     assert compte_abonnement._show_active_view({"status": "failed"}) is False
     assert compte_abonnement._show_active_view({"status": "expired"}) is False
     assert compte_abonnement._show_active_view(None) is False
+
+
+def test_active_view_shows_change_payment_method_for_active():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    row = {
+        "plan": "simple",
+        "status": "active",
+        "current_period_end": "2099-01-01T00:00:00+00:00",
+    }
+    text = str(compte_abonnement._active_view(row))
+    assert "Changer de méthode de paiement" in text
+    assert "/subscriptions/change-payment-method" in text
+
+
+def test_active_view_shows_change_payment_method_for_trial():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    row = {
+        "plan": "simple",
+        "status": "trial",
+        "current_period_end": "2099-01-01T00:00:00+00:00",
+    }
+    assert "Changer de méthode de paiement" in str(compte_abonnement._active_view(row))
+
+
+def test_active_view_hides_change_payment_method_for_cancelled():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    row = {
+        "plan": "simple",
+        "status": "cancelled",
+        "current_period_end": "2099-01-01T00:00:00+00:00",
+    }
+    assert "Changer de méthode de paiement" not in str(
+        compte_abonnement._active_view(row)
+    )
+
+
+def test_active_view_hides_change_payment_method_for_pending():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    row = {"plan": "simple", "status": "pending", "current_period_end": None}
+    text = str(compte_abonnement._active_view(row))
+    assert "Changer de méthode de paiement" not in text
+    assert "Ajouter une méthode de paiement" in text
+
+
+def test_feedback_carte_succes():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    text = str(compte_abonnement._feedback({"carte": "succes"}))
+    assert "Méthode de paiement mise à jour." in text
+
+
+def test_feedback_carte_annule():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    text = str(compte_abonnement._feedback({"carte": "annule"}))
+    assert "Modification annulée." in text

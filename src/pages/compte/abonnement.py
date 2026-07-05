@@ -82,6 +82,23 @@ def _active_view(row):
     elif row["status"] == "active":
         blocks.append(html.P(f"Prochaine facturation : {end}"))
 
+    if row["status"] in ("trial", "active"):
+        blocks.append(
+            html.Form(
+                method="POST",
+                action="/subscriptions/change-payment-method",
+                children=[
+                    _csrf_input(),
+                    html.Button(
+                        "Changer de méthode de paiement",
+                        type="submit",
+                        className="btn btn-outline-secondary mt-3 me-2",
+                    ),
+                ],
+                style={"display": "inline-block"},
+            )
+        )
+
     if row["status"] in ("pending", "trial", "active"):
         blocks.append(
             html.Button(
@@ -152,6 +169,10 @@ def _feedback(query):
         out.append(dbc.Alert(text, color=color))
     if query.get("resiliation") == "ok":
         out.append(dbc.Alert("Votre abonnement a été résilié.", color="info"))
+    if query.get("carte") == "succes":
+        out.append(dbc.Alert("Méthode de paiement mise à jour.", color="success"))
+    if query.get("carte") == "annule":
+        out.append(dbc.Alert("Modification annulée.", color="secondary"))
     if query.get("error") == "frisbii":
         out.append(
             dbc.Alert(
