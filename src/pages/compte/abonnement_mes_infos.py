@@ -85,18 +85,39 @@ def _selection_state(selected):
     )
 
 
+def _change_hint(selected: str, sub_info: dict | None) -> tuple[str, str]:
+    sub_info = sub_info or {}
+    current = sub_info.get("current_plan")
+    if (
+        not current
+        or sub_info.get("status") not in ("active", "trial")
+        or selected == current
+    ):
+        return "d-none", ""
+    echeance = sub_info.get("echeance")
+    return (
+        "text-muted mt-2",
+        f"Le changement d'abonnement sera appliqué à la prochaine échéance : {echeance}.",
+    )
+
+
 @callback(
     Output("inf-plan-hidden", "value"),
     Output("plan-card-simple", "className"),
     Output("plan-card-soutien", "className"),
     Output("inf-plan-invite", "className"),
+    Output("inf-change-hint", "className"),
+    Output("inf-change-hint", "children"),
     Input("plan-card-simple", "n_clicks"),
     Input("plan-card-soutien", "n_clicks"),
+    State("inf-sub-info", "data"),
     prevent_initial_call=True,
 )
-def _select_plan(_n_simple, _n_soutien):
+def _select_plan(_n_simple, _n_soutien, sub_info):
     selected = "simple" if ctx.triggered_id == "plan-card-simple" else "soutien"
-    return _selection_state(selected)
+    value, cls_simple, cls_soutien, cls_invite = _selection_state(selected)
+    hint_cls, hint_txt = _change_hint(selected, sub_info)
+    return value, cls_simple, cls_soutien, cls_invite, hint_cls, hint_txt
 
 
 def _legal_note():

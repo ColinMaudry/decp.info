@@ -77,3 +77,42 @@ def test_selectable_cards_preselects_current_plan():
     text = str(m._selectable_cards(trial_for=lambda key: None, selected="soutien"))
     # la card soutien est marquée sélectionnée, pas la card simple
     assert "plan-selectable selected" in text
+
+
+def test_change_hint_shown_when_plan_differs():
+    from src.pages.compte import abonnement_mes_infos as m
+
+    cls, txt = m._change_hint(
+        "soutien",
+        {"current_plan": "simple", "status": "active", "echeance": "1er janvier"},
+    )
+    assert cls != "d-none"
+    assert "prochaine échéance : 1er janvier" in txt
+
+
+def test_change_hint_hidden_when_same_plan():
+    from src.pages.compte import abonnement_mes_infos as m
+
+    cls, txt = m._change_hint(
+        "simple",
+        {"current_plan": "simple", "status": "active", "echeance": "1er janvier"},
+    )
+    assert cls == "d-none"
+    assert txt == ""
+
+
+def test_change_hint_hidden_for_pending():
+    from src.pages.compte import abonnement_mes_infos as m
+
+    cls, _ = m._change_hint(
+        "soutien",
+        {"current_plan": "simple", "status": "pending", "echeance": None},
+    )
+    assert cls == "d-none"
+
+
+def test_change_hint_hidden_in_subscribe_mode():
+    from src.pages.compte import abonnement_mes_infos as m
+
+    cls, _ = m._change_hint("soutien", {})
+    assert cls == "d-none"
