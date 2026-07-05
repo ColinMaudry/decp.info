@@ -208,3 +208,92 @@ def test_change_payment_method_api_error_redirects(logged_in_client, monkeypatch
 def test_change_payment_method_requires_login(sub_app):
     resp = sub_app.test_client().post("/subscriptions/change-payment-method")
     assert resp.status_code in (302, 401)
+
+
+def test_update_changes_plan_and_redirects(logged_in_client, monkeypatch):
+    client, uid = logged_in_client
+    handle, _ = db.create_pending(uid, "colibre-%d" % uid, "simple")
+    db.update_from_webhook(handle, "active", "2099-01-01T00:00:00+00:00")
+    monkeypatch.setattr(frisbii_client, "update_customer", lambda h, d: {})
+    captured = {}
+
+    def fake_change(sub_handle, plan_handle, timing="renewal"):
+        captured.update(sub_handle=sub_handle, plan_handle=plan_handle, timing=timing)
+        return {}
+
+    monkeypatch.setattr(frisbii_client, "change_subscription", fake_change)
+    resp = client.post("/subscriptions/update", data={"plan": "soutien"})
+    assert resp.status_code == 303
+    assert "maj=succes" in resp.headers["Location"]
+    assert captured["sub_handle"] == handle
+    assert captured["plan_handle"] == "plan_soutien"
+    assert captured["timing"] == "renewal"
+
+
+def test_update_pending_uses_immediate_timing(logged_in_client, monkeypatch):
+    client, uid = logged_in_client
+    handle, _ = db.create_pending(uid, "colibre-%d" % uid, "simple")
+    monkeypatch.setattr(frisbii_client, "update_customer", lambda h, d: {})
+    captured = {}
+    monkeypatch.setattr(
+        frisbii_client,
+        "change_subscription",
+        lambda sub_handle, plan_handle, timing="renewal": captured.update(
+            timing=timing
+        ),
+    )
+    resp = client.post("/subscriptions/update", data={"plan": "soutien"})
+    assert resp.status_code == 303
+    assert captured["timing"] == "immediate"
+
+
+def test_update_same_plan_skips_change_subscription(logged_in_client, monkeypatch):
+    client, uid = logged_in_client
+    handle, _ = db.create_pending(uid, "colibre-%d" % uid, "simple")
+    db.update_from_webhook(handle, "active", "2099-01-01T00:00:00+00:00")
+    called = []
+    monkeypatch.setattr(frisbii_client, "update_customer", lambda h, d: {})
+    monkeypatch.setattr(
+        frisbii_client,
+        "change_subscription",
+        lambda *a, **k: called.append(a),
+    )
+    resp = client.post("/subscriptions/update", data={"plan": "simple"})
+    assert resp.status_code == 303
+    assert "maj=succes" in resp.headers["Location"]
+    assert called == [], (
+        "formule inchangée : change_subscription ne doit pas être appelé"
+    )
+
+
+def test_update_without_subscription_returns_400(logged_in_client):
+    client, _ = logged_in_client
+    resp = client.post("/subscriptions/update", data={"plan": "simple"})
+    assert resp.status_code == 400
+
+
+def test_update_unknown_plan_returns_400(logged_in_client, monkeypatch):
+    client, uid = logged_in_client
+    handle, _ = db.create_pending(uid, "colibre-%d" % uid, "simple")
+    db.update_from_webhook(handle, "active", "2099-01-01T00:00:00+00:00")
+    resp = client.post("/subscriptions/update", data={"plan": "bidon"})
+    assert resp.status_code == 400
+
+
+def test_update_api_error_redirects(logged_in_client, monkeypatch):
+    client, uid = logged_in_client
+    handle, _ = db.create_pending(uid, "colibre-%d" % uid, "simple")
+    db.update_from_webhook(handle, "active", "2099-01-01T00:00:00+00:00")
+
+    def boom(h, d):
+        raise frisbii_client.FrisbiiError(500, "boom")
+
+    monkeypatch.setattr(frisbii_client, "update_customer", boom)
+    resp = client.post("/subscriptions/update", data={"plan": "soutien"})
+    assert resp.status_code == 302
+    assert "error=frisbii" in resp.headers["Location"]
+
+
+def test_update_requires_login(sub_app):
+    resp = sub_app.test_client().post("/subscriptions/update", data={"plan": "simple"})
+    assert resp.status_code in (302, 401)

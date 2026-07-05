@@ -148,6 +148,49 @@ def change_payment_method():
     return redirect(url, code=303)
 
 
+@subscriptions_bp.route("/subscriptions/update", methods=["POST"])
+@login_required
+def update():
+    new_plan_key = request.form.get("plan") or ""
+    new_handle = plans.resolve_handle(new_plan_key)
+    if new_handle is None:
+        return "Plan inconnu", 400
+
+    row = db.get_current(current_user.id)
+    if row is None or not row["frisbii_subscription_handle"]:
+        return "Aucun abonnement à mettre à jour", 400
+
+    cust = _customer_handle(current_user.id)
+    siret = (request.form.get("siret") or "").strip()
+    billing: dict = {
+        "email": current_user.email,
+        "first_name": request.form.get("first_name", ""),
+        "last_name": request.form.get("last_name", ""),
+        "address": request.form.get("address", ""),
+        "city": request.form.get("city", ""),
+        "postal_code": request.form.get("postal_code", ""),
+        "country": request.form.get("country", "FR"),
+    }
+    if request.form.get("address2"):
+        billing["address2"] = request.form["address2"]
+    if request.form.get("company"):
+        billing["company"] = request.form["company"]
+
+    try:
+        if siret:
+            auth_db.set_siret(current_user.id, siret)
+        client.update_customer(cust, billing)
+        if new_handle != plans.resolve_handle(row["plan"]):
+            timing = "immediate" if row["status"] == "pending" else "renewal"
+            client.change_subscription(
+                row["frisbii_subscription_handle"], new_handle, timing
+            )
+    except client.FrisbiiError:
+        logger.exception("Échec de mise à jour de l'abonnement Frisbii")
+        return redirect("/compte/abonnement?error=frisbii")
+    return redirect("/compte/abonnement?maj=succes", code=303)
+
+
 @subscriptions_bp.route("/subscriptions/cancel", methods=["POST"])
 @login_required
 def cancel():
