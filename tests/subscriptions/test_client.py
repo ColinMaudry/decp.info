@@ -131,3 +131,18 @@ def test_get_payment_info_url_merges_existing_query_string(fake_httpx):
     assert "locale=fr" in url
     assert "accept_url=https%3A%2F%2Fapp%2Fok" in url
     assert "cancel_url=https%3A%2F%2Fapp%2Fko" in url
+
+
+def test_change_subscription_sends_timing_and_plan(fake_httpx):
+    fake_httpx["queue"].append(fake_httpx["Response"](200, {"handle": "abo-1-1"}))
+    client.change_subscription("abo-1-1", "plan_soutien", timing="renewal")
+    call = fake_httpx["calls"][0]
+    assert call["method"] == "PUT"
+    assert call["url"] == "https://api.test/v1/subscription/abo-1-1"
+    assert call["json"] == {"timing": "renewal", "plan": "plan_soutien"}
+
+
+def test_change_subscription_immediate_timing(fake_httpx):
+    fake_httpx["queue"].append(fake_httpx["Response"](200, {"handle": "abo-1-2"}))
+    client.change_subscription("abo-1-2", "plan_simple", timing="immediate")
+    assert fake_httpx["calls"][0]["json"]["timing"] == "immediate"

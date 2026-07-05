@@ -155,3 +155,13 @@ def get_payment_info_url(sub_handle: str, accept_url: str, cancel_url: str) -> s
 
 def get_plan(plan_handle: str) -> dict:
     return _call("GET", f"/v1/plan/{plan_handle}")
+
+
+def change_subscription(
+    sub_handle: str, plan_handle: str, timing: str = "renewal"
+) -> dict:
+    return _call(
+        "PUT",
+        f"/v1/subscription/{sub_handle}",
+        json={"timing": timing, "plan": plan_handle},
+    )
