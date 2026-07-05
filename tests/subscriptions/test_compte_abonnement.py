@@ -126,3 +126,60 @@ def test_feedback_carte_annule():
 
     text = str(compte_abonnement._feedback({"carte": "annule"}))
     assert "Modification annulée." in text
+
+
+def test_price_text_rounds_ttc():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    assert compte_abonnement._price_text({"prix_ht": 20}) == "20 € HT / mois (24 € TTC)"
+    assert compte_abonnement._price_text({"prix_ht": 50}) == "50 € HT / mois (60 € TTC)"
+    assert compte_abonnement._price_text({"label": "x"}) is None
+
+
+def test_active_view_shows_price():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    row = {
+        "plan": "simple",
+        "status": "active",
+        "current_period_end": "2099-01-01T00:00:00+00:00",
+    }
+    assert "24 € TTC" in str(compte_abonnement._active_view(row))
+
+
+def test_active_view_shows_configure_button_for_active():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    row = {
+        "plan": "simple",
+        "status": "active",
+        "current_period_end": "2099-01-01T00:00:00+00:00",
+    }
+    text = str(compte_abonnement._active_view(row))
+    assert "Configurer mon abonnement" in text
+    assert "href='/compte/abonnement/mes-infos'" in text
+
+
+def test_active_view_shows_configure_button_for_pending():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    row = {"plan": "simple", "status": "pending", "current_period_end": None}
+    assert "Configurer mon abonnement" in str(compte_abonnement._active_view(row))
+
+
+def test_active_view_hides_configure_button_for_cancelled():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    row = {
+        "plan": "simple",
+        "status": "cancelled",
+        "current_period_end": "2099-01-01T00:00:00+00:00",
+    }
+    assert "Configurer mon abonnement" not in str(compte_abonnement._active_view(row))
+
+
+def test_feedback_maj_succes():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    text = str(compte_abonnement._feedback({"maj": "succes"}))
+    assert "Votre abonnement a été mis à jour." in text

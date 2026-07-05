@@ -21,6 +21,13 @@ def _csrf_input():
     return dcc.Input(type="hidden", name="csrf_token", value=generate_csrf())
 
 
+def _price_text(meta: dict) -> str | None:
+    ht = meta.get("prix_ht")
+    if ht is None:
+        return None
+    return f"{ht} € HT / mois ({round(ht * 1.2, 2):g} € TTC)"
+
+
 def _reabo_button(has_used_trial: bool):
     label = "Me réabonner" if has_used_trial else "M'abonner"
     return html.Div(
@@ -43,7 +50,10 @@ def _reabo_button(has_used_trial: bool):
 def _active_view(row):
     meta = plans.plan_meta(row["plan"]) or {"label": row["plan"]}
     end = format_date_french(row["current_period_end"])
-    blocks = [html.H3(meta["label"], className="mb-3")]
+    blocks = [html.H3(meta["label"], className="mb-1")]
+    price = _price_text(meta)
+    if price:
+        blocks.append(html.P(price, className="text-muted mb-3"))
 
     if row["status"] == "pending":
         blocks.extend(
@@ -81,6 +91,15 @@ def _active_view(row):
         )
     elif row["status"] == "active":
         blocks.append(html.P(f"Prochaine facturation : {end}"))
+
+    if row["status"] in ("pending", "trial", "active"):
+        blocks.append(
+            html.A(
+                "Configurer mon abonnement",
+                href="/compte/abonnement/mes-infos",
+                className="btn btn-outline-primary mt-3 me-2",
+            )
+        )
 
     if row["status"] in ("trial", "active"):
         blocks.append(
@@ -179,6 +198,8 @@ def _feedback(query):
                 "Une erreur est survenue avec le service de paiement.", color="primary"
             )
         )
+    if query.get("maj") == "succes":
+        out.append(dbc.Alert("Votre abonnement a été mis à jour.", color="success"))
     return out
 
 
