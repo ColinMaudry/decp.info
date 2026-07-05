@@ -129,6 +129,25 @@ def add_payment_callback():
     return redirect("/compte/abonnement?paiement=succes")
 
 
+@subscriptions_bp.route("/subscriptions/change-payment-method", methods=["POST"])
+@login_required
+def change_payment_method():
+    base = os.getenv("APP_BASE_URL", "")
+    row = db.get_current(current_user.id)
+    if row is None or not row["frisbii_subscription_handle"]:
+        return "Aucun abonnement actif", 400
+    try:
+        url = client.get_payment_info_url(
+            row["frisbii_subscription_handle"],
+            f"{base}/compte/abonnement?carte=succes",
+            f"{base}/compte/abonnement?carte=annule",
+        )
+    except client.FrisbiiError:
+        logger.exception("Échec de récupération du lien de paiement Frisbii")
+        return redirect("/compte/abonnement?error=frisbii")
+    return redirect(url, code=303)
+
+
 @subscriptions_bp.route("/subscriptions/cancel", methods=["POST"])
 @login_required
 def cancel():

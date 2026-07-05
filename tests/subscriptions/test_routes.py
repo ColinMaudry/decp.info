@@ -159,3 +159,52 @@ def test_subscribe_skips_if_trial_active(logged_in_client, monkeypatch):
     assert resp.status_code == 302
     assert "compte/abonnement" in resp.headers["Location"]
     assert db.get_current(uid)["status"] == "trial"
+
+
+def test_change_payment_method_redirects_to_hosted_url(logged_in_client, monkeypatch):
+    client, uid = logged_in_client
+    handle, _ = db.create_pending(uid, "colibre-%d" % uid, "simple")
+    db.update_from_webhook(handle, "active", "2099-01-01T00:00:00+00:00")
+    monkeypatch.setattr(
+        frisbii_client,
+        "get_payment_info_url",
+        lambda h,
+        accept_url,
+        cancel_url: f"https://pay.test/{h}?a={accept_url}&c={cancel_url}",
+    )
+    resp = client.post("/subscriptions/change-payment-method")
+    assert resp.status_code == 303
+    assert resp.headers["Location"].startswith(f"https://pay.test/{handle}")
+    assert (
+        "carte%3Dsucces" in resp.headers["Location"]
+        or "carte=succes" in resp.headers["Location"]
+    )
+    assert (
+        "carte%3Dannule" in resp.headers["Location"]
+        or "carte=annule" in resp.headers["Location"]
+    )
+
+
+def test_change_payment_method_without_subscription(logged_in_client):
+    client, _ = logged_in_client
+    resp = client.post("/subscriptions/change-payment-method")
+    assert resp.status_code == 400
+
+
+def test_change_payment_method_api_error_redirects(logged_in_client, monkeypatch):
+    client, uid = logged_in_client
+    handle, _ = db.create_pending(uid, "colibre-%d" % uid, "simple")
+    db.update_from_webhook(handle, "active", "2099-01-01T00:00:00+00:00")
+
+    def boom(h, accept_url, cancel_url):
+        raise frisbii_client.FrisbiiError(500, "boom")
+
+    monkeypatch.setattr(frisbii_client, "get_payment_info_url", boom)
+    resp = client.post("/subscriptions/change-payment-method")
+    assert resp.status_code == 302
+    assert "error=frisbii" in resp.headers["Location"]
+
+
+def test_change_payment_method_requires_login(sub_app):
+    resp = sub_app.test_client().post("/subscriptions/change-payment-method")
+    assert resp.status_code in (302, 401)
