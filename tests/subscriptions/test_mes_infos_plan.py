@@ -116,3 +116,36 @@ def test_change_hint_hidden_in_subscribe_mode():
 
     cls, _ = m._change_hint("soutien", {})
     assert cls == "d-none"
+
+
+def test_consent_checklists_ids_always_present_in_configure_mode():
+    # Régression : le callback _toggle_submit référence inf-cb-retractation
+    # et inf-cb-cgu en Input inconditionnellement, donc ces composants
+    # doivent exister dans le layout même en mode "configure" (sinon Dash
+    # lève "A nonexistent object was used in an Input").
+    from src.pages.compte import abonnement_mes_infos as m
+
+    div = m._consent_checklists(hidden=True)
+    text = str(div)
+    assert "inf-cb-retractation" in text
+    assert "inf-cb-cgu" in text
+    assert "d-none" in div.className
+
+
+def test_consent_checklists_pre_accepted_when_hidden():
+    from src.pages.compte import abonnement_mes_infos as m
+
+    div = m._consent_checklists(hidden=True)
+    retractation, cgu = div.children
+    assert retractation.value == ["ok"]
+    assert cgu.value == ["ok"]
+
+
+def test_consent_checklists_visible_and_empty_in_subscribe_mode():
+    from src.pages.compte import abonnement_mes_infos as m
+
+    div = m._consent_checklists(hidden=False)
+    retractation, cgu = div.children
+    assert retractation.value == []
+    assert cgu.value == []
+    assert div.className is None

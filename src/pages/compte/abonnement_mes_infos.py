@@ -128,40 +128,44 @@ def _legal_note():
     )
 
 
-def _consent_checklists():
-    return [
-        dcc.Checklist(
-            id="inf-cb-retractation",
-            options=[
-                {
-                    "label": "Je renonce à mon droit de rétractation légal de 14 jours.",
-                    "value": "ok",
-                }
-            ],
-            value=[],
-            className="mb-2",
-        ),
-        dcc.Checklist(
-            id="inf-cb-cgu",
-            options=[
-                {
-                    "label": [
-                        "J'ai lu et accepte les ",
-                        html.A(
-                            "conditions générales d'utilisation du service",
-                            href="#",
-                            id="inf-cgu-link",
-                            style={"cursor": "pointer"},
-                        ),
-                        ".",
-                    ],
-                    "value": "ok",
-                }
-            ],
-            value=[],
-            className="mb-4",
-        ),
-    ]
+def _consent_checklists(hidden: bool = False):
+    default_value = ["ok"] if hidden else []
+    return html.Div(
+        [
+            dcc.Checklist(
+                id="inf-cb-retractation",
+                options=[
+                    {
+                        "label": "Je renonce à mon droit de rétractation légal de 14 jours.",
+                        "value": "ok",
+                    }
+                ],
+                value=default_value,
+                className="mb-2",
+            ),
+            dcc.Checklist(
+                id="inf-cb-cgu",
+                options=[
+                    {
+                        "label": [
+                            "J'ai lu et accepte les ",
+                            html.A(
+                                "conditions générales d'utilisation du service",
+                                href="#",
+                                id="inf-cgu-link",
+                                style={"cursor": "pointer"},
+                            ),
+                            ".",
+                        ],
+                        "value": "ok",
+                    }
+                ],
+                value=default_value,
+                className="mb-4",
+            ),
+        ],
+        className="d-none" if hidden else None,
+    )
 
 
 def _cgu_modal():
@@ -356,7 +360,7 @@ def layout(**query):
             ),
             dbc.Row([col1, col2], className="g-4 mb-4"),
             _legal_note(),
-            *(_consent_checklists() if mode == "subscribe" else []),
+            _consent_checklists(hidden=(mode == "configure")),
             _submit_button(mode),
         ],
     )
@@ -374,7 +378,7 @@ def layout(**query):
                 if prefill
                 else None,
                 form,
-                _cgu_modal() if mode == "subscribe" else None,
+                _cgu_modal(),
             ]
         ),
     )
