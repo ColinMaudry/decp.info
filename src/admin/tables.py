@@ -15,6 +15,8 @@ class TableConfig:
     column_types: dict[str, type]
     dropdowns: dict[str, list[str]]
     target_user_id: Callable[[dict], int | None]
+    sort_by: str
+    join_user_email: bool = False
 
 
 TABLES: dict[str, TableConfig] = {
@@ -40,11 +42,13 @@ TABLES: dict[str, TableConfig] = {
         },
         dropdowns={"email_verified": ["0", "1"]},
         target_user_id=lambda row: row["id"],
+        sort_by="updated_at",
     ),
     "subscriptions": TableConfig(
         columns=[
             "id",
             "user_id",
+            "email",
             "frisbii_customer_handle",
             "frisbii_subscription_handle",
             "plan",
@@ -67,10 +71,13 @@ TABLES: dict[str, TableConfig] = {
             "plan": list(PLANS.keys()),
         },
         target_user_id=lambda row: row["user_id"],
+        sort_by="updated_at",
+        join_user_email=True,
     ),
     "subscriber_state": TableConfig(
         columns=[
             "user_id",
+            "email",
             "trial_used",
             "votes_balance",
             "votes_last_credited_at",
@@ -87,6 +94,8 @@ TABLES: dict[str, TableConfig] = {
         },
         dropdowns={"trial_used": ["0", "1"]},
         target_user_id=lambda row: row["user_id"],
+        sort_by="updated_at",
+        join_user_email=True,
     ),
     "admin_actions": TableConfig(
         columns=[
@@ -102,14 +111,25 @@ TABLES: dict[str, TableConfig] = {
         column_types={},
         dropdowns={},
         target_user_id=lambda row: None,
+        sort_by="created_at",
     ),
 }
 
 
 def get_rows(table: str) -> list[dict]:
     cfg = TABLES[table]
-    cols_sql = ", ".join(cfg.columns)
-    rows = get_conn().execute(f"SELECT {cols_sql} FROM {table}").fetchall()
+    if cfg.join_user_email:
+        real_cols = [col for col in cfg.columns if col != "email"]
+        cols_sql = ", ".join(f"{table}.{col}" for col in real_cols)
+        query = (
+            f"SELECT {cols_sql}, users.email AS email FROM {table} "
+            f"LEFT JOIN users ON users.id = {table}.user_id "
+            f"ORDER BY {table}.{cfg.sort_by} DESC"
+        )
+    else:
+        cols_sql = ", ".join(cfg.columns)
+        query = f"SELECT {cols_sql} FROM {table} ORDER BY {cfg.sort_by} DESC"
+    rows = get_conn().execute(query).fetchall()
     return [dict(row) for row in rows]
 
 

@@ -15,6 +15,34 @@ def test_get_rows_users_excludes_password_hash(users_db_path):
     assert "password_hash" not in rows[0]
 
 
+def test_get_rows_subscriptions_includes_user_email(users_db_path):
+    from src.auth import db as auth_db
+    from src.subscriptions import db as sub_db
+
+    auth_db.init_schema()
+    sub_db.init_schema()
+    uid = auth_db.create_user("a@ex.fr", "hash")
+    sub_db.create_pending(uid, "cust-1", "simple")
+
+    rows = tables.get_rows("subscriptions")
+
+    assert rows[0]["email"] == "a@ex.fr"
+
+
+def test_get_rows_subscriber_state_includes_user_email(users_db_path):
+    from src.auth import db as auth_db
+    from src.subscriptions import db as sub_db
+
+    auth_db.init_schema()
+    sub_db.init_schema()
+    uid = auth_db.create_user("a@ex.fr", "hash")
+    sub_db.create_pending(uid, "cust-1", "simple")
+
+    rows = tables.get_rows("subscriber_state")
+
+    assert rows[0]["email"] == "a@ex.fr"
+
+
 def test_set_cell_rejects_unknown_table(users_db_path):
     with pytest.raises(ValueError):
         tables.set_cell("not_a_table", 1, "email", "x@ex.fr")
