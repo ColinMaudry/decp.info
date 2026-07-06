@@ -98,8 +98,8 @@ def _subscribe_button(
             [
                 dbc.Alert(
                     "Les fonctionnalités normalement accessibles contre un abonnement "
-                    "de 20 € HT par mois sont accessibles à tous et toutes en attendant "
-                    "la validation de mon dossier pour recevoir des paiements.",
+                    "mensuel sont accessibles à tous et toutes en attendant "
+                    "la validation de mon dossier pour recevoir des paiements par carte bancaire.",
                     color="info",
                 ),
                 html.A(
@@ -117,8 +117,9 @@ def _subscribe_button(
     else:
         label, href = "Je m'abonne", "/inscription"
     return html.Div(
-        html.A(label, href=href, className="btn btn-primary btn-lg"),
-        className="text-center my-4",
+        html.A(label, href=href, className="btn btn-primary"),
+        className="text-center my-4 btn-lg",
+        style={"width": "fit-content", "margin": "auto"},
     )
 
 
@@ -189,7 +190,7 @@ au bon fonctionnement du site et de la facturation.
 
 **Données stockées par Frisbii :**
 
-- Informations de facturation : prénom et nom (ou nom de l'entreprise), adresse postale, code postal, ville, pays, nom de l'entreprise (ou prénom et nom)
+- Informations de facturation : prénom et nom (et nom et SIRET de l'organisme si applicable), adresse postale, code postal, ville, pays
 - Informations de paiement : coordonnées bancaires
 - Historique des factures
 
@@ -211,8 +212,8 @@ def layout(**_):
     body = html.Div(
         [
             _plan_cards(),
-            _explainer(),
             _subscribe_button(authenticated, has_active, TOUS_ABONNES),
+            _explainer(),
             subscription_terms,
         ]
     )

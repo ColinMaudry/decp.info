@@ -252,7 +252,7 @@ def layout(**query):
                 className="mb-1",
             ),
             html.Div(id="inf-siret-msg", className="small mb-3"),
-            dbc.Label("Nom de l'entreprise"),
+            dbc.Label("Nom de l'organisme"),
             dbc.Input(
                 id="inf-entreprise",
                 name="company",

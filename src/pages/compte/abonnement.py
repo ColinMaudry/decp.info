@@ -28,19 +28,13 @@ def _price_text(meta: dict) -> str | None:
     return f"{ht} € HT / mois ({round(ht * 1.2, 2):g} € TTC)"
 
 
-def _reabo_button(has_used_trial: bool):
-    label = "Me réabonner" if has_used_trial else "M'abonner"
+def _reabo_button():
     return html.Div(
         [
-            html.P(
-                "Abonnez-vous pour accéder aux fonctionnalités réservées "
+            dcc.Markdown(
+                "[Abonnez-vous](/a-propos/abonnement) pour accéder aux fonctionnalités réservées "
                 "aux abonné·es.",
                 className="mb-3",
-            ),
-            html.A(
-                label,
-                href="/a-propos/abonnement",
-                className="btn btn-primary",
             ),
         ],
         className="mb-4",
@@ -274,7 +268,7 @@ def layout(**query):
                     "Votre abonnement a expiré.", color="warning", className="mb-4"
                 )
             )
-        body.append(_reabo_button(db.has_used_trial(current_user.id)))
+        body.append(_reabo_button())
 
     body.append(_salaire_modal)
     return account_shell("abonnement", html.Div(body))
