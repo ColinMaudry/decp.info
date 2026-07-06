@@ -1,18 +1,9 @@
-def test_reabo_button_never_subscribed():
+def test_reabo_button_links_to_abonnement_page():
     from src.pages.compte import abonnement as compte_abonnement
 
-    text = str(compte_abonnement._reabo_button(has_used_trial=False))
-    assert "M'abonner" in text
-    assert "Me réabonner" not in text
-    assert "href='/a-propos/abonnement'" in text
-
-
-def test_reabo_button_former_subscriber():
-    from src.pages.compte import abonnement as compte_abonnement
-
-    text = str(compte_abonnement._reabo_button(has_used_trial=True))
-    assert "Me réabonner" in text
-    assert "href='/a-propos/abonnement'" in text
+    text = str(compte_abonnement._reabo_button())
+    assert "Abonnez-vous" in text
+    assert "/a-propos/abonnement" in text
 
 
 def test_active_view_shows_cancel(monkeypatch):
