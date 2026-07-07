@@ -12,7 +12,7 @@ NAME = "Recherche"
 register_page(
     __name__,
     path="/",
-    title="Recherche de marchés publics | colibre",
+    title="Outils pour l'exploration des marchés publics | colibre",
     name=NAME,
     description="Explorez et analysez les données des marchés publics français. Pour une commande publique accessible à toutes et tous.",
     image_url=META_CONTENT["image_url"],
