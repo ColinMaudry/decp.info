@@ -10,6 +10,7 @@ from dash import (
     no_update,
     register_page,
 )
+from dash.exceptions import PreventUpdate
 from flask_login import current_user
 
 from src.admin.db import log_action
@@ -91,6 +92,13 @@ def layout(**_):
     prevent_initial_call=True,
 )
 def _update_table(selected_table, data, data_previous):
+    # Les callbacks Dash sont des endpoints serveur globaux (/_dash-update-component)
+    # invocables indépendamment du layout rendu : la garde is_admin() de layout()
+    # ne protège QUE l'affichage. Sans ce contrôle, n'importe qui (y compris un
+    # anonyme) pourrait lire/écrire toute la base via ce callback. Voir issue #110.
+    if not is_admin():
+        raise PreventUpdate
+
     if ctx.triggered_id == "admin-table-select":
         return (
             get_rows(selected_table),
