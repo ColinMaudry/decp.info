@@ -16,6 +16,7 @@ def _abort_401(message: str):
 def require_token(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
+        print(API_AUTH_DISABLED)
         if not API_AUTH_DISABLED:
             header = request.headers.get("Authorization", "")
             if not header.startswith("Bearer "):
