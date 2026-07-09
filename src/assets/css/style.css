@@ -770,6 +770,13 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
+/* Dash 4 ajoute des boutons +/- (steppers) sur les dcc.Input type="number" ;
+   inutiles ici (pas d'incrémentation pertinente pour des montants), on les
+   masque pour que le champ récupère l'espace (flex: 1 1 0 sur l'input). */
+.dash-input-stepper {
+  display: none;
+}
+
 /* ===== Page /etapes : graphique données par étape et par seuil ===== */
 
 .etapes-chart-scroll {
