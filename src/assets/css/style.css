@@ -7,6 +7,10 @@
   --bs-font-monospace: "Fira Code";
   --primary-color: rgb(179, 56, 33);
   --primary-color-text: #b33821;
+  /* Dash 4 utilise cette variable pour l'état actif/focus des composants
+     dcc (Dropdown, Input, Tabs, DatePicker...) ; défaut violet remplacé
+     par notre couleur primaire. */
+  --Dash-Fill-Interactive-Strong: var(--primary-color);
 }
 
 /* ==========================================================================
