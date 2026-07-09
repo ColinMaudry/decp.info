@@ -275,7 +275,7 @@ Alors, on fait comment ?
                                             ),
                                             dbc.Col(
                                                 html.A(
-                                                    "liste des codes",
+                                                    "liste des codes CPV",
                                                     href="https://cpvcodes.eu/fr",
                                                     target="_blank",
                                                 ),
