@@ -72,7 +72,8 @@ Nouvelle fabrique `ag_grid(...)` (à côté de la classe `DataTable`, qui reste 
 - `dag.AgGrid(rowModelType="infinite", ...)`.
 - `columnDefs` dérivés de `schema` : `field`, `headerName`, `filter` par type (`agTextColumnFilter` / `agNumberColumnFilter` / `agDateColumnFilter`), `floatingFilter: True`, `headerTooltip` = définition de la colonne (remplace `tooltip_header`), `hide` selon les colonnes masquées.
 - Cellules à liens (`marche` 🔍, `acheteur_nom`/`titulaire_nom` avec liens détail + 📊, `uid`, ressource) : `cellRenderer: "markdown"` + `dangerously_allow_code=True` sur la grille → le HTML `<a>` produit par `postprocess_page`/`add_links` se rend tel quel. `linkTarget: "_blank"` au besoin.
-- `dashGridOptions` : `cacheBlockSize` = taille de page (20), `maxBlocksInCache`, `rowBuffer`, `pagination`/`paginationAutoPageSize` selon l'UX voulue.
+- **Scroll infini** (décidé) : pas de pagination numérotée. Grille à **hauteur fixe** (ex. `calc(100vh - …)`) avec scroll interne → **en-têtes toujours figés**, virtualisation des lignes (seules les lignes visibles + buffer sont rendues), chargement des blocs à la volée. Ne PAS utiliser `domLayout: "autoHeight"` (incompatible avec l'infinite row model).
+- `dashGridOptions` : `cacheBlockSize` (taille de bloc serveur, ex. 100), `maxBlocksInCache`, `rowBuffer`, `infiniteInitialRowCount`. Optionnel : épingler à gauche les colonnes-clés (lien 🔍 marché, acheteur) via `pinned: "left"` pour rester visibles au scroll horizontal.
 - **Apparence de base** : pas de thème custom au Lot 1 (thème AG Grid par défaut).
 
 ### Persistance
@@ -83,7 +84,7 @@ Nouvelle fabrique `ag_grid(...)` (à côté de la classe `DataTable`, qui reste 
 
 - **Remplacé** : le callback `update_table` (Inputs `page_current/page_size/filter_query/sort_by`) devient `get_rows_tableau` (Input `getRowsRequest` → Output `getRowsResponse`).
 - **Sélecteur de colonnes** : les callbacks colonnes pilotent désormais `columnDefs`/`columnState` (`hide`) au lieu de `hidden_columns`. `make_column_picker`, `get_default_hidden_columns`, `invert_columns` réutilisés.
-- **Export Excel** (`download_data`) : recompile le filtre via l'AST (à partir du `filterModel` courant, exposé en `State`). **Recommandé** : compiler l'AST en SQL et récupérer les lignes filtrées/triées depuis DuckDB, puis `write_styled_excel` — unifie le chemin de données et évite un second compilateur (AST→Polars). L'actuel export passe par Polars (`filter_table_data`) ; ce point est listé dans « Questions ouvertes ».
+- **Export Excel** (`download_data`) — chemin **DuckDB** (décidé) : recompile le `filterModel` courant (exposé en `State`) → AST → SQL, récupère les lignes filtrées/triées depuis DuckDB (colonnes masquées exclues), puis `write_styled_excel`. Un seul compilateur (AST→SQL), même chemin de données que la grille → pas de divergence filtre-affiché / filtre-exporté. Remplace l'actuel pipeline Polars (`filter_table_data`/`sort_table_data` sur `LazyFrame`).
 - **nb_rows / hint téléchargement** : dérivés du `rowCount` et du total (seuil 65 000 lignes conservé).
 - **Vues sauvegardées (abonnés)** : `saved_views` stocke désormais l'AST (JSON) + `columnState`, au lieu de la query DSL. `build_view_query` / `restore_view_from_url` remplacés par une sérialisation AST. Le _rappel_ de vue reste ; le _partage par URL riche_ est retiré.
 - **Retiré** : `restore_view_from_url` (partie `?filtres/tris/colonnes`), `sync_url_and_reset_button` (URL riche), bouton « Partager la vue » (revient avec #112), `clean_filters` clientside.
@@ -114,10 +115,10 @@ Le `dcc.Markdown` d'aide et les **liens d'exemple** codés en dur (qui encodent 
 - **Intégration (Selenium/DashComposite)** : chargement de la grille, filtre de colonne, tri, pagination, sélecteur de colonnes, export Excel, persistance locale, vue sauvegardée (abonné).
 - Suite complète `uv run pytest` uniquement en fin de lot.
 
-## Questions ouvertes à trancher
+## Décisions tranchées
 
-1. **UX de pagination** : garder des **pages numérotées** (20 lignes/page, comme aujourd'hui, via `pagination=True` sur l'infinite row model) ou passer au **scroll infini** (chargement continu au défilement) ? Défaut proposé : pages numérotées, plus proche de l'existant.
-2. **Chemin de l'export Excel** : passer l'export sur **DuckDB** (AST→SQL, cohérent avec la grille — recommandé) ou conserver le pipeline **Polars** actuel en lui branchant un compilateur AST→Polars ?
+- **Pagination** : scroll infini (grille à hauteur fixe, en-têtes figés, virtualisation).
+- **Export Excel** : chemin DuckDB (AST → SQL), pipeline Polars retiré.
 
 ## Reporté au 2e temps / lots suivants
 
