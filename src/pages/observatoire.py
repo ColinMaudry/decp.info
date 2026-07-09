@@ -37,7 +37,7 @@ from src.utils.data import (
     DF_TITULAIRES,
     prepare_dashboard_data,
 )
-from src.utils.frontend import get_enum_values_as_dict
+from src.utils.frontend import DROPDOWN_LABELS_FR, get_enum_values_as_dict
 from src.utils.seo import META_CONTENT
 from src.utils.table import (
     COLUMNS,
@@ -149,6 +149,7 @@ Alors, on fait comment ?
                                                 placeholder="12 derniers mois",
                                                 persistence=True,
                                                 persistence_type="local",
+                                                labels=DROPDOWN_LABELS_FR,
                                             ),
                                         ),
                                     ),
@@ -175,6 +176,7 @@ Alors, on fait comment ?
                                                 placeholder="Catégorie",
                                                 persistence=True,
                                                 persistence_type="local",
+                                                labels=DROPDOWN_LABELS_FR,
                                             )
                                         ),
                                     ),
@@ -188,6 +190,7 @@ Alors, on fait comment ?
                                                 options=OPTIONS_DEPARTEMENTS,
                                                 persistence=True,
                                                 persistence_type="local",
+                                                labels=DROPDOWN_LABELS_FR,
                                             ),
                                         ),
                                     ),
@@ -214,6 +217,7 @@ Alors, on fait comment ?
                                                 ),
                                                 persistence=True,
                                                 persistence_type="local",
+                                                labels=DROPDOWN_LABELS_FR,
                                             ),
                                         ),
                                     ),
@@ -227,6 +231,7 @@ Alors, on fait comment ?
                                                 options=OPTIONS_DEPARTEMENTS,
                                                 persistence=True,
                                                 persistence_type="local",
+                                                labels=DROPDOWN_LABELS_FR,
                                             ),
                                         ),
                                     ),
@@ -239,6 +244,7 @@ Alors, on fait comment ?
                                                 options=get_enum_values_as_dict("type"),
                                                 persistence=True,
                                                 persistence_type="local",
+                                                labels=DROPDOWN_LABELS_FR,
                                             ),
                                         ),
                                     ),
@@ -318,6 +324,7 @@ Alors, on fait comment ?
                                                 multi=True,
                                                 persistence=True,
                                                 persistence_type="local",
+                                                labels=DROPDOWN_LABELS_FR,
                                             ),
                                         ),
                                     ),
@@ -390,6 +397,7 @@ Alors, on fait comment ?
                                                 multi=True,
                                                 persistence=True,
                                                 persistence_type="local",
+                                                labels=DROPDOWN_LABELS_FR,
                                             ),
                                         ),
                                     ),
@@ -404,6 +412,7 @@ Alors, on fait comment ?
                                                 ),
                                                 persistence=True,
                                                 persistence_type="local",
+                                                labels=DROPDOWN_LABELS_FR,
                                             ),
                                         ),
                                     ),

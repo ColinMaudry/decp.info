@@ -23,7 +23,7 @@ from src.figures import (
     make_column_picker,
 )
 from src.utils.data import DF_TITULAIRES, get_annuaire_data, get_departement_region
-from src.utils.frontend import get_button_properties
+from src.utils.frontend import DROPDOWN_LABELS_FR, get_button_properties
 from src.utils.seo import META_CONTENT
 from src.utils.table import (
     COLUMNS,
@@ -122,6 +122,7 @@ layout = [
                                         )
                                     ],
                                     placeholder="Année",
+                                    labels=DROPDOWN_LABELS_FR,
                                 ),
                                 width=4,
                             ),

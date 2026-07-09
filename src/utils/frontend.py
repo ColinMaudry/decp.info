@@ -2,6 +2,16 @@ from datetime import datetime
 
 from src.utils.data import DATA_SCHEMA
 
+DROPDOWN_LABELS_FR = {
+    "select_all": "Tout sélectionner",
+    "deselect_all": "Tout désélectionner",
+    "selected_count": "{num_selected} sélectionné(s)",
+    "search": "Rechercher...",
+    "clear_search": "Effacer la recherche",
+    "clear_selection": "Effacer la sélection",
+    "no_options_found": "Aucun résultat",
+}
+
 
 def format_date_french(date_input) -> str:
     """Format a date as 'jour mois' (e.g., '1er janvier', '15 décembre')."""
