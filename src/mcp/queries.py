@@ -175,7 +175,7 @@ def compute_org_stats(org_type: str, org_id: str) -> dict:
         return {
             "identite": identite,
             "nb_marches": 0,
-            "montant_total": 0,
+            "montant_total": 0.0,
             "repartition_annuelle": [],
             f"top_{other}s": [],
             "top_cpv": [],
