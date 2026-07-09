@@ -1,0 +1,156 @@
+import pytest
+
+import src.utils.search as search_mod
+from src.mcp.queries import (
+    build_where_args,
+    compute_org_stats,
+    search_marches,
+    search_organisations,
+)
+from src.utils.data import DF_ACHETEURS
+from src.utils.search import search_org
+
+
+def test_search_org_track_false_skips_track_search(monkeypatch):
+    calls = []
+    monkeypatch.setattr(search_mod, "track_search", lambda q, c: calls.append((q, c)))
+
+    search_org(DF_ACHETEURS, "ACHETEUR", "acheteur", track=False)
+
+    assert calls == []
+
+
+def test_search_org_track_true_calls_track_search(monkeypatch):
+    calls = []
+    monkeypatch.setattr(search_mod, "track_search", lambda q, c: calls.append((q, c)))
+
+    search_org(DF_ACHETEURS, "ACHETEUR", "acheteur", track=True)
+
+    assert calls == [("ACHETEUR", "home_page_search")]
+
+
+def test_search_organisations_finds_known_acheteur():
+    result = search_organisations("ACHETEUR", "acheteur")
+    assert any(r["id"] == "123" for r in result)
+    first = next(r for r in result if r["id"] == "123")
+    assert set(first.keys()) == {"id", "nom", "departement"}
+    # Vérifier que le nom a été extrait en texte plain (HTML strippé)
+    assert first["nom"] == "ACHETEUR 1"
+    assert "<" not in first["nom"]  # Défense : aucun markup HTML ne s'échappe
+
+
+def test_search_organisations_finds_known_titulaire():
+    result = search_organisations("TITULAIRE", "titulaire")
+    assert any(r["id"] == "345" for r in result)
+    first = next(r for r in result if r["id"] == "345")
+    assert set(first.keys()) == {"id", "nom", "departement"}
+    # Vérifier que le nom a été extrait en texte plain (HTML strippé),
+    # même chemin SIRET/non-SIRET différent de celui du test acheteur.
+    assert first["id"] == "345"
+    assert first["nom"] == "TITULAIRE 1"
+    assert "<" not in first["id"]
+    assert "<" not in first["nom"]
+
+
+def test_search_organisations_invalid_type_raises():
+    with pytest.raises(ValueError):
+        search_organisations("x", "autre")
+
+
+def test_search_organisations_respects_limite():
+    result = search_organisations("ACHETEUR", "acheteur", limite=1)
+    assert len(result) <= 1
+
+
+def test_build_where_args_named_params():
+    args = build_where_args(
+        {"acheteur_id": "123", "montant_min": 5, "objet_contient": "test"}, None
+    )
+    assert ("acheteur_id__exact", "123") in args
+    assert ("montant__greater", "5") in args
+    assert ("objet__contains", "test") in args
+
+
+def test_build_where_args_merges_filtres_avances():
+    args = build_where_args(
+        {"acheteur_id": "123"}, {"titulaire_departement_code__exact": "35"}
+    )
+    assert ("acheteur_id__exact", "123") in args
+    assert ("titulaire_departement_code__exact", "35") in args
+
+
+def test_search_marches_returns_meta_and_rows():
+    result = search_marches(acheteur_id="123")
+    assert result["meta"]["total"] >= 1
+    assert result["meta"]["page"] == 1
+    assert result["meta"]["page_size"] == 50
+    assert any(m["acheteur_id"] == "123" for m in result["marches"])
+    # dates sérialisées en ISO
+    assert result["marches"][0]["dateNotification"] == "2025-01-01"
+
+
+def test_search_marches_no_match_is_empty():
+    result = search_marches(acheteur_id="inconnu-xyz")
+    assert result["meta"]["total"] == 0
+    assert result["marches"] == []
+
+
+def test_search_marches_bad_filter_returns_error():
+    result = search_marches(filtres_avances={"colonne_bidon__exact": "x"})
+    assert "error" in result
+
+
+def test_search_marches_montant_min_filters_correctly():
+    assert search_marches(montant_min=100)["meta"]["total"] == 0
+    assert search_marches(montant_min=1)["meta"]["total"] >= 1
+
+
+def test_search_marches_date_min_max_filters_correctly():
+    assert search_marches(date_min="2025-01-01")["meta"]["total"] >= 1
+    assert search_marches(date_min="2025-01-02")["meta"]["total"] == 0
+    assert search_marches(date_max="2025-01-01")["meta"]["total"] >= 1
+    assert search_marches(date_max="2024-12-31")["meta"]["total"] == 0
+
+
+def test_search_marches_cpv_filters_correctly():
+    assert search_marches(cpv="716")["meta"]["total"] >= 1
+    assert search_marches(cpv="999")["meta"]["total"] == 0
+
+
+def test_search_marches_page_2_is_empty_with_correct_meta():
+    result = search_marches(acheteur_id="123", page=2)
+    assert result["meta"]["page"] == 2
+    assert result["marches"] == []
+
+
+def test_search_marches_page_zero_is_clamped_to_one():
+    result = search_marches(acheteur_id="123", page=0)
+    assert result["meta"]["page"] == 1
+
+
+def test_compute_org_stats_acheteur_known():
+    stats = compute_org_stats("acheteur", "123")
+    assert stats["nb_marches"] >= 1
+    assert stats["montant_total"] == 10
+    assert stats["identite"]["id"] == "123"
+    assert stats["identite"]["nom"] == "ACHETEUR 1"
+    assert "top_titulaires" in stats
+    assert "top_cpv" in stats
+    # répartition annuelle dérivée de dateNotification (2025)
+    annees = [row["annee"] for row in stats["repartition_annuelle"]]
+    assert 2025 in annees
+
+
+def test_compute_org_stats_titulaire_known():
+    stats = compute_org_stats("titulaire", "345")
+    assert stats["nb_marches"] >= 1
+    assert "top_acheteurs" in stats
+
+
+def test_compute_org_stats_unknown_is_empty():
+    stats = compute_org_stats("acheteur", "inconnu-xyz")
+    assert stats["nb_marches"] == 0
+    assert stats["montant_total"] == 0
+    assert stats["repartition_annuelle"] == []
+    assert stats["top_titulaires"] == []
+    assert stats["top_cpv"] == []
