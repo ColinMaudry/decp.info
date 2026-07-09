@@ -635,8 +635,7 @@ requires-dist = [
     { name = "boto3" },
     { name = "brevo-python", specifier = "==5.0.0rc1" },
     { name = "cryptography" },
-    { name = "dash", specifier = "==3.4.0" },
-    { name = "dash", extras = ["compress"] },
+    { name = "dash", extras = ["compress"], specifier = "==4.4.0" },
     { name = "dash-bootstrap-components" },
     { name = "dash-extensions" },
     { name = "dash-leaflet" },
@@ -662,7 +661,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "dash", extras = ["testing"] },
+    { name = "dash", extras = ["testing"], specifier = "==4.4.0" },
     { name = "fastexcel" },
     { name = "moto", extras = ["s3"] },
     { name = "openpyxl" },
@@ -750,22 +749,24 @@ wheels = [
 
 [[package]]
 name = "dash"
-version = "3.4.0"
+version = "4.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "flask" },
     { name = "importlib-metadata" },
+    { name = "janus" },
     { name = "nest-asyncio" },
     { name = "plotly" },
+    { name = "pydantic" },
     { name = "requests" },
     { name = "retrying" },
     { name = "setuptools" },
     { name = "typing-extensions" },
     { name = "werkzeug" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7a/3a/322a583ca3479ad2dc6a8bfbaf7f8e4d01e16cc5030d8e7b45445bc22502/dash-3.4.0.tar.gz", hash = "sha256:3944beb32000ee8b22cd7fbb33545a0a43e25916c63aa41ba59ee5611997815e", size = 7581177, upload-time = "2026-01-20T20:46:47.43Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/71/2d/c605f929e126f72a980a0f06fc08084d9e35e43f14bba2cddd507f7d7b14/dash-4.4.0.tar.gz", hash = "sha256:9155e4b1136b5a6bdae1fbd108f55a2ce9e9b4ac376dace4457c877cc7da279d", size = 8517423, upload-time = "2026-07-03T18:29:11.163Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/87/2e/8fa7d095f7ab28649ece149118ccbde8286be52037b02ab02fbe52c34601/dash-3.4.0-py3-none-any.whl", hash = "sha256:62b1c2eca3cfbe05f5e6ed8666e2c9a204aa08e2ceef89f01ce9bcccb3c18e95", size = 7921864, upload-time = "2026-01-20T20:46:36.088Z" },
+    { url = "https://files.pythonhosted.org/packages/bc/49/c15f6c1d3d340bf18b4f66a4bf884d6bd2364d1707db2c200963066cf67c/dash-4.4.0-py3-none-any.whl", hash = "sha256:59eb377b8601fcbcf67246c75cc6daf066790ec08a616eb6f64efba7a5e021d4", size = 8925788, upload-time = "2026-07-03T18:29:03.189Z" },
 ]
 
 [package.optional-dependencies]
@@ -778,7 +779,7 @@ testing = [
     { name = "dash-testing-stub" },
     { name = "lxml" },
     { name = "multiprocess" },
-    { name = "percy" },
+    { name = "percy-python-selenium" },
     { name = "psutil" },
     { name = "pytest" },
     { name = "requests" },
@@ -1310,6 +1311,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/9c/cb/8ac0172223afbccb63986cc25049b154ecfb5e85932587206f42317be31d/itsdangerous-2.2.0.tar.gz", hash = "sha256:e0050c0b7da1eea53ffaf149c0cfbb5c6e2e2b69c4bef22c81fa6eb73e5f6173", size = 54410, upload-time = "2024-04-16T21:28:15.614Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/04/96/92447566d16df59b2a776c0fb82dbc4d9e07cd95062562af01e408583fc4/itsdangerous-2.2.0-py3-none-any.whl", hash = "sha256:c6242fc49e35958c8b15141343aa660db5fc54d4f13a1db01a3f5891b98700ef", size = 16234, upload-time = "2024-04-16T21:28:14.499Z" },
+]
+
+[[package]]
+name = "janus"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d8/7f/69884b6618be4baf6ebcacc716ee8680a842428a19f403db6d1c0bb990aa/janus-2.0.0.tar.gz", hash = "sha256:0970f38e0e725400496c834a368a67ee551dc3b5ad0a257e132f5b46f2e77770", size = 22910, upload-time = "2024-12-13T12:59:08.622Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/68/34/65604740edcb20e1bda6a890348ed7d282e7dd23aa00401cbe36fd0edbd9/janus-2.0.0-py3-none-any.whl", hash = "sha256:7e6449d34eab04cd016befbd7d8c0d8acaaaab67cb59e076a69149f9031745f9", size = 12161, upload-time = "2024-12-13T12:59:06.106Z" },
 ]
 
 [[package]]
@@ -2177,15 +2187,28 @@ wheels = [
 ]
 
 [[package]]
-name = "percy"
-version = "2.0.2"
+name = "percy-python-selenium"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "percy-selenium" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0f/6f/96745634ec04a48801bf49cba166696b39f239a03caab1743c501ccc6131/percy-python-selenium-1.0.0.tar.gz", hash = "sha256:d50975cc7d923b7ce470f7f56f8d3ebcb33cb4a2d53f865ccd9c65d207a77252", size = 2673, upload-time = "2021-02-08T18:35:32.517Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/33/81/ea79b5b3c64fcfcea0be2416ce8b5b8c619a53dbd9a3ced587ce2bafb920/percy_python_selenium-1.0.0-py3-none-any.whl", hash = "sha256:4879c6145266aaecce6c5fa14de50bb578bfdff02beb85187e4180d110c6fa4c", size = 3175, upload-time = "2021-02-08T18:35:31.314Z" },
+]
+
+[[package]]
+name = "percy-selenium"
+version = "1.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "requests" },
+    { name = "selenium" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6c/e8/1b856488736db9f1bb8578480f9497f7cf1ede96c6e6e17f29ebef4e78bc/percy-2.0.2.tar.gz", hash = "sha256:6238612dc401fa5c221c0ad7738f7ea43e48fe2695f6423e785ee2bc940f021d", size = 67855, upload-time = "2019-03-07T00:28:30.78Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6a/29/aee6dcf53b9f2f3a4448b6d7665368a1dae493d19b16e956732b1f5ba405/percy-selenium-1.1.0.tar.gz", hash = "sha256:3995c719458d537df469fdd1ac8b1168f37fdb98b0fd8d566a945aaecc8c4cbf", size = 6103, upload-time = "2023-04-10T08:09:18.079Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d6/39/528e689e21baa4d625cecc326c0d56c976d63855f9d114c07ccaed8a73eb/percy-2.0.2-py2.py3-none-any.whl", hash = "sha256:c1647b768810e9453220a7721a5d52cec560dee913d13c1e29b713703f4f223e", size = 12004, upload-time = "2019-03-07T00:28:33.207Z" },
+    { url = "https://files.pythonhosted.org/packages/4d/db/3d1d38db09c9bce0adfd7e0f34d0c3e94b3f2a3183bc9333dd02fa2b361c/percy_selenium-1.1.0-py3-none-any.whl", hash = "sha256:7f6628d114266281f7115db65c93c575a9ffd639654afddcd59f748c44b472fa", size = 4867, upload-time = "2023-04-10T08:09:16.54Z" },
 ]
 
 [[package]]
