@@ -29,6 +29,9 @@ def test_search_organisations_finds_known_acheteur():
     assert any(r["id"] == "123" for r in result)
     first = next(r for r in result if r["id"] == "123")
     assert set(first.keys()) == {"id", "nom", "departement"}
+    # Vérifier que le nom a été extrait en texte plain (HTML strippé)
+    assert first["nom"] == "ACHETEUR 1"
+    assert "<" not in first["nom"]  # Défense : aucun markup HTML ne s'échappe
 
 
 def test_search_organisations_invalid_type_raises():
