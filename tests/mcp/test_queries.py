@@ -1,7 +1,12 @@
 import pytest
 
 import src.utils.search as search_mod
-from src.mcp.queries import build_where_args, search_marches, search_organisations
+from src.mcp.queries import (
+    build_where_args,
+    compute_org_stats,
+    search_marches,
+    search_organisations,
+)
 from src.utils.data import DF_ACHETEURS
 from src.utils.search import search_org
 
@@ -80,3 +85,31 @@ def test_search_marches_no_match_is_empty():
 def test_search_marches_bad_filter_returns_error():
     result = search_marches(filtres_avances={"colonne_bidon__exact": "x"})
     assert "error" in result
+
+
+def test_compute_org_stats_acheteur_known():
+    stats = compute_org_stats("acheteur", "123")
+    assert stats["nb_marches"] >= 1
+    assert stats["montant_total"] == 10
+    assert stats["identite"]["id"] == "123"
+    assert stats["identite"]["nom"] == "ACHETEUR 1"
+    assert "top_titulaires" in stats
+    assert "top_cpv" in stats
+    # répartition annuelle dérivée de dateNotification (2025)
+    annees = [row["annee"] for row in stats["repartition_annuelle"]]
+    assert 2025 in annees
+
+
+def test_compute_org_stats_titulaire_known():
+    stats = compute_org_stats("titulaire", "345")
+    assert stats["nb_marches"] >= 1
+    assert "top_acheteurs" in stats
+
+
+def test_compute_org_stats_unknown_is_empty():
+    stats = compute_org_stats("acheteur", "inconnu-xyz")
+    assert stats["nb_marches"] == 0
+    assert stats["montant_total"] == 0
+    assert stats["repartition_annuelle"] == []
+    assert stats["top_titulaires"] == []
+    assert stats["top_cpv"] == []

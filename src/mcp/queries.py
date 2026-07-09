@@ -2,7 +2,7 @@
 import re
 
 from src.api.filters import FilterError, build_where
-from src.db import count_marches, query_marches
+from src.db import aggregate_marches, count_marches, query_marches
 from src.db import schema as duckdb_schema
 from src.mcp.serialization import to_json_records
 from src.utils.data import DF_ACHETEURS, DF_TITULAIRES
@@ -129,3 +129,94 @@ def search_organisations(
         }
         for r in df.to_dicts()
     ]
+
+
+def _org_identite(org_type: str, org_id: str) -> dict:
+    df = query_marches(
+        where_sql=f'"{org_type}_id" = ?',
+        params=[org_id],
+        columns=[
+            f"{org_type}_id",
+            f"{org_type}_nom",
+            f"{org_type}_departement_nom",
+            f"{org_type}_commune_nom",
+        ],
+        limit=1,
+    )
+    if df.height == 0:
+        return {"id": org_id, "nom": None, "departement": None, "commune": None}
+    r = df.row(0, named=True)
+    return {
+        "id": org_id,
+        "nom": r[f"{org_type}_nom"],
+        "departement": r[f"{org_type}_departement_nom"],
+        "commune": r[f"{org_type}_commune_nom"],
+    }
+
+
+def compute_org_stats(org_type: str, org_id: str) -> dict:
+    """Statistiques agrégées d'un acheteur ou titulaire."""
+    if org_type not in ORG_FRAMES:
+        raise ValueError(
+            f"type invalide: {org_type!r} (attendu 'acheteur' ou 'titulaire')"
+        )
+    other = "titulaire" if org_type == "acheteur" else "acheteur"
+    where_sql = f'"{org_type}_id" = ?'
+    params = [org_id]
+    identite = _org_identite(org_type, org_id)
+
+    totals = aggregate_marches(
+        select_sql='COUNT("uid") AS nb, COALESCE(SUM("montant"), 0) AS montant_total',
+        where_sql=where_sql,
+        params=params,
+    )
+    nb = int(totals["nb"][0])
+    if nb == 0:
+        return {
+            "identite": identite,
+            "nb_marches": 0,
+            "montant_total": 0,
+            "repartition_annuelle": [],
+            f"top_{other}s": [],
+            "top_cpv": [],
+        }
+
+    annuelle = aggregate_marches(
+        select_sql=(
+            "CAST(date_part('year', \"dateNotification\") AS INTEGER) AS annee, "
+            'COUNT("uid") AS nb_marches, '
+            'COALESCE(SUM("montant"), 0) AS montant_total'
+        ),
+        where_sql=where_sql,
+        params=params,
+        group_by="date_part('year', \"dateNotification\")",
+        order_by="annee",
+    )
+    top_other = aggregate_marches(
+        select_sql=(
+            f'"{other}_id" AS id, any_value("{other}_nom") AS nom, '
+            'COUNT("uid") AS nb_marches, '
+            'COALESCE(SUM("montant"), 0) AS montant_total'
+        ),
+        where_sql=where_sql,
+        params=params,
+        group_by=f'"{other}_id"',
+        order_by="nb_marches DESC",
+        limit=TOP_N,
+    )
+    top_cpv = aggregate_marches(
+        select_sql='"codeCPV" AS cpv, COUNT("uid") AS nb_marches',
+        where_sql=where_sql,
+        params=params,
+        group_by='"codeCPV"',
+        order_by="nb_marches DESC",
+        limit=TOP_N,
+    )
+    return {
+        "identite": identite,
+        "nb_marches": nb,
+        "montant_total": float(totals["montant_total"][0]),
+        "repartition_annuelle": to_json_records(annuelle),
+        f"top_{other}s": to_json_records(top_other),
+        "top_cpv": to_json_records(top_cpv),
+    }
