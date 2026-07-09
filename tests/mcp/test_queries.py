@@ -1,7 +1,7 @@
 import pytest
 
 import src.utils.search as search_mod
-from src.mcp.queries import search_organisations
+from src.mcp.queries import build_where_args, search_marches, search_organisations
 from src.utils.data import DF_ACHETEURS
 from src.utils.search import search_org
 
@@ -42,3 +42,41 @@ def test_search_organisations_invalid_type_raises():
 def test_search_organisations_respects_limite():
     result = search_organisations("ACHETEUR", "acheteur", limite=1)
     assert len(result) <= 1
+
+
+def test_build_where_args_named_params():
+    args = build_where_args(
+        {"acheteur_id": "123", "montant_min": 5, "objet_contient": "test"}, None
+    )
+    assert ("acheteur_id__exact", "123") in args
+    assert ("montant__greater", "5") in args
+    assert ("objet__contains", "test") in args
+
+
+def test_build_where_args_merges_filtres_avances():
+    args = build_where_args(
+        {"acheteur_id": "123"}, {"titulaire_departement_code__exact": "35"}
+    )
+    assert ("acheteur_id__exact", "123") in args
+    assert ("titulaire_departement_code__exact", "35") in args
+
+
+def test_search_marches_returns_meta_and_rows():
+    result = search_marches(acheteur_id="123")
+    assert result["meta"]["total"] >= 1
+    assert result["meta"]["page"] == 1
+    assert result["meta"]["page_size"] == 50
+    assert any(m["acheteur_id"] == "123" for m in result["marches"])
+    # dates sérialisées en ISO
+    assert result["marches"][0]["dateNotification"] == "2025-01-01"
+
+
+def test_search_marches_no_match_is_empty():
+    result = search_marches(acheteur_id="inconnu-xyz")
+    assert result["meta"]["total"] == 0
+    assert result["marches"] == []
+
+
+def test_search_marches_bad_filter_returns_error():
+    result = search_marches(filtres_avances={"colonne_bidon__exact": "x"})
+    assert "error" in result
