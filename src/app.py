@@ -74,6 +74,8 @@ cache.init_app(
     },
 )
 
+_mcp_enabled = os.getenv("DASH_MCP_ENABLED") == "true"
+
 app: Dash = Dash(
     server=server,
     # name="src" (et non "src.app") pour que use_pages enregistre les pages sous
@@ -87,6 +89,7 @@ app: Dash = Dash(
     use_pages=True,
     suppress_callback_exceptions=True,
     compress=True,
+    enable_mcp=_mcp_enabled,
     meta_tags=META_TAGS,
 )
 
@@ -107,6 +110,19 @@ if _auth_csrf is not None:
 from src.api import init_api  # noqa: E402  # inline: src.db.conn must be ready first
 
 init_api(app.server)
+
+# Serveur MCP (issue #111, scope A) : n'expose QUE les fonctions @mcp_enabled,
+# jamais les callbacks/layout/pages d'UI. Activé via DASH_MCP_ENABLED=true.
+if _mcp_enabled:
+    from dash.mcp import configure_mcp_server  # noqa: E402
+
+    configure_mcp_server(
+        include_layout=False,
+        include_callbacks=False,
+        include_pages=False,
+        include_clientside_callbacks=False,
+    )
+    import src.mcp.tools  # noqa: E402,F401  # l'import enregistre les @mcp_enabled
 
 from src.subscriptions.setup import init_subscriptions  # noqa: E402
 
