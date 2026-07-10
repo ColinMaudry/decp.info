@@ -38,13 +38,14 @@ def test_prepare_accepts_valid():
     assert err is None
 
 
-def test_saved_views_items_build_links():
+def test_saved_views_items_build_clickable_entries():
     items = ui.saved_views_items(
         [_view(1, "Vue A", "filtres=a"), _view(2, "Vue B", "tris=b")]
     )
     assert len(items) == 2
-    assert items[0].href == "/tableau?filtres=a"
+    assert items[0].id == {"type": "saved-view-item", "index": 1}
     assert items[0].children == "Vue A"
+    assert items[1].id == {"type": "saved-view-item", "index": 2}
 
 
 def test_views_table_empty_state():

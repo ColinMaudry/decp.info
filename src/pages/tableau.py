@@ -1,17 +1,16 @@
 import json
 import os
-import urllib.parse
-import uuid
 from datetime import datetime
 
 import dash_bootstrap_components as dbc
 from dash import (
-    ClientsideFunction,
+    ALL,
     Input,
     Output,
     State,
     callback,
     clientside_callback,
+    ctx,
     dcc,
     html,
     no_update,
@@ -24,14 +23,12 @@ from src.figures import ag_grid, make_column_picker
 from src.pages._compte_shell import current_user_has_subscription
 from src.saved_views import db as saved_views_db
 from src.saved_views import ui as saved_views_ui
-from src.utils import get_data_update_timestamp, logger
+from src.utils import get_data_update_timestamp
 from src.utils.grid import fetch_grid_page, grid_column_defs
 from src.utils.seo import META_CONTENT
 from src.utils.table import (
     COLUMNS,
-    build_view_query,
     get_default_hidden_columns,
-    invert_columns,
     write_styled_excel,
 )
 from src.utils.tracking import track_search
@@ -124,7 +121,6 @@ def _help_button_legend():
 
 layout = [
     dcc.Location(id="tableau_url", refresh=False),
-    dcc.Store(id="filter-cleanup-trigger-tableau"),
     dcc.Store(id="tableau-hidden-columns", storage_type="local"),
     dcc.Store(id="tableau-table"),
     dcc.Store(id="tableau-total"),
@@ -364,8 +360,6 @@ layout = [
                             ),
                         ],
                     ),
-                    html.Div(id="copy-container"),
-                    dcc.Input(id="share-url", readOnly=True, style={"display": "none"}),
                     dbc.Button(
                         "Télécharger (Excel)",
                         id="btn-download-data",
@@ -489,123 +483,6 @@ def download_data(n_clicks, filter_model, column_state):
 
 
 @callback(
-    Output("tableau_datatable", "filter_query"),
-    Output("tableau_datatable", "sort_by"),
-    Output("tableau-hidden-columns", "data"),
-    Output("tableau_url", "search"),
-    Output("filter-cleanup-trigger-tableau", "data"),
-    Input("tableau_url", "search"),
-    State("tableau_datatable", "filter_query"),
-    State("tableau_datatable", "sort_by"),
-)
-def restore_view_from_url(search, stored_filters, stored_sort):
-    if not search and not stored_filters:
-        return no_update, no_update, no_update, no_update, no_update
-
-    params = urllib.parse.parse_qs(search.lstrip("?")) if search else {}
-    logger.debug("params " + json.dumps(params, indent=2))
-
-    filter_query = no_update
-    sort_by = no_update
-    hidden_columns = no_update
-    trigger_cleanup = no_update
-
-    if "filtres" in params:
-        filter_query = params["filtres"][0]
-        trigger_cleanup = str(uuid.uuid4())
-    elif stored_filters:
-        filter_query = stored_filters
-        trigger_cleanup = str(uuid.uuid4())
-
-    if "tris" in params:
-        try:
-            sort_by = json.loads(params["tris"][0])
-        except json.JSONDecodeError:
-            pass
-    elif stored_sort:
-        sort_by = stored_sort
-
-    if "colonnes" in params:
-        table_columns = params["colonnes"][0].split(",")
-        verified_columns = [
-            column for column in table_columns if column in schema.names()
-        ]
-        hidden_columns = invert_columns(verified_columns)
-
-    return filter_query, sort_by, hidden_columns, "", trigger_cleanup
-
-
-# Pour nettoyer les icontains et i< des filtres
-# voir aussi src/assets/dash_clientside.js
-clientside_callback(
-    ClientsideFunction(
-        namespace="clientside",
-        function_name="clean_filters",
-    ),
-    Output("filter-cleanup-trigger-tableau", "data", allow_duplicate=True),
-    Input("filter-cleanup-trigger-tableau", "data"),
-    prevent_initial_call=True,
-)
-
-
-@callback(
-    Output("share-url", "value"),
-    Output("copy-container", "children"),
-    Input("tableau_datatable", "filter_query"),
-    Input("tableau_datatable", "sort_by"),
-    Input("tableau_datatable", "hidden_columns"),
-    State("tableau_url", "href"),
-    prevent_initial_call=True,
-)
-def sync_url_and_reset_button(filter_query, sort_by, hidden_columns, href):
-    if not href:
-        return no_update, no_update
-
-    # Extract base URL (remove existing query params)
-    base_url = href.split("?")[0]
-
-    query_string = build_view_query(filter_query, sort_by, hidden_columns)
-    full_url = f"{base_url}?{query_string}" if query_string else base_url
-
-    copy_button = dcc.Clipboard(
-        id="btn-copy-url",
-        target_id="share-url",
-        title="Copier l'URL de cette vue",
-        style={
-            "display": "inline-block",
-            "fontSize": 20,
-            "verticalAlign": "top",
-            "cursor": "pointer",
-        },
-        className="fa fa-link",
-        children=[
-            dbc.Button(
-                "Partager la vue",
-                color="secondary",
-                size="sm",
-                title="Copier l'adresse de cette vue (filtres, tris, choix de colonnes) pour la partager.",
-            )
-        ],
-    )
-
-    return full_url, copy_button
-
-
-@callback(
-    Output("copy-container", "children", allow_duplicate=True),
-    Input("btn-copy-url", "n_clicks", allow_optional=True),
-    prevent_initial_call=True,
-)
-def show_confirmation(n_clicks):
-    if n_clicks:
-        return html.Span(
-            "Adresse de la vue copiée",
-            style={"color": "green", "fontWeight": "bold", "marginLeft": "10px"},
-        )
-    return no_update
-
-
-@callback(
     Output("tableau_help", "is_open"),
     [Input("tableau_help_open", "n_clicks"), Input("tableau_help_close", "n_clicks")],
     [State("tableau_help", "is_open")],
@@ -666,13 +543,12 @@ def toggle_tableau_columns(click_open, click_close, is_open):
 
 
 @callback(
-    Output("tableau_datatable", "filter_query", allow_duplicate=True),
-    Output("tableau_datatable", "sort_by", allow_duplicate=True),
+    Output("tableau_grid", "filterModel", allow_duplicate=True),
     Input("btn-tableau-reset", "n_clicks"),
     prevent_initial_call=True,
 )
 def reset_view(n_clicks):
-    return "", []
+    return {}
 
 
 @callback(
@@ -698,17 +574,18 @@ def toggle_save_view_modal(_open):
     Output("saved-views-refresh", "data"),
     Input("btn-save-view-confirm", "n_clicks"),
     State("save-view-name", "value"),
-    State("tableau_datatable", "filter_query"),
-    State("tableau_datatable", "sort_by"),
-    State("tableau_datatable", "hidden_columns"),
+    State("tableau_grid", "filterModel"),
+    State("tableau_grid", "columnState"),
     prevent_initial_call=True,
 )
-def save_view(_n, name, filter_query, sort_by, hidden_columns):
+def save_view(_n, name, filter_model, column_state):
     has_sub = current_user_has_subscription()
     clean_name, error = saved_views_ui.prepare_view_to_save(has_sub, name)
     if error:
         return True, html.Span(error, style={"color": "red"}), no_update
-    query = build_view_query(filter_query, sort_by, hidden_columns)
+    query = json.dumps(
+        {"filterModel": filter_model or {}, "columnState": column_state or []}
+    )
     saved_views_db.upsert(current_user.id, "tableau", clean_name, query)
     return (
         False,
@@ -727,6 +604,24 @@ def populate_saved_views_menu(_pathname, _refresh):
         return []
     views = saved_views_db.list_views(current_user.id, "tableau")
     return saved_views_ui.saved_views_items(views)
+
+
+@callback(
+    Output("tableau_grid", "filterModel"),
+    Output("tableau_grid", "columnState"),
+    Input({"type": "saved-view-item", "index": ALL}, "n_clicks"),
+    State({"type": "saved-view-item", "index": ALL}, "id"),
+    prevent_initial_call=True,
+)
+def apply_saved_view(n_clicks, ids):
+    triggered = ctx.triggered_id
+    if not triggered or not any(n_clicks):
+        return no_update, no_update
+    row = saved_views_db.get(triggered["index"], current_user.id)
+    if not row:
+        return no_update, no_update
+    view = json.loads(row["query"])
+    return view.get("filterModel") or {}, view.get("columnState") or []
 
 
 @callback(

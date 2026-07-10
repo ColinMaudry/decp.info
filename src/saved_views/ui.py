@@ -23,7 +23,11 @@ def prepare_view_to_save(
 
 def saved_views_items(views) -> list:
     return [
-        dbc.DropdownMenuItem(view["name"], href=f"/tableau?{view['query']}")
+        dbc.DropdownMenuItem(
+            view["name"],
+            id={"type": "saved-view-item", "index": view["id"]},
+            n_clicks=0,
+        )
         for view in views
     ]
 
@@ -35,8 +39,11 @@ def _view_row(view) -> html.Div:
         children=[
             html.Span(view["name"], className="flex-grow-1"),
             dbc.Button(
+                # Limitation connue : la vue n'est pas appliquée automatiquement
+                # en arrivant sur /tableau depuis cette page. Le mécanisme de
+                # rappel multi-page reste à faire (voir tableau.py `apply_saved_view`).
                 "Ouvrir",
-                href=f"/tableau?{view['query']}",
+                href="/tableau",
                 color="link",
                 size="sm",
             ),
