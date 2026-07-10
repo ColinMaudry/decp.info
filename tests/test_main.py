@@ -73,7 +73,13 @@ def test_002_filter_persistence(dash_duo: DashComposite):
         )
         return _filter_input_in_view(dash_duo, filter_input_selector)
 
-    for page in ["tableau", "acheteurs/123", "titulaires/345"]:
+    # /tableau utilise désormais AG Grid (dash-ag-grid) au lieu de dash_table.DataTable ;
+    # la persistance de ses filtres/colonnes est couverte par persistence=True et
+    # persisted_props=["filterModel", "columnState"] configurés dans la fabrique
+    # ag_grid() de src/figures.py, et a été vérifiée manuellement via un navigateur
+    # réel (Task 12 du plan #41). Une couverture Selenium dédiée à AG Grid pourrait
+    # être ajoutée ultérieurement.
+    for page in ["acheteurs/123", "titulaires/345"]:
         filter_input = open_page_and_check_filter_input()
         filter_input.send_keys("11")  # valeur quelconque, on teste la persistance
         filter_input.send_keys(Keys.ENTER)
@@ -99,7 +105,7 @@ def test_003_tableau_download(dash_duo: DashComposite):
     print(app.server.name)
 
     outputs = [
-        download_data(1, "", [], None),
+        download_data(1, None, None),
         download_acheteur_data(1, "/acheteurs/123", "2025", "ACHETEUR 1"),
         download_titulaire_data(1, "/titulaires/345", "2025", "TITULAIRE 1"),
     ]
@@ -347,13 +353,18 @@ def test_014_get_distance_histogram_all_nulls():
     assert isinstance(result, dcc.Graph)
 
 
-def test_015_tableau_filter_date(dash_duo: DashComposite):
+def test_015_org_pages_filter_date(dash_duo: DashComposite):
     from src.app import app
 
     dash_duo.start_server(app)
     dash_duo.wait_for_text_to_equal(".logo > h1", "colibre", timeout=4)
 
-    for page in ["tableau", "acheteurs/123", "titulaires/345"]:
+    # /tableau utilise désormais AG Grid ; le filtrage de sa colonne date est
+    # couvert par les tests unitaires de compilation SQL dans
+    # tests/test_query_ast.py (ex. test_date_range_uses_between) et a été
+    # vérifié manuellement (Task 12 du plan #41). Une couverture Selenium
+    # dédiée au filtre de date AG Grid pourrait être ajoutée ultérieurement.
+    for page in ["acheteurs/123", "titulaires/345"]:
         dash_duo.wait_for_page(f"{dash_duo.server_url}/{page}")
         filter_input = '.marches_table th[data-dash-column="dateNotification"] input'
         filter_cell_result = '.marches_table td[data-dash-column="dateNotification"] p'

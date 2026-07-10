@@ -2,6 +2,7 @@ import math
 from datetime import datetime
 from typing import Literal
 
+import dash_ag_grid as dag
 import dash_bootstrap_components as dbc
 import dash_leaflet as dl
 import dash_leaflet.express as dlx
@@ -1065,4 +1066,30 @@ def get_top_org_table(data, org_type: str, extra_columns: list, filters: bool = 
         columns=columns,
         tooltip_header=tooltip,
         filter_action="native" if filters else "none",
+    )
+
+
+def ag_grid(grid_id: str, column_defs: list[dict]) -> "dag.AgGrid":
+    """Grille AG Grid server-side (infinite) pour la page Tableau.
+
+    Apparence de base d'AG Grid (aucun thème custom au Lot 1).
+    """
+    return dag.AgGrid(
+        id=grid_id,
+        columnDefs=column_defs,
+        defaultColDef={"resizable": True, "minWidth": 120, "floatingFilter": True},
+        rowModelType="infinite",
+        dangerously_allow_code=True,  # rend le HTML <a> des cellules liens
+        dashGridOptions={
+            "cacheBlockSize": 100,
+            "maxBlocksInCache": 10,
+            "rowBuffer": 0,
+            "infiniteInitialRowCount": 100,
+            "suppressCellFocus": True,
+        },
+        columnSize="responsiveSizeToFit",
+        style={"height": "70vh", "width": "100%"},
+        persistence=True,
+        persistence_type="local",
+        persisted_props=["filterModel", "columnState"],
     )

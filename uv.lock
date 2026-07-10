@@ -590,6 +590,7 @@ dependencies = [
     { name = "brevo-python" },
     { name = "cryptography" },
     { name = "dash", extra = ["compress"] },
+    { name = "dash-ag-grid" },
     { name = "dash-bootstrap-components" },
     { name = "dash-extensions", version = "1.0.20", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "dash-extensions", version = "2.0.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
@@ -636,6 +637,7 @@ requires-dist = [
     { name = "brevo-python", specifier = "==5.0.0rc1" },
     { name = "cryptography" },
     { name = "dash", extras = ["compress"], specifier = "==4.4.0" },
+    { name = "dash-ag-grid", specifier = ">=35.2.0" },
     { name = "dash-bootstrap-components" },
     { name = "dash-extensions" },
     { name = "dash-leaflet" },
@@ -785,6 +787,18 @@ testing = [
     { name = "requests" },
     { name = "selenium" },
     { name = "waitress" },
+]
+
+[[package]]
+name = "dash-ag-grid"
+version = "35.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dash" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c4/4d/259d21112a087a23ecd2f7dd651412755bf0547835805c38f3c77c971052/dash_ag_grid-35.2.0.tar.gz", hash = "sha256:507f5dccf7235bf1b9af2c59d4cd0f12205db03c3489f605948f13c72bcece4f", size = 5794514, upload-time = "2026-04-03T10:46:26.05Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/69/71/7f97793a3449ee5218f0fb820c03c15be11a7c6d0c61c37d38779b753d4e/dash_ag_grid-35.2.0-py3-none-any.whl", hash = "sha256:b8b33780faa7322101b0559658da2a301a58a3329ff6a2c45f1490f0c3719df9", size = 5836952, upload-time = "2026-04-03T10:46:23.957Z" },
 ]
 
 [[package]]

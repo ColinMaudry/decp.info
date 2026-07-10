@@ -1,18 +1,16 @@
 import json
 import os
-import urllib.parse
-import uuid
 from datetime import datetime
 
 import dash_bootstrap_components as dbc
-import polars as pl
 from dash import (
-    ClientsideFunction,
+    ALL,
     Input,
     Output,
     State,
     callback,
     clientside_callback,
+    ctx,
     dcc,
     html,
     no_update,
@@ -20,21 +18,23 @@ from dash import (
 )
 from flask_login import current_user
 
-from src.db import query_marches, schema
-from src.figures import DataTable, make_column_picker
+from src.db import schema
+from src.figures import ag_grid, make_column_picker
 from src.pages._compte_shell import current_user_has_subscription
 from src.saved_views import db as saved_views_db
 from src.saved_views import ui as saved_views_ui
 from src.utils import get_data_update_timestamp, logger
+from src.utils.grid import fetch_grid_page, grid_column_defs
+from src.utils.query_ast import (
+    ast_from_dict,
+    ast_to_dict,
+    ast_to_filtermodel,
+    filtermodel_to_ast,
+)
 from src.utils.seo import META_CONTENT
 from src.utils.table import (
     COLUMNS,
-    build_view_query,
-    filter_table_data,
     get_default_hidden_columns,
-    invert_columns,
-    prepare_table_data,
-    sort_table_data,
     write_styled_excel,
 )
 from src.utils.tracking import track_search
@@ -64,17 +64,8 @@ register_page(
 
 DATATABLE = html.Div(
     className="marches_table",
-    children=DataTable(
-        dtid="tableau_datatable",
-        persisted_props=["filter_query", "sort_by"],
-        persistence_type="local",
-        persistence=True,
-        page_size=20,
-        page_action="custom",
-        filter_action="custom",
-        sort_action="custom",
-        hidden_columns=[],
-        columns=[{"id": col, "name": col} for col in schema.names()],
+    children=ag_grid(
+        "tableau_grid", grid_column_defs(get_default_hidden_columns("tableau"))
     ),
 )
 
@@ -94,10 +85,6 @@ def _help_button_legend():
         (
             dbc.Button("Mes vues ▾", color="secondary", size="sm"),
             "Rouvrir une vue que vous avez enregistrée (abonnés).",
-        ),
-        (
-            dbc.Button("Partager la vue", color="secondary", size="sm"),
-            "Copier l'adresse de la vue actuelle pour la partager ou la conserver.",
         ),
         (
             dbc.Button("Télécharger (Excel)", color="secondary", size="sm"),
@@ -136,9 +123,9 @@ def _help_button_legend():
 
 layout = [
     dcc.Location(id="tableau_url", refresh=False),
-    dcc.Store(id="filter-cleanup-trigger-tableau"),
     dcc.Store(id="tableau-hidden-columns", storage_type="local"),
     dcc.Store(id="tableau-table"),
+    dcc.Store(id="tableau-total"),
     html.Script(
         type="application/ld+json",
         id="dataset_jsonld",
@@ -201,7 +188,7 @@ layout = [
         ],
     ),
     dcc.Markdown(
-        f"Ce tableau contient tous les marchés attribués en France. Il vous permet d'appliquer un filtre sur une ou plusieurs colonnes, et ainsi produire la liste de marchés dont vous avez besoin (exemples : [marchés de voirie < 40 k€ en 2025](/tableau?filtres=%7Bacheteur_id%7D+icontains+24350013900189+%26%26+%7BdateNotification%7D+icontains+2025%2A+%26%26+%7Bmontant%7D+i%3C+40000+%26%26+%7Bobjet%7D+icontains+voirie&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2Cacheteur_departement_code%2CsourceDataset), [marchés > 500 k€ avec clause sociale attribués à des PME à plus de 100 km dans le Var](/tableau?filtres=%7Btitulaire_categorie%7D+icontains+PME+%26%26+%7Btitulaire_distance%7D+i%3E+100+%26%26+%7Bmontant%7D+i%3E+500000+%26%26+%7Bacheteur_departement_code%7D+icontains+83+%26%26+%7BconsiderationsSociales%7D+icontains+clause&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2CconsiderationsSociales%2Ctitulaire_distance%2Cacheteur_departement_code%2Ctitulaire_categorie%2CsourceDataset)). Par défaut seules quelques colonnes sont affichées, mais vous pouvez en afficher jusqu'à {len(schema.names())} en cliquant sur le bouton **Colonnes**. Cet outil est assez puissant, je vous recommande de lire le mode d'emploi pour en tirer pleinement partie.",
+        f"Ce tableau contient tous les marchés attribués en France. Il vous permet d'appliquer un filtre sur une ou plusieurs colonnes, et ainsi produire la liste de marchés dont vous avez besoin. Par défaut seules quelques colonnes sont affichées, mais vous pouvez en afficher jusqu'à {len(schema.names())} en cliquant sur le bouton **Colonnes**. Cet outil est assez puissant, je vous recommande de lire le mode d'emploi pour en tirer pleinement partie.",
         style={"maxWidth": "1000px"},
     ),
     html.Div(
@@ -241,51 +228,45 @@ layout = [
 
             Les filtres, les tris et le choix de colonnes sont automatiquement enregistrés dans votre navigateur et persistent même si vous changez de page ou si vous fermez votre navigateur. À votre retour, vous retrouverez cette page comme vous l'avez laissée.
 
-            ##### Appliquer des filtres
+            ##### Filtrer les colonnes
 
-            Vous pouvez appliquer un filtre pour chaque colonne en entrant du texte sous le nom de la colonne, puis en tapant sur `Entrée`.
+            Chaque colonne a son propre filtre : saisissez une valeur dans le champ situé juste sous son en-tête (le filtre « flottant »), ou cliquez sur l'icône entonnoir dans l'en-tête pour ouvrir le filtre complet.
 
-            - Champs textuels : la recherche retourne les valeurs qui contiennent le texte recherché, n'est sensible ni à la casse (majuscules/minuscules), ni à l'accentuation.
-                - `rennes` => le texte contient "rennes"
-                - `metro* *pole` => le texte contient un mot qui commence par "metro" et un mot qui finit par "pole"
-                - `metropole rennes` => le texte contient les mots "metropole" et "rennes", n'importe où dans le texte
-                - `métropole+rennes` => le texte contient "metropole rennes" ou "métropole rennes", collé et dans cet ordre
-                - `metropole+rennes travaux distri*` => le texte contient "metropole rennes", "travaux" et un mot qui commence par "distri"
-                - Les guillemets simples (apostrophe du 4) doivent être prédédées d'une barre oblique (AltGr + 8). Exemple : `services d\\\'assurances`
-            - Champs numériques (Durée en mois, Montant, ...) : vous pouvez...
-                - soit taper un nombre pour trouver les valeurs strictement égales. Exemple : `12` ne retourne que des 12
-                - soit le précéder de **>** ou **<** pour filtrer les valeurs supérieures ou inférieures. Exemple pour les offres reçues : `> 4` retourne les marchés ayant reçu plus de 4 offres.
-            - Champs date (Date de notification, ...) :
-                - `< 2024-01-31` pour "avant le 31 janvier 2024"
-                - `2024` pour "en 2024", `> 2022` pour "à partir de 2022"
+            - Champs textuels : contient (par défaut), égal à, ne contient pas, commence par, se termine par...
+            - Champs numériques (Durée en mois, Montant, nombre d'offres...) : égal à, supérieur à, inférieur à, entre (plage)...
+            - Champs date (Date de notification...) : égal à, avant, après, entre (plage)...
 
-            Vous pouvez filtrer plusieurs colonnes à la fois.
+            Dans le filtre complet (icône entonnoir), vous pouvez combiner deux conditions sur la même colonne avec **ET** ou **OU**.
+
+            Vous pouvez filtrer plusieurs colonnes à la fois ; les filtres de colonnes différentes se cumulent toujours (ET).
 
             ##### Trier les données
 
-            Pour trier une colonne, utilisez les flèches grises à côté des noms de colonnes. Chaque clic change le tri dans cet ordre :
+            Cliquez sur l'en-tête d'une colonne pour la trier. Chaque clic change le tri dans cet ordre :
 
             1. tri croissant
             2. tri décroissant
             3. pas de tri
 
-            Les tris sont appliqués dans l'ordre : la première colonne que vous triez a la priorité sur la seconde, qui triera uniquement au sein des groupes de valeurs de la première colonne.
+            Pour trier sur plusieurs colonnes à la fois, maintenez la touche `Maj` (Shift) enfoncée en cliquant sur les en-têtes suivants : la première colonne triée a la priorité, la suivante ne départage qu'au sein des groupes de valeurs identiques de la précédente, et ainsi de suite.
+
+            ##### Défilement
+
+            Le tableau charge les lignes au fur et à mesure que vous faites défiler la page, plutôt que par pages numérotées. Les en-têtes de colonnes (et leurs filtres) restent toujours visibles en haut du tableau pendant le défilement.
 
             ##### Afficher plus de colonnes
 
             Par défaut, un nombre réduit de colonnes est affiché pour ne pas surcharger la page. Mais vous avez le choix parmi {len(schema.names())} colonnes, ce serait dommage de vous limiter !
 
-            Pour afficher plus de colonnes, cliquez sur le bouton **Choisir les colonnes** et cochez les colonnes pour les afficher.
+            Pour afficher plus de colonnes, cliquez sur le bouton **Colonnes** et cochez les colonnes à afficher.
 
-            ##### Partager une vue
+            ##### Vues sauvegardées (abonnés)
 
-            Une vue est un ensemble de filtres, de tris et de choix de colonnes que vous avez appliqués. Cliquez sur **Partager** pour copier une adresse Web qui reproduit la vue courante à l'identique : en la collant dans la barre d'adresse d'un navigateur, vous ouvrez la vue Tableau avec les mêmes paramètres.
-
-            Pratique pour partager une vue avec un·e collègue, sur les réseaux sociaux, ou la sauvegarder pour plus tard.
+            Une vue est un ensemble de filtres, de tris et de colonnes affichées que vous avez appliqués. Si vous êtes abonné, le bouton **Sauvegarder la vue** vous permet d'enregistrer la configuration actuelle sous un nom, et le menu **Mes vues** de la rappeler d'un clic plus tard.
 
             ##### Télécharger le résultat
 
-            Vous pouvez télécharger le résultat de vos filtres et tris, pour les colonnes affichées, en cliquant sur **Télécharger au format Excel**.
+            Vous pouvez télécharger le résultat de vos filtres et tris, pour les colonnes affichées, en cliquant sur **Télécharger (Excel)**.
 
             ##### Liens
 
@@ -375,8 +356,6 @@ layout = [
                             ),
                         ],
                     ),
-                    html.Div(id="copy-container"),
-                    dcc.Input(id="share-url", readOnly=True, style={"display": "none"}),
                     dbc.Button(
                         "Télécharger (Excel)",
                         id="btn-download-data",
@@ -434,194 +413,73 @@ layout = [
 
 
 @callback(
-    Output("tableau_datatable", "data"),
-    Output("tableau_datatable", "columns"),
-    Output("tableau_datatable", "tooltip_header"),
-    Output("tableau_datatable", "data_timestamp"),
-    Output("nb_rows", "children"),
-    Output("btn-download-data", "disabled"),
-    Output("btn-download-data", "children"),
-    Output("btn-download-data", "title"),
-    Output("filter-cleanup-trigger-tableau", "data", allow_duplicate=True),
-    Output("download-hint", "children"),
-    Input("tableau_url", "href"),
-    Input("tableau_datatable", "page_current"),
-    Input("tableau_datatable", "page_size"),
-    Input("tableau_datatable", "filter_query"),
-    Input("tableau_datatable", "sort_by"),
-    State("tableau_datatable", "data_timestamp"),
+    Output("tableau_grid", "getRowsResponse"),
+    Output("tableau-total", "data"),
+    Input("tableau_grid", "getRowsRequest"),
     prevent_initial_call=True,
 )
-def update_table(href, page_current, page_size, filter_query, sort_by, data_timestamp):
-    result = list(
-        prepare_table_data(
-            None,
-            data_timestamp,
-            filter_query,
-            page_current,
-            page_size,
-            sort_by,
-            "tableau",
-        )
+def get_rows_tableau(request):
+    if request is None:
+        return no_update, no_update
+    filter_model = request.get("filterModel") or None
+    sort_model = request.get("sortModel") or None
+    # AG Grid renvoie une nouvelle requête getRowsRequest pour chaque bloc de
+    # défilement infini, avec le même filterModel tant que le filtre ne change
+    # pas. Ne compter qu'une recherche par changement de filtre/tri (bloc 0),
+    # pas une par bloc chargé au défilement.
+    if filter_model and request.get("startRow", 0) == 0:
+        track_search(json.dumps(filter_model), "tableau")
+    rows, total = fetch_grid_page(
+        filter_model,
+        sort_model,
+        request.get("startRow", 0),
+        request.get("endRow", 100),
     )
-    # Libellé court et constant ; la raison d'un éventuel blocage est affichée
-    # en clair dans la ligne d'infos (fiable cross-browser, contrairement à une
-    # infobulle sur bouton désactivé). index 5 = disabled, 6 = children, 7 = title.
-    result[6] = "Télécharger (Excel)"
-    download_blocked_too_many = result[5] and result[7]
-    download_hint = (
+    return {"rowData": rows, "rowCount": total}, total
+
+
+@callback(
+    Output("nb_rows", "children"),
+    Output("btn-download-data", "disabled"),
+    Output("download-hint", "children"),
+    Input("tableau-total", "data"),
+)
+def update_meta(total):
+    total = total or 0
+    too_many = total > 65000
+    hint = (
         " · Filtrez sous 65 000 lignes pour activer le téléchargement"
-        if download_blocked_too_many
+        if too_many
         else ""
     )
-    result.append(download_hint)
-    return tuple(result)
+    return f"{total} lignes", too_many, hint
 
 
 @callback(
     Output("download-data", "data"),
     Input("btn-download-data", "n_clicks"),
-    State("tableau_datatable", "filter_query"),
-    State("tableau_datatable", "sort_by"),
-    State("tableau_datatable", "hidden_columns"),
+    State("tableau_grid", "filterModel"),
+    State("tableau_grid", "columnState"),
     prevent_initial_call=True,
 )
-def download_data(n_clicks, filter_query, sort_by, hidden_columns: list | None = None):
-    lff: pl.LazyFrame = query_marches().lazy()
+def download_data(n_clicks, filter_model, column_state):
+    from src.utils.grid import export_dataframe
 
-    # Les colonnes masquées sont supprimées
-    if hidden_columns:
-        lff = lff.drop(hidden_columns)
-
-    if filter_query:
-        track_search(filter_query, "tab download")
-        lff = filter_table_data(lff, filter_query)
-
-    if sort_by and len(sort_by) > 0:
-        lff = sort_table_data(lff, sort_by)
+    sort_model = [
+        {"colId": c["colId"], "sort": c["sort"]}
+        for c in (column_state or [])
+        if c.get("sort")
+    ]
+    hidden_columns = [c["colId"] for c in (column_state or []) if c.get("hide")]
+    if filter_model:
+        track_search(json.dumps(filter_model), "tab download")
+    df = export_dataframe(filter_model, sort_model, hidden_columns)
 
     def to_bytes(buffer):
-        write_styled_excel(lff.collect(engine="streaming"), buffer)
+        write_styled_excel(df, buffer)
 
     date = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     return dcc.send_bytes(to_bytes, filename=f"decp_{date}.xlsx")
-
-
-@callback(
-    Output("tableau_datatable", "filter_query"),
-    Output("tableau_datatable", "sort_by"),
-    Output("tableau-hidden-columns", "data"),
-    Output("tableau_url", "search"),
-    Output("filter-cleanup-trigger-tableau", "data"),
-    Input("tableau_url", "search"),
-    State("tableau_datatable", "filter_query"),
-    State("tableau_datatable", "sort_by"),
-)
-def restore_view_from_url(search, stored_filters, stored_sort):
-    if not search and not stored_filters:
-        return no_update, no_update, no_update, no_update, no_update
-
-    params = urllib.parse.parse_qs(search.lstrip("?")) if search else {}
-    logger.debug("params " + json.dumps(params, indent=2))
-
-    filter_query = no_update
-    sort_by = no_update
-    hidden_columns = no_update
-    trigger_cleanup = no_update
-
-    if "filtres" in params:
-        filter_query = params["filtres"][0]
-        trigger_cleanup = str(uuid.uuid4())
-    elif stored_filters:
-        filter_query = stored_filters
-        trigger_cleanup = str(uuid.uuid4())
-
-    if "tris" in params:
-        try:
-            sort_by = json.loads(params["tris"][0])
-        except json.JSONDecodeError:
-            pass
-    elif stored_sort:
-        sort_by = stored_sort
-
-    if "colonnes" in params:
-        table_columns = params["colonnes"][0].split(",")
-        verified_columns = [
-            column for column in table_columns if column in schema.names()
-        ]
-        hidden_columns = invert_columns(verified_columns)
-
-    return filter_query, sort_by, hidden_columns, "", trigger_cleanup
-
-
-# Pour nettoyer les icontains et i< des filtres
-# voir aussi src/assets/dash_clientside.js
-clientside_callback(
-    ClientsideFunction(
-        namespace="clientside",
-        function_name="clean_filters",
-    ),
-    Output("filter-cleanup-trigger-tableau", "data", allow_duplicate=True),
-    Input("filter-cleanup-trigger-tableau", "data"),
-    prevent_initial_call=True,
-)
-
-
-@callback(
-    Output("share-url", "value"),
-    Output("copy-container", "children"),
-    Input("tableau_datatable", "filter_query"),
-    Input("tableau_datatable", "sort_by"),
-    Input("tableau_datatable", "hidden_columns"),
-    State("tableau_url", "href"),
-    prevent_initial_call=True,
-)
-def sync_url_and_reset_button(filter_query, sort_by, hidden_columns, href):
-    if not href:
-        return no_update, no_update
-
-    # Extract base URL (remove existing query params)
-    base_url = href.split("?")[0]
-
-    query_string = build_view_query(filter_query, sort_by, hidden_columns)
-    full_url = f"{base_url}?{query_string}" if query_string else base_url
-
-    copy_button = dcc.Clipboard(
-        id="btn-copy-url",
-        target_id="share-url",
-        title="Copier l'URL de cette vue",
-        style={
-            "display": "inline-block",
-            "fontSize": 20,
-            "verticalAlign": "top",
-            "cursor": "pointer",
-        },
-        className="fa fa-link",
-        children=[
-            dbc.Button(
-                "Partager la vue",
-                color="secondary",
-                size="sm",
-                title="Copier l'adresse de cette vue (filtres, tris, choix de colonnes) pour la partager.",
-            )
-        ],
-    )
-
-    return full_url, copy_button
-
-
-@callback(
-    Output("copy-container", "children", allow_duplicate=True),
-    Input("btn-copy-url", "n_clicks", allow_optional=True),
-    prevent_initial_call=True,
-)
-def show_confirmation(n_clicks):
-    if n_clicks:
-        return html.Span(
-            "Adresse de la vue copiée",
-            style={"color": "green", "fontWeight": "bold", "marginLeft": "10px"},
-        )
-    return no_update
 
 
 @callback(
@@ -650,21 +508,18 @@ def update_hidden_columns_from_checkboxes(selected_columns):
 
 
 @callback(
-    Output("tableau_datatable", "hidden_columns"),
-    Input(
-        "tableau-hidden-columns",
-        "data",
-    ),
+    Output("tableau_grid", "columnDefs"),
+    Input("tableau-hidden-columns", "data"),
 )
-def store_hidden_columns(hidden_columns):
+def apply_hidden_columns(hidden_columns):
     if hidden_columns is None:
         hidden_columns = get_default_hidden_columns("tableau")
-    return hidden_columns
+    return grid_column_defs(hidden_columns)
 
 
 @callback(
     Output("tableau_column_list", "selected_rows"),
-    Input("tableau_datatable", "hidden_columns"),
+    Input("tableau-hidden-columns", "data"),
     State("tableau_column_list", "selected_rows"),  # pour éviter la boucle infinie
 )
 def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
@@ -688,13 +543,12 @@ def toggle_tableau_columns(click_open, click_close, is_open):
 
 
 @callback(
-    Output("tableau_datatable", "filter_query", allow_duplicate=True),
-    Output("tableau_datatable", "sort_by", allow_duplicate=True),
+    Output("tableau_grid", "filterModel", allow_duplicate=True),
     Input("btn-tableau-reset", "n_clicks"),
     prevent_initial_call=True,
 )
 def reset_view(n_clicks):
-    return "", []
+    return {}
 
 
 @callback(
@@ -720,17 +574,20 @@ def toggle_save_view_modal(_open):
     Output("saved-views-refresh", "data"),
     Input("btn-save-view-confirm", "n_clicks"),
     State("save-view-name", "value"),
-    State("tableau_datatable", "filter_query"),
-    State("tableau_datatable", "sort_by"),
-    State("tableau_datatable", "hidden_columns"),
+    State("tableau_grid", "filterModel"),
+    State("tableau_grid", "columnState"),
     prevent_initial_call=True,
 )
-def save_view(_n, name, filter_query, sort_by, hidden_columns):
+def save_view(_n, name, filter_model, column_state):
     has_sub = current_user_has_subscription()
     clean_name, error = saved_views_ui.prepare_view_to_save(has_sub, name)
     if error:
         return True, html.Span(error, style={"color": "red"}), no_update
-    query = build_view_query(filter_query, sort_by, hidden_columns)
+    # On stocke l'AST canonique (indépendant de l'UI), pas le filterModel brut
+    # d'AG Grid : cf. spec de conception, "l'AST (JSON) + columnState,
+    # indépendant de l'UI".
+    ast = filtermodel_to_ast(filter_model, schema)
+    query = json.dumps({"ast": ast_to_dict(ast), "columnState": column_state or []})
     saved_views_db.upsert(current_user.id, "tableau", clean_name, query)
     return (
         False,
@@ -749,6 +606,50 @@ def populate_saved_views_menu(_pathname, _refresh):
         return []
     views = saved_views_db.list_views(current_user.id, "tableau")
     return saved_views_ui.saved_views_items(views)
+
+
+@callback(
+    Output("tableau_grid", "filterModel"),
+    Output("tableau_grid", "columnState"),
+    Output("tableau-hidden-columns", "data", allow_duplicate=True),
+    Input({"type": "saved-view-item", "index": ALL}, "n_clicks"),
+    State({"type": "saved-view-item", "index": ALL}, "id"),
+    prevent_initial_call=True,
+)
+def apply_saved_view(n_clicks, ids):
+    triggered = ctx.triggered_id
+    if not triggered or not any(n_clicks):
+        return no_update, no_update, no_update
+    row = saved_views_db.get(triggered["index"], current_user.id)
+    if not row:
+        return no_update, no_update, no_update
+    try:
+        view = json.loads(row["query"])
+        # L'AST canonique est stocké (pas le filterModel brut d'AG Grid) :
+        # cf. save_view. `ast_from_dict(None)` -> None et
+        # `ast_to_filtermodel(None, schema)` -> {} si la vue est d'un ancien
+        # format (sans clé "ast") : dégradation propre, la vue se rappelle
+        # sans filtre plutôt que de planter.
+        ast = ast_from_dict(view.get("ast"))
+        filter_model = ast_to_filtermodel(ast, schema)
+        column_state = view.get("columnState") or []
+    except (json.JSONDecodeError, TypeError, AttributeError):
+        # Vue enregistrée avant la migration vers AG Grid (Task 10) : row["query"]
+        # est encore une query string (ex. "filtres=a&tris=b"), pas du JSON. On
+        # échoue proprement plutôt que de planter le callback ; pas de
+        # migration automatique de l'ancien format.
+        logger.warning(
+            "Vue sauvegardée au format pré-migration, impossible de l'appliquer : "
+            f"id={row['id']!r} name={row['name']!r}"
+        )
+        return no_update, no_update, no_update
+    # tableau-hidden-columns pilote les cases à cocher du sélecteur de colonnes
+    # (update_checkboxes_from_hidden_columns) et la régénération des
+    # columnDefs (apply_hidden_columns) ; sans cette sortie, ce store restait
+    # désynchronisé du columnState rappelé (revue finale #41). Même extraction
+    # que download_data.
+    hidden_columns = [c["colId"] for c in column_state if c.get("hide")]
+    return filter_model, column_state, hidden_columns
 
 
 @callback(
