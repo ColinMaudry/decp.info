@@ -57,3 +57,22 @@ def test_valid_token_sets_g_and_calls_view(temp_db):
     )
     assert resp.status_code == 200
     assert resp.get_json()["token_id"] == token_id
+
+
+def test_mcp_kind_token_rejected_by_rest_api(temp_db):
+    token, _ = tokens_db.create_token(temp_db, "x", user_id=1, kind="mcp")
+    app = _make_app()
+    resp = app.test_client().get(
+        "/protected", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert resp.status_code == 401
+    assert resp.get_json()["message"] == "invalid_token"
+
+
+def test_api_kind_token_accepted_by_rest_api(temp_db):
+    token, _ = tokens_db.create_token(temp_db, "x", kind="api")
+    app = _make_app()
+    resp = app.test_client().get(
+        "/protected", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert resp.status_code == 200
