@@ -202,6 +202,47 @@ def test_filtermodel_two_conditions_or():
     assert " OR " in sql and params == ["%beton%", "%ciment%"]
 
 
+def test_filtermodel_two_conditions_or_real_ag_grid_shape():
+    """AG Grid >=29.2 (pinné à 35.2.0 ici) envoie 'conditions' (liste), pas
+    condition1/condition2 (déprécié). Voir la doc Dash AG Grid "Filter Model
+    & Dash Callbacks" > "Filter Model Multiple Conditions". Bug de régression :
+    filtermodel_to_ast ignorait silencieusement ces filtres (#41)."""
+    fm = {
+        "acheteur_nom": {
+            "filterType": "text",
+            "operator": "OR",
+            "conditions": [
+                {"filterType": "text", "type": "contains", "filter": "91"},
+                {"filterType": "text", "type": "contains", "filter": "78"},
+            ],
+        }
+    }
+    ast = filtermodel_to_ast(fm, SCHEMA)
+    assert ast is not None, "le filtre ne doit pas être silencieusement ignoré"
+    sql, params = ast_to_sql(ast, SCHEMA)
+    assert " OR " in sql
+    assert params == ["%91%", "%78%"]
+
+
+def test_filtermodel_conditions_and_three_values():
+    """La liste 'conditions' n'est pas limitée à 2 éléments (maxNumConditions)."""
+    fm = {
+        "objet": {
+            "filterType": "text",
+            "operator": "AND",
+            "conditions": [
+                {"filterType": "text", "type": "contains", "filter": "voirie"},
+                {"filterType": "text", "type": "notContains", "filter": "reparation"},
+                {"filterType": "text", "type": "contains", "filter": "route"},
+            ],
+        }
+    }
+    ast = filtermodel_to_ast(fm, SCHEMA)
+    sql, params = ast_to_sql(ast, SCHEMA)
+    assert sql.count(" AND ") >= 2
+    assert params == ["%voirie%", "%reparation%", "%route%"]
+
+
 def test_filtermodel_multiple_columns_are_anded():
     fm = {
         "objet": {"filterType": "text", "type": "contains", "filter": "voirie"},

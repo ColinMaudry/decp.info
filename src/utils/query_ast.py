@@ -191,7 +191,14 @@ def _leaf(column: str, spec: dict):
 
 
 def filtermodel_to_ast(filter_model, schema):
-    """Traduit un filterModel AG Grid en AST. Colonnes combinées en And."""
+    """Traduit un filterModel AG Grid en AST. Colonnes combinées en And.
+
+    AG Grid >=29.2 (pinné à 35.2.0 ici) encode un filtre à conditions
+    multiples via une liste `conditions` (N éléments, cf. `maxNumConditions`),
+    et non plus via `condition1`/`condition2` (dépréciés depuis 29.2, mais
+    l'API dit "still accept" ces clés en entrée — on les supporte donc aussi
+    en repli, sans qu'AG Grid ne les envoie normalement).
+    """
     if not filter_model:
         return None
     children = []
@@ -199,7 +206,12 @@ def filtermodel_to_ast(filter_model, schema):
         if column not in schema.names():
             logger.warning(f"Filtre sur colonne inconnue ignoré : {column!r}")
             continue
-        if "operator" in spec:  # deux conditions
+        if "conditions" in spec:  # forme courante AG Grid >=29.2 (N conditions)
+            parts = [c for c in (_leaf(column, s) for s in spec["conditions"]) if c]
+            if not parts:
+                continue
+            node = And(parts) if spec.get("operator") == "AND" else Or(parts)
+        elif "operator" in spec:  # forme dépréciée condition1/condition2
             c1 = _leaf(column, spec.get("condition1", {}))
             c2 = _leaf(column, spec.get("condition2", {}))
             parts = [c for c in (c1, c2) if c is not None]
@@ -289,11 +301,12 @@ def _child_to_filterspec(child, schema: pl.Schema):
     """Convertit un enfant du And de haut niveau en (colonne, spec filterModel).
 
     Ne sait inverser que les deux formes produites par `filtermodel_to_ast` :
-    une Condition seule, ou un And/Or à 2 enfants portant sur la MÊME colonne
-    (filtre AG Grid natif à deux conditions). Toute autre forme (Not, And/Or
-    imbriqué plus profondément, colonnes différentes, plus de 2 enfants) est
-    ignorée avec un warning : un filterModel est par nature par-colonne et ne
-    peut représenter une expression booléenne arbitraire (cf. #97).
+    une Condition seule, ou un And/Or à N enfants (N = maxNumConditions)
+    portant tous sur la MÊME colonne (filtre AG Grid natif multi-conditions,
+    forme `conditions` — cf. AG Grid >=29.2). Toute autre forme (Not, And/Or
+    imbriqué plus profondément, colonnes différentes) est ignorée avec un
+    warning : un filterModel est par nature par-colonne et ne peut représenter
+    une expression booléenne arbitraire (cf. #97).
     """
     if isinstance(child, Condition):
         spec = _condition_to_filterspec(child, schema)
@@ -301,24 +314,28 @@ def _child_to_filterspec(child, schema: pl.Schema):
             return None
         return child.column, spec
 
-    if isinstance(child, (And, Or)) and len(child.children) == 2:
-        c1, c2 = child.children
-        if (
-            isinstance(c1, Condition)
-            and isinstance(c2, Condition)
-            and c1.column == c2.column
-        ):
-            spec1 = _condition_to_filterspec(c1, schema)
-            spec2 = _condition_to_filterspec(c2, schema)
-            if spec1 is None or spec2 is None:
-                return None
-            operator = "AND" if isinstance(child, And) else "OR"
-            return c1.column, {
-                "filterType": spec1["filterType"],
-                "operator": operator,
-                "condition1": spec1,
-                "condition2": spec2,
-            }
+    if isinstance(child, (And, Or)) and len(child.children) >= 2:
+        conditions = child.children
+        if not all(isinstance(c, Condition) for c in conditions):
+            logger.warning(
+                f"Nœud AST non représentable en filterModel, ignoré : {child!r}"
+            )
+            return None
+        columns = {c.column for c in conditions}
+        if len(columns) != 1:
+            logger.warning(
+                f"Nœud AST non représentable en filterModel, ignoré : {child!r}"
+            )
+            return None
+        specs = [_condition_to_filterspec(c, schema) for c in conditions]
+        if any(s is None for s in specs):
+            return None
+        operator = "AND" if isinstance(child, And) else "OR"
+        return conditions[0].column, {
+            "filterType": specs[0]["filterType"],
+            "operator": operator,
+            "conditions": specs,
+        }
 
     logger.warning(f"Nœud AST non représentable en filterModel, ignoré : {child!r}")
     return None

@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pytest
 
 import src.app  # noqa: F401  # instancie l'app → register_page() des pages
-from src.pages.tableau import get_rows_tableau
+from src.pages.tableau import get_rows_tableau, reset_view
 from src.utils import grid as grid_module
 from src.utils.grid import export_dataframe, fetch_grid_page, grid_column_defs
 
@@ -119,3 +119,11 @@ def test_fetch_grid_page_caches_count_across_scroll_blocks(flask_app, monkeypatc
 
     assert call_count["n"] == 1
     assert total1 == total2 == total3
+
+
+def test_reset_view_clears_filter_and_sort():
+    """Régression : le bouton Réinitialiser ('Supprime tous les filtres et les
+    tris') ne remettait à zéro que filterModel, jamais le tri (#41)."""
+    filter_model, reset_column_state = reset_view(1)
+    assert filter_model == {}
+    assert reset_column_state is True

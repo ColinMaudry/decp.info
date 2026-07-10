@@ -544,11 +544,16 @@ def toggle_tableau_columns(click_open, click_close, is_open):
 
 @callback(
     Output("tableau_grid", "filterModel", allow_duplicate=True),
+    Output("tableau_grid", "resetColumnState", allow_duplicate=True),
     Input("btn-tableau-reset", "n_clicks"),
     prevent_initial_call=True,
 )
 def reset_view(n_clicks):
-    return {}
+    # resetColumnState remet les colonnes (tri inclus) à l'état déclaré dans
+    # columnDefs — qui reflète déjà la visibilité choisie via le sélecteur de
+    # colonnes (cf. apply_hidden_columns), donc ça ne touche pas au choix de
+    # colonnes affichées, seulement au tri.
+    return {}, True
 
 
 @callback(
