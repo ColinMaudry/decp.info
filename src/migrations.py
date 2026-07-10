@@ -42,6 +42,10 @@ _MIGRATIONS: list[tuple[str, str]] = [
         "details TEXT, "
         "created_at TEXT NOT NULL)",
     ),
+    (
+        "0007_add_kind_to_api_tokens",
+        "ALTER TABLE api_tokens ADD COLUMN kind TEXT NOT NULL DEFAULT 'api'",
+    ),
 ]
 
 
