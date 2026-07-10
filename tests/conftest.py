@@ -60,6 +60,16 @@ shutil.copyfile(_SCHEMA_FIXTURE, _SCHEMA_CACHE)
 os.environ["DATA_SCHEMA_CACHE"] = str(_SCHEMA_CACHE)
 os.environ.pop("DATA_SCHEMA_PATH", None)
 
+# Base users partagée par les tests qui démarrent l'app complète (Selenium) :
+# on COPIE le fixture committé vers une base jetable (users.runtime.sqlite,
+# gitignorée) et on pointe USERS_DB_PATH dessus. Ainsi, toute écriture faite
+# pendant les tests (comptes créés, vues sauvegardées, etc.) ne mute pas
+# tests/users.test.sqlite (versionné, partagé pour toute la suite).
+_USERS_DB_FIXTURE = Path(os.path.abspath("tests/users.test.sqlite"))
+_USERS_DB_RUNTIME = Path(os.path.abspath("tests/users.runtime.sqlite"))
+shutil.copyfile(_USERS_DB_FIXTURE, _USERS_DB_RUNTIME)
+os.environ["USERS_DB_PATH"] = str(_USERS_DB_RUNTIME)
+
 
 def _cleanup_db_artifacts() -> None:
     for artifact in (
