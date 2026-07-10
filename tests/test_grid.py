@@ -1,4 +1,22 @@
-from src.utils.grid import fetch_grid_page
+from src.utils.grid import fetch_grid_page, grid_column_defs
+
+
+def test_column_defs_have_field_and_filter():
+    defs = grid_column_defs(hidden_columns=[])
+    by_field = {d["field"]: d for d in defs}
+    assert "objet" in by_field
+    # filtre texte par défaut
+    assert by_field["objet"]["filter"] == "agTextColumnFilter"
+    # montant est numérique
+    assert by_field["montant"]["filter"] == "agNumberColumnFilter"
+    # headerTooltip présent (définition de colonne)
+    assert "headerTooltip" in by_field["objet"]
+
+
+def test_column_defs_hidden_flag():
+    defs = grid_column_defs(hidden_columns=["objet"])
+    by_field = {d["field"]: d for d in defs}
+    assert by_field["objet"]["hide"] is True
 
 
 def test_fetch_grid_page_returns_rows_and_count():

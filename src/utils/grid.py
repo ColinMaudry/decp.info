@@ -1,6 +1,9 @@
 """Datasource server-side pour AG Grid (infinite row model)."""
 
+import polars as pl
+
 from src.db import count_marches, query_marches, schema
+from src.figures import DATA_SCHEMA
 from src.utils.query_ast import ast_to_sql, filtermodel_to_ast, sort_model_to_sql
 from src.utils.table import postprocess_page
 
@@ -32,3 +35,60 @@ def fetch_grid_page(
     )
     page = postprocess_page(page)
     return page.to_dicts(), total
+
+
+_LINK_COLUMNS = {
+    "marche",
+    "uid",
+    "acheteur_id",
+    "acheteur_nom",
+    "titulaire_id",
+    "titulaire_nom",
+    "sourceFile",
+}
+
+
+def _filter_for(col_type) -> str:
+    if col_type.is_numeric():
+        return "agNumberColumnFilter"
+    if col_type == pl.Date:
+        return "agDateColumnFilter"
+    return "agTextColumnFilter"
+
+
+def grid_column_defs(hidden_columns=None):
+    """columnDefs dérivés du schéma DuckDB.
+
+    'marche' (colonne loupe ajoutée par postprocess_page) est placée en tête.
+    """
+    hidden = set(hidden_columns or [])
+    defs = [
+        {
+            "field": "marche",
+            "headerName": "",
+            "cellRenderer": "markdown",
+            "filter": False,
+            "sortable": False,
+            "maxWidth": 60,
+            "pinned": "left",
+        }
+    ]
+    for col in schema.names():
+        meta = DATA_SCHEMA.get(col, {})
+        col_type = schema[col]
+        col_def = {
+            "field": col,
+            "headerName": meta.get("title", col),
+            "filter": _filter_for(col_type),
+            "floatingFilter": True,
+            "sortable": True,
+            "hide": col in hidden,
+        }
+        if meta.get("description"):
+            col_def["headerTooltip"] = (
+                f"{meta.get('title', col)} ({col}) — {meta['description']}"
+            )
+        if col in _LINK_COLUMNS:
+            col_def["cellRenderer"] = "markdown"
+        defs.append(col_def)
+    return defs
