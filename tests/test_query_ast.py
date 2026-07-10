@@ -85,6 +85,32 @@ def test_blank_and_notblank():
     assert "IS NOT NULL" in sql_nb
 
 
+def test_date_range_uses_between():
+    sql, params = _run(
+        Condition("dateNotification", "range", "2022-01-01", "2022-12-31")
+    )
+    assert "BETWEEN" in sql
+    assert params == ["2022-01-01", "2022-12-31"]
+
+
+def test_text_range_uses_between():
+    sql, params = _run(Condition("acheteur_nom", "range", "a", "m"))
+    assert "BETWEEN" in sql
+    assert params == ["a", "m"]
+
+
+def test_blank_on_numeric_column_no_empty_string():
+    sql, params = _run(Condition("montant", "blank"))
+    assert sql == '"montant" IS NULL'
+    assert params == []
+
+
+def test_notblank_on_date_column_no_empty_string():
+    sql, params = _run(Condition("dateNotification", "notBlank"))
+    assert sql == '"dateNotification" IS NOT NULL'
+    assert params == []
+
+
 def test_unknown_column_is_true():
     assert _run(Condition("colonne_inexistante", "contains", "x")) == ("TRUE", [])
 

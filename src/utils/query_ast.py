@@ -82,13 +82,17 @@ def _condition_to_sql(cond: Condition, schema: pl.Schema) -> tuple[str, list]:
     col_type = schema[col]
     quoted = f'"{col}"'
 
-    if cond.operator == "blank":
-        return f"({quoted} IS NULL OR {quoted} = '')", []
-    if cond.operator == "notBlank":
-        return f"({quoted} IS NOT NULL AND {quoted} <> '')", []
-
     is_numeric = col_type.is_numeric()
     col_is_date = col_type == pl.Date
+
+    if cond.operator == "blank":
+        if is_numeric or col_is_date:
+            return f"{quoted} IS NULL", []
+        return f"({quoted} IS NULL OR {quoted} = '')", []
+    if cond.operator == "notBlank":
+        if is_numeric or col_is_date:
+            return f"{quoted} IS NOT NULL", []
+        return f"({quoted} IS NOT NULL AND {quoted} <> '')", []
 
     if is_numeric:
         return _numeric_to_sql(cond, col_type, quoted)
@@ -105,6 +109,11 @@ def _condition_to_sql(cond: Condition, schema: pl.Schema) -> tuple[str, list]:
     if cond.operator in op_map:
         return f"{quoted} IS NOT NULL AND {target} {op_map[cond.operator]} ?", [
             str(cond.value)
+        ]
+    if cond.operator == "range":
+        return f"{quoted} IS NOT NULL AND {target} BETWEEN ? AND ?", [
+            str(cond.value),
+            str(cond.value2),
         ]
     if cond.operator == "startsWith":
         return f"{quoted} ILIKE ?", [f"{cond.value}%"]
