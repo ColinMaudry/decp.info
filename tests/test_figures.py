@@ -349,3 +349,24 @@ def test_bounds_to_center_zoom_center_is_bbox_midpoint():
     center, _ = bounds_to_center_zoom(40.0, 0.0, 50.0, 4.0)
 
     assert center == [45.0, 2.0]
+
+
+def test_ag_grid_locale_text_translates_common_filter_labels():
+    from src.figures import ag_grid
+
+    grid = ag_grid("tableau_grid", [])
+    locale_text = grid.dashGridOptions["localeText"]
+
+    assert locale_text["equals"] == "Égal à"
+    assert locale_text["contains"] == "Contient"
+    assert locale_text["blank"] == "Vide"
+    assert locale_text["notBlank"] == "Non vide"
+
+
+def test_ag_grid_keeps_base_appearance():
+    """Pas de thème/className custom au Lot 1 (spec de design)."""
+    from src.figures import ag_grid
+
+    grid = ag_grid("tableau_grid", [])
+
+    assert getattr(grid, "className", None) in (None, "")

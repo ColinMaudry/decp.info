@@ -1069,10 +1069,45 @@ def get_top_org_table(data, org_type: str, extra_columns: list, filters: bool = 
     )
 
 
+# Libellés du menu de filtre AG Grid, traduits en français (option native
+# AG Grid localeText, exposée via dashGridOptions — n'affecte pas l'apparence
+# de base conservée au Lot 1, seulement le texte).
+AG_GRID_LOCALE_FR = {
+    # Filtres texte / nombre / date
+    "contains": "Contient",
+    "notContains": "Ne contient pas",
+    "equals": "Égal à",
+    "notEqual": "Différent de",
+    "startsWith": "Commence par",
+    "endsWith": "Se termine par",
+    "blank": "Vide",
+    "notBlank": "Non vide",
+    "empty": "Choisir une option",
+    "lessThan": "Inférieur à",
+    "lessThanOrEqual": "Inférieur ou égal à",
+    "greaterThan": "Supérieur à",
+    "greaterThanOrEqual": "Supérieur ou égal à",
+    "inRange": "Entre",
+    "inRangeStart": "de",
+    "inRangeEnd": "à",
+    # Chrome du menu de filtre
+    "filterOoo": "Filtrer...",
+    "applyFilter": "Appliquer",
+    "resetFilter": "Réinitialiser",
+    "clearFilter": "Effacer",
+    "cancelFilter": "Annuler",
+    "andCondition": "ET",
+    "orCondition": "OU",
+    "noRowsToShow": "Aucune ligne à afficher",
+    "loadingOoo": "Chargement...",
+}
+
+
 def ag_grid(grid_id: str, column_defs: list[dict]) -> "dag.AgGrid":
     """Grille AG Grid server-side (infinite) pour la page Tableau.
 
-    Apparence de base d'AG Grid (aucun thème custom au Lot 1).
+    Apparence de base d'AG Grid (aucun thème custom au Lot 1) ; libellés
+    de filtre traduits en français via localeText.
     """
     return dag.AgGrid(
         id=grid_id,
@@ -1086,6 +1121,7 @@ def ag_grid(grid_id: str, column_defs: list[dict]) -> "dag.AgGrid":
             "rowBuffer": 0,
             "infiniteInitialRowCount": 100,
             "suppressCellFocus": True,
+            "localeText": AG_GRID_LOCALE_FR,
         },
         columnSize="responsiveSizeToFit",
         style={"height": "70vh", "width": "100%"},
