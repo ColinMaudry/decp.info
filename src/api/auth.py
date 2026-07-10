@@ -16,7 +16,6 @@ def _abort_401(message: str):
 def require_token(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        print(API_AUTH_DISABLED)
         if not API_AUTH_DISABLED:
             header = request.headers.get("Authorization", "")
             if not header.startswith("Bearer "):
@@ -30,6 +29,9 @@ def require_token(fn):
                 _abort_401("invalid_token")
             if row["revoked_at"] is not None:
                 _abort_401("revoked_token")
+            if row["kind"] == "mcp":
+                # jeton dédié MCP : non valable sur l'API REST
+                _abort_401("invalid_token")
             g.token_id = row["id"]
         return fn(*args, **kwargs)
 

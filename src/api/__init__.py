@@ -5,6 +5,14 @@ from src.api import routes
 
 def init_api(server) -> None:
     """Enregistre le blueprint d'API privée sur le serveur Flask."""
+    import os
+
+    from src.api import tokens_db, tracking
+
+    # Garantit que api_tokens existe avant que apply_pending (init_subscriptions,
+    # plus tard) ne tente l'ALTER de la migration 0007.
+    tokens_db.init_schema(os.environ["USERS_DB_PATH"])
+
     server.config.setdefault("API_TITLE", "colibre API")
     server.config.setdefault("API_VERSION", "v1")
     server.config.setdefault("OPENAPI_VERSION", "3.0.3")
@@ -26,9 +34,5 @@ def init_api(server) -> None:
 
     api = Api(server)
     api.register_blueprint(routes.bp)
-
-    import os
-
-    from src.api import tracking
 
     tracking.start_worker(os.environ["USERS_DB_PATH"])

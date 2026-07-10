@@ -6,6 +6,7 @@
 - Sauvegarde de vues personnalisées (filtres, tris, colonnes) dans la page Tableau, réservée aux abonné·es ([#95](https://github.com/ColinMaudry/colibre/issues/95))
 - Vote pour prioriser les fonctionnalités de la roadmap, réservé aux abonné·es une fois leur période d'essai terminée, avec une page roadmap publique en lecture seule ([#94](https://github.com/ColinMaudry/colibre/issues/94))
 - Accès aux données de la commande publique via un serveur MCP (Model Context Protocol), pour interroger colibre directement depuis un agent IA (Claude, Cursor…) ([#111](https://github.com/ColinMaudry/colibre/issues/111))
+- Connecteur MCP : les abonnés génèrent un jeton dans « Mon compte › Connecteur MCP » pour connecter leur agent IA (Claude, Gemini, Mistral) au serveur MCP colibre ; l'accès est conditionné à un abonnement actif ([#111](https://github.com/ColinMaudry/colibre/issues/111))
 
 **Autres améliorations**
 
