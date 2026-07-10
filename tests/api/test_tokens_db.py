@@ -62,3 +62,42 @@ def test_list_tokens_returns_all(temp_db):
     tokens_db.create_token(temp_db, "b")
     rows = tokens_db.list_tokens(temp_db)
     assert [r["label"] for r in rows] == ["a", "b"]
+
+
+def test_create_token_defaults_to_api_kind(temp_db):
+    token, token_id = tokens_db.create_token(temp_db, "x")
+    row = tokens_db.get_token_by_plaintext(temp_db, token)
+    assert row["kind"] == "api"
+
+
+def test_create_token_with_mcp_kind(temp_db):
+    token, _ = tokens_db.create_token(temp_db, "x", user_id=7, kind="mcp")
+    row = tokens_db.get_token_by_plaintext(temp_db, token)
+    assert row["kind"] == "mcp"
+    assert row["user_id"] == 7
+
+
+def test_list_user_tokens_filters_by_user_and_kind(temp_db):
+    tokens_db.create_token(temp_db, "mcp-u1", user_id=1, kind="mcp")
+    tokens_db.create_token(temp_db, "api-u1", user_id=1, kind="api")
+    tokens_db.create_token(temp_db, "mcp-u2", user_id=2, kind="mcp")
+    rows = tokens_db.list_user_tokens(temp_db, 1, "mcp")
+    assert [r["label"] for r in rows] == ["mcp-u1"]
+
+
+def test_revoke_user_token_revokes_own(temp_db):
+    token, token_id = tokens_db.create_token(temp_db, "x", user_id=1, kind="mcp")
+    assert tokens_db.revoke_user_token(temp_db, token_id, 1) is True
+    assert tokens_db.get_token_by_plaintext(temp_db, token)["revoked_at"] is not None
+
+
+def test_revoke_user_token_refuses_other_owner(temp_db):
+    token, token_id = tokens_db.create_token(temp_db, "x", user_id=1, kind="mcp")
+    assert tokens_db.revoke_user_token(temp_db, token_id, 999) is False
+    assert tokens_db.get_token_by_plaintext(temp_db, token)["revoked_at"] is None
+
+
+def test_revoke_user_token_already_revoked_returns_false(temp_db):
+    _, token_id = tokens_db.create_token(temp_db, "x", user_id=1, kind="mcp")
+    assert tokens_db.revoke_user_token(temp_db, token_id, 1) is True
+    assert tokens_db.revoke_user_token(temp_db, token_id, 1) is False

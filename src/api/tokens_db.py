@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS api_tokens (
     created_at   TEXT NOT NULL,
     last_used_at TEXT,
     count_total  INTEGER NOT NULL DEFAULT 0,
-    revoked_at   TEXT
+    revoked_at   TEXT,
+    kind         TEXT NOT NULL DEFAULT 'api'
 );
 CREATE INDEX IF NOT EXISTS idx_api_tokens_hash ON api_tokens(token_hash);
 """
@@ -47,13 +48,15 @@ def init_schema(db_path) -> None:
         conn.commit()
 
 
-def create_token(db_path, label: str, user_id: int | None = None) -> tuple[str, int]:
+def create_token(
+    db_path, label: str, user_id: int | None = None, kind: str = "api"
+) -> tuple[str, int]:
     token = TOKEN_PREFIX + secrets.token_hex(32)
     with _connect(db_path) as conn:
         cur = conn.execute(
-            "INSERT INTO api_tokens (token_hash, label, user_id, created_at) "
-            "VALUES (?, ?, ?, ?)",
-            (_hash(token), label, user_id, _utcnow_iso()),
+            "INSERT INTO api_tokens (token_hash, label, user_id, kind, created_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (_hash(token), label, user_id, kind, _utcnow_iso()),
         )
         conn.commit()
         return token, cur.lastrowid
@@ -92,3 +95,24 @@ def list_tokens(db_path) -> list[dict]:
     with _connect(db_path) as conn:
         rows = conn.execute("SELECT * FROM api_tokens ORDER BY id").fetchall()
     return [dict(r) for r in rows]
+
+
+def list_user_tokens(db_path, user_id: int, kind: str = "mcp") -> list[dict]:
+    with _connect(db_path) as conn:
+        rows = conn.execute(
+            "SELECT * FROM api_tokens WHERE user_id = ? AND kind = ? "
+            "ORDER BY created_at DESC, id DESC",
+            (user_id, kind),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def revoke_user_token(db_path, token_id: int, user_id: int) -> bool:
+    with _connect(db_path) as conn:
+        cur = conn.execute(
+            "UPDATE api_tokens SET revoked_at = ? "
+            "WHERE id = ? AND user_id = ? AND revoked_at IS NULL",
+            (_utcnow_iso(), token_id, user_id),
+        )
+        conn.commit()
+        return cur.rowcount > 0
