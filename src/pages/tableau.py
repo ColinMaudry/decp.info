@@ -21,11 +21,12 @@ from dash import (
 from flask_login import current_user
 
 from src.db import query_marches, schema
-from src.figures import DataTable, make_column_picker
+from src.figures import ag_grid, make_column_picker
 from src.pages._compte_shell import current_user_has_subscription
 from src.saved_views import db as saved_views_db
 from src.saved_views import ui as saved_views_ui
 from src.utils import get_data_update_timestamp, logger
+from src.utils.grid import fetch_grid_page, grid_column_defs
 from src.utils.seo import META_CONTENT
 from src.utils.table import (
     COLUMNS,
@@ -33,7 +34,6 @@ from src.utils.table import (
     filter_table_data,
     get_default_hidden_columns,
     invert_columns,
-    prepare_table_data,
     sort_table_data,
     write_styled_excel,
 )
@@ -64,17 +64,8 @@ register_page(
 
 DATATABLE = html.Div(
     className="marches_table",
-    children=DataTable(
-        dtid="tableau_datatable",
-        persisted_props=["filter_query", "sort_by"],
-        persistence_type="local",
-        persistence=True,
-        page_size=20,
-        page_action="custom",
-        filter_action="custom",
-        sort_action="custom",
-        hidden_columns=[],
-        columns=[{"id": col, "name": col} for col in schema.names()],
+    children=ag_grid(
+        "tableau_grid", grid_column_defs(get_default_hidden_columns("tableau"))
     ),
 )
 
@@ -139,6 +130,7 @@ layout = [
     dcc.Store(id="filter-cleanup-trigger-tableau"),
     dcc.Store(id="tableau-hidden-columns", storage_type="local"),
     dcc.Store(id="tableau-table"),
+    dcc.Store(id="tableau-total"),
     html.Script(
         type="application/ld+json",
         id="dataset_jsonld",
@@ -434,48 +426,42 @@ layout = [
 
 
 @callback(
-    Output("tableau_datatable", "data"),
-    Output("tableau_datatable", "columns"),
-    Output("tableau_datatable", "tooltip_header"),
-    Output("tableau_datatable", "data_timestamp"),
-    Output("nb_rows", "children"),
-    Output("btn-download-data", "disabled"),
-    Output("btn-download-data", "children"),
-    Output("btn-download-data", "title"),
-    Output("filter-cleanup-trigger-tableau", "data", allow_duplicate=True),
-    Output("download-hint", "children"),
-    Input("tableau_url", "href"),
-    Input("tableau_datatable", "page_current"),
-    Input("tableau_datatable", "page_size"),
-    Input("tableau_datatable", "filter_query"),
-    Input("tableau_datatable", "sort_by"),
-    State("tableau_datatable", "data_timestamp"),
+    Output("tableau_grid", "getRowsResponse"),
+    Output("tableau-total", "data"),
+    Input("tableau_grid", "getRowsRequest"),
     prevent_initial_call=True,
 )
-def update_table(href, page_current, page_size, filter_query, sort_by, data_timestamp):
-    result = list(
-        prepare_table_data(
-            None,
-            data_timestamp,
-            filter_query,
-            page_current,
-            page_size,
-            sort_by,
-            "tableau",
-        )
+def get_rows_tableau(request):
+    if request is None:
+        return no_update, no_update
+    filter_model = request.get("filterModel") or None
+    sort_model = request.get("sortModel") or None
+    if filter_model:
+        track_search(json.dumps(filter_model), "tableau")
+    rows, total = fetch_grid_page(
+        filter_model,
+        sort_model,
+        request.get("startRow", 0),
+        request.get("endRow", 100),
     )
-    # Libellé court et constant ; la raison d'un éventuel blocage est affichée
-    # en clair dans la ligne d'infos (fiable cross-browser, contrairement à une
-    # infobulle sur bouton désactivé). index 5 = disabled, 6 = children, 7 = title.
-    result[6] = "Télécharger (Excel)"
-    download_blocked_too_many = result[5] and result[7]
-    download_hint = (
+    return {"rowData": rows, "rowCount": total}, total
+
+
+@callback(
+    Output("nb_rows", "children"),
+    Output("btn-download-data", "disabled"),
+    Output("download-hint", "children"),
+    Input("tableau-total", "data"),
+)
+def update_meta(total):
+    total = total or 0
+    too_many = total > 65000
+    hint = (
         " · Filtrez sous 65 000 lignes pour activer le téléchargement"
-        if download_blocked_too_many
+        if too_many
         else ""
     )
-    result.append(download_hint)
-    return tuple(result)
+    return f"{total} lignes", too_many, hint
 
 
 @callback(
