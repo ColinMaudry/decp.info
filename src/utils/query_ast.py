@@ -11,7 +11,7 @@ from dataclasses import dataclass
 import polars as pl
 
 from src.utils import logger
-from src.utils.table_sql import tokenize_text_filter
+from src.utils.table_sql import sort_by_to_sql, tokenize_text_filter
 
 
 @dataclass
@@ -212,3 +212,52 @@ def filtermodel_to_ast(filter_model, schema):
                 continue
         children.append(node)
     return And(children) if children else None
+
+
+def sort_model_to_sql(sort_model: list | None, schema: pl.Schema) -> str:
+    """Traduit un sortModel AG Grid en clause ORDER BY DuckDB (adapte à sort_by_to_sql)."""
+    if not sort_model:
+        return ""
+    sort_by = [
+        {"column_id": s.get("colId"), "direction": s.get("sort")} for s in sort_model
+    ]
+    return sort_by_to_sql(sort_by, schema)
+
+
+def ast_to_dict(node: Node) -> dict | None:
+    """Sérialise un AST en dict JSON-compatible (pour persistance en base)."""
+    if node is None:
+        return None
+    if isinstance(node, Condition):
+        return {
+            "t": "cond",
+            "column": node.column,
+            "operator": node.operator,
+            "value": node.value,
+            "value2": node.value2,
+        }
+    if isinstance(node, And):
+        return {"t": "and", "children": [ast_to_dict(c) for c in node.children]}
+    if isinstance(node, Or):
+        return {"t": "or", "children": [ast_to_dict(c) for c in node.children]}
+    if isinstance(node, Not):
+        return {"t": "not", "child": ast_to_dict(node.child)}
+    return None
+
+
+def ast_from_dict(data: dict | None) -> Node:
+    """Reconstruit un AST à partir d'un dict produit par ast_to_dict."""
+    if data is None:
+        return None
+    t = data.get("t")
+    if t == "cond":
+        return Condition(
+            data["column"], data["operator"], data.get("value"), data.get("value2")
+        )
+    if t == "and":
+        return And([ast_from_dict(c) for c in data["children"]])
+    if t == "or":
+        return Or([ast_from_dict(c) for c in data["children"]])
+    if t == "not":
+        return Not(ast_from_dict(data["child"]))
+    return None

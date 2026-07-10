@@ -1,6 +1,16 @@
 import polars as pl
 
-from src.utils.query_ast import And, Condition, Not, Or, ast_to_sql, filtermodel_to_ast
+from src.utils.query_ast import (
+    And,
+    Condition,
+    Not,
+    Or,
+    ast_from_dict,
+    ast_to_dict,
+    ast_to_sql,
+    filtermodel_to_ast,
+    sort_model_to_sql,
+)
 
 SCHEMA = pl.Schema(
     {
@@ -198,3 +208,30 @@ def test_filtermodel_multiple_columns_are_anded():
     }
     sql, params = ast_to_sql(filtermodel_to_ast(fm, SCHEMA), SCHEMA)
     assert " AND " in sql and set(params) == {"%voirie%", 1000.0}
+
+
+def test_sort_model_to_sql():
+    sm = [{"colId": "montant", "sort": "desc"}, {"colId": "dureeMois", "sort": "asc"}]
+    out = sort_model_to_sql(sm, SCHEMA)
+    assert out == '"montant" DESC NULLS LAST, "dureeMois" ASC NULLS LAST'
+
+
+def test_sort_model_empty():
+    assert sort_model_to_sql(None, SCHEMA) == ""
+    assert sort_model_to_sql([], SCHEMA) == ""
+
+
+def test_ast_dict_roundtrip():
+    node = And(
+        [
+            Or([Condition("objet", "contains", "beton")]),
+            Not(Condition("objet", "contains", "x")),
+        ]
+    )
+    restored = ast_from_dict(ast_to_dict(node))
+    assert ast_to_sql(restored, SCHEMA) == ast_to_sql(node, SCHEMA)
+
+
+def test_ast_dict_none():
+    assert ast_to_dict(None) is None
+    assert ast_from_dict(None) is None
