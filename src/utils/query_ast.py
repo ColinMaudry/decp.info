@@ -146,3 +146,69 @@ def _numeric_to_sql(cond: Condition, col_type, quoted: str) -> tuple[str, list]:
         return f"{quoted} BETWEEN ? AND ?", [v1, v2]
     logger.warning(f"Opérateur numérique invalide : {cond.operator!r}")
     return "TRUE", []
+
+
+_TEXT_TYPE = {
+    "contains": "contains",
+    "notContains": "notContains",
+    "equals": "eq",
+    "notEqual": "neq",
+    "startsWith": "startsWith",
+    "endsWith": "endsWith",
+    "blank": "blank",
+    "notBlank": "notBlank",
+}
+_NUM_TYPE = {
+    "equals": "eq",
+    "notEqual": "neq",
+    "lessThan": "lt",
+    "lessThanOrEqual": "lte",
+    "greaterThan": "gt",
+    "greaterThanOrEqual": "gte",
+    "inRange": "range",
+    "blank": "blank",
+    "notBlank": "notBlank",
+}
+
+
+def _leaf(column: str, spec: dict):
+    """Convertit une condition AG Grid unitaire en Condition."""
+    ftype = spec.get("filterType", "text")
+    ag_type = spec.get("type")
+    if ftype == "date":
+        op = _NUM_TYPE.get(ag_type)
+        if op == "range":
+            return Condition(column, "range", spec.get("dateFrom"), spec.get("dateTo"))
+        return Condition(column, op, spec.get("dateFrom")) if op else None
+    if ftype == "number":
+        op = _NUM_TYPE.get(ag_type)
+        if op == "range":
+            return Condition(column, "range", spec.get("filter"), spec.get("filterTo"))
+        return Condition(column, op, spec.get("filter")) if op else None
+    # texte
+    op = _TEXT_TYPE.get(ag_type)
+    return Condition(column, op, spec.get("filter")) if op else None
+
+
+def filtermodel_to_ast(filter_model, schema):
+    """Traduit un filterModel AG Grid en AST. Colonnes combinées en And."""
+    if not filter_model:
+        return None
+    children = []
+    for column, spec in filter_model.items():
+        if column not in schema.names():
+            logger.warning(f"Filtre sur colonne inconnue ignoré : {column!r}")
+            continue
+        if "operator" in spec:  # deux conditions
+            c1 = _leaf(column, spec.get("condition1", {}))
+            c2 = _leaf(column, spec.get("condition2", {}))
+            parts = [c for c in (c1, c2) if c is not None]
+            if not parts:
+                continue
+            node = And(parts) if spec["operator"] == "AND" else Or(parts)
+        else:
+            node = _leaf(column, spec)
+            if node is None:
+                continue
+        children.append(node)
+    return And(children) if children else None

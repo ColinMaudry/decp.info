@@ -1,6 +1,6 @@
 import polars as pl
 
-from src.utils.query_ast import And, Condition, Not, Or, ast_to_sql
+from src.utils.query_ast import And, Condition, Not, Or, ast_to_sql, filtermodel_to_ast
 
 SCHEMA = pl.Schema(
     {
@@ -130,3 +130,71 @@ def test_and_or_not_grouping():
     sql, params = _run(node)
     assert " OR " in sql and " AND " in sql and "NOT (" in sql
     assert params == ["%beton%", "%ciment%", "%demolition%"]
+
+
+def test_filtermodel_empty_is_none():
+    assert filtermodel_to_ast(None, SCHEMA) is None
+    assert filtermodel_to_ast({}, SCHEMA) is None
+
+
+def test_filtermodel_text_contains():
+    fm = {"objet": {"filterType": "text", "type": "contains", "filter": "voirie"}}
+    _, params = ast_to_sql(filtermodel_to_ast(fm, SCHEMA), SCHEMA)
+    assert params == ["%voirie%"]
+
+
+def test_filtermodel_number_greaterthan():
+    fm = {"montant": {"filterType": "number", "type": "greaterThan", "filter": 40000}}
+    sql, params = ast_to_sql(filtermodel_to_ast(fm, SCHEMA), SCHEMA)
+    assert '"montant"' in sql and params == [40000.0]
+
+
+def test_filtermodel_number_inrange():
+    fm = {
+        "montant": {
+            "filterType": "number",
+            "type": "inRange",
+            "filter": 100,
+            "filterTo": 200,
+        }
+    }
+    _, params = ast_to_sql(filtermodel_to_ast(fm, SCHEMA), SCHEMA)
+    assert params == [100.0, 200.0]
+
+
+def test_filtermodel_date_uses_datefrom():
+    fm = {
+        "dateNotification": {
+            "filterType": "date",
+            "type": "greaterThan",
+            "dateFrom": "2022-01-01",
+        }
+    }
+    _, params = ast_to_sql(filtermodel_to_ast(fm, SCHEMA), SCHEMA)
+    assert params == ["2022-01-01"]
+
+
+def test_filtermodel_two_conditions_or():
+    fm = {
+        "objet": {
+            "filterType": "text",
+            "operator": "OR",
+            "condition1": {"filterType": "text", "type": "contains", "filter": "beton"},
+            "condition2": {
+                "filterType": "text",
+                "type": "contains",
+                "filter": "ciment",
+            },
+        }
+    }
+    sql, params = ast_to_sql(filtermodel_to_ast(fm, SCHEMA), SCHEMA)
+    assert " OR " in sql and params == ["%beton%", "%ciment%"]
+
+
+def test_filtermodel_multiple_columns_are_anded():
+    fm = {
+        "objet": {"filterType": "text", "type": "contains", "filter": "voirie"},
+        "montant": {"filterType": "number", "type": "greaterThan", "filter": 1000},
+    }
+    sql, params = ast_to_sql(filtermodel_to_ast(fm, SCHEMA), SCHEMA)
+    assert " AND " in sql and set(params) == {"%voirie%", 1000.0}
