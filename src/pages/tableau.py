@@ -81,10 +81,6 @@ def _help_button_legend():
             "Rouvrir une vue que vous avez enregistrée (abonnés).",
         ),
         (
-            dbc.Button("Partager la vue", color="secondary", size="sm"),
-            "Copier l'adresse de la vue actuelle pour la partager ou la conserver.",
-        ),
-        (
             dbc.Button("Télécharger (Excel)", color="secondary", size="sm"),
             "Télécharger les données filtrées et triées au format Excel.",
         ),
@@ -186,7 +182,7 @@ layout = [
         ],
     ),
     dcc.Markdown(
-        f"Ce tableau contient tous les marchés attribués en France. Il vous permet d'appliquer un filtre sur une ou plusieurs colonnes, et ainsi produire la liste de marchés dont vous avez besoin (exemples : [marchés de voirie < 40 k€ en 2025](/tableau?filtres=%7Bacheteur_id%7D+icontains+24350013900189+%26%26+%7BdateNotification%7D+icontains+2025%2A+%26%26+%7Bmontant%7D+i%3C+40000+%26%26+%7Bobjet%7D+icontains+voirie&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2Cacheteur_departement_code%2CsourceDataset), [marchés > 500 k€ avec clause sociale attribués à des PME à plus de 100 km dans le Var](/tableau?filtres=%7Btitulaire_categorie%7D+icontains+PME+%26%26+%7Btitulaire_distance%7D+i%3E+100+%26%26+%7Bmontant%7D+i%3E+500000+%26%26+%7Bacheteur_departement_code%7D+icontains+83+%26%26+%7BconsiderationsSociales%7D+icontains+clause&colonnes=uid%2Cacheteur_id%2Cacheteur_nom%2Ctitulaire_id%2Ctitulaire_nom%2Cobjet%2Cmontant%2CdureeMois%2CdateNotification%2CconsiderationsSociales%2Ctitulaire_distance%2Cacheteur_departement_code%2Ctitulaire_categorie%2CsourceDataset)). Par défaut seules quelques colonnes sont affichées, mais vous pouvez en afficher jusqu'à {len(schema.names())} en cliquant sur le bouton **Colonnes**. Cet outil est assez puissant, je vous recommande de lire le mode d'emploi pour en tirer pleinement partie.",
+        f"Ce tableau contient tous les marchés attribués en France. Il vous permet d'appliquer un filtre sur une ou plusieurs colonnes, et ainsi produire la liste de marchés dont vous avez besoin. Par défaut seules quelques colonnes sont affichées, mais vous pouvez en afficher jusqu'à {len(schema.names())} en cliquant sur le bouton **Colonnes**. Cet outil est assez puissant, je vous recommande de lire le mode d'emploi pour en tirer pleinement partie.",
         style={"maxWidth": "1000px"},
     ),
     html.Div(
@@ -226,51 +222,45 @@ layout = [
 
             Les filtres, les tris et le choix de colonnes sont automatiquement enregistrés dans votre navigateur et persistent même si vous changez de page ou si vous fermez votre navigateur. À votre retour, vous retrouverez cette page comme vous l'avez laissée.
 
-            ##### Appliquer des filtres
+            ##### Filtrer les colonnes
 
-            Vous pouvez appliquer un filtre pour chaque colonne en entrant du texte sous le nom de la colonne, puis en tapant sur `Entrée`.
+            Chaque colonne a son propre filtre : saisissez une valeur dans le champ situé juste sous son en-tête (le filtre « flottant »), ou cliquez sur l'icône entonnoir dans l'en-tête pour ouvrir le filtre complet.
 
-            - Champs textuels : la recherche retourne les valeurs qui contiennent le texte recherché, n'est sensible ni à la casse (majuscules/minuscules), ni à l'accentuation.
-                - `rennes` => le texte contient "rennes"
-                - `metro* *pole` => le texte contient un mot qui commence par "metro" et un mot qui finit par "pole"
-                - `metropole rennes` => le texte contient les mots "metropole" et "rennes", n'importe où dans le texte
-                - `métropole+rennes` => le texte contient "metropole rennes" ou "métropole rennes", collé et dans cet ordre
-                - `metropole+rennes travaux distri*` => le texte contient "metropole rennes", "travaux" et un mot qui commence par "distri"
-                - Les guillemets simples (apostrophe du 4) doivent être prédédées d'une barre oblique (AltGr + 8). Exemple : `services d\\\'assurances`
-            - Champs numériques (Durée en mois, Montant, ...) : vous pouvez...
-                - soit taper un nombre pour trouver les valeurs strictement égales. Exemple : `12` ne retourne que des 12
-                - soit le précéder de **>** ou **<** pour filtrer les valeurs supérieures ou inférieures. Exemple pour les offres reçues : `> 4` retourne les marchés ayant reçu plus de 4 offres.
-            - Champs date (Date de notification, ...) :
-                - `< 2024-01-31` pour "avant le 31 janvier 2024"
-                - `2024` pour "en 2024", `> 2022` pour "à partir de 2022"
+            - Champs textuels : contient (par défaut), égal à, ne contient pas, commence par, se termine par...
+            - Champs numériques (Durée en mois, Montant, nombre d'offres...) : égal à, supérieur à, inférieur à, entre (plage)...
+            - Champs date (Date de notification...) : égal à, avant, après, entre (plage)...
 
-            Vous pouvez filtrer plusieurs colonnes à la fois.
+            Dans le filtre complet (icône entonnoir), vous pouvez combiner deux conditions sur la même colonne avec **ET** ou **OU**.
+
+            Vous pouvez filtrer plusieurs colonnes à la fois ; les filtres de colonnes différentes se cumulent toujours (ET).
 
             ##### Trier les données
 
-            Pour trier une colonne, utilisez les flèches grises à côté des noms de colonnes. Chaque clic change le tri dans cet ordre :
+            Cliquez sur l'en-tête d'une colonne pour la trier. Chaque clic change le tri dans cet ordre :
 
             1. tri croissant
             2. tri décroissant
             3. pas de tri
 
-            Les tris sont appliqués dans l'ordre : la première colonne que vous triez a la priorité sur la seconde, qui triera uniquement au sein des groupes de valeurs de la première colonne.
+            Pour trier sur plusieurs colonnes à la fois, maintenez la touche `Maj` (Shift) enfoncée en cliquant sur les en-têtes suivants : la première colonne triée a la priorité, la suivante ne départage qu'au sein des groupes de valeurs identiques de la précédente, et ainsi de suite.
+
+            ##### Défilement
+
+            Le tableau charge les lignes au fur et à mesure que vous faites défiler la page, plutôt que par pages numérotées. Les en-têtes de colonnes (et leurs filtres) restent toujours visibles en haut du tableau pendant le défilement.
 
             ##### Afficher plus de colonnes
 
             Par défaut, un nombre réduit de colonnes est affiché pour ne pas surcharger la page. Mais vous avez le choix parmi {len(schema.names())} colonnes, ce serait dommage de vous limiter !
 
-            Pour afficher plus de colonnes, cliquez sur le bouton **Choisir les colonnes** et cochez les colonnes pour les afficher.
+            Pour afficher plus de colonnes, cliquez sur le bouton **Colonnes** et cochez les colonnes à afficher.
 
-            ##### Partager une vue
+            ##### Vues sauvegardées (abonnés)
 
-            Une vue est un ensemble de filtres, de tris et de choix de colonnes que vous avez appliqués. Cliquez sur **Partager** pour copier une adresse Web qui reproduit la vue courante à l'identique : en la collant dans la barre d'adresse d'un navigateur, vous ouvrez la vue Tableau avec les mêmes paramètres.
-
-            Pratique pour partager une vue avec un·e collègue, sur les réseaux sociaux, ou la sauvegarder pour plus tard.
+            Une vue est un ensemble de filtres, de tris et de colonnes affichées que vous avez appliqués. Si vous êtes abonné, le bouton **Sauvegarder la vue** vous permet d'enregistrer la configuration actuelle sous un nom, et le menu **Mes vues** de la rappeler d'un clic plus tard.
 
             ##### Télécharger le résultat
 
-            Vous pouvez télécharger le résultat de vos filtres et tris, pour les colonnes affichées, en cliquant sur **Télécharger au format Excel**.
+            Vous pouvez télécharger le résultat de vos filtres et tris, pour les colonnes affichées, en cliquant sur **Télécharger (Excel)**.
 
             ##### Liens
 
