@@ -636,21 +636,18 @@ def update_hidden_columns_from_checkboxes(selected_columns):
 
 
 @callback(
-    Output("tableau_datatable", "hidden_columns"),
-    Input(
-        "tableau-hidden-columns",
-        "data",
-    ),
+    Output("tableau_grid", "columnDefs"),
+    Input("tableau-hidden-columns", "data"),
 )
-def store_hidden_columns(hidden_columns):
+def apply_hidden_columns(hidden_columns):
     if hidden_columns is None:
         hidden_columns = get_default_hidden_columns("tableau")
-    return hidden_columns
+    return grid_column_defs(hidden_columns)
 
 
 @callback(
     Output("tableau_column_list", "selected_rows"),
-    Input("tableau_datatable", "hidden_columns"),
+    Input("tableau-hidden-columns", "data"),
     State("tableau_column_list", "selected_rows"),  # pour éviter la boucle infinie
 )
 def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
