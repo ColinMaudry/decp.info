@@ -214,6 +214,141 @@ def filtermodel_to_ast(filter_model, schema):
     return And(children) if children else None
 
 
+_TEXT_TYPE_INV = {v: k for k, v in _TEXT_TYPE.items()}
+_NUM_TYPE_INV = {v: k for k, v in _NUM_TYPE.items()}
+
+
+def _condition_to_filterspec(cond: Condition, schema: pl.Schema) -> dict | None:
+    """Convertit une Condition en spec de filtre AG Grid unitaire (une colonne).
+
+    Inverse de `_leaf`. Renvoie None (avec warning) si la colonne est inconnue
+    ou si l'opérateur n'a pas d'équivalent AG Grid — ne devrait pas arriver
+    pour un AST produit par `filtermodel_to_ast`, mais on reste défensif.
+    """
+    if cond.column not in schema.names():
+        logger.warning(
+            f"Colonne inconnue ignorée (ast_to_filtermodel) : {cond.column!r}"
+        )
+        return None
+
+    col_type = schema[cond.column]
+    if col_type.is_numeric():
+        filter_type = "number"
+    elif col_type == pl.Date:
+        filter_type = "date"
+    else:
+        filter_type = "text"
+
+    if filter_type in ("number", "date") and cond.operator == "range":
+        if filter_type == "number":
+            return {
+                "filterType": "number",
+                "type": "inRange",
+                "filter": cond.value,
+                "filterTo": cond.value2,
+            }
+        return {
+            "filterType": "date",
+            "type": "inRange",
+            "dateFrom": cond.value,
+            "dateTo": cond.value2,
+        }
+
+    if filter_type == "date":
+        ag_type = _NUM_TYPE_INV.get(cond.operator)
+        if ag_type is None:
+            logger.warning(
+                f"Opérateur sans équivalent AG Grid ignoré : {cond.operator!r} "
+                f"(colonne {cond.column!r})"
+            )
+            return None
+        return {"filterType": "date", "type": ag_type, "dateFrom": cond.value}
+
+    if filter_type == "number":
+        ag_type = _NUM_TYPE_INV.get(cond.operator)
+        if ag_type is None:
+            logger.warning(
+                f"Opérateur sans équivalent AG Grid ignoré : {cond.operator!r} "
+                f"(colonne {cond.column!r})"
+            )
+            return None
+        return {"filterType": "number", "type": ag_type, "filter": cond.value}
+
+    # texte
+    ag_type = _TEXT_TYPE_INV.get(cond.operator)
+    if ag_type is None:
+        logger.warning(
+            f"Opérateur sans équivalent AG Grid ignoré : {cond.operator!r} "
+            f"(colonne {cond.column!r})"
+        )
+        return None
+    return {"filterType": "text", "type": ag_type, "filter": cond.value}
+
+
+def _child_to_filterspec(child, schema: pl.Schema):
+    """Convertit un enfant du And de haut niveau en (colonne, spec filterModel).
+
+    Ne sait inverser que les deux formes produites par `filtermodel_to_ast` :
+    une Condition seule, ou un And/Or à 2 enfants portant sur la MÊME colonne
+    (filtre AG Grid natif à deux conditions). Toute autre forme (Not, And/Or
+    imbriqué plus profondément, colonnes différentes, plus de 2 enfants) est
+    ignorée avec un warning : un filterModel est par nature par-colonne et ne
+    peut représenter une expression booléenne arbitraire (cf. #97).
+    """
+    if isinstance(child, Condition):
+        spec = _condition_to_filterspec(child, schema)
+        if spec is None:
+            return None
+        return child.column, spec
+
+    if isinstance(child, (And, Or)) and len(child.children) == 2:
+        c1, c2 = child.children
+        if (
+            isinstance(c1, Condition)
+            and isinstance(c2, Condition)
+            and c1.column == c2.column
+        ):
+            spec1 = _condition_to_filterspec(c1, schema)
+            spec2 = _condition_to_filterspec(c2, schema)
+            if spec1 is None or spec2 is None:
+                return None
+            operator = "AND" if isinstance(child, And) else "OR"
+            return c1.column, {
+                "filterType": spec1["filterType"],
+                "operator": operator,
+                "condition1": spec1,
+                "condition2": spec2,
+            }
+
+    logger.warning(f"Nœud AST non représentable en filterModel, ignoré : {child!r}")
+    return None
+
+
+def ast_to_filtermodel(node: Node, schema: pl.Schema) -> dict:
+    """Traduit un AST en filterModel AG Grid. Inverse de `filtermodel_to_ast`.
+
+    Seules les formes que `filtermodel_to_ast` peut effectivement produire sont
+    garanties d'être inversées correctement (voir `_child_to_filterspec`).
+    """
+    if node is None:
+        return {}
+    if isinstance(node, And) and not node.children:
+        return {}
+
+    # Le niveau supérieur est normalement un And multi-enfants (un enfant par
+    # colonne filtrée) ; on tolère aussi un nœud "nu" (une seule colonne).
+    children = node.children if isinstance(node, And) else [node]
+
+    filter_model: dict = {}
+    for child in children:
+        entry = _child_to_filterspec(child, schema)
+        if entry is None:
+            continue
+        column, spec = entry
+        filter_model[column] = spec
+    return filter_model
+
+
 def sort_model_to_sql(sort_model: list | None, schema: pl.Schema) -> str:
     """Traduit un sortModel AG Grid en clause ORDER BY DuckDB (adapte à sort_by_to_sql)."""
     if not sort_model:

@@ -4,8 +4,21 @@ import polars as pl
 
 from src.db import count_marches, query_marches, schema
 from src.figures import DATA_SCHEMA
+from src.utils.cache import cache
 from src.utils.query_ast import ast_to_sql, filtermodel_to_ast, sort_model_to_sql
 from src.utils.table import postprocess_page
+
+
+@cache.memoize()
+def _cached_count(where_sql: str, params: tuple) -> int:
+    """Cache le COUNT(*) sur (where_sql, params).
+
+    AG Grid envoie une requête par bloc de défilement infini ; pour un même
+    filtre, tous les blocs partagent le même (where_sql, params) et donc le
+    même total — inutile de recompter un COUNT(*) sur ~1,5M lignes à chaque
+    bloc chargé (cf. `src.utils.table._fetch_page_sql`, même schéma).
+    """
+    return count_marches(where_sql, params)
 
 
 def fetch_grid_page(
@@ -23,7 +36,7 @@ def fetch_grid_page(
     params = [*base_params, *filter_params]
 
     order_by = sort_model_to_sql(sort_model, schema) or None
-    total = count_marches(where_sql, params)
+    total = _cached_count(where_sql, tuple(params))
 
     limit = max(0, end_row - start_row)
     page = query_marches(

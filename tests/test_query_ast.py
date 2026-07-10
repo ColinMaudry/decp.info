@@ -7,6 +7,7 @@ from src.utils.query_ast import (
     Or,
     ast_from_dict,
     ast_to_dict,
+    ast_to_filtermodel,
     ast_to_sql,
     filtermodel_to_ast,
     sort_model_to_sql,
@@ -235,3 +236,103 @@ def test_ast_dict_roundtrip():
 def test_ast_dict_none():
     assert ast_to_dict(None) is None
     assert ast_from_dict(None) is None
+
+
+def _roundtrip_sql(fm):
+    """Compile fm -> ast -> filterModel -> ast à nouveau, renvoie (sql, params)
+    de la première et de la seconde compilation, pour vérifier l'équivalence
+    sémantique du round-trip (pas l'égalité dict-à-dict)."""
+    ast1 = filtermodel_to_ast(fm, SCHEMA)
+    rebuilt_fm = ast_to_filtermodel(ast1, SCHEMA)
+    ast2 = filtermodel_to_ast(rebuilt_fm, SCHEMA)
+    return ast_to_sql(ast1, SCHEMA), ast_to_sql(ast2, SCHEMA)
+
+
+def test_ast_to_filtermodel_roundtrip_text_contains():
+    fm = {"objet": {"filterType": "text", "type": "contains", "filter": "voirie"}}
+    original, rebuilt = _roundtrip_sql(fm)
+    assert original == rebuilt
+
+
+def test_ast_to_filtermodel_roundtrip_number_greaterthan():
+    fm = {"montant": {"filterType": "number", "type": "greaterThan", "filter": 40000}}
+    original, rebuilt = _roundtrip_sql(fm)
+    assert original == rebuilt
+
+
+def test_ast_to_filtermodel_roundtrip_number_inrange():
+    fm = {
+        "montant": {
+            "filterType": "number",
+            "type": "inRange",
+            "filter": 100,
+            "filterTo": 200,
+        }
+    }
+    original, rebuilt = _roundtrip_sql(fm)
+    assert original == rebuilt
+
+
+def test_ast_to_filtermodel_roundtrip_date_greaterthan():
+    fm = {
+        "dateNotification": {
+            "filterType": "date",
+            "type": "greaterThan",
+            "dateFrom": "2022-01-01",
+        }
+    }
+    original, rebuilt = _roundtrip_sql(fm)
+    assert original == rebuilt
+
+
+def test_ast_to_filtermodel_roundtrip_two_conditions_or():
+    fm = {
+        "objet": {
+            "filterType": "text",
+            "operator": "OR",
+            "condition1": {"filterType": "text", "type": "contains", "filter": "beton"},
+            "condition2": {
+                "filterType": "text",
+                "type": "contains",
+                "filter": "ciment",
+            },
+        }
+    }
+    original, rebuilt = _roundtrip_sql(fm)
+    assert original == rebuilt
+
+
+def test_ast_to_filtermodel_roundtrip_multiple_columns():
+    fm = {
+        "objet": {"filterType": "text", "type": "contains", "filter": "voirie"},
+        "montant": {"filterType": "number", "type": "greaterThan", "filter": 1000},
+    }
+    original, rebuilt = _roundtrip_sql(fm)
+    assert original == rebuilt
+
+
+def test_ast_to_filtermodel_none_and_empty_and():
+    assert ast_to_filtermodel(None, SCHEMA) == {}
+    assert ast_to_filtermodel(And([]), SCHEMA) == {}
+
+
+def test_ast_to_filtermodel_skips_not_with_warning():
+    node = And([Not(Condition("objet", "contains", "x"))])
+    assert ast_to_filtermodel(node, SCHEMA) == {}
+
+
+def test_ast_to_filtermodel_skips_mismatched_columns_with_warning():
+    node = And(
+        [Or([Condition("objet", "contains", "a"), Condition("montant", "gt", 1)])]
+    )
+    assert ast_to_filtermodel(node, SCHEMA) == {}
+
+
+def test_ast_to_filtermodel_bare_single_condition():
+    """filtermodel_to_ast enveloppe toujours dans And, mais on tolère un nœud
+    non enveloppé (Condition seule) en entrée, défensivement."""
+    node = Condition("objet", "contains", "voirie")
+    fm = ast_to_filtermodel(node, SCHEMA)
+    assert fm == {
+        "objet": {"filterType": "text", "type": "contains", "filter": "voirie"}
+    }

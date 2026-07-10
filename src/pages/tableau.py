@@ -25,6 +25,12 @@ from src.saved_views import db as saved_views_db
 from src.saved_views import ui as saved_views_ui
 from src.utils import get_data_update_timestamp, logger
 from src.utils.grid import fetch_grid_page, grid_column_defs
+from src.utils.query_ast import (
+    ast_from_dict,
+    ast_to_dict,
+    ast_to_filtermodel,
+    filtermodel_to_ast,
+)
 from src.utils.seo import META_CONTENT
 from src.utils.table import (
     COLUMNS,
@@ -577,9 +583,11 @@ def save_view(_n, name, filter_model, column_state):
     clean_name, error = saved_views_ui.prepare_view_to_save(has_sub, name)
     if error:
         return True, html.Span(error, style={"color": "red"}), no_update
-    query = json.dumps(
-        {"filterModel": filter_model or {}, "columnState": column_state or []}
-    )
+    # On stocke l'AST canonique (indépendant de l'UI), pas le filterModel brut
+    # d'AG Grid : cf. spec de conception, "l'AST (JSON) + columnState,
+    # indépendant de l'UI".
+    ast = filtermodel_to_ast(filter_model, schema)
+    query = json.dumps({"ast": ast_to_dict(ast), "columnState": column_state or []})
     saved_views_db.upsert(current_user.id, "tableau", clean_name, query)
     return (
         False,
@@ -603,6 +611,7 @@ def populate_saved_views_menu(_pathname, _refresh):
 @callback(
     Output("tableau_grid", "filterModel"),
     Output("tableau_grid", "columnState"),
+    Output("tableau-hidden-columns", "data", allow_duplicate=True),
     Input({"type": "saved-view-item", "index": ALL}, "n_clicks"),
     State({"type": "saved-view-item", "index": ALL}, "id"),
     prevent_initial_call=True,
@@ -610,13 +619,19 @@ def populate_saved_views_menu(_pathname, _refresh):
 def apply_saved_view(n_clicks, ids):
     triggered = ctx.triggered_id
     if not triggered or not any(n_clicks):
-        return no_update, no_update
+        return no_update, no_update, no_update
     row = saved_views_db.get(triggered["index"], current_user.id)
     if not row:
-        return no_update, no_update
+        return no_update, no_update, no_update
     try:
         view = json.loads(row["query"])
-        filter_model = view.get("filterModel") or {}
+        # L'AST canonique est stocké (pas le filterModel brut d'AG Grid) :
+        # cf. save_view. `ast_from_dict(None)` -> None et
+        # `ast_to_filtermodel(None, schema)` -> {} si la vue est d'un ancien
+        # format (sans clé "ast") : dégradation propre, la vue se rappelle
+        # sans filtre plutôt que de planter.
+        ast = ast_from_dict(view.get("ast"))
+        filter_model = ast_to_filtermodel(ast, schema)
         column_state = view.get("columnState") or []
     except (json.JSONDecodeError, TypeError, AttributeError):
         # Vue enregistrée avant la migration vers AG Grid (Task 10) : row["query"]
@@ -627,8 +642,14 @@ def apply_saved_view(n_clicks, ids):
             "Vue sauvegardée au format pré-migration, impossible de l'appliquer : "
             f"id={row['id']!r} name={row['name']!r}"
         )
-        return no_update, no_update
-    return filter_model, column_state
+        return no_update, no_update, no_update
+    # tableau-hidden-columns pilote les cases à cocher du sélecteur de colonnes
+    # (update_checkboxes_from_hidden_columns) et la régénération des
+    # columnDefs (apply_hidden_columns) ; sans cette sortie, ce store restait
+    # désynchronisé du columnState rappelé (revue finale #41). Même extraction
+    # que download_data.
+    hidden_columns = [c["colId"] for c in column_state if c.get("hide")]
+    return filter_model, column_state, hidden_columns
 
 
 @callback(
