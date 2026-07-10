@@ -37,6 +37,23 @@ def fetch_grid_page(
     return page.to_dicts(), total
 
 
+def export_dataframe(filter_model, sort_model, hidden_columns) -> pl.DataFrame:
+    """Renvoie les lignes filtrées/triées pour l'export Excel.
+
+    Colonnes masquées exclues, valeurs brutes (non post-traitées HTML).
+    """
+    ast = filtermodel_to_ast(filter_model, schema)
+    filter_sql, params = ast_to_sql(ast, schema)
+    order_by = sort_model_to_sql(sort_model, schema) or None
+    visible = [c for c in schema.names() if c not in set(hidden_columns or [])]
+    return query_marches(
+        where_sql=filter_sql,
+        params=params,
+        columns=visible,
+        order_by=order_by,
+    )
+
+
 _LINK_COLUMNS = {
     "marche",
     "uid",

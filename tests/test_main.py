@@ -99,7 +99,7 @@ def test_003_tableau_download(dash_duo: DashComposite):
     print(app.server.name)
 
     outputs = [
-        download_data(1, "", [], None),
+        download_data(1, None, None),
         download_acheteur_data(1, "/acheteurs/123", "2025", "ACHETEUR 1"),
         download_titulaire_data(1, "/titulaires/345", "2025", "TITULAIRE 1"),
     ]

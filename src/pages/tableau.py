@@ -5,7 +5,6 @@ import uuid
 from datetime import datetime
 
 import dash_bootstrap_components as dbc
-import polars as pl
 from dash import (
     ClientsideFunction,
     Input,
@@ -20,7 +19,7 @@ from dash import (
 )
 from flask_login import current_user
 
-from src.db import query_marches, schema
+from src.db import schema
 from src.figures import ag_grid, make_column_picker
 from src.pages._compte_shell import current_user_has_subscription
 from src.saved_views import db as saved_views_db
@@ -31,10 +30,8 @@ from src.utils.seo import META_CONTENT
 from src.utils.table import (
     COLUMNS,
     build_view_query,
-    filter_table_data,
     get_default_hidden_columns,
     invert_columns,
-    sort_table_data,
     write_styled_excel,
 )
 from src.utils.tracking import track_search
@@ -467,27 +464,25 @@ def update_meta(total):
 @callback(
     Output("download-data", "data"),
     Input("btn-download-data", "n_clicks"),
-    State("tableau_datatable", "filter_query"),
-    State("tableau_datatable", "sort_by"),
-    State("tableau_datatable", "hidden_columns"),
+    State("tableau_grid", "filterModel"),
+    State("tableau_grid", "columnState"),
     prevent_initial_call=True,
 )
-def download_data(n_clicks, filter_query, sort_by, hidden_columns: list | None = None):
-    lff: pl.LazyFrame = query_marches().lazy()
+def download_data(n_clicks, filter_model, column_state):
+    from src.utils.grid import export_dataframe
 
-    # Les colonnes masquées sont supprimées
-    if hidden_columns:
-        lff = lff.drop(hidden_columns)
-
-    if filter_query:
-        track_search(filter_query, "tab download")
-        lff = filter_table_data(lff, filter_query)
-
-    if sort_by and len(sort_by) > 0:
-        lff = sort_table_data(lff, sort_by)
+    sort_model = [
+        {"colId": c["colId"], "sort": c["sort"]}
+        for c in (column_state or [])
+        if c.get("sort")
+    ]
+    hidden_columns = [c["colId"] for c in (column_state or []) if c.get("hide")]
+    if filter_model:
+        track_search(json.dumps(filter_model), "tab download")
+    df = export_dataframe(filter_model, sort_model, hidden_columns)
 
     def to_bytes(buffer):
-        write_styled_excel(lff.collect(engine="streaming"), buffer)
+        write_styled_excel(df, buffer)
 
     date = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     return dcc.send_bytes(to_bytes, filename=f"decp_{date}.xlsx")

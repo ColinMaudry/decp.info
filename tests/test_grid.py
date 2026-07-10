@@ -1,4 +1,4 @@
-from src.utils.grid import fetch_grid_page, grid_column_defs
+from src.utils.grid import export_dataframe, fetch_grid_page, grid_column_defs
 
 
 def test_column_defs_have_field_and_filter():
@@ -40,3 +40,14 @@ def test_fetch_grid_page_filter_reduces_count():
 def test_fetch_grid_page_offset_slicing():
     rows, _ = fetch_grid_page(None, None, 0, 5)
     assert len(rows) <= 5
+
+
+def test_export_dataframe_excludes_hidden_columns():
+    df = export_dataframe(None, None, hidden_columns=["objet"])
+    assert "objet" not in df.columns
+
+
+def test_export_dataframe_applies_filter():
+    fm = {"objet": {"filterType": "text", "type": "contains", "filter": "zzzzzznope"}}
+    df = export_dataframe(fm, None, hidden_columns=[])
+    assert df.height == 0
