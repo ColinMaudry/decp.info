@@ -66,9 +66,15 @@ def apply_pending() -> None:
             except sqlite3.OperationalError as exc:
                 # Sur une DB fraîche (schéma déjà à jour), certaines migrations
                 # sont sans effet : ADD COLUMN → "duplicate column name",
-                # RENAME COLUMN → "no such column". On les ignore.
+                # RENAME COLUMN → "no such column", et un ALTER sur une table pas
+                # encore créée → "no such table" (elle sera créée plus tard par
+                # init_schema avec la colonne déjà dans SCHEMA).
                 err = str(exc)
-                if "duplicate column name" not in err and "no such column" not in err:
+                if (
+                    "duplicate column name" not in err
+                    and "no such column" not in err
+                    and "no such table" not in err
+                ):
                     raise
             conn.execute(
                 "INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)",

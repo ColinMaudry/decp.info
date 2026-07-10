@@ -27,3 +27,18 @@ def test_migration_0007_adds_kind_to_legacy_api_tokens(monkeypatch, tmp_path):
     # idempotent : un second passage ne lève pas
     migrations.apply_pending()
     auth_db.reset_conn_for_tests()
+
+
+def test_apply_pending_tolerates_missing_api_tokens_table(monkeypatch, tmp_path):
+    from src import migrations
+    from src.auth import db as auth_db
+    from src.subscriptions import db as sub_db
+
+    db_path = tmp_path / "users.test.sqlite"
+    monkeypatch.setenv("USERS_DB_PATH", str(db_path))
+    auth_db.reset_conn_for_tests()
+    auth_db.init_schema()
+    sub_db.init_schema()
+    # api_tokens volontairement NON créée (chemin init_subscriptions sans init_api)
+    migrations.apply_pending()  # ne doit pas lever
+    auth_db.reset_conn_for_tests()
