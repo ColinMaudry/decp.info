@@ -124,6 +124,19 @@ if _mcp_enabled:
     )
     import src.mcp.tools  # noqa: E402,F401  # l'import enregistre les @mcp_enabled
 
+    # Les routes /_mcp existent maintenant : exempter du CSRF (POST JSON-RPC
+    # externe sans jeton) puis brancher le garde d'abonnement.
+    from src.mcp.auth import init_mcp_auth  # noqa: E402
+
+    if _auth_csrf is not None:
+        for _rule in app.server.url_map.iter_rules():
+            if _rule.rule.startswith("/_mcp"):
+                _vf = app.server.view_functions.get(_rule.endpoint)
+                if _vf is not None:
+                    _auth_csrf.exempt(_vf)
+
+    init_mcp_auth(app.server)
+
 from src.subscriptions.setup import init_subscriptions  # noqa: E402
 
 init_subscriptions(app.server)
