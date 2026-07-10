@@ -23,7 +23,7 @@ from src.figures import ag_grid, make_column_picker
 from src.pages._compte_shell import current_user_has_subscription
 from src.saved_views import db as saved_views_db
 from src.saved_views import ui as saved_views_ui
-from src.utils import get_data_update_timestamp
+from src.utils import get_data_update_timestamp, logger
 from src.utils.grid import fetch_grid_page, grid_column_defs
 from src.utils.seo import META_CONTENT
 from src.utils.table import (
@@ -417,7 +417,11 @@ def get_rows_tableau(request):
         return no_update, no_update
     filter_model = request.get("filterModel") or None
     sort_model = request.get("sortModel") or None
-    if filter_model:
+    # AG Grid renvoie une nouvelle requête getRowsRequest pour chaque bloc de
+    # défilement infini, avec le même filterModel tant que le filtre ne change
+    # pas. Ne compter qu'une recherche par changement de filtre/tri (bloc 0),
+    # pas une par bloc chargé au défilement.
+    if filter_model and request.get("startRow", 0) == 0:
         track_search(json.dumps(filter_model), "tableau")
     rows, total = fetch_grid_page(
         filter_model,
@@ -610,8 +614,21 @@ def apply_saved_view(n_clicks, ids):
     row = saved_views_db.get(triggered["index"], current_user.id)
     if not row:
         return no_update, no_update
-    view = json.loads(row["query"])
-    return view.get("filterModel") or {}, view.get("columnState") or []
+    try:
+        view = json.loads(row["query"])
+        filter_model = view.get("filterModel") or {}
+        column_state = view.get("columnState") or []
+    except (json.JSONDecodeError, TypeError, AttributeError):
+        # Vue enregistrée avant la migration vers AG Grid (Task 10) : row["query"]
+        # est encore une query string (ex. "filtres=a&tris=b"), pas du JSON. On
+        # échoue proprement plutôt que de planter le callback ; pas de
+        # migration automatique de l'ancien format.
+        logger.warning(
+            "Vue sauvegardée au format pré-migration, impossible de l'appliquer : "
+            f"id={row['id']!r} name={row['name']!r}"
+        )
+        return no_update, no_update
+    return filter_model, column_state
 
 
 @callback(
