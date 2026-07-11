@@ -1,9 +1,10 @@
-@import url(https://fonts.bunny.net/css?family=fira-code:400|inter:400,600);
+@import url(https://fonts.bunny.net/css?family=fira-code:400|inter:400,600|archivo-narrow:500);
 
 /* ==========================================================================
    Variables
    ========================================================================== */
 :root {
+  --main-font: "Inter", sans-serif;
   --bs-font-monospace: "Fira Code";
   --primary-color: rgb(179, 56, 33);
   --primary-color-text: #b33821;
@@ -11,6 +12,9 @@
      dcc (Dropdown, Input, Tabs, DatePicker...) ; défaut violet remplacé
      par notre couleur primaire. */
   --Dash-Fill-Interactive-Strong: var(--primary-color);
+
+  /* Override AG Grid */
+  --ag-font-family: var(--main-font);
 }
 
 /* ==========================================================================
@@ -619,6 +623,29 @@ button.show-hide {
 .show-hide-menu-item > input {
   margin-right: 10px;
 } */
+
+/* Override des styles AG Grid */
+
+/* La ligne de filtres flottants reprend le fond des lignes paires (rosé),
+   distinct du fond rouge brique appliqué à la ligne d'en-têtes (theme
+   params AG Grid n'exposant pas de couleur de fond dédiée à cette ligne). */
+.marches_table .ag-floating-filter {
+  background-color: var(--ag-odd-row-background-color);
+}
+.ag-row {
+  --ag-internal-content-line-height: 20px;
+}
+
+.ag-header-cell-text {
+  font-family: "Archivo Narrow", sans-serif;
+  font-size: 18px;
+}
+
+/* Lien "voir le marché" (loupe) : pas de soulignement, c'est une icône. */
+.ag-cell[col-id="marche"] a {
+  text-decoration: none;
+}
+/* fin overrides AG Grid*/
 
 #btn-copy-url:before {
 }

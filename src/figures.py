@@ -1106,8 +1106,9 @@ AG_GRID_LOCALE_FR = {
 def ag_grid(grid_id: str, column_defs: list[dict]) -> "dag.AgGrid":
     """Grille AG Grid server-side (infinite) pour la page Tableau.
 
-    Apparence de base d'AG Grid (aucun thème custom au Lot 1) ; libellés
-    de filtre traduits en français via localeText.
+    Thème aligné sur les dash_table.DataTable du reste du site (en-tête
+    rouge brique, lignes alternées, police Inter) ; libellés de filtre
+    traduits en français via localeText.
     """
     return dag.AgGrid(
         id=grid_id,
@@ -1120,10 +1121,37 @@ def ag_grid(grid_id: str, column_defs: list[dict]) -> "dag.AgGrid":
             "maxBlocksInCache": 10,
             "rowBuffer": 0,
             "infiniteInitialRowCount": 100,
+            # rowHeight fixe (pas autoHeight, non supporté par rowModelType
+            # "infinite") pour laisser la place au texte replié à la ligne
+            # de la colonne "objet" (cf. grid_column_defs).
+            "rowHeight": 60,
             "suppressCellFocus": True,
+            "enableCellTextSelection": True,
+            "ensureDomOrder": True,
+            # Permet de sélectionner/copier le texte des infobulles (ex.
+            # colonne "objet" tronquée, cf. tooltipField dans grid_column_defs).
+            "tooltipInteraction": True,
             "localeText": AG_GRID_LOCALE_FR,
+            "theme": {
+                "function": (
+                    "themeQuartz.withParams({"
+                    "accentColor: 'rgb(179, 56, 33)',"
+                    "headerTextColor: 'white',"
+                    "headerBackgroundColor: 'rgb(179, 56, 33)',"
+                    "oddRowBackgroundColor: 'rgba(255, 240, 240, 0.4)',"
+                    "borderColor: '#ccc',"
+                    "fontFamily: 'Inter, sans-serif',"
+                    # "headerFontFamily: '\"Inter Tight\", sans-serif',"
+                    "fontSize: 16"
+                    "})"
+                )
+            },
         },
-        columnSize="responsiveSizeToFit",
+        # Pas de columnSize="responsiveSizeToFit" : les colonnes gardent leur
+        # largeur définie dans columnDefs (cf. _column_width dans
+        # src.utils.grid) même à 50 colonnes affichées, quitte à faire
+        # apparaître le défilement horizontal natif d'AG Grid plutôt que de
+        # les compresser/étirer toutes à la même largeur.
         style={"height": "70vh", "width": "100%"},
         persistence=True,
         persistence_type="local",

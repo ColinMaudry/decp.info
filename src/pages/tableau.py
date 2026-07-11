@@ -34,6 +34,7 @@ from src.utils.query_ast import (
 from src.utils.seo import META_CONTENT
 from src.utils.table import (
     COLUMNS,
+    format_number,
     get_default_hidden_columns,
     write_styled_excel,
 )
@@ -126,6 +127,7 @@ layout = [
     dcc.Store(id="tableau-hidden-columns", storage_type="local"),
     dcc.Store(id="tableau-table"),
     dcc.Store(id="tableau-total"),
+    dcc.Store(id="tableau-total-unique"),
     html.Script(
         type="application/ld+json",
         id="dataset_jsonld",
@@ -415,12 +417,13 @@ layout = [
 @callback(
     Output("tableau_grid", "getRowsResponse"),
     Output("tableau-total", "data"),
+    Output("tableau-total-unique", "data"),
     Input("tableau_grid", "getRowsRequest"),
     prevent_initial_call=True,
 )
 def get_rows_tableau(request):
     if request is None:
-        return no_update, no_update
+        return no_update, no_update, no_update
     filter_model = request.get("filterModel") or None
     sort_model = request.get("sortModel") or None
     # AG Grid renvoie une nouvelle requête getRowsRequest pour chaque bloc de
@@ -429,13 +432,13 @@ def get_rows_tableau(request):
     # pas une par bloc chargé au défilement.
     if filter_model and request.get("startRow", 0) == 0:
         track_search(json.dumps(filter_model), "tableau")
-    rows, total = fetch_grid_page(
+    rows, total, total_unique = fetch_grid_page(
         filter_model,
         sort_model,
         request.get("startRow", 0),
         request.get("endRow", 100),
     )
-    return {"rowData": rows, "rowCount": total}, total
+    return {"rowData": rows, "rowCount": total}, total, total_unique
 
 
 @callback(
@@ -443,16 +446,22 @@ def get_rows_tableau(request):
     Output("btn-download-data", "disabled"),
     Output("download-hint", "children"),
     Input("tableau-total", "data"),
+    Input("tableau-total-unique", "data"),
 )
-def update_meta(total):
+def update_meta(total, total_unique):
     total = total or 0
+    total_unique = total_unique or 0
     too_many = total > 65000
     hint = (
         " · Filtrez sous 65 000 lignes pour activer le téléchargement"
         if too_many
         else ""
     )
-    return f"{total} lignes", too_many, hint
+    nb_rows = (
+        f"{format_number(total_unique) or 0} marchés "
+        f"({format_number(total) or 0} lignes)"
+    )
+    return nb_rows, too_many, hint
 
 
 @callback(
@@ -499,12 +508,15 @@ def toggle_tableau_help(click_open, click_close, is_open):
     prevent_initial_call=True,
 )
 def update_hidden_columns_from_checkboxes(selected_columns):
-    if selected_columns:
-        selected_columns = [COLUMNS[i] for i in selected_columns]
-        hidden_columns = [col for col in COLUMNS if col not in selected_columns]
-        return hidden_columns
-    else:
-        return []
+    # selected_columns == [] est un choix explicite (tout décoché), à ne pas
+    # confondre avec « pas encore de préférence » : cf. apply_hidden_columns
+    # et update_checkboxes_from_hidden_columns, qui eux distinguent ce cas de
+    # None. Sans ce traitement uniforme, décocher/cocher toutes les colonnes
+    # se faisait écraser par update_checkboxes_from_hidden_columns au tour
+    # suivant (`hidden_cols or get_default_hidden_columns(...)`).
+    selected = [COLUMNS[i] for i in (selected_columns or [])]
+    hidden_columns = [col for col in COLUMNS if col not in selected]
+    return hidden_columns
 
 
 @callback(
@@ -523,7 +535,11 @@ def apply_hidden_columns(hidden_columns):
     State("tableau_column_list", "selected_rows"),  # pour éviter la boucle infinie
 )
 def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
-    hidden_cols = hidden_cols or get_default_hidden_columns("tableau")
+    # None = pas encore de préférence enregistrée (première visite) ; []
+    # est un choix explicite (« ne rien masquer »/tout afficher) et doit
+    # être respecté tel quel, cf. update_hidden_columns_from_checkboxes.
+    if hidden_cols is None:
+        hidden_cols = get_default_hidden_columns("tableau")
 
     # Show all columns that are NOT hidden
     visible_cols = [COLUMNS.index(col) for col in COLUMNS if col not in hidden_cols]
