@@ -24,7 +24,7 @@ from src.pages._compte_shell import current_user_has_subscription
 from src.saved_views import db as saved_views_db
 from src.saved_views import ui as saved_views_ui
 from src.utils import get_data_update_timestamp, logger
-from src.utils.grid import fetch_grid_page, grid_column_defs
+from src.utils.grid import apply_persisted_layout, fetch_grid_page, grid_column_defs
 from src.utils.query_ast import (
     ast_from_dict,
     ast_to_dict,
@@ -522,11 +522,13 @@ def update_hidden_columns_from_checkboxes(selected_columns):
 @callback(
     Output("tableau_grid", "columnDefs"),
     Input("tableau-hidden-columns", "data"),
+    State("tableau_grid", "columnState"),
 )
-def apply_hidden_columns(hidden_columns):
+def apply_hidden_columns(hidden_columns, column_state):
     if hidden_columns is None:
         hidden_columns = get_default_hidden_columns("tableau")
-    return grid_column_defs(hidden_columns)
+    defs = grid_column_defs(hidden_columns)
+    return apply_persisted_layout(defs, column_state)
 
 
 @callback(
@@ -560,16 +562,20 @@ def toggle_tableau_columns(click_open, click_close, is_open):
 
 @callback(
     Output("tableau_grid", "filterModel", allow_duplicate=True),
-    Output("tableau_grid", "resetColumnState", allow_duplicate=True),
+    Output("tableau_grid", "columnState", allow_duplicate=True),
     Input("btn-tableau-reset", "n_clicks"),
+    State("tableau_grid", "columnState"),
     prevent_initial_call=True,
 )
-def reset_view(n_clicks):
-    # resetColumnState remet les colonnes (tri inclus) à l'état déclaré dans
-    # columnDefs — qui reflète déjà la visibilité choisie via le sélecteur de
-    # colonnes (cf. apply_hidden_columns), donc ça ne touche pas au choix de
-    # colonnes affichées, seulement au tri.
-    return {}, True
+def reset_view(n_clicks, column_state):
+    # On ne touche qu'au tri (sort/sortIndex) : on réécrit le columnState tel
+    # quel pour préserver la largeur, l'épinglage et l'ordre des colonnes
+    # choisis par l'utilisateur (auparavant resetColumnState les effaçait
+    # aussi, cf. #47).
+    cleared_sort = [
+        {**col, "sort": None, "sortIndex": None} for col in (column_state or [])
+    ]
+    return {}, cleared_sort
 
 
 @callback(

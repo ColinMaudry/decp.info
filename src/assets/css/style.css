@@ -636,6 +636,10 @@ button.show-hide {
   --ag-internal-content-line-height: 20px;
 }
 
+.ag-cell {
+  padding-top: 3px;
+}
+
 .ag-header-cell-text {
   font-family: "Archivo Narrow", sans-serif;
   font-size: 18px;
@@ -644,6 +648,43 @@ button.show-hide {
 /* Lien "voir le marché" (loupe) : pas de soulignement, c'est une icône. */
 .ag-cell[col-id="marche"] a {
   text-decoration: none;
+}
+
+/* Numéro de ligne sous la loupe : repère de position pendant le défilement,
+   discret pour ne pas concurrencer le lien. */
+.ag-cell[col-id="marche"] {
+  text-align: center;
+}
+.marche-row-number {
+  color: #bbb;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Infobulle : largeur bornée avec retour à la ligne plutôt qu'une largeur
+   qui suit tout le texte. .ag-tooltip = infobulle native (ex. colonne
+   "objet" tronquée) ; .ag-tooltip-custom = infobulle rendue par un
+   tooltipComponent personnalisé (ex. en-têtes de colonnes, cf.
+   grid_column_defs) — AG Grid n'ajoute PAS la classe .ag-tooltip dans ce
+   cas, il faut donc cibler les deux. */
+.ag-tooltip,
+.ag-tooltip-custom {
+  max-width: 400px;
+  white-space: normal;
+  word-wrap: break-word;
+  background-color: #fdd;
+}
+
+/* .ag-tooltip-custom n'a, contrairement à .ag-tooltip, aucun style visuel
+   par défaut côté AG Grid (voir dash_ag_grid.min.js : seuls position/z-index
+   sont posés) — on reprend ici les mêmes variables de thème que .ag-tooltip
+   pour un rendu identique (bordure grise, padding, coins arrondis). */
+.ag-tooltip-custom {
+  border: var(--ag-tooltip-border);
+  border-radius: var(--ag-border-radius);
+  color: var(--ag-tooltip-text-color);
+  padding: var(--ag-widget-container-vertical-padding)
+    var(--ag-widget-container-horizontal-padding);
 }
 /* fin overrides AG Grid*/
 

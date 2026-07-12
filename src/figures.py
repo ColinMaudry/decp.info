@@ -1131,6 +1131,9 @@ def ag_grid(grid_id: str, column_defs: list[dict]) -> "dag.AgGrid":
             # Permet de sélectionner/copier le texte des infobulles (ex.
             # colonne "objet" tronquée, cf. tooltipField dans grid_column_defs).
             "tooltipInteraction": True,
+            # Délai avant apparition des infobulles natives (200ms au lieu
+            # des 2000ms par défaut d'AG Grid).
+            "tooltipShowDelay": 200,
             "localeText": AG_GRID_LOCALE_FR,
             "theme": {
                 "function": (

@@ -50,7 +50,26 @@ def add_resource_link(dff: pl.DataFrame) -> pl.DataFrame:
     return dff
 
 
+_TOOLTIP_SHADOW_COLUMNS = [
+    "acheteur_nom",
+    "titulaire_nom",
+    "acheteur_id",
+    "titulaire_id",
+]
+
+
 def add_links(dff: pl.DataFrame):
+    # Copie du texte brut avant réécriture en HTML ci-dessous, pour que la
+    # grille AG Grid (cf. grid_column_defs dans src.utils.grid) puisse
+    # afficher une infobulle lisible sur ces colonnes plutôt que le balisage
+    # <a href=...> brut.
+    dff = dff.with_columns(
+        [
+            pl.col(c).alias(f"{c}_tooltip")
+            for c in _TOOLTIP_SHADOW_COLUMNS
+            if c in dff.columns
+        ]
+    )
     for col in ["uid", "acheteur_nom", "titulaire_nom", "acheteur_id", "titulaire_id"]:
         if col in dff.columns:
             if col.startswith("titulaire_"):

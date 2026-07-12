@@ -22,6 +22,11 @@ users.sqlite
 # Copie jetable de tests/users.test.sqlite, générée par tests/conftest.py
 tests/users.runtime.sqlite
 
+# Cache disque isolé pour pytest (CACHE_DIR, cf. pyproject.toml) : évite de
+# partager /tmp/colibre-cache avec le serveur dev (résultats de requêtes
+# faussés par les données de test après un rmtree() croisé, cf. src/app.py)
+tests/cache/
+
 # LLM plugins
 .superpowers/
 .codegraph/

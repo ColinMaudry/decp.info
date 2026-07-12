@@ -55,7 +55,17 @@ def fetch_grid_page(
         offset=start_row,
     )
     page = postprocess_page(page)
-    return page.to_dicts(), total, total_unique
+    rows = page.to_dicts()
+    # Numéro de ligne absolu (position dans les résultats filtrés/triés),
+    # ajouté sous le lien loupe : repère visuel pendant le défilement infini
+    # de la grille. Calculé ici (pas dans postprocess_page, partagé avec les
+    # dash_table paginées d'acheteur.py/titulaire.py) car il dépend de
+    # `start_row`, propre au chargement par bloc de l'AG Grid.
+    for i, row in enumerate(rows):
+        row["marche"] = (
+            f'{row["marche"]}<div class="marche-row-number">{start_row + i + 1}</div>'
+        )
+    return rows, total, total_unique
 
 
 def export_dataframe(filter_model, sort_model, hidden_columns) -> pl.DataFrame:
@@ -98,16 +108,27 @@ _BOOLEAN_LIKE_COLUMNS = {
 # Codes/identifiants qui ne suivent pas le pattern de suffixe `_id`/`_code`
 # (ex. codeCPV, idAccordCadre) mais restent des valeurs courtes.
 _SHORT_CODE_COLUMNS = {
-    "uid",
-    "id",
     "codeCPV",
-    "idAccordCadre",
     "lieuExecution_typeCode",
-    "sourceFile",
 }
 
 # Colonnes "nom" qui ne suivent pas le suffixe `_nom` (ex. sourceDataset).
 _WIDE_LABEL_COLUMNS = {"sourceDataset"}
+
+# Colonnes avec infobulle systématique sur les cellules (valeur complète au
+# survol, pas seulement quand le texte est tronqué).
+_CELL_TOOLTIP_COLUMNS = {
+    "procedure",
+    "considerationsSociales",
+    "considerationsEnvironnementales",
+    "objet",
+    "ccag",
+    "modalitesExecution",
+    "acheteur_nom",
+    "titulaire_nom",
+    "acheteur_id",
+    "titulaire_id",
+}
 
 
 def _filter_for(col_type) -> str:
@@ -121,23 +142,24 @@ def _filter_for(col_type) -> str:
 def _column_width(col: str, col_type) -> dict:
     """Largeur par défaut selon la nature de la colonne.
 
-    `columnSize="responsiveSizeToFit"` (cf. ag_grid()) étire les colonnes
-    proportionnellement à cette largeur pour remplir l'espace disponible :
-    sans ça, les codes/booléens s'étirent autant que les noms/libellés.
+    Sert de base à l'affichage initial (pas de columnSize="responsiveSizeToFit",
+    cf. ag_grid() : les colonnes ne s'étirent/compressent pas automatiquement).
+    Pas de maxWidth ici : resizable=True (defaultColDef) doit pouvoir élargir
+    librement une colonne à la souris, sans plafond artificiel.
     """
     if col == "montant":
-        return {"width": 150, "maxWidth": 200}
+        return {"width": 150}
     if col_type == pl.Date:
-        return {"width": 140, "maxWidth": 160}
+        return {"width": 220}
     if col_type.is_numeric():
-        return {"width": 120, "maxWidth": 150}
+        return {"width": 150}
     if col in _BOOLEAN_LIKE_COLUMNS:
-        return {"width": 110, "maxWidth": 140}
-    if col in _SHORT_CODE_COLUMNS or col.endswith(("_id", "_code")):
-        return {"width": 130, "maxWidth": 170}
+        return {"width": 110}
+    if col in _SHORT_CODE_COLUMNS or col.endswith(("_code")):
+        return {"width": 180}
     if col in _WIDE_LABEL_COLUMNS or col.endswith("_nom"):
-        return {"width": 200}
-    return {"width": 170}
+        return {"width": 300}
+    return {"width": 190}
 
 
 def grid_column_defs(hidden_columns=None):
@@ -169,11 +191,22 @@ def grid_column_defs(hidden_columns=None):
             "hide": col in hidden,
         }
         if meta.get("description"):
+            # Texte brut (pas de markdown) : le renderer "markdown" côté
+            # dash-ag-grid n'est enregistré que comme cellRenderer, pas
+            # comme tooltipComponent — posé sur un en-tête, il retombe sur
+            # le rendu natif d'AG Grid, qui affiche la chaîne telle quelle
+            # (donc "**gras**" apparaissait littéralement avec les astérisques).
             col_def["headerTooltip"] = (
                 f"{meta.get('title', col)} ({col}) — {meta['description']}"
             )
         if col in _LINK_COLUMNS:
             col_def["cellRenderer"] = "markdown"
+        if col in _CELL_TOOLTIP_COLUMNS:
+            # Valeur complète en infobulle. Pour les colonnes-liens
+            # (_LINK_COLUMNS), la cellule contient du HTML (<a href=...>) :
+            # on pointe vers la copie texte brut posée par add_links() dans
+            # src.utils.table plutôt que d'afficher ce balisage tel quel.
+            col_def["tooltipField"] = f"{col}_tooltip" if col in _LINK_COLUMNS else col
         if col != "objet":
             col_def.update(_column_width(col, col_type))
         if col == "objet":
@@ -183,8 +216,33 @@ def grid_column_defs(hidden_columns=None):
             # rowHeight fixe côté dashGridOptions plutôt qu'autoHeight ici.
             col_def["wrapText"] = True
             col_def["minWidth"] = 360
-            # Le texte tronqué par la hauteur de ligne fixe reste consultable
-            # en entier via l'infobulle native AG Grid au survol.
-            col_def["tooltipField"] = "objet"
         defs.append(col_def)
+    return defs
+
+
+def apply_persisted_layout(
+    defs: list[dict], column_state: list[dict] | None
+) -> list[dict]:
+    """Réapplique la largeur et l'ordre des colonnes personnalisés par
+    l'utilisateur (columnState restauré via la persistance AG Grid) par-dessus
+    des columnDefs fraîchement régénérés par grid_column_defs(), qui eux
+    ignorent tout état précédent et ne portent que la largeur par défaut et
+    l'ordre du schéma.
+
+    Sans ça, tout changement de columnDefs (à chaque chargement de page ou
+    changement de colonnes affichées) écrase silencieusement le
+    redimensionnement/réordonnancement fait par l'utilisateur, cf. #47.
+    """
+    if not column_state:
+        return defs
+    order = {col["colId"]: i for i, col in enumerate(column_state)}
+    widths = {col["colId"]: col["width"] for col in column_state if col.get("width")}
+    for col_def in defs:
+        field = col_def["field"]
+        if field in widths:
+            col_def["width"] = widths[field]
+    # Colonnes déjà connues dans leur ordre persisté, colonnes nouvelles
+    # (ex. ajout au schéma, jamais vues dans columnState) à la fin dans
+    # leur ordre par défaut.
+    defs.sort(key=lambda d: order.get(d["field"], len(order)))
     return defs
