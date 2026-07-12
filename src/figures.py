@@ -1149,6 +1149,11 @@ def ag_grid(grid_id: str, column_defs: list[dict]) -> "dag.AgGrid":
                     "})"
                 )
             },
+            # Réserve l'espace de la barre de défilement horizontale en permanence
+            # (comportement natif de Chrome). Sans effet sur Firefox : le curseur
+            # de la barre y reste en overlay au survol, géré par l'OS/le navigateur
+            # (ex. réglage GTK overlay-scrollbars), non contrôlable par l'appli.
+            "alwaysShowHorizontalScroll": True,
         },
         # Pas de columnSize="responsiveSizeToFit" : les colonnes gardent leur
         # largeur définie dans columnDefs (cf. _column_width dans
