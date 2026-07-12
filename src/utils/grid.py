@@ -113,7 +113,7 @@ _SHORT_CODE_COLUMNS = {
 }
 
 # Colonnes "nom" qui ne suivent pas le suffixe `_nom` (ex. sourceDataset).
-_WIDE_LABEL_COLUMNS = {"sourceDataset"}
+_WIDE_LABEL_COLUMNS = {"objet"}
 
 # Colonnes avec infobulle systématique sur les cellules (valeur complète au
 # survol, pas seulement quand le texte est tronqué).
@@ -158,7 +158,7 @@ def _column_width(col: str, col_type) -> dict:
     if col in _SHORT_CODE_COLUMNS or col.endswith(("_code")):
         return {"width": 180}
     if col in _WIDE_LABEL_COLUMNS or col.endswith("_nom"):
-        return {"width": 300}
+        return {"width": 350}
     return {"width": 190}
 
 
@@ -196,9 +196,9 @@ def grid_column_defs(hidden_columns=None):
             # comme tooltipComponent — posé sur un en-tête, il retombe sur
             # le rendu natif d'AG Grid, qui affiche la chaîne telle quelle
             # (donc "**gras**" apparaissait littéralement avec les astérisques).
-            col_def["headerTooltip"] = (
-                f"{meta.get('title', col)} ({col}) — {meta['description']}"
-            )
+            col_def["headerTooltip"] = f"""{meta.get("title", col)} ({col})
+
+                {meta["description"]}"""
         if col in _LINK_COLUMNS:
             col_def["cellRenderer"] = "markdown"
         if col in _CELL_TOOLTIP_COLUMNS:
@@ -207,15 +207,13 @@ def grid_column_defs(hidden_columns=None):
             # on pointe vers la copie texte brut posée par add_links() dans
             # src.utils.table plutôt que d'afficher ce balisage tel quel.
             col_def["tooltipField"] = f"{col}_tooltip" if col in _LINK_COLUMNS else col
-        if col != "objet":
-            col_def.update(_column_width(col, col_type))
         if col == "objet":
             # autoHeight n'est pas supporté avec rowModelType="infinite" (la
             # grille doit pouvoir calculer la position des lignes non
             # chargées, donc une hauteur de ligne fixe) : cf. ag_grid(),
             # rowHeight fixe côté dashGridOptions plutôt qu'autoHeight ici.
             col_def["wrapText"] = True
-            col_def["minWidth"] = 360
+        col_def.update(_column_width(col, col_type))
         defs.append(col_def)
     return defs
 

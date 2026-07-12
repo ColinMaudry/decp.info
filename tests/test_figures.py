@@ -370,3 +370,14 @@ def test_ag_grid_keeps_base_appearance():
     grid = ag_grid("tableau_grid", [])
 
     assert getattr(grid, "className", None) in (None, "")
+
+
+def test_ag_grid_always_shows_horizontal_scroll():
+    """Réserve l'espace de la barre de défilement horizontale en permanence
+    (comportement natif Chrome). Sans effet sur le curseur en overlay de
+    Firefox, géré par l'OS/le navigateur, non contrôlable par l'appli."""
+    from src.figures import ag_grid
+
+    grid = ag_grid("tableau_grid", [])
+
+    assert grid.dashGridOptions["alwaysShowHorizontalScroll"] is True
