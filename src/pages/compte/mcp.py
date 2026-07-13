@@ -42,7 +42,7 @@ def client_instructions(url: str, token: str):
         always_open=False,
         children=[
             dbc.AccordionItem(
-                title="Claude (Code / Desktop)",
+                title="Claude Code",
                 children=html.Pre(html.Code(claude)),
             ),
             dbc.AccordionItem(
