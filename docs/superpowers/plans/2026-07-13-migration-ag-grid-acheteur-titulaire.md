@@ -43,7 +43,6 @@
 - **Modify** `src/pages/acheteur.py` — `layout` → fonction, grille AG Grid via `entity_grid`, top 10 en AG Grid, suppression des callbacks DataTable.
 - **Modify** `src/pages/titulaire.py` — idem acheteur.
 - **Modify** `tests/test_main.py` — sélecteurs AG Grid (`test_002_filter_persistence`) ; vérifier `test_003_tableau_download`.
-- **Modify** `CLAUDE.md` — corriger « Dash 3.4 » → « Dash 4.4 ».
 
 ---
 
