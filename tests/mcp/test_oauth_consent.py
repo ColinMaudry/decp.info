@@ -27,3 +27,24 @@ def test_render_consent_shows_redirect_host():
 def test_render_subscription_required_links_abonnement():
     html = consent.render_subscription_required()
     assert "/compte/abonnement" in html
+
+
+def test_render_consent_escapes_client_name():
+    html = consent.render_consent(
+        "<script>alert(1)</script>",
+        "https://claude.ai/api/mcp/auth_callback",
+        "mcp",
+    )
+    assert "<script>alert(1)</script>" not in html
+    assert "&lt;script&gt;" in html
+
+
+def test_render_consent_includes_csrf_token():
+    html = consent.render_consent(
+        "Claude",
+        "https://claude.ai/api/mcp/auth_callback",
+        "mcp",
+        csrf_token="tok-abc-123",
+    )
+    assert 'name="csrf_token"' in html
+    assert "tok-abc-123" in html

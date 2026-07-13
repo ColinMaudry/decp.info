@@ -32,6 +32,9 @@ def init_auth(app: Flask) -> None:
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
     app.config["SESSION_COOKIE_SECURE"] = not DEVELOPMENT
+    app.config["REMEMBER_COOKIE_SAMESITE"] = "Lax"
+    app.config["REMEMBER_COOKIE_SECURE"] = not DEVELOPMENT
+    app.config["REMEMBER_COOKIE_HTTPONLY"] = True
     app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 24 * 30  # 30 jours
 
     db.init_schema()

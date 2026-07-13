@@ -150,11 +150,15 @@ if _mcp_enabled:
 
     oauth_routes.init_oauth(app.server)
 
-    # Exempter les routes OAuth du CSRF (POST externes JSON-RPC/form sans jeton).
+    # Exempter du CSRF les endpoints OAuth machine-à-machine (POST externes sans
+    # cookie) et les documents de découverte (GET). /oauth/authorize N'EST PAS
+    # exempté : endpoint de consentement authentifié par cookie de session, donc
+    # protégé par CSRF via un jeton dans le formulaire de consentement.
     if _auth_csrf is not None:
+        _csrf_exempt_oauth = ("/oauth/token", "/oauth/register", "/oauth/revoke")
         for _rule in app.server.url_map.iter_rules():
-            if _rule.rule.startswith("/oauth") or _rule.rule.startswith(
-                "/.well-known/oauth"
+            if _rule.rule in _csrf_exempt_oauth or _rule.rule.startswith(
+                "/.well-known/"
             ):
                 _vf = app.server.view_functions.get(_rule.endpoint)
                 if _vf is not None:

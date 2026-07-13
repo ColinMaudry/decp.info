@@ -2,6 +2,7 @@ from urllib.parse import urlencode
 
 from flask import redirect, request
 from flask_login import current_user
+from flask_wtf.csrf import generate_csrf
 
 from src.mcp.oauth import consent
 
@@ -28,6 +29,7 @@ def authorize():
             client.client_metadata.get("client_name", client.get_client_id()),
             grant.request.redirect_uri or client.get_default_redirect_uri(),
             scope,
+            csrf_token=generate_csrf(),
         )
 
     # POST

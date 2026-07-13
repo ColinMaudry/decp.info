@@ -92,6 +92,30 @@ def test_authorize_requires_subscription(flow_app, monkeypatch):
     assert b"Abonnement requis" in resp.data
 
 
+def test_authorize_post_requires_subscription(flow_app, monkeypatch):
+    from src.auth import db as auth_db
+
+    app, _ = flow_app
+    monkeypatch.setattr("src.mcp.oauth.consent.TOUS_ABONNES", False)
+    uid = auth_db.create_user("nosub2@ex.fr", "h")
+    client = app.test_client()
+    client.get(f"/_test_login/{uid}")
+    cid = _register(client)
+    _, challenge = _pkce()
+    qs = {
+        "client_id": cid,
+        "response_type": "code",
+        "redirect_uri": "https://claude.ai/api/mcp/auth_callback",
+        "scope": "mcp",
+        "code_challenge": challenge,
+        "code_challenge_method": "S256",
+        "resource": "https://colibre.fr/_mcp",
+    }
+    resp = client.post("/oauth/authorize", query_string=qs, data={"confirm": "yes"})
+    assert resp.status_code == 403
+    assert b"Abonnement requis" in resp.data
+
+
 def test_full_flow_issues_audience_bound_token(flow_app, monkeypatch):
     from src.auth import db as auth_db
     from src.mcp.oauth import store

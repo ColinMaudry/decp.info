@@ -21,7 +21,9 @@ def render_subscription_required() -> str:
     )
 
 
-def render_consent(client_name: str, redirect_uri: str, scope: str) -> str:
+def render_consent(
+    client_name: str, redirect_uri: str, scope: str, csrf_token: str = ""
+) -> str:
     host = urlparse(redirect_uri).netloc or redirect_uri
     return (
         "<!doctype html><html lang=fr><head><meta charset=utf-8>"
@@ -31,6 +33,7 @@ def render_consent(client_name: str, redirect_uri: str, scope: str) -> str:
         "colibre en votre nom via le connecteur MCP.</p>"
         f"<p>Vous serez redirigé vers <strong>{escape(host)}</strong>.</p>"
         '<form method="post">'
+        f'<input type="hidden" name="csrf_token" value="{escape(csrf_token)}">'
         '<button name="confirm" value="yes" type="submit">Autoriser</button> '
         '<button name="confirm" value="no" type="submit">Refuser</button>'
         "</form></body></html>"
