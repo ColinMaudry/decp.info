@@ -66,33 +66,47 @@ def test_002_filter_persistence(dash_duo: DashComposite):
     dash_duo.start_server(app)
     dash_duo.wait_for_text_to_equal(".logo > h1", "colibre", timeout=4)
 
-    def open_page_and_check_filter_input():
-        dash_duo.wait_for_page(f"{dash_duo.server_url}/{page}")
-        filter_input_selector = (
-            '.marches_table th[data-dash-column="dateNotification"] input[type="text"]'
-        )
-        return _filter_input_in_view(dash_duo, filter_input_selector)
-
-    # /tableau utilise désormais AG Grid (dash-ag-grid) au lieu de dash_table.DataTable ;
-    # la persistance de ses filtres/colonnes est couverte par persistence=True et
+    # /tableau utilise AG Grid (dash-ag-grid) depuis #41 ; sa persistance de
+    # filtres/colonnes est couverte par persistence=True et
     # persisted_props=["filterModel", "columnState"] configurés dans la fabrique
     # ag_grid() de src/figures.py, et a été vérifiée manuellement via un navigateur
-    # réel (Task 12 du plan #41). Une couverture Selenium dédiée à AG Grid pourrait
-    # être ajoutée ultérieurement.
-    for page in ["acheteurs/123", "titulaires/345"]:
-        filter_input = open_page_and_check_filter_input()
-        filter_input.send_keys("11")  # valeur quelconque, on teste la persistance
-        filter_input.send_keys(Keys.ENTER)
-        # Attendre que le filtre soit réellement appliqué (la table se vide :
-        # "11" ne matche aucune dateNotification) AVANT de re-naviguer. Sinon, on
+    # réel (Task 12 du plan #41).
+    #
+    # Les fiches acheteur/titulaire utilisent désormais elles aussi AG Grid
+    # (src/utils/entity_grid.py). Chaque grille a un id pattern-matching
+    # {"type": "<org>-grid", "entity_id": ..., "year": ...} : la persistance
+    # (localStorage, persisted_props=["filterModel"]) est donc scopée par fiche
+    # (et année) — on ne peut pas s'attendre à ce qu'un filtre saisi sur une
+    # fiche survive à la navigation vers une AUTRE fiche, seulement à un
+    # rechargement de la MÊME URL. C'est ce que ce test vérifie ci-dessous, sur
+    # la colonne "objet" (filtre texte AG Grid, sans ambiguïté de format
+    # contrairement à un filtre de date).
+
+    def filter_input_selector(container_id: str) -> str:
+        return f'#{container_id} div[col-id="objet"] .ag-floating-filter-input input'
+
+    def open_page_and_get_filter_input(page: str, container_id: str) -> WebElement:
+        dash_duo.wait_for_page(f"{dash_duo.server_url}/{page}")
+        return _filter_input_in_view(dash_duo, filter_input_selector(container_id))
+
+    for page, container_id in [
+        ("acheteurs/123", "acheteur-grid-container"),
+        ("titulaires/345", "titulaire-grid-container"),
+    ]:
+        filter_input = open_page_and_get_filter_input(page, container_id)
+        filter_input.send_keys(
+            "zzz_no_match"
+        )  # valeur quelconque, on teste la persistance
+        # Attendre que le filtre soit réellement appliqué (la grille se vide :
+        # "zzz_no_match" ne matche aucun "objet") AVANT de re-naviguer. Sinon, on
         # peut quitter la page avant que le callback de filtre ait écrit la
         # persistance → la valeur n'est pas restaurée à la ré-ouverture.
         dash_duo.wait_for_no_elements(
-            '.marches_table td[data-dash-column="dateNotification"] p'
+            f"#{container_id} .ag-center-cols-container .ag-row"
         )
-        filter_input = open_page_and_check_filter_input()
-        _wait_input_value(dash_duo, filter_input, "11")
-        assert filter_input.get_attribute("value") == "11"
+        filter_input = open_page_and_get_filter_input(page, container_id)
+        _wait_input_value(dash_duo, filter_input, "zzz_no_match")
+        assert filter_input.get_attribute("value") == "zzz_no_match"
 
 
 def test_003_tableau_download(dash_duo: DashComposite):
@@ -359,18 +373,32 @@ def test_015_org_pages_filter_date(dash_duo: DashComposite):
     dash_duo.start_server(app)
     dash_duo.wait_for_text_to_equal(".logo > h1", "colibre", timeout=4)
 
-    # /tableau utilise désormais AG Grid ; le filtrage de sa colonne date est
+    # /tableau utilise AG Grid depuis #41 ; le filtrage de sa colonne date est
     # couvert par les tests unitaires de compilation SQL dans
     # tests/test_query_ast.py (ex. test_date_range_uses_between) et a été
-    # vérifié manuellement (Task 12 du plan #41). Une couverture Selenium
-    # dédiée au filtre de date AG Grid pourrait être ajoutée ultérieurement.
-    for page in ["acheteurs/123", "titulaires/345"]:
+    # vérifié manuellement (Task 12 du plan #41).
+    #
+    # Les fiches acheteur/titulaire utilisent elles aussi AG Grid désormais
+    # (src/utils/entity_grid.py). La colonne dateNotification y est un filtre
+    # AG Grid de type "agDateColumnFilter", dont le floating filter est un
+    # <input type="date"> natif du navigateur : peu fiable à piloter via
+    # Selenium (send_keys/click interceptés selon le focus du picker natif).
+    # On vérifie donc ici qu'UN filtre de colonne (texte, "objet") vide bien
+    # la grille scopée à la fiche, sur le même principe que le test historique
+    # (valeur ne correspondant à aucune ligne). Le filtrage par date reste
+    # couvert au niveau SQL par tests/test_query_ast.py.
+    for page, container_id in [
+        ("acheteurs/123", "acheteur-grid-container"),
+        ("titulaires/345", "titulaire-grid-container"),
+    ]:
         dash_duo.wait_for_page(f"{dash_duo.server_url}/{page}")
-        filter_input = '.marches_table th[data-dash-column="dateNotification"] input'
-        filter_cell_result = '.marches_table td[data-dash-column="dateNotification"] p'
+        filter_input = (
+            f'#{container_id} div[col-id="objet"] .ag-floating-filter-input input'
+        )
+        filter_cell_result = f"#{container_id} .ag-center-cols-container .ag-row"
         _filter_input: WebElement = _filter_input_in_view(dash_duo, filter_input)
-        _filter_input.send_keys("3333")  # a dateNotification that doesn't exist
-        _filter_input.send_keys(Keys.ENTER)
-        # Le filtrage est asynchrone : attendre la mise à jour du tableau plutôt
-        # que de lire les lignes immédiatement (sinon on lit l'état pré-filtre).
+        _filter_input.send_keys("zzz_no_match")  # un "objet" qui n'existe pas
+        # Le filtrage est asynchrone (debounce du filtre texte AG Grid) : attendre
+        # la mise à jour de la grille plutôt que de lire les lignes immédiatement
+        # (sinon on lit l'état pré-filtre).
         dash_duo.wait_for_no_elements(filter_cell_result, timeout=4)
