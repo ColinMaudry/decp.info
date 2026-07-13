@@ -35,7 +35,9 @@ def test_mcp_endpoint_guarded_and_csrf_exempt(monkeypatch, tmp_path):
         # ce qui prouve exemption CSRF + garde câblés sur /_mcp.
         resp = client.post("/_mcp", json={"jsonrpc": "2.0", "method": "ping", "id": 1})
         assert resp.status_code == 401
-        assert resp.headers.get("WWW-Authenticate") == 'Bearer realm="colibre-mcp"'
+        assert resp.headers.get("WWW-Authenticate", "").startswith(
+            'Bearer realm="colibre-mcp"'
+        )
     finally:
         # Restaurer les objets-modules d'origine et purger ceux créés par le
         # reload, pour ne pas polluer les tests suivants.

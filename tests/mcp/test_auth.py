@@ -11,10 +11,15 @@ def mcp_app(monkeypatch, tmp_path):
 
     db_path = tmp_path / "users.test.sqlite"
     monkeypatch.setenv("USERS_DB_PATH", str(db_path))
+    from src.mcp import usage
+    from src.mcp.oauth import store as oauth_store
+
     auth_db.reset_conn_for_tests()
     auth_db.init_schema()
     sub_db.init_schema()
     tokens_db.init_schema(db_path)
+    oauth_store.init_schema(db_path)
+    usage.init_schema(db_path)
 
     app = Flask(__name__)
 
@@ -41,7 +46,7 @@ def test_missing_header_401_with_challenge(mcp_app):
     app, _ = mcp_app
     resp = app.test_client().post("/_mcp")
     assert resp.status_code == 401
-    assert resp.headers["WWW-Authenticate"] == 'Bearer realm="colibre-mcp"'
+    assert resp.headers["WWW-Authenticate"].startswith('Bearer realm="colibre-mcp"')
 
 
 def test_empty_bearer_401(mcp_app):
@@ -120,3 +125,88 @@ def test_tous_abonnes_bypasses_subscription(mcp_app, monkeypatch):
     token, _ = tokens_db.create_token(db_path, "x", user_id=uid, kind="mcp")
     resp = app.test_client().post("/_mcp", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200
+
+
+def test_oauth_token_active_subscription_passes(mcp_app, monkeypatch):
+    import time
+
+    from src.mcp.oauth import server, store
+
+    monkeypatch.setenv("APP_BASE_URL", "https://colibre.fr")
+    app, db_path = mcp_app
+    store.init_schema(db_path)
+    uid = _subscribed_uid()
+    store.create_client(db_path, "cid", {"redirect_uris": []})
+    store.save_token(
+        db_path,
+        access_token="opaque123",
+        refresh_token=None,
+        client_id="cid",
+        user_id=uid,
+        scope="mcp",
+        resource="https://colibre.fr/_mcp",
+        access_expires_at=server._iso(time.time() + 3600),
+        refresh_expires_at=None,
+    )
+    resp = app.test_client().post(
+        "/_mcp", headers={"Authorization": "Bearer opaque123"}
+    )
+    assert resp.status_code == 200
+
+
+def test_oauth_token_wrong_audience_401(mcp_app, monkeypatch):
+    import time
+
+    from src.mcp.oauth import server, store
+
+    monkeypatch.setenv("APP_BASE_URL", "https://colibre.fr")
+    app, db_path = mcp_app
+    store.init_schema(db_path)
+    uid = _subscribed_uid()
+    store.save_token(
+        db_path,
+        access_token="badaud",
+        refresh_token=None,
+        client_id="cid",
+        user_id=uid,
+        scope="mcp",
+        resource="https://evil.example/_mcp",
+        access_expires_at=server._iso(time.time() + 3600),
+        refresh_expires_at=None,
+    )
+    resp = app.test_client().post("/_mcp", headers={"Authorization": "Bearer badaud"})
+    assert resp.status_code == 401
+
+
+def test_401_carries_resource_metadata(mcp_app, monkeypatch):
+    monkeypatch.setenv("APP_BASE_URL", "https://colibre.fr")
+    app, _ = mcp_app
+    resp = app.test_client().post("/_mcp")
+    assert resp.status_code == 401
+    assert "resource_metadata=" in resp.headers["WWW-Authenticate"]
+
+
+def test_oauth_token_no_subscription_403(mcp_app, monkeypatch):
+    import time
+
+    from src.auth import db as auth_db
+    from src.mcp.oauth import server, store
+
+    monkeypatch.setenv("APP_BASE_URL", "https://colibre.fr")
+    monkeypatch.setattr("src.mcp.auth.TOUS_ABONNES", False)
+    app, db_path = mcp_app
+    store.init_schema(db_path)
+    uid = auth_db.create_user("nosuboauth@ex.fr", "h")  # aucun abonnement
+    store.save_token(
+        db_path,
+        access_token="nosubtok",
+        refresh_token=None,
+        client_id="cid",
+        user_id=uid,
+        scope="mcp",
+        resource="https://colibre.fr/_mcp",
+        access_expires_at=server._iso(time.time() + 3600),
+        refresh_expires_at=None,
+    )
+    resp = app.test_client().post("/_mcp", headers={"Authorization": "Bearer nosubtok"})
+    assert resp.status_code == 403
