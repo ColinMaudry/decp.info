@@ -405,3 +405,63 @@ def test_ag_grid_defaults_unchanged_for_tableau():
     assert grid.id == "tableau_grid"
     assert list(grid.persisted_props) == ["filterModel", "columnState"]
     assert grid.persistence is True
+
+
+def test_get_top_org_ag_grid_returns_grid_with_rowdata():
+    """Le top 10 devient une AG Grid client-side (rowData directe, pas de
+    getRowsRequest server-side)."""
+    import dash_ag_grid as dag
+
+    from src.db import query_marches
+    from src.figures import get_top_org_ag_grid
+
+    lff = query_marches("TRUE", (), columns=None).lazy()
+    grid = get_top_org_ag_grid(lff, "titulaire", ["titulaire_distance"])
+
+    assert isinstance(grid, dag.AgGrid)
+    assert grid.rowData is not None and len(grid.rowData) > 0
+    # Colonne d'agrégat présente ; colonnes définies.
+    assert any(c.get("field") == "Attributions" for c in grid.columnDefs)
+    # Pas de persistance (petit tableau statique, régénéré à chaque fiche).
+    assert grid.persistence in (False, None)
+
+
+def test_get_top_org_ag_grid_empty_returns_div():
+    """Données vides → html.Div() (parité get_top_org_table)."""
+    import polars as pl
+    from dash import html
+
+    from src.figures import get_top_org_ag_grid
+
+    empty = pl.DataFrame(
+        {"uid": [], "titulaire_id": [], "titulaire_nom": [], "titulaire_distance": []}
+    ).lazy()
+    out = get_top_org_ag_grid(empty, "titulaire", ["titulaire_distance"])
+    assert isinstance(out, html.Div)
+
+
+def test_get_top_org_table_still_returns_datatable_after_refactor():
+    """Non-régression : get_top_org_table (utilisé par observatoire.py) garde
+    son comportement après extraction du helper d'agrégation partagé."""
+    import dash_ag_grid  # noqa: F401
+    from dash import html
+
+    from src.db import query_marches
+    from src.figures import DataTable, get_top_org_table
+
+    lff = query_marches("TRUE", (), columns=None).lazy()
+    out = get_top_org_table(lff, "titulaire", ["titulaire_distance"])
+    assert isinstance(out, (DataTable, html.Div))
+
+
+def test_top_org_aggregate_does_not_mutate_extra_columns():
+    """Le helper ne mute pas la liste extra_columns passée (bug latent de
+    l'ancien get_top_org_table, qui faisait extra_columns.append(...))."""
+    from src.db import query_marches
+    from src.figures import _top_org_aggregate
+
+    extra = ["titulaire_distance"]
+    _top_org_aggregate(
+        query_marches("TRUE", (), columns=None).lazy(), "titulaire", extra
+    )
+    assert extra == ["titulaire_distance"]

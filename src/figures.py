@@ -1017,18 +1017,24 @@ def make_column_picker(page: str):
     return table
 
 
-def get_top_org_table(data, org_type: str, extra_columns: list, filters: bool = True):
+def _top_org_aggregate(data, org_type: str, extra_columns: list):
+    """Agrégation « top N » commune à get_top_org_table et get_top_org_ag_grid.
+
+    Renvoie le DataFrame agrégé (colonnes castées en str, tri par Attributions
+    décroissant), AVANT add_links, ou None si vide/colonne manquante.
+    """
     if isinstance(data, pl.LazyFrame):
         lff = data
     else:
         lff = pl.LazyFrame(data, strict=False, infer_schema_length=5000)
 
+    extra = list(extra_columns)  # copie : ne pas muter la liste du caller
     if org_type == "titulaire":
-        extra_columns.append("titulaire_typeIdentifiant")
-    columns = ["uid", f"{org_type}_id", f"{org_type}_nom"] + extra_columns
+        extra.append("titulaire_typeIdentifiant")
+    columns = ["uid", f"{org_type}_id", f"{org_type}_nom"] + extra
 
     lff = lff.select(columns)
-    lff = lff.group_by([f"{org_type}_id", f"{org_type}_nom"] + extra_columns).agg(
+    lff = lff.group_by([f"{org_type}_id", f"{org_type}_nom"] + extra).agg(
         pl.len().alias("Attributions")
     )
     lff = lff.sort(by="Attributions", descending=True, nulls_last=True)
@@ -1037,11 +1043,18 @@ def get_top_org_table(data, org_type: str, extra_columns: list, filters: bool = 
 
     try:
         dff: pl.DataFrame = lff.collect(engine="streaming")
-    except ColumnNotFoundError:
-        logger.warning(f"get_top_org_table: column not found. {lff.collect_schema()}")
-        return html.Div()
+    except ColumnNotFoundError as e:
+        # Ne pas rappeler lff.collect_schema() ici : sur le même plan lazy
+        # cassé, la résolution du schéma lève à nouveau ColumnNotFoundError
+        # (non rattrapée), au lieu de renvoyer None comme prévu.
+        logger.warning(f"_top_org_aggregate: column not found. {e}")
+        return None
+    return dff if dff.height > 0 else None
 
-    if dff.height == 0:
+
+def get_top_org_table(data, org_type: str, extra_columns: list, filters: bool = True):
+    dff = _top_org_aggregate(data, org_type, extra_columns)
+    if dff is None:
         return html.Div()
 
     columns, tooltip = setup_table_columns(
@@ -1049,7 +1062,6 @@ def get_top_org_table(data, org_type: str, extra_columns: list, filters: bool = 
     )
     dff = add_links(dff)
     data = dff.to_dicts()
-    # data = add_links_in_dict(data, f"{org_type}")
 
     return DataTable(
         dtid=f"top10_{org_type}",
@@ -1059,6 +1071,72 @@ def get_top_org_table(data, org_type: str, extra_columns: list, filters: bool = 
         columns=columns,
         tooltip_header=tooltip,
         filter_action="native" if filters else "none",
+    )
+
+
+def get_top_org_ag_grid(data, org_type: str, extra_columns: list, filters: bool = True):
+    """Top N acheteurs/titulaires en AG Grid client-side (rowData directe).
+
+    Remplace get_top_org_table (dash_table) : même agrégation (helper partagé),
+    rendu AG Grid (thème brique, liens markdown). html.Div() si vide/erreur.
+    """
+    dff = _top_org_aggregate(data, org_type, extra_columns)
+    if dff is None:
+        return html.Div()
+
+    dff = add_links(dff)
+
+    # columnDefs : on masque l'id (lien porté par le nom), on rend le nom en
+    # markdown (HTML <a>), on cache les colonnes techniques *_tooltip.
+    id_col = f"{org_type}_id"
+    nom_col = f"{org_type}_nom"
+    link_cols = {nom_col}
+    column_defs = []
+    for col in dff.columns:
+        if col == id_col or col.endswith("_tooltip"):
+            continue
+        col_def = {
+            "field": col,
+            "headerName": DATA_SCHEMA.get(col, {}).get("title", col),
+            "sortable": True,
+            "filter": "agTextColumnFilter" if filters else False,
+        }
+        if col in link_cols:
+            col_def["cellRenderer"] = "markdown"
+            col_def["flex"] = 1
+        column_defs.append(col_def)
+
+    # ag_grid() du Lot 1 est server-side (rowModelType="infinite", pas de
+    # rowData) : inadapté au top 10, qui est client-side. On construit donc une
+    # AG Grid client-side directe, en réutilisant le thème + localeText.
+    return dag.AgGrid(
+        id=f"top10_{org_type}",
+        columnDefs=column_defs,
+        rowData=dff.to_dicts(),
+        dangerously_allow_code=True,  # rend le HTML <a> des cellules liens
+        columnSize="responsiveSizeToFit",
+        dashGridOptions={
+            "domLayout": "autoHeight",  # OK ici : row model client-side
+            "pagination": True,
+            "paginationPageSize": 10,
+            "suppressCellFocus": True,
+            "localeText": AG_GRID_LOCALE_FR,
+            "theme": {
+                "function": (
+                    "themeQuartz.withParams({"
+                    "accentColor: 'rgb(179, 56, 33)',"
+                    "headerTextColor: 'white',"
+                    "headerBackgroundColor: 'rgb(179, 56, 33)',"
+                    "oddRowBackgroundColor: 'rgba(255, 240, 240, 0.4)',"
+                    "borderColor: '#ccc',"
+                    "fontFamily: 'Inter, sans-serif',"
+                    "fontSize: 16"
+                    "})"
+                )
+            },
+        },
+        style={"width": "100%"},
+        persistence=False,
     )
 
 
