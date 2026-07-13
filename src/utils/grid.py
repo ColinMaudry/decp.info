@@ -113,7 +113,7 @@ _SHORT_CODE_COLUMNS = {
 }
 
 # Colonnes "nom" qui ne suivent pas le suffixe `_nom` (ex. sourceDataset).
-_WIDE_LABEL_COLUMNS = {"objet"}
+_WIDE_LABEL_COLUMNS = {"objet", "uid"}
 
 # Colonnes avec infobulle systématique sur les cellules (valeur complète au
 # survol, pas seulement quand le texte est tronqué).

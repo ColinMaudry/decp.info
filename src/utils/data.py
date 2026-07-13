@@ -132,7 +132,6 @@ def get_data_schema() -> dict:
             new_obj["description"] = (
                 f"{new_obj['description']} Valeurs possibles : {enums}"
             )
-    print(schema["titulaire_typeIdentifiant"])
     return schema
 
 

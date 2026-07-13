@@ -35,7 +35,7 @@ def _csrf(index: str):
 
 def client_instructions(url: str, token: str):
     """Construit les blocs d'instructions par client (fonction pure, testable)."""
-    claude = f'claude mcp add colibre --transport http {url} --header "Authorization: Bearer {token}"'
+    claude = f'claude mcp add colibre --scope user --transport http {url} --header "Authorization: Bearer {token}"'
     gemini = f'gemini mcp add --transport http --header "Authorization: Bearer {token}" colibre {url}'
     return dbc.Accordion(
         start_collapsed=True,
@@ -68,11 +68,8 @@ def client_instructions(url: str, token: str):
                 title="ChatGPT",
                 children=[
                     html.P(
-                        "L'app ChatGPT grand public exige le flux OAuth 2.1 et "
-                        "n'accepte pas de jeton statique. En attendant le connecteur "
-                        "OAuth (itération future), utilisez la voie développeur "
-                        "(API / Agents SDK OpenAI), qui accepte un serveur MCP distant "
-                        f"d'URL {url} avec l'en-tête « Authorization: Bearer {token} »."
+                        """L'app ChatGPT grand public exige une technique d'authentification plus complexe
+                            qu'un simple jeton. Votez pour cette fonctionnalité si elle peut vous être utile."""
                     ),
                 ],
             ),
