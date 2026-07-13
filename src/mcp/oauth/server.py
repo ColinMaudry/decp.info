@@ -165,21 +165,25 @@ class RefreshTokenGrant(grants.RefreshTokenGrant):
     INCLUDE_NEW_REFRESH_TOKEN = True  # rotation
 
     def authenticate_refresh_token(self, refresh_token):
+        from src.mcp.oauth.consent import subscription_ok
+
         row = store.get_token_by_refresh(_db(), refresh_token)
         if not row or row["revoked_at"] is not None:
             return None
         if row["refresh_expires_at"] and _expired(row["refresh_expires_at"]):
             return None
+        # Re-vérifie l'abonnement au refresh ici (pas dans authenticate_user) :
+        # authlib traite un authenticate_refresh_token → None comme
+        # InvalidGrantError (invalid_grant), alors qu'un authenticate_user →
+        # None y devient InvalidRequestError (invalid_request). Claude exige
+        # invalid_grant pour redéclencher le flux OAuth quand l'abonnement
+        # est perdu.
+        if not subscription_ok(row["user_id"]):
+            return None
         return _Token(row)
 
     def authenticate_user(self, credential):
-        from src.mcp.oauth.consent import subscription_ok
-
-        uid = credential["user_id"]
-        # Re-vérifie l'abonnement au refresh : perdu → invalid_grant.
-        if not subscription_ok(uid):
-            return None
-        return uid
+        return credential["user_id"]
 
     def revoke_old_credential(self, credential):
         store.revoke_token(_db(), credential["id"])
