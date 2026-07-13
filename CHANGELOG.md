@@ -5,24 +5,18 @@
 - Abonnement payant à colibre : période d'essai gratuite, souscription et gestion du moyen de paiement, résiliation, historique de facturation ([#90](https://github.com/ColinMaudry/colibre/issues/90))
 - Sauvegarde de vues personnalisées (filtres, tris, colonnes) dans la page Tableau, réservée aux abonné·es ([#95](https://github.com/ColinMaudry/colibre/issues/95))
 - Vote pour prioriser les fonctionnalités de la roadmap, réservé aux abonné·es une fois leur période d'essai terminée, avec une page roadmap publique en lecture seule ([#94](https://github.com/ColinMaudry/colibre/issues/94))
-- Accès aux données de la commande publique via un serveur MCP (Model Context Protocol), pour interroger colibre directement depuis un agent IA (Claude, Cursor…) ([#111](https://github.com/ColinMaudry/colibre/issues/111))
-- Connecteur MCP : les abonnés génèrent un jeton dans « Mon compte › Connecteur MCP » pour connecter leur agent IA (Claude, Gemini, Mistral) au serveur MCP colibre ; l'accès est conditionné à un abonnement actif ([#111](https://github.com/ColinMaudry/colibre/issues/111))
+- Accès aux données de la commande publique via un serveur MCP (Model Context Protocol), pour interroger colibre directement depuis un agent IA (Claude, Mistral, Gemini, Cursor…) ([#111](https://github.com/ColinMaudry/colibre/issues/111))
 
 **Autres améliorations**
 
-- Comptes utilisateurs : inscription avec vérification d'email, connexion (email/mot de passe ou LinkedIn), réinitialisation de mot de passe, gestion du compte ([#73](https://github.com/ColinMaudry/colibre/issues/73), [#88](https://github.com/ColinMaudry/colibre/issues/88))
-- Nouvel espace "Mon compte" avec navigation par sections
-- Sauvegarde régulière et chiffrée de la base des utilisateurs ([#89](https://github.com/ColinMaudry/colibre/issues/89))
+- Nouvelle interface de tableau : plus d'options de filtres, plus performante ([#47](https://github.com/ColinMaudry/colibre/issues/47))
 - Ajout des codes et libellés NAF des titulaires, affichés sur leur page /titulaire
-- Scroll horizontal ergonomique et en-têtes de colonnes collants dans la page Tableau ([#82](https://github.com/ColinMaudry/colibre/issues/82))
 - Export Excel mis en forme (styles) ([#83](https://github.com/ColinMaudry/colibre/issues/83))
 - Réduction du nombre de colonnes affichées par défaut et ajout de la colonne "Marché" dans la page Tableau ([#84](https://github.com/ColinMaudry/colibre/issues/84))
-- Barre d'outils de la page Tableau plus compacte, avec légende d'aide
 - Refonte et mise en page pleine largeur de la page À propos
 - Ajout des conditions générales d'utilisation (CGU) ([#93](https://github.com/ColinMaudry/colibre/issues/93))
 - Amélioration du référencement (sitemaps acheteurs/titulaires)
 - Amélioration des performances des pages acheteur et titulaire
-- Ajout des organismes liés sur la carte des pages acheteur et titulaire
 - decp.info devient **colibre** : nouveau nom, nouvelles icônes ([#57](https://github.com/ColinMaudry/colibre/issues/57))
 
 **Bugs résolus**
