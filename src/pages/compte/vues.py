@@ -50,7 +50,9 @@ def _content():
                         dbc.Input(id="vue-rename-input", type="text", autofocus=True),
                     ),
                     dbc.ModalFooter(
-                        dbc.Button("Renommer", id="vue-rename-confirm", color="primary")
+                        dbc.Button(
+                            "Renommer", id="vue-rename-confirm", color="secondary"
+                        )
                     ),
                 ],
             ),

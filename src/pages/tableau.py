@@ -394,7 +394,7 @@ layout = [
                                 dbc.Button(
                                     "Enregistrer",
                                     id="btn-save-view-confirm",
-                                    color="primary",
+                                    color="secondary",
                                 )
                             ),
                         ],

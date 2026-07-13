@@ -66,7 +66,7 @@ def _active_view(row):
                         html.Button(
                             "Ajouter une méthode de paiement",
                             type="submit",
-                            className="btn btn-primary mb-3",
+                            className="btn btn-secondary mb-3",
                         ),
                     ],
                 ),

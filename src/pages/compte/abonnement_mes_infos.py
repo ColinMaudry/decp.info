@@ -49,7 +49,7 @@ def _submit_button(mode: str):
         label,
         id="inf-submit",
         type="submit",
-        className="btn btn-primary",
+        className="btn btn-secondary",
         disabled=(mode == "subscribe"),
     )
 

@@ -140,7 +140,7 @@ def layout(acheteur_id=None, **kwargs):
                                         html.Button(
                                             "Téléchargement au format Excel",
                                             id="btn-download-data-acheteur",
-                                            className="btn btn-primary",
+                                            className="btn btn-secondary",
                                         ),
                                         dcc.Download(id="download-data-acheteur"),
                                     ],

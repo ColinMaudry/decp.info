@@ -58,7 +58,7 @@ def layout(
                         value=email or "",
                         className="mb-3",
                     ),
-                    dbc.Button("Envoyer le lien", type="submit", color="primary"),
+                    dbc.Button("Envoyer le lien", type="submit", color="secondary"),
                 ],
             ),
             html.Hr(),

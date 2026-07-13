@@ -118,7 +118,7 @@ def _subscribe_button(
     else:
         label, href = "Je m'abonne", "/inscription"
     return html.Div(
-        html.A(label, href=href, className="btn btn-primary"),
+        html.A(label, href=href, className="btn btn-secondary"),
         className="text-center my-4 btn-lg",
         style={"width": "fit-content", "margin": "auto"},
     )

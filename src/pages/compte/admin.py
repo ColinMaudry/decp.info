@@ -52,7 +52,9 @@ def _email_section():
                     dbc.Input(
                         type="email", name="email", required=True, className="mb-3"
                     ),
-                    dbc.Button("Mettre à jour l'email", type="submit", color="primary"),
+                    dbc.Button(
+                        "Mettre à jour l'email", type="submit", color="secondary"
+                    ),
                 ],
             ),
         ]
@@ -92,7 +94,7 @@ def _password_section():
                         className="mb-3",
                     ),
                     dbc.Button(
-                        "Changer le mot de passe", type="submit", color="primary"
+                        "Changer le mot de passe", type="submit", color="secondary"
                     ),
                 ],
             ),

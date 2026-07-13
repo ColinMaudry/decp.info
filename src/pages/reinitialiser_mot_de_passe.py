@@ -68,7 +68,7 @@ def layout(token: str | None = None, error: str | None = None, **_):
                         minLength=8,
                         className="mb-3",
                     ),
-                    dbc.Button("Valider", type="submit", color="primary"),
+                    dbc.Button("Valider", type="submit", color="secondary"),
                 ],
             ),
         ],

@@ -208,7 +208,7 @@ def layout(**_):
             _csrf("mcp-create"),
             dbc.Label("Nom du jeton (ex. « Claude sur mon portable »)"),
             dbc.Input(type="text", name="label", required=True, className="mb-2"),
-            dbc.Button("Générer un jeton", type="submit", color="primary"),
+            dbc.Button("Générer un jeton", type="submit", color="secondary"),
         ],
     )
 

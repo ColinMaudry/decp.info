@@ -53,7 +53,7 @@ layout = html.Div(
                 html.Button(
                     "=>",
                     id="search-button",
-                    className="btn btn-primary",
+                    className="btn btn-secondary",
                     style={
                         "border": "1px solid #ccc",
                         "borderRadius": "0 3px 3px 0",

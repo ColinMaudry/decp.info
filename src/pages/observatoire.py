@@ -426,9 +426,8 @@ Alors, on fait comment ?
                                                     dbc.Button(
                                                         "Voir les données",
                                                         id="btn-observatoire-preview",
-                                                        className="btn btn-primary mt-2",
-                                                        color="primary",
-                                                        outline=True,
+                                                        color="secondary",
+                                                        className="mt-2",
                                                     ),
                                                     dcc.Input(
                                                         id="observatoire-share-url",
@@ -641,7 +640,8 @@ def sync_observatoire_share_url(*args):
                 dbc.Button(
                     "Partager cette vue",
                     id="btn-copy-observatoire",
-                    className="btn btn-primary mt-2",
+                    color="secondary",
+                    className="mt-2",
                     title="Copier l'adresse de cette vue filtrée pour la partager.",
                 )
             ],

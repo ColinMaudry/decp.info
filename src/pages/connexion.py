@@ -81,7 +81,7 @@ def layout(error: str | None = None, email: str | None = None, **kwargs):
                         required=True,
                         className="mb-3",
                     ),
-                    dbc.Button("Se connecter", type="submit", color="primary"),
+                    dbc.Button("Se connecter", type="submit", color="secondary"),
                 ],
             ),
             dcc.Link(
@@ -95,7 +95,7 @@ def layout(error: str | None = None, email: str | None = None, **kwargs):
             html.A(
                 "Pas encore de compte ? Voir les abonnements",
                 href="/a-propos/abonnement",
-                className="btn btn-primary w-100",
+                className="btn btn-secondary w-100",
             ),
         ],
     )

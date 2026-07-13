@@ -19,15 +19,6 @@
 - Amélioration des performances des pages acheteur et titulaire
 - decp.info devient **colibre** : nouveau nom, nouvelles icônes ([#57](https://github.com/ColinMaudry/colibre/issues/57))
 
-**Bugs résolus**
-
-- Redirection Frisbii corrigée après l'ajout d'un moyen de paiement lors du premier abonnement
-- Un abonnement en échec ne bloque plus une nouvelle tentative de réabonnement
-- Meilleure gestion de l'affichage d'un abonnement expiré
-- Correction de l'affichage du nombre de jours d'essai restants
-- Correction d'une erreur lors du renommage d'une vue sauvegardée, avec un meilleur retour visuel
-- Le champ de filtrage n'apparaît plus sur la colonne "Marché" (non filtrable)
-
 ##### 2.8.1 (25 juin 2026)
 
 - Correction du bug dans la création de token d'API

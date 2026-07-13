@@ -66,7 +66,7 @@ def layout(error: str | None = None, email: str | None = None, **_):
                         minLength=8,
                         className="mb-3",
                     ),
-                    dbc.Button("Créer le compte", type="submit", color="primary"),
+                    dbc.Button("Créer le compte", type="submit", color="secondary"),
                 ],
             ),
             html.Div("ou", className="text-center text-muted my-2"),
