@@ -45,6 +45,22 @@ def stats_titulaire(titulaire_id: str) -> dict:
     return queries.compute_org_stats("titulaire", titulaire_id)
 
 
+@mcp_enabled(name="schema_donnees", expose_docstring=True)
+def schema_donnees() -> dict:
+    """Schéma des données marchés (DECP) pour construire des filtres.
+
+    À consulter avant d'utiliser `filtres_avances` de rechercher_marches.
+    - colonnes_filtrables : {colonne: {type, titre, description}}, utilisables
+      comme "colonne__operateur" (la description inclut les valeurs possibles).
+    - colonnes_retournees : colonnes présentes dans chaque marché renvoyé.
+    - operateurs : opérateurs de filtre valides (exact, contains, greater, less,
+      in, isnull, sort…). L'agrégation n'est pas supportée ici (API REST /data).
+    - filtres_nommes : correspondance paramètre nommé -> "colonne__operateur".
+    """
+    track_mcp_tool("schema_donnees")
+    return queries.describe_schema()
+
+
 @mcp_enabled(name="rechercher_marches", expose_docstring=True)
 def rechercher_marches(
     acheteur_id: str | None = None,
@@ -66,7 +82,8 @@ def rechercher_marches(
     date_min / date_max (format YYYY-MM-DD, sur dateNotification),
     departement (code département de l'acheteur).
     filtres_avances : dict optionnel {"colonne__operateur": valeur} pour les
-    besoins pointus (mêmes colonnes/opérateurs que l'API REST colibre).
+    besoins pointus. Colonnes et opérateurs disponibles via l'outil
+    schema_donnees().
     page : numéro de page (50 résultats par page).
     Retourne {meta: {page, page_size, total}, marches: [...]}.
     """

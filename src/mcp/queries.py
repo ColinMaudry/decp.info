@@ -1,11 +1,11 @@
 # src/mcp/queries.py
 import re
 
-from src.api.filters import FilterError, build_where
+from src.api.filters import OPERATORS, FilterError, build_where
 from src.db import aggregate_marches, count_marches, query_marches
 from src.db import schema as duckdb_schema
 from src.mcp.serialization import to_json_records
-from src.utils.data import DF_ACHETEURS, DF_TITULAIRES
+from src.utils.data import DATA_SCHEMA, DF_ACHETEURS, DF_TITULAIRES
 from src.utils.search import search_org
 
 PAGE_SIZE = 50
@@ -39,6 +39,30 @@ _NAMED_FILTERS = [
     ("date_max", "dateNotification", "less"),
     ("departement", "acheteur_departement_code", "exact"),
 ]
+
+
+def describe_schema() -> dict:
+    """Schéma des marchés (même source que /schema de l'API REST).
+
+    Limité aux colonnes réellement filtrables via filtres_avances (présentes
+    dans la table DuckDB). L'agrégation (groupby/sum/...) n'est pas supportée
+    ici : c'est une fonctionnalité de l'API REST /data.
+    """
+    colonnes = {
+        name: {
+            "type": field.get("type"),
+            "titre": field.get("title"),
+            "description": field.get("description"),  # inclut les énumérations
+        }
+        for name, field in DATA_SCHEMA.items()
+        if name in duckdb_schema  # exclut la colonne virtuelle "marche"
+    }
+    return {
+        "colonnes_filtrables": colonnes,
+        "colonnes_retournees": MARCHES_COLUMNS,
+        "operateurs": sorted(OPERATORS),
+        "filtres_nommes": {p: f"{c}__{o}" for p, c, o in _NAMED_FILTERS},
+    }
 
 
 def build_where_args(
