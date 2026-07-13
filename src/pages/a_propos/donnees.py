@@ -22,7 +22,7 @@ def layout(**_):
             dcc.Markdown(
                 """
 Les données présentées sur ce site sont publiées par les acheteurs publics dans le cadre de la réglementation DECP (Données Essentielles de la Commande Publique).
-Ces données couvrent principalement l'étape d'attribution des marchés publics, qui suit l'étape d'appel d'offres.
+Ces données couvrent principalement l'étape d'attribution des marchés publics, qui suit l'étape de publicité (l'appel d'offres).
 
 **Données publiées par étape de passsation du marché et par seuil selon la valeur du marché** :
 

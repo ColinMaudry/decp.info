@@ -1,4 +1,4 @@
-@import url(https://fonts.bunny.net/css?family=fira-code:400|inter:400,600|archivo-narrow:500);
+@import url(https://fonts.bunny.net/css?family=fira-code:400|inter:400,600|akshar:500);
 
 /* ==========================================================================
    Variables
@@ -641,7 +641,7 @@ button.show-hide {
 }
 
 .ag-header-cell-text {
-  font-family: "Archivo Narrow", sans-serif;
+  font-family: "Akshar", sans-serif;
   font-size: 18px;
 }
 

@@ -17,9 +17,9 @@ register_page(
 )
 
 abonnement_features = dcc.Markdown("""
-    - sauvegarde de vues dans la page Tableau
-    - vote pour les [fonctionnalités à développer](/a-propos/roadmap) en priorité (une fois la période d'essai terminée)
-    - interrogation des données depuis un agent IA (Gemini, Claude, Mistral...)
+    - sauvegarde et partage de vues dans la page Tableau
+    - vote pour les [fonctionnalités à développer](/a-propos/roadmap) en priorité (une fois la période d'essai de 2 jours consommée)
+    - interrogation des données depuis un agent IA via le connecteur MCP (ChatGPT, Claude, Mistral...)
       """)
 
 
