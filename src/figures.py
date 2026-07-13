@@ -1163,6 +1163,9 @@ AG_GRID_LOCALE_FR = {
     "inRangeEnd": "à",
     "before": "Avant",
     "after": "Après",
+    "to": "à",
+    "of": "de",
+    "pageSizeSelectorLabel": "Lignes par page",
     # Chrome du menu de filtre
     "filterOoo": "Filtrer...",
     "applyFilter": "Appliquer",
