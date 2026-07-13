@@ -11,7 +11,18 @@ Les callbacks Dash sont enregistrés par register_entity_grid_callbacks()
 (cf. module séparé de wiring) ; ici, seules des fonctions pures testables.
 """
 
-from dash import ALL, MATCH, Input, Output, State, callback, ctx, dcc, no_update
+from dash import (
+    ALL,
+    MATCH,
+    Input,
+    Output,
+    State,
+    callback,
+    ctx,
+    dcc,
+    no_update,
+    set_props,
+)
 
 from src.figures import (
     AG_GRID_LOCALE_FR,  # noqa: F401  (réexport pratique)
@@ -126,26 +137,32 @@ def register_entity_grid_callbacks(org_type: str) -> None:
     """
     gtype = grid_type(org_type)
 
-    # 1) Datasource server-side. Input MATCH (grille) → Output MATCH
-    #    (getRowsResponse) + Outputs fixes (stores totaux). Autorisé en Dash 4.4.
+    # 1) Datasource server-side. Une seule sortie MATCH (getRowsResponse de la
+    #    grille pattern-matching) : Dash INTERDIT de mélanger une sortie MATCH
+    #    avec des sorties fixes (« MATCH wildcards must be on the same keys for
+    #    all Outputs », erreur du dev-renderer en mode debug). Les stores totaux
+    #    (id fixes) sont donc alimentés impérativement via dash.set_props.
     @callback(
         Output({"type": gtype, "entity_id": MATCH, "year": MATCH}, "getRowsResponse"),
-        Output(f"{org_type}-total", "data"),
-        Output(f"{org_type}-total-unique", "data"),
         Input({"type": gtype, "entity_id": MATCH, "year": MATCH}, "getRowsRequest"),
         prevent_initial_call=True,
     )
     def _get_rows(request):
         gid = ctx.triggered_id  # {"type", "entity_id", "year"}
         if request is None or gid is None:
-            return no_update, no_update, no_update
+            return no_update
         if request.get("filterModel") and request.get("startRow", 0) == 0:
             import json
 
             from src.utils.tracking import track_search
 
             track_search(json.dumps(request["filterModel"]), org_type)
-        return fetch_entity_page(org_type, gid["entity_id"], gid["year"], request)
+        response, total, total_unique = fetch_entity_page(
+            org_type, gid["entity_id"], gid["year"], request
+        )
+        set_props(f"{org_type}-total", {"data": total})
+        set_props(f"{org_type}-total-unique", {"data": total_unique})
+        return response
 
     # 2) (Re)construit la grille au changement de fiche (URL), d'année, ou de
     #    colonnes masquées. Le remontage réinitialise le filterModel (accepté
