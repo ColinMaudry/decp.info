@@ -147,16 +147,18 @@ def _consent_checklists(hidden: bool = False):
                 id="inf-cb-cgu",
                 options=[
                     {
-                        "label": [
-                            "J'ai lu et accepte les ",
-                            html.A(
-                                "conditions générales d'utilisation du service",
-                                href="#",
-                                id="inf-cgu-link",
-                                style={"cursor": "pointer"},
-                            ),
-                            ".",
-                        ],
+                        "label": html.Span(
+                            [
+                                "J'ai lu et accepte les ",
+                                html.A(
+                                    "conditions générales d'utilisation du service",
+                                    href="#",
+                                    id="inf-cgu-link",
+                                    style={"cursor": "pointer"},
+                                ),
+                                ".",
+                            ]
+                        ),
                         "value": "ok",
                     }
                 ],
