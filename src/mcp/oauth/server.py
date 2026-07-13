@@ -9,9 +9,17 @@ from authlib.oauth2.rfc7591 import ClientRegistrationEndpoint
 from authlib.oauth2.rfc7636 import CodeChallenge
 
 from src.mcp.oauth import metadata, store
+from src.utils import DEVELOPMENT
 
 ACCESS_TTL = 3600  # 1 h
 REFRESH_TTL = 5184000  # 60 j
+
+if DEVELOPMENT:
+    # authlib refuse tout URI non-https (InsecureTransportError), y compris
+    # http://colibre.fr utilisé par le client de test Flask (pas de TLS local).
+    # Comportement identique à SESSION_COOKIE_SECURE = not DEVELOPMENT dans
+    # src/auth/setup.py : ne s'applique jamais en production (DEVELOPMENT=false).
+    os.environ.setdefault("AUTHLIB_INSECURE_TRANSPORT", "1")
 
 
 def _db() -> str:
@@ -224,6 +232,10 @@ class _RevocationEndpoint(RevocationEndpoint):
 
 
 def create_authorization_server(app) -> AuthorizationServer:
+    # authlib n'émet un refresh_token que si ce flag est activé (défaut: False) ;
+    # requis puisque RefreshTokenGrant est enregistré ci-dessous et que le scope
+    # "offline_access" (DCR) suppose l'émission d'un refresh_token.
+    app.config.setdefault("OAUTH2_REFRESH_TOKEN_GENERATOR", True)
     server = AuthorizationServer(app, query_client=query_client, save_token=save_token)
     server.register_grant(AuthorizationCodeGrant, [CodeChallenge(required=True)])
     server.register_grant(RefreshTokenGrant)
