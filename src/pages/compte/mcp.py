@@ -46,6 +46,26 @@ def client_instructions(url: str, token: str):
                 children=html.Pre(html.Code(claude)),
             ),
             dbc.AccordionItem(
+                title="Claude.ai / Claude Desktop / mobile",
+                children=[
+                    html.P("Aucun jeton à copier : ces applications utilisent OAuth."),
+                    html.Ol(
+                        [
+                            html.Li(
+                                "Paramètres → Connecteurs → Ajouter un connecteur personnalisé."
+                            ),
+                            html.Li(f"URL du serveur MCP : {url}"),
+                            html.Li(
+                                "Laissez le champ « Client Secret » vide (client public)."
+                            ),
+                            html.Li(
+                                "Connectez-vous avec votre compte colibre, puis « Autoriser »."
+                            ),
+                        ]
+                    ),
+                ],
+            ),
+            dbc.AccordionItem(
                 title="Gemini CLI",
                 children=[
                     html.Pre(html.Code(gemini)),
@@ -68,8 +88,20 @@ def client_instructions(url: str, token: str):
                 title="ChatGPT",
                 children=[
                     html.P(
-                        """L'app ChatGPT grand public exige une technique d'authentification plus complexe
-                            qu'un simple jeton. Votez pour cette fonctionnalité si elle peut vous être utile."""
+                        "ChatGPT utilise aussi OAuth (aucun jeton à copier). Dans les "
+                        "connecteurs, ajoutez un connecteur par URL :"
+                    ),
+                    html.Ol(
+                        [
+                            html.Li(f"URL du serveur MCP : {url}"),
+                            html.Li(
+                                "Connectez-vous avec colibre, puis autorisez l'accès."
+                            ),
+                        ]
+                    ),
+                    html.P(
+                        "La disponibilité des connecteurs dépend de votre plan ChatGPT.",
+                        className="text-muted",
                     ),
                 ],
             ),
@@ -185,9 +217,10 @@ def layout(**_):
         [
             html.H2("Connecteur MCP"),
             html.P(
-                "Générez un jeton pour connecter votre agent IA (Claude, Gemini, "
-                "Mistral…) aux données colibre via le protocole MCP. Le jeton vaut "
-                "votre identité : gardez-le secret. Un abonnement actif est requis."
+                "Les clients en ligne de commande (Claude Code, Gemini, Mistral) se "
+                "connectent avec un jeton généré ci-dessous. Les applications grand "
+                "public (Claude.ai, ChatGPT) se connectent par OAuth, sans jeton à "
+                "copier. Dans tous les cas, un abonnement actif est requis."
             ),
             *alerts,
             html.H4("Générer un jeton", className="mt-3"),
