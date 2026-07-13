@@ -1,6 +1,7 @@
 import json
 import os
 from datetime import datetime
+from urllib.parse import parse_qs
 
 import dash_bootstrap_components as dbc
 from dash import (
@@ -22,6 +23,7 @@ from src.db import schema
 from src.figures import ag_grid, make_column_picker
 from src.pages._compte_shell import current_user_has_subscription
 from src.saved_views import db as saved_views_db
+from src.saved_views import resolve as saved_views_resolve
 from src.saved_views import ui as saved_views_ui
 from src.utils import get_data_update_timestamp, logger
 from src.utils.grid import apply_persisted_layout, fetch_grid_page, grid_column_defs
@@ -128,6 +130,9 @@ layout = [
     dcc.Store(id="tableau-table"),
     dcc.Store(id="tableau-total"),
     dcc.Store(id="tableau-total-unique"),
+    dcc.Store(id="active-view"),
+    dcc.Store(id="suppress-next", data=0),
+    dcc.Store(id="vue-resolution"),
     html.Script(
         type="application/ld+json",
         id="dataset_jsonld",
@@ -197,6 +202,7 @@ layout = [
         [],
         id="header",
     ),
+    html.Div(id="vue-resolve-feedback"),
     dcc.Loading(
         overlay_style={"visibility": "visible", "filter": "blur(2px)"},
         id="loading-home",
@@ -377,6 +383,30 @@ layout = [
                     ),
                 ],
                 className="table-toolbar",
+            ),
+            html.Div(
+                id="share-url-box",
+                style={"display": "none"},
+                className="d-flex align-items-center gap-2 my-2",
+                children=[
+                    dbc.Label(
+                        "URL directe vers cette vue :",
+                        html_for="share-url-input",
+                        className="mb-0",
+                    ),
+                    dcc.Input(
+                        id="share-url-input",
+                        type="text",
+                        readOnly=True,
+                        className="form-control form-control-sm",
+                        style={"maxWidth": "420px"},
+                    ),
+                    dcc.Clipboard(
+                        target_id="share-url-input",
+                        title="Copier le lien vers cette vue",
+                        style={"cursor": "pointer", "fontSize": "1.1rem"},
+                    ),
+                ],
             ),
             html.Div(
                 className="table-meta",
@@ -584,6 +614,63 @@ def reset_view(n_clicks, column_state):
 )
 def toggle_saved_views_bar(_pathname):
     return saved_views_ui.bar_style(current_user_has_subscription())
+
+
+def resolve_vue_from_url(search: str) -> dict | None:
+    """Extrait ?vue=... de la query string et le résout. Renvoie None s'il n'y a
+    pas de paramètre `vue` (chargement normal du tableau)."""
+    params = parse_qs((search or "").lstrip("?"))
+    values = params.get("vue")
+    if not values:
+        return None
+    return saved_views_resolve.resolve_vue_param(values[0], schema)
+
+
+@callback(
+    Output("vue-resolution", "data"),
+    Input("tableau_url", "search"),
+)
+def store_vue_resolution(search):
+    resolution = resolve_vue_from_url(search)
+    return resolution if resolution is not None else no_update
+
+
+def apply_vue_resolution(resolution):
+    """Mappe le dict de résolution vers les sorties de la grille + stores. Séparé
+    du callback pour être testable sans contexte Dash."""
+    if resolution is None:
+        return (no_update,) * 6
+    if not resolution["found"]:
+        return (
+            no_update,
+            no_update,
+            no_update,
+            None,  # active-view : masque le bloc de partage
+            0,
+            html.Div(resolution["error"], className="alert alert-warning py-2"),
+        )
+    return (
+        resolution["filter_model"],
+        resolution["column_state"],
+        resolution["hidden_columns"],
+        {"token": resolution["token"], "url": resolution["url"]},
+        1,  # suppress-next : neutralise l'écho de l'application (verrou one-shot)
+        "",
+    )
+
+
+@callback(
+    Output("tableau_grid", "filterModel", allow_duplicate=True),
+    Output("tableau_grid", "columnState", allow_duplicate=True),
+    Output("tableau-hidden-columns", "data", allow_duplicate=True),
+    Output("active-view", "data", allow_duplicate=True),
+    Output("suppress-next", "data", allow_duplicate=True),
+    Output("vue-resolve-feedback", "children"),
+    Input("vue-resolution", "data"),
+    prevent_initial_call=True,
+)
+def apply_vue_resolution_cb(resolution):
+    return apply_vue_resolution(resolution)
 
 
 @callback(
