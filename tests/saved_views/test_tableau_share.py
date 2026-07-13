@@ -2,6 +2,7 @@ import json
 from unittest.mock import patch
 
 import dash
+from selenium.webdriver.support.ui import WebDriverWait
 
 import src.app  # noqa: F401  # instancie l'app → register_page()
 from src.auth import db as auth_db
@@ -52,14 +53,11 @@ def test_apply_vue_resolution_found_shows_box(users_db_path):
         "url": "https://test.colibre.fr/tableau?vue=ma-vue_abc123",
         "error": None,
     }
-    fm, cs, hidden, active, suppress, feedback = tableau.apply_vue_resolution(
-        resolution
-    )
+    fm, cs, hidden, active, feedback = tableau.apply_vue_resolution(resolution)
     assert fm == resolution["filter_model"]
     assert cs == resolution["column_state"]
     assert hidden == ["montant"]
     assert active == {"token": "abc123", "url": resolution["url"]}
-    assert suppress == 1
     assert feedback == ""
 
 
@@ -73,13 +71,10 @@ def test_apply_vue_resolution_not_found_shows_alert(users_db_path):
         "url": None,
         "error": resolve.NOT_FOUND_MESSAGE,
     }
-    fm, cs, hidden, active, suppress, feedback = tableau.apply_vue_resolution(
-        resolution
-    )
+    fm, cs, hidden, active, feedback = tableau.apply_vue_resolution(resolution)
     assert fm is dash.no_update
     assert cs is dash.no_update
     assert active is None
-    assert suppress == 0
     assert resolve.NOT_FOUND_MESSAGE in str(feedback)
 
 
@@ -100,31 +95,21 @@ class _Ctx:
 
 
 def test_render_share_box_visible_when_active():
-    style, value = tableau.render_share_box(
+    class_name, value = tableau.render_share_box(
         {"token": "abc123", "url": "https://x/tableau?vue=a_abc123"}
     )
-    assert style == {}
+    assert "d-flex" in class_name
+    assert "d-none" not in class_name
     assert value == "https://x/tableau?vue=a_abc123"
 
 
 def test_render_share_box_hidden_when_none():
-    style, value = tableau.render_share_box(None)
-    assert style == {"display": "none"}
+    class_name, value = tableau.render_share_box(None)
+    assert "d-none" in class_name
     assert value == ""
 
 
-def test_hide_lock_consumes_echo_then_hides():
-    # 1er changement = écho de l'application (suppress=1) → garde la box.
-    active, suppress = tableau.hide_share_box_on_change({}, [], 1)
-    assert active is dash.no_update
-    assert suppress == 0
-    # Changement réel suivant (suppress=0) → masque.
-    active2, suppress2 = tableau.hide_share_box_on_change({"objet": {}}, [], 0)
-    assert active2 is None
-    assert suppress2 == 0
-
-
-def test_apply_saved_view_sets_active_and_suppress(monkeypatch, users_db_path):
+def test_apply_saved_view_sets_active(monkeypatch, users_db_path):
     monkeypatch.setattr(tableau.saved_views_ui, "DOMAIN_NAME", "test.colibre.fr")
     saved_views_db.init_schema()
     uid = _make_user()
@@ -136,12 +121,11 @@ def test_apply_saved_view_sets_active_and_suppress(monkeypatch, users_db_path):
         out = tableau.apply_saved_view(
             [1], [{"type": "saved-view-item", "index": view_id}]
         )
-    # (filter_model, column_state, hidden, active-view, suppress-next)
+    # (filter_model, column_state, hidden, active-view)
     assert out[3] == {
         "token": token,
         "url": f"https://test.colibre.fr/tableau?vue=ma-vue_{token}",
     }
-    assert out[4] == 1
 
 
 def test_save_view_shows_box(monkeypatch, users_db_path):
@@ -151,6 +135,57 @@ def test_save_view_shows_box(monkeypatch, users_db_path):
     monkeypatch.setattr(tableau, "current_user_has_subscription", lambda: True)
     with patch.object(tableau, "current_user", _fake_user(uid)):
         out = tableau.save_view(1, "Nouvelle", {}, [])
-    # (is_open, feedback, refresh, active-view, suppress-next)
+    # (is_open, feedback, refresh, active-view)
     assert out[3]["url"].startswith("https://test.colibre.fr/tableau?vue=nouvelle_")
-    assert out[4] == 0  # sauvegarde ne modifie pas la grille → pas d'écho
+
+
+def _type_in_first_filter(dash_duo):
+    """Saisit du texte dans le premier filtre flottant présent dans le DOM (AG
+    Grid virtualise horizontalement : 'objet' peut être hors DOM). Re-localise
+    l'élément à chaque appel : la grille se re-rend juste après l'application de
+    la vue (echo columnVisible) et remplace l'input."""
+    selector = "#tableau_grid .ag-floating-filter-input input"
+    dash_duo.wait_for_element(selector, timeout=8)
+    el = dash_duo.find_elements(selector)[0]
+    dash_duo.driver.execute_script(
+        "arguments[0].scrollIntoView({block: 'center', inline: 'center'});", el
+    )
+    el.click()
+    el.send_keys("z")
+
+
+def test_open_shared_view_applies_and_shows_box(dash_duo, users_db_path):
+    """?vue=<token> applique la vue et affiche le bloc de partage ; une action
+    utilisateur (saisie d'un filtre) le masque via l'écouteur d'événements AG
+    Grid (source utilisateur ≠ 'api'), l'écho de l'application étant ignoré."""
+    saved_views_db.init_schema()
+    uid = _make_user()
+    token = _seed(uid, "Ma vue")
+
+    from src.app import app
+
+    dash_duo.start_server(app)
+    dash_duo.wait_for_text_to_equal(".logo > h1", "colibre", timeout=6)
+    dash_duo.wait_for_page(dash_duo.server_url + f"/tableau?vue=ma-vue_{token}")
+
+    # Le bloc de partage est visible et contient l'URL courte (jeton). La valeur
+    # de l'input est renseignée par le même callback que l'affichage : la lire
+    # non vide prouve que l'écho de l'application n'a PAS masqué le bloc.
+    dash_duo.wait_for_style_to_equal("#share-url-box", "display", "flex", timeout=10)
+    dash_duo.wait_for_element("#share-url-input", timeout=6)
+    WebDriverWait(dash_duo.driver, 10).until(
+        lambda _d: token
+        in (dash_duo.find_element("#share-url-input").get_attribute("value") or "")
+    )
+
+    # Une action utilisateur (filtre) masque la box. On re-tente la saisie tant
+    # que le bloc n'est pas masqué : la fenêtre de re-render post-application
+    # peut invalider l'input entre le find et le send_keys.
+    def _box_hidden(_d):
+        _type_in_first_filter(dash_duo)
+        display = dash_duo.find_element("#share-url-box").value_of_css_property(
+            "display"
+        )
+        return display == "none"
+
+    WebDriverWait(dash_duo.driver, 15).until(_box_hidden)

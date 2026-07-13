@@ -1184,6 +1184,7 @@ def ag_grid(
     column_defs: list[dict],
     persisted_props=("filterModel", "columnState"),
     persistence: bool = True,
+    event_listeners: "dict | None" = None,
 ) -> "dag.AgGrid":
     """Grille AG Grid server-side (infinite) pour la page Tableau.
 
@@ -1195,6 +1196,7 @@ def ag_grid(
         id=grid_id,
         columnDefs=column_defs,
         defaultColDef={"resizable": True, "minWidth": 120, "floatingFilter": True},
+        eventListeners=event_listeners,
         rowModelType="infinite",
         dangerously_allow_code=True,  # rend le HTML <a> des cellules liens
         dashGridOptions={

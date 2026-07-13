@@ -65,10 +65,30 @@ register_page(
     order=1,
 )
 
+# Le bloc « URL directe » (share-url-box) reste affiché tant que la vue partagée
+# n'a pas dérivé. On détecte la dérive par des écouteurs d'événements AG Grid
+# côté client plutôt que par diff d'état : l'application programmatique d'une vue
+# (source 'api'/'gridOptionsChanged') est ignorée, seules les actions utilisateur
+# effacent `active-view` et masquent le bloc. Voir
+# src/assets/dashAgGridFunctions.js. Cette approche évite la course
+# d'ordonnancement d'un compteur d'échos et le bruit du columnState réémis.
+#
+# On écoute filtre et tri (signaux natifs fiables, source utilisateur distincte
+# de 'api'). La visibilité des colonnes est pilotée par le sélecteur « Colonnes »
+# maison (store tableau-hidden-columns → régénération des columnDefs → événement
+# columnVisible de source 'gridOptionsChanged', identique pour l'utilisateur et
+# l'application programmatique) : indistinguable via AG Grid, donc non écoutée.
+_SHARE_DRIFT_LISTENERS = {
+    event: ["hideShareOnUserAction(params)"]
+    for event in ("filterChanged", "sortChanged")
+}
+
 DATATABLE = html.Div(
     className="marches_table",
     children=ag_grid(
-        "tableau_grid", grid_column_defs(get_default_hidden_columns("tableau"))
+        "tableau_grid",
+        grid_column_defs(get_default_hidden_columns("tableau")),
+        event_listeners=_SHARE_DRIFT_LISTENERS,
     ),
 )
 
@@ -131,7 +151,6 @@ layout = [
     dcc.Store(id="tableau-total"),
     dcc.Store(id="tableau-total-unique"),
     dcc.Store(id="active-view"),
-    dcc.Store(id="suppress-next", data=0),
     dcc.Store(id="vue-resolution"),
     html.Script(
         type="application/ld+json",
@@ -386,8 +405,7 @@ layout = [
             ),
             html.Div(
                 id="share-url-box",
-                style={"display": "none"},
-                className="d-flex align-items-center gap-2 my-2",
+                className="share-url-box d-none",
                 children=[
                     dbc.Label(
                         "URL directe vers cette vue :",
@@ -636,17 +654,24 @@ def store_vue_resolution(search):
 
 
 def apply_vue_resolution(resolution):
-    """Mappe le dict de résolution vers les sorties de la grille + stores. Séparé
-    du callback pour être testable sans contexte Dash."""
+    """Mappe le dict de résolution vers les sorties de la grille + le store
+    `active-view`. Séparé du callback pour être testable sans contexte Dash.
+
+    Sorties : (filterModel, columnState, hidden-columns, active-view, feedback).
+    Le masquage du bloc de partage n'est PAS géré par comparaison d'état ici :
+    c'est un écouteur d'événements AG Grid côté client (eventListeners →
+    `dashAgGridFunctions.hideShareOnUserAction`) qui efface `active-view` sur
+    action utilisateur (filtre/tri/colonne), en ignorant l'application
+    programmatique (source == 'api'). Voir src/assets/dashAgGridFunctions.js.
+    """
     if resolution is None:
-        return (no_update,) * 6
+        return (no_update,) * 5
     if not resolution["found"]:
         return (
             no_update,
             no_update,
             no_update,
             None,  # active-view : masque le bloc de partage
-            0,
             html.Div(resolution["error"], className="alert alert-warning py-2"),
         )
     return (
@@ -654,7 +679,6 @@ def apply_vue_resolution(resolution):
         resolution["column_state"],
         resolution["hidden_columns"],
         {"token": resolution["token"], "url": resolution["url"]},
-        1,  # suppress-next : neutralise l'écho de l'application (verrou one-shot)
         "",
     )
 
@@ -664,7 +688,6 @@ def apply_vue_resolution(resolution):
     Output("tableau_grid", "columnState", allow_duplicate=True),
     Output("tableau-hidden-columns", "data", allow_duplicate=True),
     Output("active-view", "data", allow_duplicate=True),
-    Output("suppress-next", "data", allow_duplicate=True),
     Output("vue-resolve-feedback", "children"),
     Input("vue-resolution", "data"),
     prevent_initial_call=True,
@@ -673,32 +696,23 @@ def apply_vue_resolution_cb(resolution):
     return apply_vue_resolution(resolution)
 
 
+# Classe Bootstrap de visibilité du bloc de partage. On bascule la CLASSE
+# (d-flex ↔ d-none, toutes deux `!important`) et non le style inline : `.d-flex`
+# est `display: flex !important` et l'emporterait sur un `style={"display":
+# "none"}` inline, rendant le bloc impossible à masquer par le style.
+_SHARE_BOX_SHOWN = "share-url-box d-flex align-items-center gap-2 my-2"
+_SHARE_BOX_HIDDEN = "share-url-box d-none"
+
+
 @callback(
-    Output("share-url-box", "style"),
+    Output("share-url-box", "className"),
     Output("share-url-input", "value"),
     Input("active-view", "data"),
 )
 def render_share_box(active_view):
     if active_view and active_view.get("url"):
-        return {}, active_view["url"]
-    return {"display": "none"}, ""
-
-
-@callback(
-    Output("active-view", "data", allow_duplicate=True),
-    Output("suppress-next", "data", allow_duplicate=True),
-    Input("tableau_grid", "filterModel"),
-    Input("tableau_grid", "columnState"),
-    State("suppress-next", "data"),
-    prevent_initial_call=True,
-)
-def hide_share_box_on_change(_filter_model, _column_state, suppress):
-    # Verrou « sale » à sens unique. L'application d'une vue modifie elle-même
-    # filterModel/columnState (écho) : on l'absorbe une fois (suppress>0), puis
-    # tout changement réel masque la box en effaçant active-view.
-    if suppress and suppress > 0:
-        return no_update, suppress - 1
-    return None, 0
+        return _SHARE_BOX_SHOWN, active_view["url"]
+    return _SHARE_BOX_HIDDEN, ""
 
 
 @callback(
@@ -715,7 +729,6 @@ def toggle_save_view_modal(_open):
     Output("save-view-feedback", "children"),
     Output("saved-views-refresh", "data"),
     Output("active-view", "data", allow_duplicate=True),
-    Output("suppress-next", "data", allow_duplicate=True),
     Input("btn-save-view-confirm", "n_clicks"),
     State("save-view-name", "value"),
     State("tableau_grid", "filterModel"),
@@ -731,7 +744,6 @@ def save_view(_n, name, filter_model, column_state):
             html.Span(error, style={"color": "red"}),
             no_update,
             no_update,
-            no_update,
         )
     # On stocke l'AST canonique (indépendant de l'UI), pas le filterModel brut
     # d'AG Grid : cf. spec de conception, "l'AST (JSON) + columnState,
@@ -745,7 +757,6 @@ def save_view(_n, name, filter_model, column_state):
         html.Span(f"Vue « {clean_name} » enregistrée.", style={"color": "green"}),
         clean_name,
         active,
-        0,  # la sauvegarde ne modifie pas la grille → pas d'écho à absorber
     )
 
 
@@ -766,7 +777,6 @@ def populate_saved_views_menu(_pathname, _refresh):
     Output("tableau_grid", "columnState"),
     Output("tableau-hidden-columns", "data", allow_duplicate=True),
     Output("active-view", "data", allow_duplicate=True),
-    Output("suppress-next", "data", allow_duplicate=True),
     Input({"type": "saved-view-item", "index": ALL}, "n_clicks"),
     State({"type": "saved-view-item", "index": ALL}, "id"),
     prevent_initial_call=True,
@@ -774,10 +784,10 @@ def populate_saved_views_menu(_pathname, _refresh):
 def apply_saved_view(n_clicks, ids):
     triggered = ctx.triggered_id
     if not triggered or not any(n_clicks):
-        return no_update, no_update, no_update, no_update, no_update
+        return no_update, no_update, no_update, no_update
     row = saved_views_db.get(triggered["index"], current_user.id)
     if not row:
-        return no_update, no_update, no_update, no_update, no_update
+        return no_update, no_update, no_update, no_update
     try:
         view = json.loads(row["query"])
         # L'AST canonique est stocké (pas le filterModel brut d'AG Grid) :
@@ -797,7 +807,7 @@ def apply_saved_view(n_clicks, ids):
             "Vue sauvegardée au format pré-migration, impossible de l'appliquer : "
             f"id={row['id']!r} name={row['name']!r}"
         )
-        return no_update, no_update, no_update, no_update, no_update
+        return no_update, no_update, no_update, no_update
     # tableau-hidden-columns pilote les cases à cocher du sélecteur de colonnes
     # (update_checkboxes_from_hidden_columns) et la régénération des
     # columnDefs (apply_hidden_columns) ; sans cette sortie, ce store restait
@@ -808,7 +818,7 @@ def apply_saved_view(n_clicks, ids):
         "token": row["token"],
         "url": saved_views_ui.build_view_url(row["name"], row["token"]),
     }
-    return filter_model, column_state, hidden_columns, active, 1
+    return filter_model, column_state, hidden_columns, active
 
 
 @callback(

@@ -48,13 +48,14 @@ def test_apply_saved_view_old_format_returns_no_update(monkeypatch, users_db_pat
     monkeypatch.setattr(tableau, "ctx", _Ctx)
 
     with patch.object(tableau, "current_user", _fake_user(uid)):
-        filter_model, column_state, hidden_columns = tableau.apply_saved_view(
+        filter_model, column_state, hidden_columns, active = tableau.apply_saved_view(
             [1], [{"type": "saved-view-item", "index": view_id}]
         )
 
     assert filter_model is dash.no_update
     assert column_state is dash.no_update
     assert hidden_columns is dash.no_update
+    assert active is dash.no_update
 
 
 def test_apply_saved_view_new_format_returns_view(monkeypatch, users_db_path):
@@ -75,8 +76,10 @@ def test_apply_saved_view_new_format_returns_view(monkeypatch, users_db_path):
     monkeypatch.setattr(tableau, "ctx", _Ctx)
 
     with patch.object(tableau, "current_user", _fake_user(uid)):
-        filter_model, returned_column_state, hidden_columns = tableau.apply_saved_view(
-            [1], [{"type": "saved-view-item", "index": view_id}]
+        filter_model, returned_column_state, hidden_columns, active = (
+            tableau.apply_saved_view(
+                [1], [{"type": "saved-view-item", "index": view_id}]
+            )
         )
 
     assert filter_model == {
@@ -86,6 +89,8 @@ def test_apply_saved_view_new_format_returns_view(monkeypatch, users_db_path):
     # tableau-hidden-columns doit être resynchronisé à partir du columnState
     # rappelé (revue finale #41, round 2) : seules les colonnes avec hide=True.
     assert hidden_columns == ["acheteur_nom"]
+    # active-view alimente le bloc de partage (token + URL courte).
+    assert active["token"] and active["url"].endswith(f"_{active['token']}")
 
 
 def test_apply_saved_view_missing_ast_key_degrades_gracefully(
@@ -111,8 +116,10 @@ def test_apply_saved_view_missing_ast_key_degrades_gracefully(
     monkeypatch.setattr(tableau, "ctx", _Ctx)
 
     with patch.object(tableau, "current_user", _fake_user(uid)):
-        filter_model, returned_column_state, hidden_columns = tableau.apply_saved_view(
-            [1], [{"type": "saved-view-item", "index": view_id}]
+        filter_model, returned_column_state, hidden_columns, _active = (
+            tableau.apply_saved_view(
+                [1], [{"type": "saved-view-item", "index": view_id}]
+            )
         )
 
     assert filter_model == {}
