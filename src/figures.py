@@ -1098,7 +1098,12 @@ AG_GRID_LOCALE_FR = {
 }
 
 
-def ag_grid(grid_id: str, column_defs: list[dict]) -> "dag.AgGrid":
+def ag_grid(
+    grid_id: "str | dict",
+    column_defs: list[dict],
+    persisted_props=("filterModel", "columnState"),
+    persistence: bool = True,
+) -> "dag.AgGrid":
     """Grille AG Grid server-side (infinite) pour la page Tableau.
 
     Thème aligné sur les dash_table.DataTable du reste du site (en-tête
@@ -1156,7 +1161,7 @@ def ag_grid(grid_id: str, column_defs: list[dict]) -> "dag.AgGrid":
         # apparaître le défilement horizontal natif d'AG Grid plutôt que de
         # les compresser/étirer toutes à la même largeur.
         style={"height": "70vh", "width": "100%"},
-        persistence=True,
+        persistence=persistence,
         persistence_type="local",
-        persisted_props=["filterModel", "columnState"],
+        persisted_props=list(persisted_props),
     )

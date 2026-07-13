@@ -381,3 +381,27 @@ def test_ag_grid_always_shows_horizontal_scroll():
     grid = ag_grid("tableau_grid", [])
 
     assert grid.dashGridOptions["alwaysShowHorizontalScroll"] is True
+
+
+def test_ag_grid_accepts_dict_id_and_custom_persisted_props():
+    """Grille entité : id pattern-matching + persistance limitée au filterModel
+    (columnState géré via un store partagé, pas la persistance native)."""
+    from src.figures import ag_grid
+
+    gid = {"type": "acheteur-grid", "entity_id": "123", "year": "Toutes les années"}
+    grid = ag_grid(gid, [], persisted_props=["filterModel"])
+
+    assert grid.id == gid
+    assert list(grid.persisted_props) == ["filterModel"]
+    assert grid.persistence is True
+
+
+def test_ag_grid_defaults_unchanged_for_tableau():
+    """Sans args de persistance, comportement identique au Lot 1 (tableau.py)."""
+    from src.figures import ag_grid
+
+    grid = ag_grid("tableau_grid", [])
+
+    assert grid.id == "tableau_grid"
+    assert list(grid.persisted_props) == ["filterModel", "columnState"]
+    assert grid.persistence is True
