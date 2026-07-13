@@ -1,5 +1,10 @@
+import re
+
 import dash_bootstrap_components as dbc
 from dash import html
+from unidecode import unidecode
+
+from src.utils import DOMAIN_NAME
 
 
 def bar_style(has_subscription: bool) -> dict:
@@ -8,6 +13,30 @@ def bar_style(has_subscription: bool) -> dict:
 
 def clean_view_name(name: str | None) -> str:
     return (name or "").strip()
+
+
+def slugify(name: str | None) -> str:
+    """Slug décoratif en tirets (convention web) : minuscule, translittéré ASCII,
+    non-alphanumériques → '-', collapse/trim. Ne contient jamais d'underscore
+    (qui sert de séparateur slug↔jeton dans l'URL)."""
+    ascii_name = unidecode(name or "").lower()
+    return re.sub(r"[^a-z0-9]+", "-", ascii_name).strip("-")
+
+
+def build_view_url(name: str, token: str) -> str:
+    slug = slugify(name)
+    prefix = f"{slug}_" if slug else ""
+    return f"https://{DOMAIN_NAME}/tableau?vue={prefix}{token}"
+
+
+def token_from_vue_param(value: str | None) -> str | None:
+    """Extrait le jeton du paramètre ?vue=. Le jeton base62 ne contient pas d'`_`
+    et le slug est en tirets, donc le segment après le dernier `_` est le jeton
+    (`?vue=abc123` sans slug fonctionne aussi)."""
+    if not value:
+        return None
+    token = value.rsplit("_", 1)[-1]
+    return token or None
 
 
 def prepare_view_to_save(
