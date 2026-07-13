@@ -168,15 +168,17 @@ def test_open_shared_view_applies_and_shows_box(dash_duo, users_db_path):
     dash_duo.wait_for_text_to_equal(".logo > h1", "colibre", timeout=6)
     dash_duo.wait_for_page(dash_duo.server_url + f"/tableau?vue=ma-vue_{token}")
 
-    # Le bloc de partage est visible et contient l'URL courte (jeton). La valeur
-    # de l'input est renseignée par le même callback que l'affichage : la lire
-    # non vide prouve que l'écho de l'application n'a PAS masqué le bloc.
+    # Le bloc de partage est visible et affiche l'URL courte (jeton). Le texte est
+    # renseigné par le même callback que l'affichage : le lire non vide prouve que
+    # l'écho de l'application n'a PAS masqué le bloc.
     dash_duo.wait_for_style_to_equal("#share-url-box", "display", "flex", timeout=10)
-    dash_duo.wait_for_element("#share-url-input", timeout=6)
+    dash_duo.wait_for_element("#share-url-text", timeout=6)
     WebDriverWait(dash_duo.driver, 10).until(
-        lambda _d: token
-        in (dash_duo.find_element("#share-url-input").get_attribute("value") or "")
+        lambda _d: token in (dash_duo.find_element("#share-url-text").text or "")
     )
+
+    # Le bouton de copie porte un libellé explicite (UX : pas d'icône seule).
+    assert "Copier le lien" in dash_duo.find_element("#share-url-box").text
 
     # Une action utilisateur (filtre) masque la box. On re-tente la saisie tant
     # que le bloc n'est pas masqué : la fenêtre de re-render post-application

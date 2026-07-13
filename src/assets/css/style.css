@@ -1095,3 +1095,13 @@ input[type="number"] {
   background-color: var(--bs-primary-bg-subtle);
   border-color: var(--bs-primary);
 }
+
+/* Lien de partage affiché en texte (span) mais stylé comme un champ :
+   bordure gris clair, coins arrondis, texte légèrement plus petit. */
+.share-url-text {
+  font-size: 90%;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  background-color: var(--bs-body-bg);
+}

@@ -31,8 +31,14 @@ def _content():
         [
             html.H2("Mes vues"),
             html.P(
-                "Les vues que vous enregistrez depuis le Tableau apparaissent ici. "
-                "Cliquez sur « Ouvrir » pour appliquer une vue."
+                [
+                    "Les vues que vous enregistrez depuis le Tableau apparaissent "
+                    "ici. Cliquez sur ",
+                    html.B("Ouvrir"),
+                    " pour appliquer une vue, ou sur ",
+                    html.B("Copier le lien"),
+                    " pour copier son adresse Web et la partager par mail ou par message, y compris avec une personne qui n'a pas de compte colibre.",
+                ]
             ),
             html.Div(saved_views_ui.views_table(views), id="vues-list"),
             dbc.Modal(

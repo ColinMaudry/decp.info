@@ -79,7 +79,21 @@ def _view_row(view) -> html.Div:
             dcc.Clipboard(
                 content=share_url,
                 title="Copier le lien vers cette vue",
-                style={"cursor": "pointer", "fontSize": "1.1rem"},
+                className="btn btn-outline-secondary btn-sm "
+                "d-inline-flex align-items-center",
+                children=[
+                    html.Img(
+                        src="/assets/copy.svg",
+                        alt="",
+                        style={
+                            "height": "1em",
+                            "verticalAlign": "-0.15em",
+                            "marginRight": "0.35em",
+                        },
+                    ),
+                    "Copier le lien",
+                ],
+                copied_children="✓ Copié",
             ),
             dbc.Button(
                 "Renommer",
@@ -102,9 +116,9 @@ def _view_row(view) -> html.Div:
 def views_table(views) -> html.Div:
     if not views:
         return html.Div(
-            html.P(
+            dcc.Markdown(
                 "Vous n'avez pas encore de vue enregistrée. "
-                "Créez-en une depuis le Tableau, bouton « Sauvegarder la vue »."
+                "Créez-en une depuis le Tableau, bouton **Sauvegarder la vue**."
             )
         )
     return html.Div([_view_row(v) for v in views])

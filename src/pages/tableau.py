@@ -411,21 +411,35 @@ layout = [
                 className="share-url-box d-none",
                 children=[
                     dbc.Label(
-                        "URL directe vers cette vue :",
-                        html_for="share-url-input",
+                        "Lien direct vers cette vue :",
                         className="mb-0",
                     ),
-                    dcc.Input(
-                        id="share-url-input",
-                        type="text",
-                        readOnly=True,
-                        className="form-control form-control-sm",
-                        style={"maxWidth": "420px"},
+                    # URL affichée comme texte sélectionnable : prend exactement
+                    # sa largeur (pas de champ pleine largeur qui encombre) et
+                    # passe à la ligne si le lien est long (pas de troncature).
+                    html.Span(
+                        id="share-url-text",
+                        className="share-url-text",
+                        style={"wordBreak": "break-all", "minWidth": 0},
                     ),
                     dcc.Clipboard(
-                        target_id="share-url-input",
+                        target_id="share-url-text",
                         title="Copier le lien vers cette vue",
-                        style={"cursor": "pointer", "fontSize": "1.1rem"},
+                        className="btn btn-outline-secondary btn-sm "
+                        "d-inline-flex align-items-center",
+                        children=[
+                            html.Img(
+                                src="/assets/copy.svg",
+                                alt="",
+                                style={
+                                    "height": "1em",
+                                    "verticalAlign": "-0.15em",
+                                    "marginRight": "0.35em",
+                                },
+                            ),
+                            "Copier le lien",
+                        ],
+                        copied_children="✓ Copié",
                     ),
                 ],
             ),
@@ -714,7 +728,7 @@ _SHARE_BOX_HIDDEN = "share-url-box d-none"
 
 @callback(
     Output("share-url-box", "className"),
-    Output("share-url-input", "value"),
+    Output("share-url-text", "children"),
     Input("active-view", "data"),
 )
 def render_share_box(active_view):
