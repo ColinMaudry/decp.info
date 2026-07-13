@@ -696,7 +696,8 @@ button.show-hide {
    .dropdown-menu : un override sur :root est masqué (déclaration composant plus
    spécifique). On pose donc la surcharge sur .dropdown-menu. */
 .dropdown-menu {
-  --bs-dropdown-link-hover-bg: #ccc;
+  --bs-dropdown-link-hover-bg: rgba(255, 240, 240, 1);
+  --bs-dropdown-link-active-bg: rgba(255, 240, 240, 1);
 }
 
 .Select-placeholder {
