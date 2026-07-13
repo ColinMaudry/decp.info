@@ -124,7 +124,16 @@ def get_data_schema() -> dict:
         raw = _load_schema_file(cache_path)
     if raw is None:
         raise RuntimeError("Aucun schéma disponible (ni distant ni cache).")
-    return OrderedDict((c["name"], c) for c in raw["fields"])
+    schema = OrderedDict((c["name"], c) for c in raw["fields"])
+    for col in schema.keys():
+        new_obj = schema[col]
+        if "enum" in new_obj:
+            enums = ", ".join(new_obj["enum"])
+            new_obj["description"] = (
+                f"{new_obj['description']} Valeurs possibles : {enums}"
+            )
+    print(schema["titulaire_typeIdentifiant"])
+    return schema
 
 
 def prepare_dashboard_data(**filter_params) -> pl.DataFrame:

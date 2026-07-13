@@ -972,21 +972,14 @@ def make_donut(
 
 def make_column_picker(page: str):
     table_data = []
-    table_columns = [
-        {
+    for col in schema.names():
+        column_data_schema = DATA_SCHEMA[col]
+        column_data = {
             "id": col,
-            "name": DATA_SCHEMA[col]["title"],
-            "description": DATA_SCHEMA[col]["description"],
+            "name": column_data_schema["title"],
+            "description": column_data_schema["description"],
         }
-        for col in schema.names()
-    ]
-    for column in table_columns:
-        new_column = {
-            "id": column["id"],
-            "name": column["name"],
-            "description": DATA_SCHEMA[column["id"]]["description"],
-        }
-        table_data.append(new_column)
+        table_data.append(column_data)
 
     table = (
         DataTable(
