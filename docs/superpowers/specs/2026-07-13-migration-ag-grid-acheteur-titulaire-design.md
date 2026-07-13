@@ -39,9 +39,14 @@ Factorise la logique commune aux deux pages, paramétrée par `org_type: Literal
 
 - `entity_grid_column_defs(org_type, hidden_columns, column_state) -> list[dict]` : `grid_column_defs()` du Lot 1 + `apply_persisted_layout()` par-dessus (réutilisés tels quels, aucune modif requise).
 - `fetch_entity_grid_page(filter_model, sort_model, start_row, end_row, base_where_sql, base_params) -> (rows, total, total_unique)` : appelle directement `fetch_grid_page()` du Lot 1 (déjà générique, aucune modif requise).
-- `export_entity_grid(filter_model, sort_model, hidden_columns, base_where_sql, base_params) -> pl.DataFrame` : variante de `export_dataframe()` du Lot 1, étendue avec `base_where_sql`/`base_params` (seule extension nécessaire côté `grid.py`).
+- `export_entity_grid(filter_model, sort_model, hidden_columns, base_where_sql, base_params) -> pl.DataFrame` : variante de `export_dataframe()` du Lot 1, étendue avec `base_where_sql`/`base_params`.
 - `entity_ag_grid(grid_id: dict, ...) -> dag.AgGrid` : appelle `ag_grid()` du Lot 1 (même thème, même config) avec un `id` pattern-matching au lieu d'une string.
 - Fabrique de callbacks pattern-matching partagée (datasource, reset, application des colonnes masquées, export filtré) enregistrée une fois, paramétrée par `org_type` — évite de dupliquer les `@callback` dans `acheteur.py` et `titulaire.py`.
+
+**Modifications requises côté Lot 1 (`grid.py` / `figures.py`)** :
+
+- `export_dataframe()` : ajouter les paramètres `base_where_sql="TRUE"`/`base_params=()` (aujourd'hui absents — cf. `src/utils/grid.py`), composés en `(base) AND (filtre)` comme le fait déjà `fetch_grid_page()`. `tableau.py` continue de l'appeler sans ces arguments (valeurs par défaut → comportement inchangé).
+- `ag_grid()` : **paramétrer la persistance**, aujourd'hui codée en dur à `persistence=True, persisted_props=["filterModel", "columnState"]` et `id: str`. Il faut accepter (a) un `id` dict (pattern-matching) en plus d'une string, et (b) un `persisted_props` configurable. La grille entité ne persistera que `["filterModel"]` (cf. « Persistance découplée » ci-dessous) ; `tableau.py` garde `["filterModel", "columnState"]` par défaut → comportement inchangé.
 
 `acheteur.py`/`titulaire.py` gardent leur fichier propre (URL, infos annuaire, carte, stats, histogramme, bouton "toutes les données" — tout ce qui n'est pas la grille) et appellent ce module pour tout ce qui est grille.
 
@@ -62,8 +67,8 @@ Comme `ach_year` (dropdown, pas dans l'URL) n'est connu qu'au runtime et non au 
 Callbacks pattern-matching (dans `entity_grid.py`, via `MATCH`) :
 
 - datasource : `Input({"type": f"{org_type}-grid", "acheteur_id": MATCH, "year": MATCH}, "getRowsRequest")` → `Output(..., "getRowsResponse")`.
-- reset : bouton (id fixe, hors grille) → `Output({"type": f"{org_type}-grid", ...}, "filterModel", allow_duplicate=True)` avec `ALL` (un seul reset visible à la fois, mais `ALL` reste nécessaire car ce n'est pas le composant qui a émis l'événement).
-- export filtré : lit `State({"type": f"{org_type}-grid", ...}, "filterModel")`/`"sortModel"` via `ALL` (un seul match actif).
+- reset : bouton (id fixe, hors grille) → efface **filtres ET tris** (le libellé du bouton dit « Supprime tous les filtres et les tris »), donc `Output({"type": f"{org_type}-grid", ...}, "filterModel")` **et** `Output(..., "columnState")` via `ALL` (un seul reset visible à la fois, mais `ALL` reste nécessaire car ce n'est pas le composant qui émet l'événement). On reproduit l'approche #47-safe de `tableau.py::reset_view` : le tri est effacé en réécrivant `columnState` avec `sort=None`/`sortIndex=None`, ce qui **préserve** largeur/ordre/épinglage des colonnes (ne pas utiliser `resetColumnState`, qui les effacerait aussi).
+- export filtré : lit `State({"type": f"{org_type}-grid", ...}, "filterModel")`/`"columnState"` via `ALL` (un seul match actif ; le `sortModel` est dérivé du `columnState` comme dans `tableau.py::download_data`).
 
 ### Persistance découplée : `filterModel` vs `columnState`
 
@@ -72,6 +77,10 @@ Callbacks pattern-matching (dans `entity_grid.py`, via `MATCH`) :
   - un `dcc.Store(id="entity-grid-columns-state", storage_type="local")` **partagé entre acheteur.py et titulaire.py** (même schéma DECP dans les deux cas),
   - un callback pattern-matching `Input({"type": ..., ...}, "columnState")` (`ALL`) → `Output("entity-grid-columns-state", "data")` écrit dedans à chaque changement,
   - `entity_grid_column_defs()` lit ce store et réapplique largeur/ordre via `apply_persisted_layout()` (déjà prévu pour ça) avant de construire les `columnDefs` de la grille, peu importe l'acheteur/titulaire affiché.
+
+> **Différence avec `tableau.py`** : là-bas, `apply_hidden_columns` lit `columnState` depuis le `State` **live de la grille** (id fixe, `columnState` persisté nativement). Ici, la grille ne persiste **pas** `columnState` (scoping par entité indésirable), donc le callback qui régénère les `columnDefs` (au chargement / changement de colonnes masquées) doit lire le columnState depuis le **store partagé**, pas depuis la grille.
+>
+> **Éviter la boucle** : le store est alimenté par `Input(grille.columnState)` et relu pour produire `columnDefs`, qui à leur tour peuvent faire ré-émettre `columnState` par AG Grid. Pour ne pas boucler, le callback qui régénère les `columnDefs` prend le store en `State` (pas en `Input`) — il n'est déclenché que par un changement de colonnes masquées ou un (re)montage de grille, jamais par l'écriture du store elle-même (même logique que `apply_hidden_columns` qui prend déjà `columnState` en `State`).
 
 ## Composants non-grille inchangés
 
@@ -91,6 +100,14 @@ Les 2 boutons existants sont conservés (rôles différents, confirmé) :
 
 - **"Téléchargement au format Excel"** (`download_acheteur_data`/`download_titulaire_data`) : inchangé, toutes les données de la fiche pour l'année sélectionnée, ignore l'état de la grille.
 - **Bouton "filtré"** (`btn-download-filtered-data-acheteur`/`titulaire`) : passe du pipeline Polars (`filter_table_data`/`sort_table_data` sur `filter_query`/`sort_by`) au chemin DuckDB du Lot 1 — `export_entity_grid()` recompile `filterModel`/`sortModel` courants (lus via `State` pattern-matching `ALL`) → AST → SQL, scopé par `base_where_sql`/`base_params` de l'entité. Seuil de 65 000 lignes conservé (dérivé du `total` retourné par `fetch_grid_page`).
+
+## Compteur de lignes (meta)
+
+On **reproduit l'affichage de `/tableau`** : « _X marchés (Y lignes)_ », où `X` = nombre de marchés **uniques** (`COUNT(DISTINCT uid)`, `total_unique`) et `Y` = nombre de lignes (`total`). Aujourd'hui acheteur/titulaire n'affichent qu'un compteur simple (`acheteur_nb_rows`/`titulaire_nb_rows`).
+
+- `fetch_grid_page()` renvoie déjà `(rows, total, total_unique)` — les deux valeurs sont donc disponibles sans requête supplémentaire.
+- Comme sur `tableau.py`, le datasource écrit `total`/`total_unique` dans deux stores (par page, ex. `acheteur-total` / `acheteur-total-unique`), et un callback `update_meta` équivalent produit le libellé + gère le seuil de 65 000 lignes (bouton d'export filtré désactivé au-delà, message d'aide). On réutilise le même format via `format_number()` que `tableau.py::update_meta`.
+- Ces stores/meta sont scopés par page (id fixe hors grille), alimentés par le datasource pattern-matching de la grille active.
 
 ## Dépendances
 
@@ -116,6 +133,9 @@ Aucune nouvelle dépendance (dash-ag-grid déjà installé au Lot 1).
 - `filterModel` persistant par `(entité, année)` ; `columnState` persistant globalement (partagé acheteur+titulaire), découplé via un store dédié.
 - Changement d'année → remontage de la grille (pas de rafraîchissement in-place).
 - Thème "brique" du Lot 1 réutilisé tel quel (pas d'apparence de base non-thémée).
+- `ag_grid()` doit être paramétré (id dict + `persisted_props` configurable) ; `export_dataframe()` doit recevoir `base_where_sql`/`base_params` — deux extensions rétro-compatibles côté Lot 1.
+- Reset efface filtres **et** tris (via réécriture `columnState` `sort=None`, en préservant largeur/ordre/épinglage — approche #47-safe de `tableau.py`).
+- Compteur de lignes : on reproduit l'affichage « X marchés (Y lignes) » de `/tableau` (via `total`/`total_unique` déjà renvoyés par `fetch_grid_page`).
 - Les 2 boutons d'export conservés (rôles différents).
 - Top 10 migré vers AG Grid simple (row model client-side), sans persistance.
 
