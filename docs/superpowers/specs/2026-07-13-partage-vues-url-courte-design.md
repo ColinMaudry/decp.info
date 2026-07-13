@@ -34,13 +34,16 @@ https://colibre.fr/tableau?vue=<slug>_<token>
 - `token` : **6 caractères base62** (`[0-9a-zA-Z]`) générés par `secrets`. ~5,7×10¹⁰
   combinaisons → énumération inutile. C'est l'**identifiant réel et immuable** de la
   vue (clé de lookup, unique globalement).
-- `slug` : dérivé du nom de la vue, purement **cosmétique** et **ignoré** à la
-  résolution. Régénéré depuis le nom à chaque construction d'URL (le renommage
-  d'une vue change le slug mais **pas** le lien, qui reste valide via le jeton).
-- Le jeton base62 ne contient jamais de `_`, donc le dernier segment après `rsplit("_", 1)`
-  est toujours le jeton. Formes équivalentes qui résolvent la même vue :
-  - `?vue=mes_marches_abc123` → jeton `abc123`
-  - `?vue=ZZZ_abc123` → jeton `abc123`
+- `slug` : dérivé du nom de la vue, en **tirets** (`-`, convention web / SEO), purement
+  **cosmétique** et **ignoré** à la résolution. Régénéré depuis le nom à chaque
+  construction d'URL (le renommage d'une vue change le slug mais **pas** le lien, qui
+  reste valide via le jeton).
+- **Séparateur slug↔jeton : `_`.** Le slug est en tirets donc ne contient aucun `_`,
+  et le jeton base62 non plus → le **seul** `_` de l'URL est le séparateur, et le
+  dernier segment après `rsplit("_", 1)` est toujours le jeton. Formes équivalentes
+  qui résolvent la même vue :
+  - `?vue=mes-marches-2024_abc123` → jeton `abc123`
+  - `?vue=zzz_abc123` → jeton `abc123`
   - `?vue=abc123` → jeton `abc123` (slug optionnel)
 
 (Pattern GitHub / Medium / Notion : slug lisible + id qui fait foi.)
@@ -90,8 +93,11 @@ sans effet aux démarrages suivants.
 
 - minuscules,
 - accents translittérés (ASCII fold),
-- caractères non-alphanumériques → `_`,
-- collapse des `_` répétés, trim des `_` en bord.
+- caractères non-alphanumériques → `-`,
+- collapse des `-` répétés, trim des `-` en bord.
+
+(Tirets, pas underscores : convention web/SEO, et garantit que le seul `_` de l'URL
+est le séparateur slug↔jeton.)
 
 Purement cosmétique. `build_view_url(name, token) -> str` :
 `f"https://{DOMAIN_NAME}/tableau?vue={slugify(name)}_{token}"` (réutilise
@@ -168,9 +174,10 @@ ce qui déclencherait le masquage immédiat. Neutralisé par un drapeau one-shot
 
 ## Tests
 
-- `slugify` : accents, espaces, casse, caractères spéciaux, collapse/trim.
-- `build_view_url` : forme attendue avec `DOMAIN_NAME`.
-- Parsing du jeton : `slug_token`, `token` nu, `_` dans le slug, param vide/malformé.
+- `slugify` : accents, espaces, casse, caractères spéciaux → `-`, collapse/trim,
+  absence d'underscore dans le résultat.
+- `build_view_url` : forme attendue avec `DOMAIN_NAME` (slug en tirets, séparateur `_`).
+- Parsing du jeton : `slug-en-tirets_token`, `token` nu, param vide/malformé.
 - `generate_token` : longueur/alphabet, unicité (mock collision).
 - `get_by_token` : trouvé / inconnu.
 - `upsert` : insertion génère un jeton ; écrasement (même nom) **préserve** le jeton.
