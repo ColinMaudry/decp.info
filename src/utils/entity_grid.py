@@ -11,7 +11,7 @@ Les callbacks Dash sont enregistrés par register_entity_grid_callbacks()
 (cf. module séparé de wiring) ; ici, seules des fonctions pures testables.
 """
 
-from dash import no_update
+from dash import ALL, MATCH, Input, Output, State, callback, ctx, dcc, no_update
 
 from src.figures import (
     AG_GRID_LOCALE_FR,  # noqa: F401  (réexport pratique)
@@ -116,3 +116,153 @@ def build_entity_grid(org_type, entity_id, year, hidden_columns, column_state):
     }
     defs = entity_grid_column_defs(hidden_columns, column_state)
     return ag_grid(grid_id, defs, persisted_props=["filterModel"])
+
+
+def register_entity_grid_callbacks(org_type: str) -> None:
+    """Enregistre les callbacks de grille pour la page org_type (acheteur/titulaire).
+
+    Appelée une fois par page. Utilise des closures sur org_type ; toute la
+    logique délègue aux fonctions pures ci-dessus (testées en Task 4).
+    """
+    gtype = grid_type(org_type)
+
+    # 1) Datasource server-side. Input MATCH (grille) → Output MATCH
+    #    (getRowsResponse) + Outputs fixes (stores totaux). Autorisé en Dash 4.4.
+    @callback(
+        Output({"type": gtype, "entity_id": MATCH, "year": MATCH}, "getRowsResponse"),
+        Output(f"{org_type}-total", "data"),
+        Output(f"{org_type}-total-unique", "data"),
+        Input({"type": gtype, "entity_id": MATCH, "year": MATCH}, "getRowsRequest"),
+        prevent_initial_call=True,
+    )
+    def _get_rows(request):
+        gid = ctx.triggered_id  # {"type", "entity_id", "year"}
+        if request is None or gid is None:
+            return no_update, no_update, no_update
+        if request.get("filterModel") and request.get("startRow", 0) == 0:
+            import json
+
+            from src.utils.tracking import track_search
+
+            track_search(json.dumps(request["filterModel"]), org_type)
+        return fetch_entity_page(org_type, gid["entity_id"], gid["year"], request)
+
+    # 2) (Re)construit la grille au changement de fiche (URL), d'année, ou de
+    #    colonnes masquées. Le remontage réinitialise le filterModel (accepté
+    #    au changement de fiche/année) ; pour les colonnes masquées voir §3bis.
+    @callback(
+        Output(f"{org_type}-grid-container", "children"),
+        Input(f"{org_type}_url", "pathname"),
+        Input(f"{org_type}_year", "value"),
+        State(f"{org_type}-hidden-columns", "data"),
+        State("entity-grid-columns-state", "data"),
+    )
+    def _build_grid(pathname, year, hidden_columns, column_state):
+        from src.utils.table import get_default_hidden_columns
+
+        entity_id = (pathname or "").split("/")[-1]
+        if hidden_columns is None:
+            hidden_columns = get_default_hidden_columns(org_type)
+        return build_entity_grid(
+            org_type, entity_id, year, hidden_columns, column_state
+        )
+
+    # 3) Persiste columnState (largeur/ordre/tri/visibilité) dans le store global
+    #    partagé. Input MATCH (grille) → Output fixe (store). Autorisé Dash 4.4.
+    @callback(
+        Output("entity-grid-columns-state", "data"),
+        Input({"type": gtype, "entity_id": MATCH, "year": MATCH}, "columnState"),
+        prevent_initial_call=True,
+    )
+    def _persist_column_state(column_state):
+        return column_state or no_update
+
+    # 3bis) Colonnes masquées → columnDefs in-place (préserve le filtre courant,
+    #       contrairement au remontage). Input fixe → Output ALL (grille unique).
+    @callback(
+        Output({"type": gtype, "entity_id": ALL, "year": ALL}, "columnDefs"),
+        Input(f"{org_type}-hidden-columns", "data"),
+        State({"type": gtype, "entity_id": ALL, "year": ALL}, "columnState"),
+        prevent_initial_call=True,
+    )
+    def _apply_hidden_columns(hidden_columns, column_states):
+        from src.utils.table import get_default_hidden_columns
+
+        if hidden_columns is None:
+            hidden_columns = get_default_hidden_columns(org_type)
+        # ALL → listes (une entrée par grille présente, ici 0 ou 1).
+        return [
+            entity_grid_column_defs(hidden_columns, cs) for cs in (column_states or [])
+        ]
+
+    # 4) Reset : efface filtres ET tris (columnState avec sort=None). Bouton fixe
+    #    → grille ALL.
+    @callback(
+        Output({"type": gtype, "entity_id": ALL, "year": ALL}, "filterModel"),
+        Output({"type": gtype, "entity_id": ALL, "year": ALL}, "columnState"),
+        Input(f"btn-{org_type}-reset", "n_clicks"),
+        State({"type": gtype, "entity_id": ALL, "year": ALL}, "columnState"),
+        prevent_initial_call=True,
+    )
+    def _reset(_n, column_states):
+        cleared = [clear_sort(cs) for cs in (column_states or [])]
+        return [{} for _ in cleared], cleared
+
+    # 5) Export filtré (état courant de la grille). Bouton fixe → Download fixe,
+    #    lit filterModel/columnState de la grille via ALL (state).
+    @callback(
+        Output(f"{org_type}-download-filtered-data", "data"),
+        Input(f"btn-download-filtered-data-{org_type}", "n_clicks"),
+        State(f"{org_type}_url", "pathname"),
+        State(f"{org_type}_year", "value"),
+        State(f"{org_type}_nom", "children"),
+        State({"type": gtype, "entity_id": ALL, "year": ALL}, "filterModel"),
+        State({"type": gtype, "entity_id": ALL, "year": ALL}, "columnState"),
+        prevent_initial_call=True,
+    )
+    def _download_filtered(_n, pathname, year, nom, filter_models, column_states):
+        import datetime as _dt
+
+        from src.utils.table import write_styled_excel
+
+        entity_id = (pathname or "").split("/")[-1]
+        filter_model = (filter_models or [None])[0]
+        column_state = (column_states or [None])[0]
+        if filter_model:
+            import json
+
+            from src.utils.tracking import track_search
+
+            track_search(json.dumps(filter_model), f"{org_type} download")
+        df = export_entity_dataframe(
+            org_type, entity_id, year, filter_model, column_state
+        )
+
+        def to_bytes(buffer):
+            write_styled_excel(df, buffer)
+
+        date = _dt.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+        label = nom if isinstance(nom, str) else org_type
+        return dcc.send_bytes(to_bytes, filename=f"decp_filtrées_{label}_{date}.xlsx")
+
+    # 6) Meta : "X marchés (Y lignes)" + état du bouton d'export filtré (seuil 65k).
+    @callback(
+        Output(f"{org_type}_nb_rows", "children"),
+        Output(f"btn-download-filtered-data-{org_type}", "disabled"),
+        Output(f"btn-download-filtered-data-{org_type}", "children"),
+        Output(f"btn-download-filtered-data-{org_type}", "title"),
+        Input(f"{org_type}-total", "data"),
+        Input(f"{org_type}-total-unique", "data"),
+    )
+    def _meta(total, total_unique):
+        from src.utils.frontend import get_button_properties
+        from src.utils.table import format_number
+
+        total = total or 0
+        total_unique = total_unique or 0
+        nb_rows = (
+            f"{format_number(total_unique) or 0} marchés "
+            f"({format_number(total) or 0} lignes)"
+        )
+        disabled, children, title = get_button_properties(total)
+        return nb_rows, disabled, children, title

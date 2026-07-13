@@ -105,3 +105,11 @@ def test_build_entity_grid_has_pattern_matching_id_and_filter_only_persistence()
 def test_grid_type():
     assert grid_type("acheteur") == "acheteur-grid"
     assert grid_type("titulaire") == "titulaire-grid"
+
+
+def test_register_entity_grid_callbacks_smoke():
+    """La registration ne lève pas (les ids/patterns sont valides pour Dash)."""
+    from src.utils.entity_grid import register_entity_grid_callbacks
+
+    # Ne doit pas lever ; idempotence non requise (appelée une fois par page).
+    register_entity_grid_callbacks("acheteur")
