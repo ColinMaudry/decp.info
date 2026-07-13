@@ -330,7 +330,6 @@ layout = [
                     ),
                     html.Div(
                         id="saved-views-bar",
-                        style={"display": "none"},
                         className="d-inline-flex align-items-center gap-2",
                         children=[
                             dbc.Button(
@@ -338,7 +337,10 @@ layout = [
                                 id="btn-save-view",
                                 color="secondary",
                                 size="sm",
-                                title="Enregistrer les filtres, tris et colonnes actuels sous un nom",
+                                # Grisé/désactivé pour les non-abonnés (le callback
+                                # toggle_saved_views_controls affine au chargement).
+                                disabled=True,
+                                title="Enregistrer les filtres, tris et colonnes actuels sous un nom (abonnés)",
                             ),
                             dbc.DropdownMenu(
                                 id="saved-views-menu",
@@ -346,6 +348,7 @@ layout = [
                                 color="secondary",
                                 size="sm",
                                 children=[],
+                                disabled=True,
                                 className="d-inline-block",
                             ),
                         ],
@@ -627,11 +630,16 @@ def reset_view(n_clicks, column_state):
 
 
 @callback(
-    Output("saved-views-bar", "style"),
+    Output("btn-save-view", "disabled"),
+    Output("saved-views-menu", "disabled"),
     Input("tableau_url", "pathname"),
 )
-def toggle_saved_views_bar(_pathname):
-    return saved_views_ui.bar_style(current_user_has_subscription())
+def toggle_saved_views_controls(_pathname):
+    # La barre reste visible pour tous ; « Sauvegarder la vue » et « Mes vues »
+    # sont grisés et désactivés pour les non-abonnés (le gating serveur de
+    # save_view reste en place via prepare_view_to_save).
+    disabled = saved_views_ui.controls_disabled(current_user_has_subscription())
+    return disabled, disabled
 
 
 def resolve_vue_from_url(search: str) -> dict | None:

@@ -9,9 +9,9 @@ def _view(view_id, name, query, token="abc123"):
     return _Row(id=view_id, name=name, query=query, token=token)
 
 
-def test_bar_style_hidden_for_non_subscriber():
-    assert ui.bar_style(False) == {"display": "none"}
-    assert ui.bar_style(True) == {}
+def test_controls_disabled_for_non_subscriber():
+    assert ui.controls_disabled(False) is True
+    assert ui.controls_disabled(True) is False
 
 
 def test_clean_view_name_strips_and_empties():

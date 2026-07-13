@@ -7,8 +7,10 @@ from unidecode import unidecode
 from src.utils import DOMAIN_NAME
 
 
-def bar_style(has_subscription: bool) -> dict:
-    return {} if has_subscription else {"display": "none"}
+def controls_disabled(has_subscription: bool) -> bool:
+    """Boutons « Sauvegarder la vue » / « Mes vues » : actifs pour les abonnés,
+    grisés et désactivés sinon. La barre elle-même reste visible pour tous."""
+    return not has_subscription
 
 
 def clean_view_name(name: str | None) -> str:
