@@ -79,11 +79,13 @@ def test_views_deleted_on_user_cascade(users_db_path):
     assert db.list_views(uid, "tableau") == []
 
 
-def test_generate_token_is_base62_and_length_6():
+def test_generate_token_is_lowercase_base36_and_length_6():
     token = db.generate_token()
     assert len(token) == 6
-    alphabet = set(string.ascii_letters + string.digits)
+    alphabet = set(string.ascii_lowercase + string.digits)
     assert set(token) <= alphabet
+    # Jamais de majuscule (lien plus lisible/dictable, cohérent avec le slug).
+    assert token == token.lower()
 
 
 def test_upsert_returns_token_on_insert(users_db_path):

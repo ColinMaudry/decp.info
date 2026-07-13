@@ -24,7 +24,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_saved_views_token
     ON saved_views(token);
 """
 
-_TOKEN_ALPHABET = string.ascii_letters + string.digits  # base62
+_TOKEN_ALPHABET = string.ascii_lowercase + string.digits  # base36 (a-z 0-9)
 
 
 def generate_token(length: int = 6) -> str:
