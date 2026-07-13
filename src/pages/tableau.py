@@ -224,19 +224,19 @@ layout = [
                                         children=f"""
             ##### Définition des colonnes
 
-            Pour voir la définition d'une colonne, passez votre souris sur son en-tête.
+            Pour voir la définition d'une colonne et ses valeurs possibles, passez votre souris sur son en-tête.
 
             ##### Vos réglages sont persistents
 
-            Les filtres, les tris et le choix de colonnes sont automatiquement enregistrés dans votre navigateur et persistent même si vous changez de page ou si vous fermez votre navigateur. À votre retour, vous retrouverez cette page comme vous l'avez laissée.
+            Les filtres, les tris , le choix de colonnes, le placement et la largeur des colonnes sont automatiquement enregistrés dans votre navigateur et persistent même si vous changez de page ou si vous fermez votre navigateur. À votre retour, vous retrouverez cette page comme vous l'avez laissée.
 
             ##### Filtrer les colonnes
 
-            Chaque colonne a son propre filtre : saisissez une valeur dans le champ situé juste sous son en-tête (le filtre « flottant »), ou cliquez sur l'icône entonnoir dans l'en-tête pour ouvrir le filtre complet.
+            Chaque colonne a son propre filtre : saisissez une valeur dans le champ situé juste sous son en-tête, ou cliquez sur l'icône entonnoir dans l'en-tête pour ouvrir le filtre complet.
 
             - Champs textuels : contient (par défaut), égal à, ne contient pas, commence par, se termine par...
-            - Champs numériques (Durée en mois, Montant, nombre d'offres...) : égal à, supérieur à, inférieur à, entre (plage)...
-            - Champs date (Date de notification...) : égal à, avant, après, entre (plage)...
+            - Champs numériques (durée en mois, montant, nombre d'offres...) : égal à, supérieur à, inférieur à, entre (plage)...
+            - Champs date : égal à, avant, après, entre (plage)...
 
             Dans le filtre complet (icône entonnoir), vous pouvez combiner deux conditions sur la même colonne avec **ET** ou **OU**.
 
