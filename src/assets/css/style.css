@@ -692,6 +692,13 @@ button.show-hide {
 }
 
 /* Dropdowns */
+/* Bootstrap 5.3 redéfinit les variables --bs-dropdown-* SUR le sélecteur
+   .dropdown-menu : un override sur :root est masqué (déclaration composant plus
+   spécifique). On pose donc la surcharge sur .dropdown-menu. */
+.dropdown-menu {
+  --bs-dropdown-link-hover-bg: #ccc;
+}
+
 .Select-placeholder {
   color: #333 !important;
 }
@@ -1102,6 +1109,6 @@ input[type="number"] {
   font-size: 90%;
   padding: 0.2rem 0.5rem;
   border: 1px solid var(--bs-border-color);
-  border-radius: var(--bs-border-radius);
+  border-radius: 3px;
   background-color: var(--bs-body-bg);
 }

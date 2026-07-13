@@ -413,6 +413,7 @@ layout = [
                     dbc.Label(
                         "Lien direct vers cette vue :",
                         className="mb-0",
+                        style={"fontSize": "0.9em"},
                     ),
                     # URL affichée comme texte sélectionnable : prend exactement
                     # sa largeur (pas de champ pleine largeur qui encombre) et
@@ -791,7 +792,13 @@ def populate_saved_views_menu(_pathname, _refresh):
     if not current_user_has_subscription():
         return []
     views = saved_views_db.list_views(current_user.id, "tableau")
-    return saved_views_ui.saved_views_items(views)
+    items = saved_views_ui.saved_views_items(views)
+    header = dbc.DropdownMenuItem(
+        "Gérer mes vues", href="/compte/vues", className="text-primary"
+    )
+    # Lien de gestion en tête, séparé de la liste des vues (séparateur seulement
+    # s'il y a des vues en dessous, pour éviter un séparateur orphelin).
+    return [header, *([dbc.DropdownMenuItem(divider=True)] if items else []), *items]
 
 
 @callback(
