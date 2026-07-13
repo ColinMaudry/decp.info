@@ -332,24 +332,37 @@ layout = [
                         id="saved-views-bar",
                         className="d-inline-flex align-items-center gap-2",
                         children=[
-                            dbc.Button(
-                                "Sauvegarder la vue",
-                                id="btn-save-view",
-                                color="secondary",
-                                size="sm",
-                                # Grisé/désactivé pour les non-abonnés (le callback
-                                # toggle_saved_views_controls affine au chargement).
-                                disabled=True,
-                                title="Enregistrer les filtres, tris et colonnes actuels sous un nom (abonnés)",
-                            ),
-                            dbc.DropdownMenu(
-                                id="saved-views-menu",
-                                label="Mes vues",
-                                color="secondary",
-                                size="sm",
-                                children=[],
-                                disabled=True,
+                            # Boutons enveloppés dans un <span> : Bootstrap met
+                            # `pointer-events: none` sur les boutons désactivés,
+                            # ce qui empêche le survol (et donc le `title`
+                            # natif) de fonctionner directement dessus. Le
+                            # `title` est donc porté par le span englobant.
+                            html.Span(
+                                id="btn-save-view-wrapper",
                                 className="d-inline-block",
+                                children=dbc.Button(
+                                    "Sauvegarder la vue",
+                                    id="btn-save-view",
+                                    color="secondary",
+                                    size="sm",
+                                    # Grisé/désactivé pour les non-abonnés (le
+                                    # callback toggle_saved_views_controls
+                                    # affine au chargement).
+                                    disabled=True,
+                                ),
+                            ),
+                            html.Span(
+                                id="saved-views-menu-wrapper",
+                                className="d-inline-block",
+                                children=dbc.DropdownMenu(
+                                    id="saved-views-menu",
+                                    label="Mes vues",
+                                    color="secondary",
+                                    size="sm",
+                                    children=[],
+                                    disabled=True,
+                                    className="d-inline-block",
+                                ),
                             ),
                         ],
                     ),
@@ -647,14 +660,18 @@ def reset_view(n_clicks, column_state):
 @callback(
     Output("btn-save-view", "disabled"),
     Output("saved-views-menu", "disabled"),
+    Output("btn-save-view-wrapper", "title"),
+    Output("saved-views-menu-wrapper", "title"),
     Input("tableau_url", "pathname"),
 )
 def toggle_saved_views_controls(_pathname):
     # La barre reste visible pour tous ; « Sauvegarder la vue » et « Mes vues »
     # sont grisés et désactivés pour les non-abonnés (le gating serveur de
-    # save_view reste en place via prepare_view_to_save).
+    # save_view reste en place via prepare_view_to_save). L'infobulle est
+    # portée par les <span> englobants, cf. layout.
     disabled = saved_views_ui.controls_disabled(current_user_has_subscription())
-    return disabled, disabled
+    tooltip = "Fonctionnalité accessible en vous abonnant" if disabled else ""
+    return disabled, disabled, tooltip, tooltip
 
 
 def resolve_vue_from_url(search: str) -> dict | None:
