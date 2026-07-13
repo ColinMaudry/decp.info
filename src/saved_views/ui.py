@@ -1,7 +1,7 @@
 import re
 
 import dash_bootstrap_components as dbc
-from dash import html
+from dash import dcc, html
 from unidecode import unidecode
 
 from src.utils import DOMAIN_NAME
@@ -63,18 +63,21 @@ def saved_views_items(views) -> list:
 
 def _view_row(view) -> html.Div:
     view_id = view["id"]
+    share_url = build_view_url(view["name"], view["token"])
     return html.Div(
         className="saved-view-row d-flex align-items-center gap-2 mb-2",
         children=[
             html.Span(view["name"], className="flex-grow-1"),
             dbc.Button(
-                # Limitation connue : la vue n'est pas appliquée automatiquement
-                # en arrivant sur /tableau depuis cette page. Le mécanisme de
-                # rappel multi-page reste à faire (voir tableau.py `apply_saved_view`).
                 "Ouvrir",
-                href="/tableau",
+                href=share_url,
                 color="link",
                 size="sm",
+            ),
+            dcc.Clipboard(
+                content=share_url,
+                title="Copier le lien vers cette vue",
+                style={"cursor": "pointer", "fontSize": "1.1rem"},
             ),
             dbc.Button(
                 "Renommer",

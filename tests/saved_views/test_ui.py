@@ -5,8 +5,8 @@ class _Row(dict):
     """Imite un sqlite3.Row : accès par clé."""
 
 
-def _view(view_id, name, query):
-    return _Row(id=view_id, name=name, query=query)
+def _view(view_id, name, query, token="abc123"):
+    return _Row(id=view_id, name=name, query=query, token=token)
 
 
 def test_bar_style_hidden_for_non_subscriber():
@@ -96,3 +96,18 @@ def test_token_from_vue_param():
     assert ui.token_from_vue_param("abc123") == "abc123"
     assert ui.token_from_vue_param("") is None
     assert ui.token_from_vue_param(None) is None
+
+
+def test_view_row_open_uses_short_url(monkeypatch):
+    monkeypatch.setattr(ui, "DOMAIN_NAME", "test.colibre.fr")
+    row = ui._view_row(_view(1, "Mes Marchés", "q", token="tok123"))
+    text = str(row)
+    assert "https://test.colibre.fr/tableau?vue=mes-marches_tok123" in text
+
+
+def test_view_row_has_clipboard_with_url(monkeypatch):
+    monkeypatch.setattr(ui, "DOMAIN_NAME", "test.colibre.fr")
+    row = ui._view_row(_view(1, "Mes Marchés", "q", token="tok123"))
+    text = str(row)
+    assert "Clipboard" in text
+    assert "Copier le lien" in text
