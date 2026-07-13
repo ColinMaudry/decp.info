@@ -267,6 +267,31 @@ def test_get_top_org_ag_grid_empty_returns_div():
     ).lazy()
     out = get_top_org_ag_grid(empty, "titulaire", ["titulaire_distance"])
     assert isinstance(out, html.Div)
+
+
+def test_get_top_org_table_still_returns_datatable_after_refactor():
+    """Non-régression : get_top_org_table (utilisé par observatoire.py) garde
+    son comportement après extraction du helper d'agrégation partagé."""
+    import dash_ag_grid  # noqa: F401
+    from dash import html
+
+    from src.db import query_marches
+    from src.figures import DataTable, get_top_org_table
+
+    lff = query_marches("TRUE", (), columns=None).lazy()
+    out = get_top_org_table(lff, "titulaire", ["titulaire_distance"])
+    assert isinstance(out, (DataTable, html.Div))
+
+
+def test_top_org_aggregate_does_not_mutate_extra_columns():
+    """Le helper ne mute pas la liste extra_columns passée (bug latent de
+    l'ancien get_top_org_table, qui faisait extra_columns.append(...))."""
+    from src.db import query_marches
+    from src.figures import _top_org_aggregate
+
+    extra = ["titulaire_distance"]
+    _top_org_aggregate(query_marches("TRUE", (), columns=None).lazy(), "titulaire", extra)
+    assert extra == ["titulaire_distance"]
 ```
 
 - [ ] **Step 2: Lancer les tests, vérifier l'échec**
@@ -274,23 +299,23 @@ def test_get_top_org_ag_grid_empty_returns_div():
 Run: `uv run pytest tests/test_figures.py::test_get_top_org_ag_grid_returns_grid_with_rowdata -v`
 Expected: FAIL — `ImportError: cannot import name 'get_top_org_ag_grid'`.
 
-- [ ] **Step 3: Implémenter la fonction**
+- [ ] **Step 3a: Extraire le helper d'agrégation partagé**
 
-Dans `src/figures.py`, ajouter (juste après `get_top_org_table`). Elle reprend le pré-traitement de `get_top_org_table` (group-by → `Attributions`, `add_links`) puis produit des `columnDefs` AG Grid depuis les colonnes calculées, avec `cellRenderer:"markdown"` sur les colonnes-liens (nom) :
+Dans `src/figures.py`, ajouter le helper `_top_org_aggregate` (juste avant `get_top_org_table`). Il porte l'agrégation commune ; il **copie** `extra_columns` (l'ancien `get_top_org_table` mutait la liste du caller — bug latent corrigé) et renvoie le `pl.DataFrame` agrégé **avant** `add_links`, ou `None` si vide/erreur :
 
 ```python
-def get_top_org_ag_grid(data, org_type: str, extra_columns: list, filters: bool = True):
-    """Top N acheteurs/titulaires en AG Grid client-side (rowData directe).
+def _top_org_aggregate(data, org_type: str, extra_columns: list):
+    """Agrégation « top N » commune à get_top_org_table et get_top_org_ag_grid.
 
-    Remplace get_top_org_table (dash_table) : même agrégation, mais rendu AG
-    Grid (thème brique, liens markdown). Renvoie html.Div() si vide/erreur.
+    Renvoie le DataFrame agrégé (colonnes castées en str, tri par Attributions
+    décroissant), AVANT add_links, ou None si vide/colonne manquante.
     """
     if isinstance(data, pl.LazyFrame):
         lff = data
     else:
         lff = pl.LazyFrame(data, strict=False, infer_schema_length=5000)
 
-    extra = list(extra_columns)
+    extra = list(extra_columns)  # copie : ne pas muter la liste du caller
     if org_type == "titulaire":
         extra.append("titulaire_typeIdentifiant")
     columns = ["uid", f"{org_type}_id", f"{org_type}_nom"] + extra
@@ -306,10 +331,49 @@ def get_top_org_ag_grid(data, org_type: str, extra_columns: list, filters: bool 
     try:
         dff: pl.DataFrame = lff.collect(engine="streaming")
     except ColumnNotFoundError:
-        logger.warning(f"get_top_org_ag_grid: column not found. {lff.collect_schema()}")
+        logger.warning(f"_top_org_aggregate: column not found. {lff.collect_schema()}")
+        return None
+    return dff if dff.height > 0 else None
+```
+
+Puis **refactorer `get_top_org_table`** pour l'utiliser (comportement identique : `setup_table_columns` toujours appelé sur le dff _avant_ `add_links`). Remplacer le début de son corps (jusqu'au `dff = add_links(dff)` inclus) par :
+
+```python
+def get_top_org_table(data, org_type: str, extra_columns: list, filters: bool = True):
+    dff = _top_org_aggregate(data, org_type, extra_columns)
+    if dff is None:
         return html.Div()
 
-    if dff.height == 0:
+    columns, tooltip = setup_table_columns(
+        dff, hideable=False, exclude=[f"{org_type}_id"]
+    )
+    dff = add_links(dff)
+    data = dff.to_dicts()
+
+    return DataTable(
+        dtid=f"top10_{org_type}",
+        data=data,
+        page_action="native",
+        page_size=10,
+        columns=columns,
+        tooltip_header=tooltip,
+        filter_action="native" if filters else "none",
+    )
+```
+
+- [ ] **Step 3b: Implémenter `get_top_org_ag_grid` via le helper**
+
+Ajouter (juste après `get_top_org_table`) :
+
+```python
+def get_top_org_ag_grid(data, org_type: str, extra_columns: list, filters: bool = True):
+    """Top N acheteurs/titulaires en AG Grid client-side (rowData directe).
+
+    Remplace get_top_org_table (dash_table) : même agrégation (helper partagé),
+    rendu AG Grid (thème brique, liens markdown). html.Div() si vide/erreur.
+    """
+    dff = _top_org_aggregate(data, org_type, extra_columns)
+    if dff is None:
         return html.Div()
 
     dff = add_links(dff)
@@ -370,12 +434,12 @@ def get_top_org_ag_grid(data, org_type: str, extra_columns: list, filters: bool 
 
 (Vérifier que `import dash_ag_grid as dag` est déjà présent en tête de `src/figures.py` — c'est le cas. `add_links`, `setup_table_columns`, `ColumnNotFoundError`, `DATA_SCHEMA`, `logger`, `AG_GRID_LOCALE_FR` sont déjà importés/définis dans `src/figures.py` puisque `get_top_org_table` les utilise.)
 
-> Note : `setup_table_columns` n'est pas strictement nécessaire ici (les columnDefs sont dérivés directement de `dff.columns`), mais l'agrégation reprend fidèlement celle de `get_top_org_table`. Garder `get_top_org_table` en place ce lot (encore utilisé par `observatoire.py`) ; ne le supprimer qu'au Lot 2b/3.
+> `get_top_org_table` reste en place ce lot (encore utilisé par `observatoire.py`), mais partage désormais l'agrégation via `_top_org_aggregate` (plus de duplication). Le test de non-régression garantit qu'il rend toujours une `DataTable`.
 
 - [ ] **Step 4: Lancer les tests, vérifier le succès**
 
-Run: `uv run pytest tests/test_figures.py::test_get_top_org_ag_grid_returns_grid_with_rowdata tests/test_figures.py::test_get_top_org_ag_grid_empty_returns_div -v`
-Expected: PASS.
+Run: `uv run pytest tests/test_figures.py -k "top_org" -v`
+Expected: PASS pour `test_get_top_org_ag_grid_returns_grid_with_rowdata`, `test_get_top_org_ag_grid_empty_returns_div`, `test_get_top_org_table_still_returns_datatable_after_refactor`, `test_top_org_aggregate_does_not_mutate_extra_columns`.
 
 - [ ] **Step 5: Commit**
 
@@ -750,8 +814,12 @@ def register_entity_grid_callbacks(org_type: str) -> None:
 
     # 3) Persiste columnState (largeur/ordre/tri/visibilité) dans le store global
     #    partagé. Input MATCH (grille) → Output fixe (store). Autorisé Dash 4.4.
+    #    allow_duplicate=True OBLIGATOIRE : ce store est partagé et
+    #    register_entity_grid_callbacks est appelé pour acheteur ET titulaire,
+    #    donc deux callbacks visent ce même Output fixe (sans allow_duplicate →
+    #    collision, 500 au runtime dès que les deux pages sont câblées).
     @callback(
-        Output("entity-grid-columns-state", "data"),
+        Output("entity-grid-columns-state", "data", allow_duplicate=True),
         Input({"type": gtype, "entity_id": MATCH, "year": MATCH}, "columnState"),
         prevent_initial_call=True,
     )
@@ -955,16 +1023,46 @@ def get_top_titulaires(pathname, ach_year):
 register_entity_grid_callbacks("acheteur")
 ```
 
-> `_acheteur_scope` reste utilisé par les callbacks conservés (carte, stats, download « toutes les données », top 10) — **ne pas le supprimer**. La logique de scope de la grille vit en double conceptuel dans `entity_grid.entity_scope`, mais les deux doivent rester cohérentes (même WHERE). C'est acceptable (le lot 3 pourra unifier).
+**Unifier le scope** : `_acheteur_scope` reste utilisé par les callbacks conservés (carte, stats, download « toutes les données », top 10) — le **garder** mais le faire **déléguer** à `entity_scope` (source unique, plus de duplication du WHERE) :
 
-- [ ] **Step 3: Vérifier que la page s'importe sans erreur**
+```python
+from src.utils.entity_grid import entity_scope, register_entity_grid_callbacks
+
+
+def _acheteur_scope(pathname: str, ach_year: str | None) -> tuple[str, list]:
+    """WHERE SQL scopant les requêtes à cet acheteur (et éventuellement une année)."""
+    return entity_scope("acheteur", pathname.split("/")[-1], ach_year)
+```
+
+- [ ] **Step 3: Corriger le smoke test entity_grid (double enregistrement)**
+
+À partir de maintenant, `acheteur.py` appelle `register_entity_grid_callbacks("acheteur")` **au niveau module** (à l'import). Or `tests/test_entity_grid.py::test_register_entity_grid_callbacks_smoke` fait `import src.app` (qui importe la page → 1er enregistrement) **puis** rappelle `register_entity_grid_callbacks("acheteur")` (2e enregistrement) → collision des Outputs org-spécifiques (`acheteur-total`, etc. — sans `allow_duplicate`), erreur `DuplicateCallback`.
+
+Rendre ce test « forward-safe » : ne plus ré-enregistrer, mais **vérifier que l'enregistrement fait à l'import a bien eu lieu**. Remplacer son corps par :
+
+```python
+def test_register_entity_grid_callbacks_registered_via_page_import():
+    """Les callbacks de grille entité sont enregistrés (une fois) à l'import
+    des pages acheteur/titulaire — pas de double enregistrement."""
+    import src.app  # noqa: F401  # importe les pages → register_entity_grid_callbacks
+
+    from dash import get_app
+
+    callback_map = get_app().callback_map
+    # Le store columnState partagé est piloté par un callback enregistré.
+    assert any("entity-grid-columns-state.data" in k for k in callback_map)
+```
+
+(Renommer le test depuis `test_register_entity_grid_callbacks_smoke`.)
+
+- [ ] **Step 4: Vérifier que la page s'importe sans erreur**
 
 Run: `uv run python -c "import src.app; import src.pages.acheteur; print('acheteur OK')"`
 Expected: `acheteur OK` (aucune exception de validation Dash : ids en double, patterns invalides, Output dupliqués sans `allow_duplicate`).
 
-> Si Dash signale un Output dupliqué (ex. `entity-grid-columns-state.data` ou un `columnDefs` piloté par deux callbacks), ajouter `allow_duplicate=True` au besoin et `prevent_initial_call=True`.
+> Si Dash signale un Output dupliqué autre que ceux déjà gérés, ajouter `allow_duplicate=True` + `prevent_initial_call=True` sur l'Output concerné (le store `entity-grid-columns-state.data` a déjà `allow_duplicate=True` depuis la Task 5).
 
-- [ ] **Step 4: Vérifier le rendu réel de la page (skill run)**
+- [ ] **Step 5: Vérifier le rendu réel de la page (skill run)**
 
 Lancer l'app et charger `/acheteurs/<un_id_présent_dans_test.parquet>`. Vérifier : la grille s'affiche, filtre multi-conditions (ET/OU + Contient) fonctionne, tri fonctionne, le compteur affiche « X marchés (Y lignes) », le bouton Réinitialiser vide filtres+tris, l'export filtré télécharge un fichier cohérent, le sélecteur de colonnes masque/affiche, le top 10 s'affiche en AG Grid.
 
@@ -1035,7 +1133,16 @@ def get_top_acheteurs(pathname, titulaire_year):
 register_entity_grid_callbacks("titulaire")
 ```
 
-> `_titulaire_scope` (qui ajoute `titulaire_typeIdentifiant = 'SIRET'`) reste utilisé par les callbacks conservés — ne pas le supprimer. Cohérent avec `entity_scope("titulaire", ...)`.
+- **Unifier le scope** : garder `_titulaire_scope` (utilisé par carte/stats/download/top 10) mais le faire déléguer à `entity_scope` — qui ajoute déjà `titulaire_typeIdentifiant = 'SIRET'` pour `org_type="titulaire"` :
+
+```python
+from src.utils.entity_grid import entity_scope, register_entity_grid_callbacks
+
+
+def _titulaire_scope(pathname: str, titulaire_year: str | None) -> tuple[str, list]:
+    """WHERE SQL scopant les requêtes à ce titulaire (et éventuellement une année)."""
+    return entity_scope("titulaire", pathname.split("/")[-1], titulaire_year)
+```
 
 - [ ] **Step 3: Vérifier l'import de la page**
 
@@ -1117,5 +1224,5 @@ git commit -m "test(acheteur/titulaire): sélecteurs AG Grid pour la grille des 
 
 - **`entity-grid-columns-state`** est un store `storage_type="local"` partagé acheteur+titulaire ; sa déclaration apparaît dans les deux `layout()`. Si Dash se plaint d'un id dupliqué au chargement simultané (ne devrait pas : une page montée à la fois), déplacer sa déclaration dans un layout applicatif global unique (`src/app.py`) et retirer des pages.
 - **Persistance filterModel scopée** : repose sur le fait que dash-ag-grid sérialise l'id dict comme clé localStorage. Le vérifier en Task 6 Step 4 (deux acheteurs distincts → filtres indépendants). Si la persistance ne discrimine pas par id, repli documenté dans la spec (« reset systématique au changement de fiche » — le remontage de grille le fait déjà, seul le rappel du filtre par fiche serait perdu).
-- **Doublon de scope** (`_acheteur_scope`/`_titulaire_scope` dans les pages vs `entity_scope` dans le module) : toléré ce lot, à unifier au Lot 3.
+- **Scope unifié** : `entity_scope` (entity_grid.py) est la source unique du WHERE ; `_acheteur_scope`/`_titulaire_scope` sont de fins wrappers qui y délèguent. `_top_org_aggregate` (figures.py) est la source unique de l'agrégation top N, partagée par `get_top_org_table` et `get_top_org_ag_grid`.
 - **Hors périmètre confirmé** : sélecteur de colonnes (`make_column_picker` reste DataTable, partagé avec tableau.py), `observatoire.py` (Lot 2b).
