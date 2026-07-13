@@ -674,6 +674,34 @@ def apply_vue_resolution_cb(resolution):
 
 
 @callback(
+    Output("share-url-box", "style"),
+    Output("share-url-input", "value"),
+    Input("active-view", "data"),
+)
+def render_share_box(active_view):
+    if active_view and active_view.get("url"):
+        return {}, active_view["url"]
+    return {"display": "none"}, ""
+
+
+@callback(
+    Output("active-view", "data", allow_duplicate=True),
+    Output("suppress-next", "data", allow_duplicate=True),
+    Input("tableau_grid", "filterModel"),
+    Input("tableau_grid", "columnState"),
+    State("suppress-next", "data"),
+    prevent_initial_call=True,
+)
+def hide_share_box_on_change(_filter_model, _column_state, suppress):
+    # Verrou « sale » à sens unique. L'application d'une vue modifie elle-même
+    # filterModel/columnState (écho) : on l'absorbe une fois (suppress>0), puis
+    # tout changement réel masque la box en effaçant active-view.
+    if suppress and suppress > 0:
+        return no_update, suppress - 1
+    return None, 0
+
+
+@callback(
     Output("save-view-modal", "is_open"),
     Input("btn-save-view", "n_clicks"),
     prevent_initial_call=True,
@@ -686,6 +714,8 @@ def toggle_save_view_modal(_open):
     Output("save-view-modal", "is_open", allow_duplicate=True),
     Output("save-view-feedback", "children"),
     Output("saved-views-refresh", "data"),
+    Output("active-view", "data", allow_duplicate=True),
+    Output("suppress-next", "data", allow_duplicate=True),
     Input("btn-save-view-confirm", "n_clicks"),
     State("save-view-name", "value"),
     State("tableau_grid", "filterModel"),
@@ -696,17 +726,26 @@ def save_view(_n, name, filter_model, column_state):
     has_sub = current_user_has_subscription()
     clean_name, error = saved_views_ui.prepare_view_to_save(has_sub, name)
     if error:
-        return True, html.Span(error, style={"color": "red"}), no_update
+        return (
+            True,
+            html.Span(error, style={"color": "red"}),
+            no_update,
+            no_update,
+            no_update,
+        )
     # On stocke l'AST canonique (indépendant de l'UI), pas le filterModel brut
     # d'AG Grid : cf. spec de conception, "l'AST (JSON) + columnState,
     # indépendant de l'UI".
     ast = filtermodel_to_ast(filter_model, schema)
     query = json.dumps({"ast": ast_to_dict(ast), "columnState": column_state or []})
-    saved_views_db.upsert(current_user.id, "tableau", clean_name, query)
+    token = saved_views_db.upsert(current_user.id, "tableau", clean_name, query)
+    active = {"token": token, "url": saved_views_ui.build_view_url(clean_name, token)}
     return (
         False,
         html.Span(f"Vue « {clean_name} » enregistrée.", style={"color": "green"}),
         clean_name,
+        active,
+        0,  # la sauvegarde ne modifie pas la grille → pas d'écho à absorber
     )
 
 
@@ -726,6 +765,8 @@ def populate_saved_views_menu(_pathname, _refresh):
     Output("tableau_grid", "filterModel"),
     Output("tableau_grid", "columnState"),
     Output("tableau-hidden-columns", "data", allow_duplicate=True),
+    Output("active-view", "data", allow_duplicate=True),
+    Output("suppress-next", "data", allow_duplicate=True),
     Input({"type": "saved-view-item", "index": ALL}, "n_clicks"),
     State({"type": "saved-view-item", "index": ALL}, "id"),
     prevent_initial_call=True,
@@ -733,10 +774,10 @@ def populate_saved_views_menu(_pathname, _refresh):
 def apply_saved_view(n_clicks, ids):
     triggered = ctx.triggered_id
     if not triggered or not any(n_clicks):
-        return no_update, no_update, no_update
+        return no_update, no_update, no_update, no_update, no_update
     row = saved_views_db.get(triggered["index"], current_user.id)
     if not row:
-        return no_update, no_update, no_update
+        return no_update, no_update, no_update, no_update, no_update
     try:
         view = json.loads(row["query"])
         # L'AST canonique est stocké (pas le filterModel brut d'AG Grid) :
@@ -756,14 +797,18 @@ def apply_saved_view(n_clicks, ids):
             "Vue sauvegardée au format pré-migration, impossible de l'appliquer : "
             f"id={row['id']!r} name={row['name']!r}"
         )
-        return no_update, no_update, no_update
+        return no_update, no_update, no_update, no_update, no_update
     # tableau-hidden-columns pilote les cases à cocher du sélecteur de colonnes
     # (update_checkboxes_from_hidden_columns) et la régénération des
     # columnDefs (apply_hidden_columns) ; sans cette sortie, ce store restait
     # désynchronisé du columnState rappelé (revue finale #41). Même extraction
     # que download_data.
     hidden_columns = [c["colId"] for c in column_state if c.get("hide")]
-    return filter_model, column_state, hidden_columns
+    active = {
+        "token": row["token"],
+        "url": saved_views_ui.build_view_url(row["name"], row["token"]),
+    }
+    return filter_model, column_state, hidden_columns, active, 1
 
 
 @callback(
