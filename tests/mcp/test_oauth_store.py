@@ -36,3 +36,25 @@ def test_save_get_delete_code(tmp_path):
     assert row["resource"] == "https://colibre.fr/_mcp"
     store.delete_code(db, "thecode")
     assert store.get_code(db, "thecode") is None
+
+
+def test_save_get_revoke_token(tmp_path):
+    db = tmp_path / "u.sqlite"
+    store.init_schema(db)
+    tid = store.save_token(
+        db,
+        access_token="acc",
+        refresh_token="ref",
+        client_id="abc",
+        user_id=7,
+        scope="mcp",
+        resource="https://colibre.fr/_mcp",
+        access_expires_at="2999-01-01T00:00:00+00:00",
+        refresh_expires_at="2999-01-01T00:00:00+00:00",
+    )
+    assert store.get_token_by_access(db, "acc")["id"] == tid
+    assert store.get_token_by_refresh(db, "ref")["user_id"] == 7
+    store.increment_usage(db, tid)
+    assert store.get_token_by_access(db, "acc")["count_total"] == 1
+    store.revoke_token(db, tid)
+    assert store.get_token_by_access(db, "acc")["revoked_at"] is not None

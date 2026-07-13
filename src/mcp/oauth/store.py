@@ -135,3 +135,73 @@ def delete_code(db_path, code: str) -> None:
     with _connect(db_path) as conn:
         conn.execute("DELETE FROM oauth_codes WHERE code_hash = ?", (_hash(code),))
         conn.commit()
+
+
+def save_token(
+    db_path,
+    *,
+    access_token: str,
+    refresh_token: str | None,
+    client_id: str,
+    user_id: int,
+    scope: str | None,
+    resource: str,
+    access_expires_at: str,
+    refresh_expires_at: str | None,
+) -> int:
+    with _connect(db_path) as conn:
+        cur = conn.execute(
+            "INSERT INTO oauth_tokens (access_token_hash, refresh_token_hash, "
+            "client_id, user_id, scope, resource, issued_at, access_expires_at, "
+            "refresh_expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                _hash(access_token),
+                _hash(refresh_token) if refresh_token else None,
+                client_id,
+                user_id,
+                scope,
+                resource,
+                _utcnow_iso(),
+                access_expires_at,
+                refresh_expires_at,
+            ),
+        )
+        conn.commit()
+        return cur.lastrowid
+
+
+def get_token_by_access(db_path, access_token: str) -> dict | None:
+    with _connect(db_path) as conn:
+        row = conn.execute(
+            "SELECT * FROM oauth_tokens WHERE access_token_hash = ?",
+            (_hash(access_token),),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def get_token_by_refresh(db_path, refresh_token: str) -> dict | None:
+    with _connect(db_path) as conn:
+        row = conn.execute(
+            "SELECT * FROM oauth_tokens WHERE refresh_token_hash = ?",
+            (_hash(refresh_token),),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def revoke_token(db_path, token_id: int) -> None:
+    with _connect(db_path) as conn:
+        conn.execute(
+            "UPDATE oauth_tokens SET revoked_at = ? WHERE id = ?",
+            (_utcnow_iso(), token_id),
+        )
+        conn.commit()
+
+
+def increment_usage(db_path, token_id: int) -> None:
+    with _connect(db_path) as conn:
+        conn.execute(
+            "UPDATE oauth_tokens SET count_total = count_total + 1, last_used_at = ? "
+            "WHERE id = ?",
+            (_utcnow_iso(), token_id),
+        )
+        conn.commit()
