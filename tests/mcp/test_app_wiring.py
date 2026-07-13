@@ -49,3 +49,41 @@ def test_mcp_endpoint_guarded_and_csrf_exempt(monkeypatch, tmp_path):
             else:
                 del sys.modules[name]
         auth_db.reset_conn_for_tests()
+
+
+def test_oauth_wellknown_served_when_mcp_enabled(monkeypatch, tmp_path):
+    # DB éphémère + secrets requis par init_auth/init_subscriptions.
+    monkeypatch.setenv("USERS_DB_PATH", str(tmp_path / "users.test.sqlite"))
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("APP_BASE_URL", "https://colibre.fr")
+    monkeypatch.setenv("DASH_MCP_ENABLED", "true")
+
+    from src.auth import db as auth_db
+
+    auth_db.reset_conn_for_tests()
+
+    # Voir commentaire ci-dessus : reload de src.app pollue sys.modules pour
+    # src.pages.* ; on snapshot/restaure de la même façon.
+    snapshot = {
+        name: mod
+        for name, mod in sys.modules.items()
+        if name == "src.app" or name.startswith("src.pages")
+    }
+    try:
+        import src.app as app_module
+
+        app_module = importlib.reload(app_module)
+        client = app_module.app.server.test_client()
+
+        resp = client.get("/.well-known/oauth-protected-resource")
+        assert resp.status_code == 200
+        assert resp.get_json()["resource"] == "https://colibre.fr/_mcp"
+    finally:
+        for name in [
+            n for n in sys.modules if n == "src.app" or n.startswith("src.pages")
+        ]:
+            if name in snapshot:
+                sys.modules[name] = snapshot[name]
+            else:
+                del sys.modules[name]
+        auth_db.reset_conn_for_tests()

@@ -46,6 +46,34 @@ _MIGRATIONS: list[tuple[str, str]] = [
         "0007_add_kind_to_api_tokens",
         "ALTER TABLE api_tokens ADD COLUMN kind TEXT NOT NULL DEFAULT 'api'",
     ),
+    (
+        "0008_create_oauth_clients",
+        "CREATE TABLE IF NOT EXISTS oauth_clients ("
+        "client_id TEXT PRIMARY KEY, client_metadata TEXT NOT NULL, "
+        "created_at TEXT NOT NULL)",
+    ),
+    (
+        "0009_create_oauth_codes",
+        "CREATE TABLE IF NOT EXISTS oauth_codes ("
+        "code_hash TEXT PRIMARY KEY, client_id TEXT NOT NULL, user_id INTEGER NOT NULL, "
+        "redirect_uri TEXT, code_challenge TEXT, code_challenge_method TEXT, "
+        "scope TEXT, resource TEXT, expires_at TEXT NOT NULL, used INTEGER NOT NULL DEFAULT 0)",
+    ),
+    (
+        "0010_create_oauth_tokens",
+        "CREATE TABLE IF NOT EXISTS oauth_tokens ("
+        "id INTEGER PRIMARY KEY, access_token_hash TEXT NOT NULL UNIQUE, "
+        "refresh_token_hash TEXT UNIQUE, client_id TEXT NOT NULL, user_id INTEGER NOT NULL, "
+        "scope TEXT, resource TEXT NOT NULL, issued_at TEXT NOT NULL, "
+        "access_expires_at TEXT NOT NULL, refresh_expires_at TEXT, revoked_at TEXT, "
+        "count_total INTEGER NOT NULL DEFAULT 0, last_used_at TEXT)",
+    ),
+    (
+        "0011_create_mcp_usage",
+        "CREATE TABLE IF NOT EXISTS mcp_usage ("
+        "id INTEGER PRIMARY KEY, user_id INTEGER, token_id INTEGER, "
+        "kind TEXT NOT NULL, created_at TEXT NOT NULL)",
+    ),
 ]
 
 

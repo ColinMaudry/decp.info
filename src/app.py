@@ -137,6 +137,29 @@ if _mcp_enabled:
 
     init_mcp_auth(app.server)
 
+    # Serveur d'autorisation OAuth 2.1 (scope B2, #114) : découverte, DCR,
+    # authorize/token, révocation. Réutilise la session flask_login.
+    from src.mcp import usage  # noqa: E402
+    from src.mcp.oauth import routes as oauth_routes  # noqa: E402
+    from src.mcp.oauth import store as oauth_store  # noqa: E402
+
+    _users_db = os.environ["USERS_DB_PATH"]
+    oauth_store.init_schema(_users_db)
+    usage.init_schema(_users_db)
+    usage.purge_older_than(_users_db)
+
+    oauth_routes.init_oauth(app.server)
+
+    # Exempter les routes OAuth du CSRF (POST externes JSON-RPC/form sans jeton).
+    if _auth_csrf is not None:
+        for _rule in app.server.url_map.iter_rules():
+            if _rule.rule.startswith("/oauth") or _rule.rule.startswith(
+                "/.well-known/oauth"
+            ):
+                _vf = app.server.view_functions.get(_rule.endpoint)
+                if _vf is not None:
+                    _auth_csrf.exempt(_vf)
+
 from src.subscriptions.setup import init_subscriptions  # noqa: E402
 
 init_subscriptions(app.server)
