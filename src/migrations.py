@@ -74,6 +74,10 @@ _MIGRATIONS: list[tuple[str, str]] = [
         "id INTEGER PRIMARY KEY, user_id INTEGER, token_id INTEGER, "
         "kind TEXT NOT NULL, created_at TEXT NOT NULL)",
     ),
+    (
+        "0012_add_token_to_saved_views",
+        "ALTER TABLE saved_views ADD COLUMN token TEXT",
+    ),
 ]
 
 

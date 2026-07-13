@@ -1,3 +1,5 @@
+import string
+
 from src.auth import db as auth_db
 from src.saved_views import db
 
@@ -75,3 +77,70 @@ def test_views_deleted_on_user_cascade(users_db_path):
     db.upsert(uid, "tableau", "Vue A", "filtres=a")
     auth_db.delete_user(uid)
     assert db.list_views(uid, "tableau") == []
+
+
+def test_generate_token_is_base62_and_length_6():
+    token = db.generate_token()
+    assert len(token) == 6
+    alphabet = set(string.ascii_letters + string.digits)
+    assert set(token) <= alphabet
+
+
+def test_upsert_returns_token_on_insert(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    token = db.upsert(uid, "tableau", "Ma vue", "q1")
+    assert token
+    assert db.list_views(uid, "tableau")[0]["token"] == token
+
+
+def test_upsert_preserves_token_on_overwrite(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    token1 = db.upsert(uid, "tableau", "Ma vue", "q1")
+    token2 = db.upsert(uid, "tableau", "Ma vue", "q2")
+    assert token2 == token1  # écrasement → lien stable
+    assert db.list_views(uid, "tableau")[0]["query"] == "q2"
+
+
+def test_get_by_token_public_lookup(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    token = db.upsert(uid, "tableau", "Ma vue", "q1")
+    row = db.get_by_token(token)
+    assert row is not None
+    assert row["name"] == "Ma vue"
+    assert db.get_by_token("zzzzzz") is None
+
+
+def test_tokens_are_unique_across_views(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    t1 = db.upsert(uid, "tableau", "Vue A", "a")
+    t2 = db.upsert(uid, "tableau", "Vue B", "b")
+    assert t1 != t2
+
+
+def test_backfill_assigns_tokens_to_null_rows(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    conn = auth_db.get_conn()
+    # Simule une ligne pré-migration (token NULL) en contournant upsert.
+    conn.execute(
+        "INSERT INTO saved_views "
+        "(user_id, table_name, name, query, token, created_at, updated_at) "
+        "VALUES (?, 'tableau', 'Ancienne', 'q', NULL, '', '')",
+        (uid,),
+    )
+    db.init_schema()  # doit backfiller
+    row = conn.execute(
+        "SELECT token FROM saved_views WHERE name = 'Ancienne'"
+    ).fetchone()
+    assert row["token"] and len(row["token"]) == 6
+    # Idempotent : un second appel ne change pas le jeton attribué.
+    token_after_first = row["token"]
+    db.init_schema()
+    row2 = conn.execute(
+        "SELECT token FROM saved_views WHERE name = 'Ancienne'"
+    ).fetchone()
+    assert row2["token"] == token_after_first
