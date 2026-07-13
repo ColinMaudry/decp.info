@@ -170,7 +170,7 @@ def register_entity_grid_callbacks(org_type: str) -> None:
     # 3) Persiste columnState (largeur/ordre/tri/visibilité) dans le store global
     #    partagé. Input MATCH (grille) → Output fixe (store). Autorisé Dash 4.4.
     @callback(
-        Output("entity-grid-columns-state", "data"),
+        Output("entity-grid-columns-state", "data", allow_duplicate=True),
         Input({"type": gtype, "entity_id": MATCH, "year": MATCH}, "columnState"),
         prevent_initial_call=True,
     )
