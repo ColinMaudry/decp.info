@@ -47,7 +47,7 @@ def _content():
                 children=[
                     dbc.ModalHeader(dbc.ModalTitle("Renommer la vue")),
                     dbc.ModalBody(
-                        dbc.Input(id="vue-rename-input", type="text"),
+                        dbc.Input(id="vue-rename-input", type="text", autofocus=True),
                     ),
                     dbc.ModalFooter(
                         dbc.Button("Renommer", id="vue-rename-confirm", color="primary")
@@ -82,25 +82,30 @@ def delete_view(n_clicks):
 @callback(
     Output("vue-rename-modal", "is_open"),
     Output("vue-rename-id", "value"),
+    Output("vue-rename-input", "value"),
     Input({"type": "vue-rename-open", "index": ALL}, "n_clicks"),
     Input("vue-rename-confirm", "n_clicks"),
+    Input("vue-rename-input", "n_submit"),
     State("vue-rename-modal", "is_open"),
     prevent_initial_call=True,
 )
-def toggle_rename_modal(_open, _confirm, is_open):
+def toggle_rename_modal(_open, _confirm, _submit, is_open):
     if isinstance(ctx.triggered_id, dict) and any(_open):
-        return True, str(ctx.triggered_id["index"])
-    return False, no_update
+        view_id = ctx.triggered_id["index"]
+        view = saved_views_db.get(view_id, current_user.id)
+        return True, str(view_id), view["name"] if view else no_update
+    return False, no_update, no_update
 
 
 @callback(
     Output("vues-list", "children", allow_duplicate=True),
     Input("vue-rename-confirm", "n_clicks"),
+    Input("vue-rename-input", "n_submit"),
     State("vue-rename-id", "value"),
     State("vue-rename-input", "value"),
     prevent_initial_call=True,
 )
-def rename_view(_n, view_id, new_name):
+def rename_view(_n, _submit, view_id, new_name):
     clean = saved_views_ui.clean_view_name(new_name)
     if not view_id or not clean:
         return no_update
