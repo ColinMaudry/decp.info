@@ -68,17 +68,28 @@ def fetch_grid_page(
     return rows, total, total_unique
 
 
-def export_dataframe(filter_model, sort_model, hidden_columns) -> pl.DataFrame:
+def export_dataframe(
+    filter_model,
+    sort_model,
+    hidden_columns,
+    base_where_sql: str = "TRUE",
+    base_params: tuple = (),
+) -> pl.DataFrame:
     """Renvoie les lignes filtrées/triées pour l'export Excel.
 
     Colonnes masquées exclues, valeurs brutes (non post-traitées HTML).
+    `base_where_sql`/`base_params` scopent l'export à un sous-ensemble (ex. un
+    acheteur/titulaire) — combinés en `(base) AND (filtre)`, comme
+    `fetch_grid_page`. Par défaut `TRUE` → comportement inchangé pour tableau.py.
     """
     ast = filtermodel_to_ast(filter_model, schema)
-    filter_sql, params = ast_to_sql(ast, schema)
+    filter_sql, filter_params = ast_to_sql(ast, schema)
+    where_sql = f"({base_where_sql}) AND ({filter_sql})"
+    params = [*base_params, *filter_params]
     order_by = sort_model_to_sql(sort_model, schema) or None
     visible = [c for c in schema.names() if c not in set(hidden_columns or [])]
     return query_marches(
-        where_sql=filter_sql,
+        where_sql=where_sql,
         params=params,
         columns=visible,
         order_by=order_by,

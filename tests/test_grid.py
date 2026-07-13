@@ -92,6 +92,26 @@ def test_export_dataframe_applies_filter():
     assert df.height == 0
 
 
+def test_export_dataframe_applies_base_scope():
+    """base_where_sql restreint l'export à un sous-ensemble (ex. un acheteur),
+    en plus du filterModel — utilisé par acheteur.py/titulaire.py (#41)."""
+    # Récupère un acheteur_id présent dans le jeu de test.
+    unscoped = export_dataframe(None, None, hidden_columns=[])
+    assert unscoped.height > 0
+    an_acheteur = unscoped["acheteur_id"][0]
+
+    scoped = export_dataframe(
+        None,
+        None,
+        hidden_columns=[],
+        base_where_sql="acheteur_id = ?",
+        base_params=(an_acheteur,),
+    )
+    assert scoped.height > 0
+    assert scoped.height <= unscoped.height
+    assert set(scoped["acheteur_id"].to_list()) == {an_acheteur}
+
+
 def test_get_rows_tableau_tracks_search_once_per_filter_not_per_scroll_block():
     """Régression revue finale #41 : AG Grid envoie une getRowsRequest par bloc
     de défilement infini, avec le même filterModel tant que le filtre ne
