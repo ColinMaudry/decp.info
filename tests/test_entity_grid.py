@@ -107,9 +107,19 @@ def test_grid_type():
     assert grid_type("titulaire") == "titulaire-grid"
 
 
-def test_register_entity_grid_callbacks_smoke():
-    """La registration ne lève pas (les ids/patterns sont valides pour Dash)."""
-    from src.utils.entity_grid import register_entity_grid_callbacks
+def test_register_entity_grid_callbacks_registered_via_page_import():
+    """Les callbacks de grille entité sont enregistrés (une fois) à l'import
+    des pages acheteur/titulaire — pas de double enregistrement."""
+    import dash
 
-    # Ne doit pas lever ; idempotence non requise (appelée une fois par page).
-    register_entity_grid_callbacks("acheteur")
+    from src.app import app  # importe les pages → register_entity_grid_callbacks
+
+    # Tant que l'app n'a pas été servie, les callbacks enregistrés via le
+    # décorateur global `dash.callback` vivent dans
+    # dash._callback.GLOBAL_CALLBACK_MAP ; ils ne migrent vers
+    # app.callback_map qu'à la première requête (_setup_server). On inspecte
+    # donc les deux registres pour ne pas dépendre de l'ordre des tests
+    # (voir tests/test_csrf_architecture.py pour le même motif).
+    callback_keys = set(dash._callback.GLOBAL_CALLBACK_MAP) | set(app.callback_map)
+    # Le store columnState partagé est piloté par un callback enregistré.
+    assert any("entity-grid-columns-state.data" in k for k in callback_keys)

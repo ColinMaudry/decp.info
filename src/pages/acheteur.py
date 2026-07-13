@@ -3,12 +3,10 @@ import datetime
 import dash_bootstrap_components as dbc
 import polars as pl
 from dash import (
-    ClientsideFunction,
     Input,
     Output,
     State,
     callback,
-    clientside_callback,
     dcc,
     html,
     register_page,
@@ -16,26 +14,22 @@ from dash import (
 
 from src.db import aggregate_marches, count_marches, query_marches, schema
 from src.figures import (
-    DataTable,
     get_distance_histogram,
     get_org_location_map,
-    get_top_org_table,
+    get_top_org_ag_grid,
     make_card,
     make_column_picker,
 )
 from src.utils.data import DF_ACHETEURS, get_annuaire_data, get_departement_region
+from src.utils.entity_grid import entity_scope, register_entity_grid_callbacks
 from src.utils.frontend import DROPDOWN_LABELS_FR, get_button_properties
 from src.utils.seo import META_CONTENT
 from src.utils.table import (
     COLUMNS,
-    filter_table_data,
     format_number,
     get_default_hidden_columns,
-    prepare_table_data,
-    sort_table_data,
     write_styled_excel,
 )
-from src.utils.tracking import track_search
 
 
 def get_title(acheteur_id: str | None = None) -> str:
@@ -49,13 +43,7 @@ def get_title(acheteur_id: str | None = None) -> str:
 
 def _acheteur_scope(pathname: str, ach_year: str | None) -> tuple[str, list]:
     """WHERE SQL scopant les requêtes à cet acheteur (et éventuellement une année)."""
-    acheteur_siret = pathname.split("/")[-1]
-    where_sql = "acheteur_id = ?"
-    params: list = [acheteur_siret]
-    if ach_year and ach_year != "Toutes les années":
-        where_sql += ' AND YEAR("dateNotification") = ?'
-        params.append(int(ach_year))
-    return where_sql, params
+    return entity_scope("acheteur", pathname.split("/")[-1], ach_year)
 
 
 register_page(
@@ -68,197 +56,191 @@ register_page(
     order=5,
 )
 
-DATATABLE = html.Div(
-    className="marches_table",
-    children=DataTable(
-        dtid="acheteur_datatable",
-        persistence=True,
-        persistence_type="local",
-        persisted_props=["filter_query", "sort_by"],
-        page_action="custom",
-        filter_action="custom",
-        sort_action="custom",
-        page_size=10,
-        hidden_columns=[],
-        columns=[{"id": col, "name": col} for col in schema.names()],
-    ),
-)
 
-layout = [
-    dcc.Store(id="acheteur-hidden-columns", storage_type="local"),
-    dcc.Store(id="filter-cleanup-trigger-acheteur"),
-    dcc.Location(id="acheteur_url", refresh="callback-nav"),
-    html.Div(
-        children=[
-            html.Div(
-                style={"marginBottom": "50px"},
-                children=[
-                    dbc.Row(
-                        className="mb-2",
-                        children=[
-                            dbc.Col(
-                                html.H2(
+def layout(acheteur_id=None, **kwargs):
+    return [
+        dcc.Store(id="acheteur-hidden-columns", storage_type="local"),
+        dcc.Store(id="acheteur-total"),
+        dcc.Store(id="acheteur-total-unique"),
+        dcc.Store(id="entity-grid-columns-state", storage_type="local"),
+        dcc.Location(id="acheteur_url", refresh="callback-nav"),
+        html.Div(
+            children=[
+                html.Div(
+                    style={"marginBottom": "50px"},
+                    children=[
+                        dbc.Row(
+                            className="mb-2",
+                            children=[
+                                dbc.Col(
+                                    html.H2(
+                                        children=[
+                                            html.Span(id="acheteur_siret"),
+                                            " - ",
+                                            html.Span(id="acheteur_nom"),
+                                        ],
+                                    ),
+                                    width=8,
+                                ),
+                                dbc.Col(
+                                    dcc.Dropdown(
+                                        id="acheteur_year",
+                                        options=["Toutes les années"]
+                                        + [
+                                            str(year)
+                                            for year in range(
+                                                2018,
+                                                int(datetime.date.today().year) + 1,
+                                            )
+                                        ],
+                                        placeholder="Année",
+                                        labels=DROPDOWN_LABELS_FR,
+                                    ),
+                                    width=4,
+                                ),
+                            ],
+                        ),
+                        dbc.Row(
+                            className="mb-2",
+                            children=[
+                                dbc.Col(
+                                    className="org_infos",
                                     children=[
-                                        html.Span(id="acheteur_siret"),
-                                        " - ",
-                                        html.Span(id="acheteur_nom"),
+                                        # TODO: ajouter le type d'acheteur : commune, CD, CR, etc.
+                                        html.P(
+                                            [
+                                                "Commune : ",
+                                                html.Strong(id="acheteur_commune"),
+                                            ]
+                                        ),
+                                        html.P(
+                                            [
+                                                "Département : ",
+                                                html.Strong(id="acheteur_departement"),
+                                            ]
+                                        ),
+                                        html.P(
+                                            [
+                                                "Région : ",
+                                                html.Strong(id="acheteur_region"),
+                                            ]
+                                        ),
+                                        html.A(
+                                            id="acheteur_lien_annuaire",
+                                            children="Plus de détails sur l'Annuaire des entreprises",
+                                        ),
                                     ],
+                                    width=4,
                                 ),
-                                width=8,
-                            ),
-                            dbc.Col(
-                                dcc.Dropdown(
-                                    id="acheteur_year",
-                                    options=["Toutes les années"]
-                                    + [
-                                        str(year)
-                                        for year in range(
-                                            2018, int(datetime.date.today().year) + 1
-                                        )
+                                dbc.Col(
+                                    children=[
+                                        html.P(id="acheteur_titre_stats"),
+                                        html.P(id="acheteur_marches_attribues"),
+                                        html.P(id="acheteur_titulaires_differents"),
+                                        html.Button(
+                                            "Téléchargement au format Excel",
+                                            id="btn-download-data-acheteur",
+                                            className="btn btn-primary",
+                                        ),
+                                        dcc.Download(id="download-data-acheteur"),
                                     ],
-                                    placeholder="Année",
-                                    labels=DROPDOWN_LABELS_FR,
+                                    width=4,
                                 ),
-                                width=4,
-                            ),
-                        ],
-                    ),
-                    dbc.Row(
-                        className="mb-2",
-                        children=[
-                            dbc.Col(
-                                className="org_infos",
-                                children=[
-                                    # TODO: ajouter le type d'acheteur : commune, CD, CR, etc.
-                                    html.P(
-                                        [
-                                            "Commune : ",
-                                            html.Strong(id="acheteur_commune"),
-                                        ]
-                                    ),
-                                    html.P(
-                                        [
-                                            "Département : ",
-                                            html.Strong(id="acheteur_departement"),
-                                        ]
-                                    ),
-                                    html.P(
-                                        ["Région : ", html.Strong(id="acheteur_region")]
-                                    ),
-                                    html.A(
-                                        id="acheteur_lien_annuaire",
-                                        children="Plus de détails sur l'Annuaire des entreprises",
-                                    ),
-                                ],
-                                width=4,
-                            ),
-                            dbc.Col(
-                                children=[
-                                    html.P(id="acheteur_titre_stats"),
-                                    html.P(id="acheteur_marches_attribues"),
-                                    html.P(id="acheteur_titulaires_differents"),
-                                    html.Button(
-                                        "Téléchargement au format Excel",
-                                        id="btn-download-data-acheteur",
-                                        className="btn btn-primary",
-                                    ),
-                                    dcc.Download(id="download-data-acheteur"),
-                                ],
-                                width=4,
-                            ),
-                            dbc.Col(
-                                id="acheteur_map",
-                                width=4,
-                                style={"minHeight": "300px"},
-                            ),
-                        ],
-                    ),
-                    dbc.Row(
-                        children=[
-                            dbc.Col(
-                                className="marches_table",
-                                id="top10_titulaires",
-                                width=8,
-                                style={"minHeight": "420px"},
-                            ),
-                            dbc.Col(
-                                id="acheteur-distance-histogram",
-                                width=4,
-                                style={"minHeight": "450px"},
-                            ),
-                        ],
-                    ),
-                ],
-            ),
-            # récupérer les données de l'acheteur sur l'api annuaire
-            html.H3("Derniers marchés publics attribués"),
-            dcc.Loading(
-                overlay_style={"visibility": "visible", "filter": "blur(2px)"},
-                id="loading-home",
-                type="default",
-                children=[
-                    html.Div(
-                        [
-                            dbc.Button(
-                                "Colonnes",
-                                id="acheteur_columns_open",
-                                color="secondary",
-                                size="sm",
-                                className="column_list",
-                            ),
-                            dbc.Button(
-                                "Téléchargement désactivé au-delà de 65 000 lignes",
-                                id="btn-download-filtered-data-acheteur",
-                                color="secondary",
-                                size="sm",
-                                disabled=True,
-                            ),
-                            dcc.Download(id="acheteur-download-filtered-data"),
-                            dbc.Button(
-                                "Réinitialiser",
-                                title="Supprime tous les filtres et les tris. Autrement ils sont conservés même si vous fermez la page.",
-                                id="btn-acheteur-reset",
-                                color="danger",
-                                outline=True,
-                                size="sm",
-                            ),
-                        ],
-                        className="table-toolbar",
-                    ),
-                    html.Div(
-                        html.Span(id="acheteur_nb_rows"),
-                        className="table-meta",
-                    ),
-                    dbc.Modal(
-                        [
-                            dbc.ModalHeader(
-                                dbc.ModalTitle("Choix des colonnes à afficher")
-                            ),
-                            dbc.ModalBody(
-                                id="acheteur_columns_body",
-                                children=make_column_picker("acheteur"),
-                            ),
-                            dbc.ModalFooter(
+                                dbc.Col(
+                                    id="acheteur_map",
+                                    width=4,
+                                    style={"minHeight": "300px"},
+                                ),
+                            ],
+                        ),
+                        dbc.Row(
+                            children=[
+                                dbc.Col(
+                                    className="marches_table",
+                                    id="top10_titulaires",
+                                    width=8,
+                                    style={"minHeight": "420px"},
+                                ),
+                                dbc.Col(
+                                    id="acheteur-distance-histogram",
+                                    width=4,
+                                    style={"minHeight": "450px"},
+                                ),
+                            ],
+                        ),
+                    ],
+                ),
+                # récupérer les données de l'acheteur sur l'api annuaire
+                html.H3("Derniers marchés publics attribués"),
+                dcc.Loading(
+                    overlay_style={"visibility": "visible", "filter": "blur(2px)"},
+                    id="loading-home",
+                    type="default",
+                    children=[
+                        html.Div(
+                            [
                                 dbc.Button(
-                                    "Fermer",
-                                    id="acheteur_columns_close",
-                                    className="ms-auto",
-                                    n_clicks=0,
-                                )
-                            ),
-                        ],
-                        id="acheteur_columns",
-                        is_open=False,
-                        fullscreen="md-down",
-                        scrollable=True,
-                        size="xl",
-                    ),
-                    DATATABLE,
-                ],
-            ),
-        ],
-    ),
-]
+                                    "Colonnes",
+                                    id="acheteur_columns_open",
+                                    color="secondary",
+                                    size="sm",
+                                    className="column_list",
+                                ),
+                                dbc.Button(
+                                    "Téléchargement désactivé au-delà de 65 000 lignes",
+                                    id="btn-download-filtered-data-acheteur",
+                                    color="secondary",
+                                    size="sm",
+                                    disabled=True,
+                                ),
+                                dcc.Download(id="acheteur-download-filtered-data"),
+                                dbc.Button(
+                                    "Réinitialiser",
+                                    title="Supprime tous les filtres et les tris. Autrement ils sont conservés même si vous fermez la page.",
+                                    id="btn-acheteur-reset",
+                                    color="danger",
+                                    outline=True,
+                                    size="sm",
+                                ),
+                            ],
+                            className="table-toolbar",
+                        ),
+                        html.Div(
+                            html.Span(id="acheteur_nb_rows"),
+                            className="table-meta",
+                        ),
+                        dbc.Modal(
+                            [
+                                dbc.ModalHeader(
+                                    dbc.ModalTitle("Choix des colonnes à afficher")
+                                ),
+                                dbc.ModalBody(
+                                    id="acheteur_columns_body",
+                                    children=make_column_picker("acheteur"),
+                                ),
+                                dbc.ModalFooter(
+                                    dbc.Button(
+                                        "Fermer",
+                                        id="acheteur_columns_close",
+                                        className="ms-auto",
+                                        n_clicks=0,
+                                    )
+                                ),
+                            ],
+                            id="acheteur_columns",
+                            is_open=False,
+                            fullscreen="md-down",
+                            scrollable=True,
+                            size="xl",
+                        ),
+                        html.Div(
+                            id="acheteur-grid-container", className="marches_table"
+                        ),
+                    ],
+                ),
+            ],
+        ),
+    ]
 
 
 @callback(
@@ -368,54 +350,13 @@ def update_download_button_acheteur(pathname, ach_year):
 
 
 @callback(
-    Output("acheteur_datatable", "data"),
-    Output("acheteur_datatable", "columns"),
-    Output("acheteur_datatable", "tooltip_header"),
-    Output("acheteur_datatable", "data_timestamp"),
-    Output("acheteur_nb_rows", "children"),
-    Output("btn-download-filtered-data-acheteur", "disabled"),
-    Output("btn-download-filtered-data-acheteur", "children"),
-    Output("btn-download-filtered-data-acheteur", "title"),
-    Output("filter-cleanup-trigger-acheteur", "data"),
-    Input("acheteur_url", "pathname"),
-    Input("acheteur_year", "value"),
-    Input("acheteur_datatable", "page_current"),
-    Input("acheteur_datatable", "page_size"),
-    Input("acheteur_datatable", "filter_query"),
-    Input("acheteur_datatable", "sort_by"),
-    State("acheteur_datatable", "data_timestamp"),
-)
-def get_last_marches_data(
-    pathname,
-    ach_year,
-    page_current,
-    page_size,
-    filter_query,
-    sort_by,
-    data_timestamp,
-) -> tuple:
-    where_sql, params = _acheteur_scope(pathname, ach_year)
-    return prepare_table_data(
-        None,
-        data_timestamp,
-        filter_query,
-        page_current,
-        page_size,
-        sort_by,
-        "acheteur",
-        base_where_sql=where_sql,
-        base_params=params,
-    )
-
-
-@callback(
     Output(component_id="top10_titulaires", component_property="children"),
     Input(component_id="acheteur_url", component_property="pathname"),
     Input(component_id="acheteur_year", component_property="value"),
 )
 def get_top_titulaires(pathname, ach_year):
     where_sql, params = _acheteur_scope(pathname, ach_year)
-    table = get_top_org_table(
+    table = get_top_org_ag_grid(
         query_marches(where_sql, params).lazy(), "titulaire", ["titulaire_distance"]
     )
     return make_card(fig=table, title="Top titulaires", lg=12, xl=12)
@@ -452,62 +393,6 @@ def download_acheteur_data(
 
 
 @callback(
-    Output("acheteur-download-filtered-data", "data"),
-    Input("btn-download-filtered-data-acheteur", "n_clicks"),
-    State("acheteur_url", "pathname"),
-    State("acheteur_year", "value"),
-    State("acheteur_nom", "children"),
-    State("acheteur_datatable", "filter_query"),
-    State("acheteur_datatable", "sort_by"),
-    State("acheteur_datatable", "hidden_columns"),
-    prevent_initial_call=True,
-)
-def download_filtered_acheteur_data(
-    n_clicks,
-    pathname,
-    ach_year,
-    acheteur_nom,
-    filter_query,
-    sort_by,
-    hidden_columns: list | None = None,
-):
-    where_sql, params = _acheteur_scope(pathname, ach_year)
-    lff: pl.LazyFrame = query_marches(where_sql, params).lazy()
-
-    # Les colonnes masquées sont supprimées
-    if hidden_columns:
-        lff = lff.drop(hidden_columns)
-
-    if filter_query:
-        track_search(filter_query, "ach download")
-        lff = filter_table_data(lff, filter_query)
-
-    if len(sort_by) > 0:
-        lff = sort_table_data(lff, sort_by)
-
-    def to_bytes(buffer):
-        write_styled_excel(lff.collect(engine="streaming"), buffer)
-
-    date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-    return dcc.send_bytes(
-        to_bytes, filename=f"decp_filtrées_{acheteur_nom}_{date}.xlsx"
-    )
-
-
-# Pour nettoyer les icontains et i< des filtres
-# voir aussi src/assets/dash_clientside.js
-clientside_callback(
-    ClientsideFunction(
-        namespace="clientside",
-        function_name="clean_filters",
-    ),
-    Output("filter-cleanup-trigger-acheteur", "data", allow_duplicate=True),
-    Input("filter-cleanup-trigger-acheteur", "data"),
-    prevent_initial_call=True,
-)
-
-
-@callback(
     Output("acheteur-hidden-columns", "data", allow_duplicate=True),
     Input("acheteur_column_list", "selected_rows"),
     prevent_initial_call=True,
@@ -522,21 +407,8 @@ def update_hidden_columns_from_checkboxes(selected_columns):
 
 
 @callback(
-    Output("acheteur_datatable", "hidden_columns"),
-    Input(
-        "acheteur-hidden-columns",
-        "data",
-    ),
-)
-def store_hidden_columns(hidden_columns):
-    if hidden_columns is None:
-        hidden_columns = get_default_hidden_columns("acheteur")
-    return hidden_columns
-
-
-@callback(
     Output("acheteur_column_list", "selected_rows"),
-    Input("acheteur_datatable", "hidden_columns"),
+    Input("acheteur-hidden-columns", "data"),
     State("acheteur_column_list", "selected_rows"),  # pour éviter la boucle infinie
 )
 def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
@@ -560,16 +432,6 @@ def toggle_acheteur_columns(click_open, click_close, is_open):
 
 
 @callback(
-    Output("acheteur_datatable", "filter_query", allow_duplicate=True),
-    Output("acheteur_datatable", "sort_by"),
-    Input("btn-acheteur-reset", "n_clicks"),
-    prevent_initial_call=True,
-)
-def reset_view(n_clicks):
-    return "", []
-
-
-@callback(
     Output("acheteur-distance-histogram", "children"),
     Input("acheteur_url", "pathname"),
     Input("acheteur_year", "value"),
@@ -585,3 +447,6 @@ def update_acheteur_distance_histogram(pathname, ach_year):
         lg=12,
         xl=12,
     )
+
+
+register_entity_grid_callbacks("acheteur")
