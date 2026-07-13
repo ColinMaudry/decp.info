@@ -88,3 +88,50 @@ def get_client(db_path, client_id: str) -> dict | None:
     d = dict(row)
     d["client_metadata"] = json.loads(d["client_metadata"])
     return d
+
+
+def save_code(
+    db_path,
+    code: str,
+    *,
+    client_id: str,
+    user_id: int,
+    redirect_uri: str | None,
+    code_challenge: str | None,
+    code_challenge_method: str | None,
+    scope: str | None,
+    resource: str | None,
+    expires_at: str,
+) -> None:
+    with _connect(db_path) as conn:
+        conn.execute(
+            "INSERT INTO oauth_codes (code_hash, client_id, user_id, redirect_uri, "
+            "code_challenge, code_challenge_method, scope, resource, expires_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                _hash(code),
+                client_id,
+                user_id,
+                redirect_uri,
+                code_challenge,
+                code_challenge_method,
+                scope,
+                resource,
+                expires_at,
+            ),
+        )
+        conn.commit()
+
+
+def get_code(db_path, code: str) -> dict | None:
+    with _connect(db_path) as conn:
+        row = conn.execute(
+            "SELECT * FROM oauth_codes WHERE code_hash = ?", (_hash(code),)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def delete_code(db_path, code: str) -> None:
+    with _connect(db_path) as conn:
+        conn.execute("DELETE FROM oauth_codes WHERE code_hash = ?", (_hash(code),))
+        conn.commit()
