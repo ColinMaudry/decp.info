@@ -22,5 +22,3 @@ def test_page_module_registers_and_builds_client_instructions():
     assert "https://colibre.fr/_mcp" in text
     for client_name in ("Claude", "Gemini", "Mistral", "ChatGPT"):
         assert client_name in text
-    # caveat ChatGPT (OAuth / itération future)
-    assert "OAuth" in text

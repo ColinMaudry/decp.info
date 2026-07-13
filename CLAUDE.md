@@ -77,7 +77,7 @@ Avant d'ajouter des fichier dans git (`git add` ou `git commit -a`), exécute `p
 
 ### UI stack
 
-- **Dash 3.4** + **Dash Bootstrap Components** for layout
+- **Dash 4.4** + **Dash Bootstrap Components** for layout
 - **Plotly Express** for charts
 - **Dash Leaflet** + **Dash Extensions** for interactive maps with clustering
 - Custom CSS in `src/assets/css/`

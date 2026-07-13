@@ -96,7 +96,7 @@ def _help_button_legend():
             "Supprimer tous les filtres et tris.",
         ),
         (
-            dbc.Button("Mode d'emploi", color="secondary", outline=True, size="sm"),
+            dbc.Button("⍰ Mode d'emploi", color="secondary", outline=True, size="sm"),
             "Ouvrir cette aide.",
         ),
     ]
