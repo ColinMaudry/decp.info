@@ -182,6 +182,14 @@ def test_search_marches_custom_columns_include_uid_only_once(monkeypatch):
     assert set(m.keys()) == {"uid", "objet", "lien"}
 
 
+def test_search_marches_duplicate_columns_deduped(monkeypatch):
+    monkeypatch.setenv("APP_BASE_URL", "https://colibre.fr")
+    # Un client peut répéter une colonne malgré l'enum : pas de doublon au SELECT.
+    result = search_marches(acheteur_id="123", colonnes=["objet", "objet"])
+    m = result["marches"][0]
+    assert set(m.keys()) == {"uid", "objet", "lien"}
+
+
 def test_search_marches_invalid_column_rejected():
     result = search_marches(acheteur_id="123", colonnes=["nexiste_pas"])
     assert result["error"] == "colonne inconnue: nexiste_pas"

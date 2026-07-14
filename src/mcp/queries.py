@@ -131,8 +131,10 @@ def search_marches(
         invalid = [c for c in colonnes if c not in SELECTABLE_COLUMNS]
         if invalid:
             return {"error": f"colonne inconnue: {invalid[0]}", "champ": invalid[0]}
-        # uid toujours présent (clé primaire + nécessaire au lien), sans doublon.
-        out_columns = ["uid"] + [c for c in colonnes if c != "uid"]
+        # uid toujours présent (clé primaire + nécessaire au lien) ; dédoublonne
+        # toute la liste (un client peut répéter une colonne malgré l'enum, ce
+        # qui produirait des noms de colonnes dupliqués au SELECT).
+        out_columns = list(dict.fromkeys(["uid", *colonnes]))
 
     page = max(1, int(page))
     offset = (page - 1) * PAGE_SIZE
