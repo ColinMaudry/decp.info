@@ -1,5 +1,7 @@
 # src/mcp/queries.py
+import os
 import re
+from typing import Literal
 
 from src.api.filters import OPERATORS, FilterError, build_where
 from src.db import aggregate_marches, count_marches, query_marches
@@ -25,6 +27,15 @@ MARCHES_COLUMNS = [
     "titulaire_id",
     "titulaire_nom",
 ]
+
+# Colonnes sélectionnables par le client : le schéma de référence (présent en
+# base) uni aux colonnes du défaut, pour que tout le défaut reste re-sélectionnable
+# même si une colonne enrichie (ex. acheteur_nom) est absente de DATA_SCHEMA.
+_FILTRABLES = tuple(name for name in DATA_SCHEMA if name in duckdb_schema)
+SELECTABLE_COLUMNS = tuple(dict.fromkeys((*MARCHES_COLUMNS, *_FILTRABLES)))
+
+# Enum exposé dans le schéma du tool (UX : liste fermée pour l'agent/le client).
+ColonneMarche = Literal[SELECTABLE_COLUMNS]
 
 # (param nommé, colonne decp, opérateur du moteur de filtres API).
 # `greater` = >=, `less` = <=, `contains` = LIKE %v%, `exact` = =.
@@ -59,7 +70,8 @@ def describe_schema() -> dict:
     }
     return {
         "colonnes_filtrables": colonnes,
-        "colonnes_retournees": MARCHES_COLUMNS,
+        "colonnes_retournees": [*MARCHES_COLUMNS, "lien"],
+        "colonnes_disponibles": list(SELECTABLE_COLUMNS),
         "operateurs": sorted(OPERATORS),
         "filtres_nommes": {p: f"{c}__{o}" for p, c, o in _NAMED_FILTERS},
     }
@@ -93,6 +105,7 @@ def search_marches(
     departement: str | None = None,
     page: int = 1,
     filtres_avances: dict | None = None,
+    colonnes: list[str] | None = None,
 ) -> dict:
     """Recherche paginée de marchés. Même sémantique de filtres que l'API REST."""
     named = {
@@ -112,21 +125,34 @@ def search_marches(
     except FilterError as e:
         return {"error": str(e), "champ": e.field}
 
+    if colonnes is None:
+        out_columns = list(MARCHES_COLUMNS)
+    else:
+        invalid = [c for c in colonnes if c not in SELECTABLE_COLUMNS]
+        if invalid:
+            return {"error": f"colonne inconnue: {invalid[0]}", "champ": invalid[0]}
+        # uid toujours présent (clé primaire + nécessaire au lien), sans doublon.
+        out_columns = ["uid"] + [c for c in colonnes if c != "uid"]
+
     page = max(1, int(page))
     offset = (page - 1) * PAGE_SIZE
     order_by = order_sql or '"dateNotification" DESC, "uid" DESC'
     df = query_marches(
         where_sql,
         params,
-        columns=MARCHES_COLUMNS,
+        columns=out_columns,
         order_by=order_by,
         limit=PAGE_SIZE,
         offset=offset,
     )
     total = count_marches(where_sql, params)
+    base = os.getenv("APP_BASE_URL", "").rstrip("/")
+    marches = to_json_records(df)
+    for marche in marches:
+        marche["lien"] = f"{base}/marche/{marche['uid']}"
     return {
         "meta": {"page": page, "page_size": PAGE_SIZE, "total": total},
-        "marches": to_json_records(df),
+        "marches": marches,
     }
 
 

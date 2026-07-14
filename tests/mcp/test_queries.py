@@ -154,3 +154,54 @@ def test_compute_org_stats_unknown_is_empty():
     assert stats["repartition_annuelle"] == []
     assert stats["top_titulaires"] == []
     assert stats["top_cpv"] == []
+
+
+def test_search_marches_default_columns_and_lien(monkeypatch):
+    monkeypatch.setenv("APP_BASE_URL", "https://colibre.fr")
+    from src.mcp.queries import MARCHES_COLUMNS
+
+    result = search_marches(acheteur_id="123")
+    m = result["marches"][0]
+    # Toutes les colonnes du défaut + le lien
+    assert set(MARCHES_COLUMNS).issubset(m.keys())
+    assert m["lien"] == f"https://colibre.fr/marche/{m['uid']}"
+
+
+def test_search_marches_custom_columns_replace(monkeypatch):
+    monkeypatch.setenv("APP_BASE_URL", "https://colibre.fr")
+    result = search_marches(acheteur_id="123", colonnes=["objet", "montant"])
+    m = result["marches"][0]
+    # « remplace » : exactement les colonnes demandées + uid (clé) + lien
+    assert set(m.keys()) == {"uid", "objet", "montant", "lien"}
+
+
+def test_search_marches_custom_columns_include_uid_only_once(monkeypatch):
+    monkeypatch.setenv("APP_BASE_URL", "https://colibre.fr")
+    result = search_marches(acheteur_id="123", colonnes=["uid", "objet"])
+    m = result["marches"][0]
+    assert set(m.keys()) == {"uid", "objet", "lien"}
+
+
+def test_search_marches_invalid_column_rejected():
+    result = search_marches(acheteur_id="123", colonnes=["nexiste_pas"])
+    assert result["error"] == "colonne inconnue: nexiste_pas"
+    assert result["champ"] == "nexiste_pas"
+    assert "marches" not in result
+
+
+def test_search_marches_lien_relative_when_base_unset(monkeypatch):
+    monkeypatch.delenv("APP_BASE_URL", raising=False)
+    result = search_marches(acheteur_id="123", colonnes=["objet"])
+    m = result["marches"][0]
+    assert m["lien"] == f"/marche/{m['uid']}"
+
+
+def test_describe_schema_exposes_colonnes_disponibles():
+    from src.mcp.queries import describe_schema
+
+    schema = describe_schema()
+    dispo = schema["colonnes_disponibles"]
+    assert isinstance(dispo, list) and dispo
+    # surensemble des colonnes filtrables (inclut le défaut)
+    assert set(schema["colonnes_filtrables"]).issubset(set(dispo))
+    assert "lien" in schema["colonnes_retournees"]
