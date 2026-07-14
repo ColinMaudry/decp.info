@@ -191,6 +191,15 @@ def _cgu_modal():
 
 
 def layout(**query):
+    from src.utils import TOUS_ABONNES
+
+    # Sous TOUS_ABONNES, la souscription payante est désactivée : cette page
+    # carte bancaire n'a plus de sens, on renvoie vers la page abonnement.
+    if TOUS_ABONNES:
+        return dcc.Location(
+            href="/compte/abonnement", id="mes-infos-tous-abonnes-redirect"
+        )
+
     guard = account_guard("/compte/abonnement/mes-infos", require_subscription=False)
     if guard is not None:
         return guard

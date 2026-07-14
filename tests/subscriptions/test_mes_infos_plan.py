@@ -7,6 +7,18 @@ def _plan_env(monkeypatch):
     monkeypatch.setenv("FRISBII_PLAN_SOUTIEN", "plan_soutien")
 
 
+def test_layout_redirects_to_abonnement_when_tous_abonnes(monkeypatch):
+    monkeypatch.setattr("src.utils.TOUS_ABONNES", True)
+    from src.pages.compte import abonnement_mes_infos as m
+
+    text = str(m.layout())
+    # redirection du flag vers /compte/abonnement (href exact), pas le guard de
+    # connexion ni un renvoi vers la page carte bancaire mes-infos
+    assert "href='/compte/abonnement'" in text
+    assert "Mes informations de facturation" not in text
+    assert "connexion" not in text
+
+
 def test_selectable_cards_render_both_plans():
     from src.pages.compte import abonnement_mes_infos as m
 

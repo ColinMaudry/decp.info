@@ -41,6 +41,39 @@ def _reabo_button():
     )
 
 
+def _free_access_view():
+    from src.pages.a_propos.abonnement import abonnement_features
+
+    return html.Div(
+        [
+            html.H3(
+                "Vous avez temporairement accès à toutes les fonctionnalités",
+                className="mb-3",
+            ),
+            html.P("Votre accès gratuit débloque :"),
+            abonnement_features,
+            dcc.Markdown(
+                "Pensez à copier les liens vers vos vues pour les conserver si vous "
+                "ne comptez pas souscrire à un abonnement payant.",
+                className="text-muted mt-3",
+            ),
+        ],
+        className="mb-4",
+    )
+
+
+def _no_sub_view(tous_abonnes: bool, row):
+    if tous_abonnes:
+        return _free_access_view()
+    blocks = []
+    if row is not None and row["status"] == "expired":
+        blocks.append(
+            dbc.Alert("Votre abonnement a expiré.", color="warning", className="mb-4")
+        )
+    blocks.append(_reabo_button())
+    return html.Div(blocks)
+
+
 def _active_view(row):
     meta = plans.plan_meta(row["plan"]) or {"label": row["plan"]}
     end = format_date_french(row["current_period_end"])
@@ -262,13 +295,9 @@ def layout(**query):
         body.append(_active_view(row))
         body.append(_resiliation_modal(row["current_period_end"]))
     else:
-        if row is not None and row["status"] == "expired":
-            body.append(
-                dbc.Alert(
-                    "Votre abonnement a expiré.", color="warning", className="mb-4"
-                )
-            )
-        body.append(_reabo_button())
+        from src.utils import TOUS_ABONNES
+
+        body.append(_no_sub_view(TOUS_ABONNES, row))
 
     body.append(_salaire_modal)
     return account_shell("abonnement", html.Div(body))

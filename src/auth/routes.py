@@ -99,7 +99,12 @@ def verify_email():
         return redirect("/verification-email?error=invalid_token")
     db.set_email_verified(user_id)
     login_user(User(db.get_user_by_id(user_id)), remember=True)
-    return redirect("/compte/abonnement/mes-infos")
+    from src.utils import TOUS_ABONNES
+
+    # Sous TOUS_ABONNES, la page carte bancaire (mes-infos) est un cul-de-sac
+    # (pas de prestataire de paiement) : on renvoie vers la page abonnement.
+    dest = "/compte/abonnement" if TOUS_ABONNES else "/compte/abonnement/mes-infos"
+    return redirect(dest)
 
 
 @auth_bp.route("/login", methods=["POST"])

@@ -44,12 +44,23 @@ def test_subscribe_button_active_sub_manages():
     assert "href='/compte/abonnement'" in text
 
 
-def test_subscribe_button_disabled_when_tous_abonnes():
+def test_subscribe_button_tous_abonnes_visitor_free_signup():
     from src.app import app  # noqa: F401
     from src.pages.a_propos import abonnement as page
 
     text = str(page._subscribe_button(False, False, True))
-    assert "disabled" in text
+    assert "Je m'abonne gratuitement" in text
+    assert "href='/inscription'" in text
+    assert "disabled" not in text
+
+
+def test_subscribe_button_tous_abonnes_authenticated_goes_to_compte():
+    from src.app import app  # noqa: F401
+    from src.pages.a_propos import abonnement as page
+
+    text = str(page._subscribe_button(True, False, True))
+    assert "href='/compte/abonnement'" in text
+    assert "disabled" not in text
 
 
 def test_cgu_terms_trimmed_of_features_section():

@@ -6,6 +6,39 @@ def test_reabo_button_links_to_abonnement_page():
     assert "/a-propos/abonnement" in text
 
 
+def test_free_access_view_message():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    text = str(compte_abonnement._free_access_view())
+    assert "temporairement accès à toutes les fonctionnalités" in text
+    assert "Pensez à copier les liens vers vos vues" in text
+
+
+def test_no_sub_view_uses_free_access_when_tous_abonnes():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    text = str(compte_abonnement._no_sub_view(True, None))
+    assert "temporairement accès" in text
+    assert "Abonnez-vous" not in text
+
+
+def test_no_sub_view_uses_reabo_when_flag_off():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    text = str(compte_abonnement._no_sub_view(False, None))
+    assert "Abonnez-vous" in text
+    assert "temporairement accès" not in text
+
+
+def test_no_sub_view_shows_expired_alert_when_flag_off():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    row = {"status": "expired", "current_period_end": None}
+    text = str(compte_abonnement._no_sub_view(False, row))
+    assert "expiré" in text
+    assert "Abonnez-vous" in text
+
+
 def test_active_view_shows_cancel(monkeypatch):
     from src.pages.compte import abonnement as compte_abonnement
 

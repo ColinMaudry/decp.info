@@ -25,3 +25,12 @@ def test_inscription_linkedin_targets_mes_infos():
     assert "/auth/linkedin?next=/compte/abonnement/mes-infos" in str(
         inscription.layout()
     )
+
+
+def test_inscription_linkedin_targets_abonnement_when_tous_abonnes(monkeypatch):
+    monkeypatch.setattr("src.utils.TOUS_ABONNES", True)
+    # Import app first to initialize Dash
+    from src.app import app  # noqa: F401
+    from src.pages import inscription
+
+    assert "/auth/linkedin?next=/compte/abonnement'" in str(inscription.layout())

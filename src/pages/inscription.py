@@ -23,9 +23,16 @@ ERROR_MESSAGES = {
 
 
 def layout(error: str | None = None, email: str | None = None, **_):
+    from src.utils import TOUS_ABONNES
+
     alert = None
     if error and error in ERROR_MESSAGES:
         alert = dbc.Alert(ERROR_MESSAGES[error], color="danger")
+
+    # Sous TOUS_ABONNES, on saute la page carte bancaire (mes-infos).
+    linkedin_next = (
+        "/compte/abonnement" if TOUS_ABONNES else "/compte/abonnement/mes-infos"
+    )
 
     return dbc.Container(
         className="py-4",
@@ -70,7 +77,7 @@ def layout(error: str | None = None, email: str | None = None, **_):
                 ],
             ),
             html.Div("ou", className="text-center text-muted my-2"),
-            linkedin_button("/compte/abonnement/mes-infos"),
+            linkedin_button(linkedin_next),
             html.Hr(),
             dcc.Link("Déjà un compte ? Se connecter", href="/connexion"),
         ],

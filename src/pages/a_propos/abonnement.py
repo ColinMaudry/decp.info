@@ -95,6 +95,7 @@ def _subscribe_button(
     authenticated: bool, has_active_subscription: bool, tous_abonnes: bool
 ):
     if tous_abonnes:
+        href = "/compte/abonnement" if authenticated else "/inscription"
         return html.Div(
             [
                 dbc.Alert(
@@ -104,9 +105,9 @@ def _subscribe_button(
                     color="info",
                 ),
                 html.A(
-                    "Je m'abonne",
-                    href="#",
-                    className="btn btn-secondary disabled",
+                    "Je m'abonne gratuitement",
+                    href=href,
+                    className="btn btn-secondary",
                 ),
             ],
             className="text-center my-4",
