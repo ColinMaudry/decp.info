@@ -182,13 +182,13 @@ def build_where(
             where_parts.append(f'"{col}" {op_sql[op]} ?')
             params.append(v)
         elif op == "contains":
-            where_parts.append(f'"{col}" LIKE ?')
+            where_parts.append(f'"{col}" ILIKE ?')
             params.append(f"%{v}%")
         elif op == "notcontains":
-            where_parts.append(f'"{col}" NOT LIKE ?')
+            where_parts.append(f'"{col}" NOT ILIKE ?')
             params.append(f"%{v}%")
         elif op == "startswith":
-            where_parts.append(f'"{col}" LIKE ?')
+            where_parts.append(f'"{col}" ILIKE ?')
             params.append(f"{v}%")
         elif op == "differs":
             where_parts.append(f'"{col}" IS DISTINCT FROM ?')

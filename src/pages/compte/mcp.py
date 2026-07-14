@@ -131,7 +131,7 @@ def prompt_tips():
             html.Ul([html.Li(html.Em(f"« {p} »")) for p in exemples]),
             html.P(
                 "Astuce colonnes : demandez à l'assistant de vous proposer les "
-                "colonnes disponibles pour choisir précisément ce qui s'affiche sous la forme, si possible d'une liste de cases à cocher "
+                "colonnes disponibles pour choisir précisément ce qui s'affiche, si possible sous la forme d'une liste de cases à cocher "
                 "(les colonnes par défaut restent pré-sélectionnées). Chaque "
                 "marché renvoyé inclut un lien direct vers sa fiche sur colibre.",
                 className="text-muted",
