@@ -42,7 +42,7 @@ ColonneMarche = Literal[SELECTABLE_COLUMNS]
 _NAMED_FILTERS = [
     ("acheteur_id", "acheteur_id", "exact"),
     ("titulaire_id", "titulaire_id", "exact"),
-    ("cpv", "codeCPV", "contains"),
+    ("cpv", "codeCPV", "startswith"),
     ("objet_contient", "objet", "contains"),
     ("montant_min", "montant", "greater"),
     ("montant_max", "montant", "less"),

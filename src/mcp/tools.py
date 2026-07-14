@@ -79,8 +79,9 @@ def rechercher_marches(
 ) -> dict:
     """Recherche paginée de marchés publics (DECP).
 
-    Filtres nommés : acheteur_id, titulaire_id, cpv (code CPV, correspondance
-    partielle), objet_contient (texte de l'objet), montant_min, montant_max,
+    Filtres nommés : acheteur_id, titulaire_id, cpv (code CPV, filtre par
+    préfixe — ex. « 72 » = informatique, « 7220 » = logiciels),
+    objet_contient (texte de l'objet), montant_min, montant_max,
     date_min / date_max (format YYYY-MM-DD, sur dateNotification),
     departement (code département de l'acheteur).
     filtres_avances : dict optionnel {"colonne__operateur": valeur} pour les

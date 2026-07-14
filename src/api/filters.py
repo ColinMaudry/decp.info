@@ -7,6 +7,7 @@ OPERATORS = {
     "exact",
     "contains",
     "notcontains",
+    "startswith",
     "differs",
     "less",
     "greater",
@@ -186,6 +187,9 @@ def build_where(
         elif op == "notcontains":
             where_parts.append(f'"{col}" NOT LIKE ?')
             params.append(f"%{v}%")
+        elif op == "startswith":
+            where_parts.append(f'"{col}" LIKE ?')
+            params.append(f"{v}%")
         elif op == "differs":
             where_parts.append(f'"{col}" IS DISTINCT FROM ?')
             params.append(v)

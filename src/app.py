@@ -74,7 +74,7 @@ cache.init_app(
     },
 )
 
-_mcp_enabled = os.getenv("DASH_MCP_ENABLED") == "true"
+_mcp_enabled = os.getenv("DASH_MCP_ENABLED", "").lower() == "true"
 
 app: Dash = Dash(
     server=server,

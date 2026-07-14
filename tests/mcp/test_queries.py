@@ -117,6 +117,19 @@ def test_search_marches_cpv_filters_correctly():
     assert search_marches(cpv="999")["meta"]["total"] == 0
 
 
+def test_build_where_args_cpv_is_prefix():
+    # le filtre nommé cpv est un « commence par » (code CPV hiérarchique)
+    args = build_where_args({"cpv": "72"}, None)
+    assert ("codeCPV__startswith", "72") in args
+
+
+def test_search_marches_cpv_is_prefix_not_contains():
+    # "1600" est contenu dans le codeCPV de test (71600000) mais n'en est pas
+    # le préfixe : en sémantique « commence par », aucun résultat.
+    assert search_marches(cpv="1600")["meta"]["total"] == 0
+    assert search_marches(cpv="716")["meta"]["total"] >= 1
+
+
 def test_search_marches_page_2_is_empty_with_correct_meta():
     result = search_marches(acheteur_id="123", page=2)
     assert result["meta"]["page"] == 2

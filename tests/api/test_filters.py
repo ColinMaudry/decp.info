@@ -39,6 +39,12 @@ def test_notcontains_filter():
     assert params == ["%x%"]
 
 
+def test_startswith_filter_uses_prefix_wildcard():
+    where, params, _ = build_where([("objet__startswith", "72")], SCHEMA)
+    assert where == '"objet" LIKE ?'
+    assert params == ["72%"]
+
+
 def test_comparison_operators_on_int():
     where, params, _ = build_where([("annee__strictly_greater", "2023")], SCHEMA)
     assert where == '"annee" > ?'

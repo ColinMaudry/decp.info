@@ -131,6 +131,7 @@ def schema():
                 "- `exact` : égal à la valeur\n"
                 "- `differs` : différent de la valeur (null-safe, `IS DISTINCT FROM`)\n"
                 "- `contains` / `notcontains` : contient / ne contient pas (LIKE)\n"
+                "- `startswith` : commence par (préfixe, ex. `codeCPV__startswith=72`)\n"
                 "- `in` / `notin` : dans / hors d'une liste séparée par des virgules\n"
                 "- `less` / `greater` : ≤ / ≥\n"
                 "- `strictly_less` / `strictly_greater` : < / >\n"
@@ -157,8 +158,9 @@ def data():
     """Récupère des marchés publics filtrés, triés ou agrégés.
 
     Filtres en query string : `<colonne>__<opérateur>=<valeur>`.
-    Opérateurs de filtre : exact, differs, contains, notcontains, in, notin,
-    less, greater, strictly_less, strictly_greater, isnull, isnotnull, sort.
+    Opérateurs de filtre : exact, differs, contains, notcontains, startswith,
+    in, notin, less, greater, strictly_less, strictly_greater, isnull,
+    isnotnull, sort.
 
     Agrégation (drapeaux sans valeur) : `<colonne>__groupby`,
     `<colonne>__count|sum|avg|min|max`. Les colonnes agrégées sont nommées

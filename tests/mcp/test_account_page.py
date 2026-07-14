@@ -34,6 +34,16 @@ def test_client_instructions_include_oauth_apps():
     assert any("ChatGPT" in t for t in titles)
 
 
+def test_prompt_tips_mentions_columns_and_examples():
+    from src.app import app  # noqa: F401
+    from src.pages.compte.mcp import prompt_tips
+
+    text = str(prompt_tips())
+    assert "Morbihan" in text  # un exemple de prompt concret
+    assert "colonnes" in text  # l'astuce sur le choix des colonnes
+    assert "lien" in text  # mention du lien vers la fiche marché
+
+
 def _collect_titles(component):
     # Parcourt récursivement les AccordionItem pour collecter leurs `title`.
     found = []
