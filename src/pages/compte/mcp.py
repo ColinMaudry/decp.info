@@ -42,6 +42,27 @@ def client_instructions(url: str, token: str):
         always_open=False,
         children=[
             dbc.AccordionItem(
+                title="ChatGPT",
+                children=[
+                    html.P(
+                        "ChatGPT utilise aussi OAuth (aucun jeton à copier). Dans les "
+                        "connecteurs, ajoutez un connecteur par URL :"
+                    ),
+                    html.Ol(
+                        [
+                            html.Li(f"URL du serveur MCP : {url}"),
+                            html.Li(
+                                "Connectez-vous avec colibre, puis autorisez l'accès."
+                            ),
+                        ]
+                    ),
+                    html.P(
+                        "La disponibilité des connecteurs dépend de votre plan ChatGPT.",
+                        className="text-muted",
+                    ),
+                ],
+            ),
+            dbc.AccordionItem(
                 title="Claude Code",
                 children=html.Pre(html.Code(claude)),
             ),
@@ -84,27 +105,6 @@ def client_instructions(url: str, token: str):
                     7. Valeur du header : Bearer <VOTRE_JETON>
                     8. Cliquez sur **Créer**
                     """),
-            ),
-            dbc.AccordionItem(
-                title="ChatGPT",
-                children=[
-                    html.P(
-                        "ChatGPT utilise aussi OAuth (aucun jeton à copier). Dans les "
-                        "connecteurs, ajoutez un connecteur par URL :"
-                    ),
-                    html.Ol(
-                        [
-                            html.Li(f"URL du serveur MCP : {url}"),
-                            html.Li(
-                                "Connectez-vous avec colibre, puis autorisez l'accès."
-                            ),
-                        ]
-                    ),
-                    html.P(
-                        "La disponibilité des connecteurs dépend de votre plan ChatGPT.",
-                        className="text-muted",
-                    ),
-                ],
             ),
         ],
     )
