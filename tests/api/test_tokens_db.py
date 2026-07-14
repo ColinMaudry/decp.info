@@ -101,3 +101,34 @@ def test_revoke_user_token_already_revoked_returns_false(temp_db):
     _, token_id = tokens_db.create_token(temp_db, "x", user_id=1, kind="mcp")
     assert tokens_db.revoke_user_token(temp_db, token_id, 1) is True
     assert tokens_db.revoke_user_token(temp_db, token_id, 1) is False
+
+
+def test_create_token_stores_recoverable_encrypted_token(temp_db, monkeypatch):
+    monkeypatch.setenv("SECRET_KEY", "s3cr3t-test-key")
+    token, token_id = tokens_db.create_token(temp_db, "x", user_id=7, kind="mcp")
+    with sqlite3.connect(str(temp_db)) as conn:
+        enc = conn.execute(
+            "SELECT token_enc FROM api_tokens WHERE id = ?", (token_id,)
+        ).fetchone()[0]
+    assert enc is not None
+    assert token not in enc  # chiffré, jamais en clair dans la base
+    assert tokens_db.get_token_plaintext_for_user(temp_db, token_id, 7) == token
+
+
+def test_get_token_plaintext_scoped_to_owner(temp_db, monkeypatch):
+    monkeypatch.setenv("SECRET_KEY", "s3cr3t-test-key")
+    _, token_id = tokens_db.create_token(temp_db, "x", user_id=1, kind="mcp")
+    assert tokens_db.get_token_plaintext_for_user(temp_db, token_id, 999) is None
+
+
+def test_get_token_plaintext_none_when_no_key(temp_db, monkeypatch):
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+    _, token_id = tokens_db.create_token(temp_db, "x", user_id=1, kind="mcp")
+    assert tokens_db.get_token_plaintext_for_user(temp_db, token_id, 1) is None
+
+
+def test_get_token_plaintext_none_after_key_rotation(temp_db, monkeypatch):
+    monkeypatch.setenv("SECRET_KEY", "key-A")
+    _, token_id = tokens_db.create_token(temp_db, "x", user_id=1, kind="mcp")
+    monkeypatch.setenv("SECRET_KEY", "key-B")  # rotation → indéchiffrable
+    assert tokens_db.get_token_plaintext_for_user(temp_db, token_id, 1) is None

@@ -78,6 +78,10 @@ _MIGRATIONS: list[tuple[str, str]] = [
         "0012_add_token_to_saved_views",
         "ALTER TABLE saved_views ADD COLUMN token TEXT",
     ),
+    (
+        "0013_add_token_enc_to_api_tokens",
+        "ALTER TABLE api_tokens ADD COLUMN token_enc TEXT",
+    ),
 ]
 
 

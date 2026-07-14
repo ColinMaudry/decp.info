@@ -44,6 +44,45 @@ def test_prompt_tips_mentions_columns_and_examples():
     assert "lien" in text  # mention du lien vers la fiche marché
 
 
+def test_token_row_has_copy_button_when_token_available():
+    from src.app import app  # noqa: F401
+    from src.pages.compte.mcp import _token_row
+
+    text = str(
+        _token_row(
+            {
+                "id": 42,
+                "label": "l",
+                "created_at": "c",
+                "last_used_at": None,
+                "revoked_at": None,
+                "token_plain": "colibre_abc123",
+            }
+        )
+    )
+    assert "Copier le jeton" in text
+    assert "colibre_abc123" in text  # contenu du presse-papier (dcc.Clipboard)
+
+
+def test_token_row_no_copy_button_when_token_unavailable():
+    from src.app import app  # noqa: F401
+    from src.pages.compte.mcp import _token_row
+
+    text = str(
+        _token_row(
+            {
+                "id": 42,
+                "label": "l",
+                "created_at": "c",
+                "last_used_at": None,
+                "revoked_at": None,
+                "token_plain": None,  # ancien jeton haché, non récupérable
+            }
+        )
+    )
+    assert "Copier le jeton" not in text
+
+
 def _collect_titles(component):
     # Parcourt récursivement les AccordionItem pour collecter leurs `title`.
     found = []

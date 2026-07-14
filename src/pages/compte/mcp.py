@@ -140,14 +140,48 @@ def prompt_tips():
     )
 
 
+def _copy_token_button(token: str):
+    """Bouton « Copier le jeton » (même design que « Copier le lien » des vues)."""
+    return dcc.Clipboard(
+        content=token,
+        title="Copier le jeton",
+        className="btn btn-outline-secondary btn-sm d-inline-flex "
+        "align-items-center me-2",
+        children=[
+            html.Img(
+                src="/assets/copy.svg",
+                alt="",
+                style={
+                    "height": "1em",
+                    "verticalAlign": "-0.15em",
+                    "marginRight": "0.35em",
+                },
+            ),
+            "Copier le jeton",
+        ],
+        copied_children="✓ Copié",
+    )
+
+
 def _token_row(row: dict):
     statut = "Révoqué" if row["revoked_at"] else "Actif"
     actions = []
     if not row["revoked_at"]:
-        actions = [
+        token_plain = row.get("token_plain")
+        if token_plain:
+            actions.append(_copy_token_button(token_plain))
+        else:
+            actions.append(
+                html.Span(
+                    "Régénérez pour copier",
+                    className="text-muted small me-2",
+                )
+            )
+        actions.append(
             html.Form(
                 method="POST",
                 action=f"/compte/mcp/revoquer/{row['id']}",
+                className="d-inline",
                 children=[
                     _csrf(f"revoke-{row['id']}"),
                     dbc.Button(
@@ -159,7 +193,7 @@ def _token_row(row: dict):
                     ),
                 ],
             )
-        ]
+        )
     return html.Tr(
         [
             html.Td(row["label"]),
@@ -196,17 +230,25 @@ def layout(**_):
         alerts.append(
             dbc.Alert(
                 [
-                    html.Strong("Votre nouveau jeton (copiez-le maintenant, "),
-                    html.Strong("il ne sera plus affiché) :"),
+                    html.Strong(
+                        "Votre nouveau jeton (vous pourrez le copier à tout "
+                        "moment via « Copier le jeton ») :"
+                    ),
                     html.Pre(html.Code(new_token)),
                 ],
                 color="success",
             )
         )
 
-    tokens = tokens_db.list_user_tokens(
-        os.environ["USERS_DB_PATH"], current_user.id, "mcp"
-    )
+    db_path = os.environ["USERS_DB_PATH"]
+    tokens = tokens_db.list_user_tokens(db_path, current_user.id, "mcp")
+    token_rows = []
+    for r in tokens:
+        row = dict(r)
+        row["token_plain"] = tokens_db.get_token_plaintext_for_user(
+            db_path, row["id"], current_user.id
+        )
+        token_rows.append(_token_row(row))
     table = (
         dbc.Table(
             [
@@ -221,7 +263,7 @@ def layout(**_):
                         ]
                     )
                 ),
-                html.Tbody([_token_row(dict(r)) for r in tokens]),
+                html.Tbody(token_rows),
             ],
             striped=True,
             bordered=False,

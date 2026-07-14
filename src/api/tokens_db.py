@@ -1,9 +1,13 @@
+import base64
 import hashlib
+import os
 import secrets
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+
+from cryptography.fernet import Fernet, InvalidToken
 
 TOKEN_PREFIX = "colibre_"
 
@@ -11,6 +15,7 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS api_tokens (
     id           INTEGER PRIMARY KEY,
     token_hash   TEXT NOT NULL UNIQUE,
+    token_enc    TEXT,
     label        TEXT NOT NULL,
     user_id      INTEGER,
     created_at   TEXT NOT NULL,
@@ -29,6 +34,19 @@ def _utcnow_iso() -> str:
 
 def _hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _fernet_key() -> bytes | None:
+    """Clé Fernet dérivée de SECRET_KEY (séparation de domaine).
+
+    Renvoie None si SECRET_KEY est absent : le jeton n'est alors pas chiffré
+    ni ré-affichable (dégradation propre, sans échec).
+    """
+    secret = os.getenv("SECRET_KEY")
+    if not secret:
+        return None
+    digest = hashlib.sha256(f"mcp-token-enc:{secret}".encode()).digest()
+    return base64.urlsafe_b64encode(digest)
 
 
 @contextmanager
@@ -52,11 +70,13 @@ def create_token(
     db_path, label: str, user_id: int | None = None, kind: str = "api"
 ) -> tuple[str, int]:
     token = TOKEN_PREFIX + secrets.token_hex(32)
+    key = _fernet_key()
+    token_enc = Fernet(key).encrypt(token.encode()).decode() if key else None
     with _connect(db_path) as conn:
         cur = conn.execute(
-            "INSERT INTO api_tokens (token_hash, label, user_id, kind, created_at) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (_hash(token), label, user_id, kind, _utcnow_iso()),
+            "INSERT INTO api_tokens (token_hash, token_enc, label, user_id, kind, "
+            "created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (_hash(token), token_enc, label, user_id, kind, _utcnow_iso()),
         )
         conn.commit()
         return token, cur.lastrowid
@@ -69,6 +89,28 @@ def get_token_by_plaintext(db_path, token: str) -> dict | None:
             (_hash(token),),
         ).fetchone()
     return dict(row) if row else None
+
+
+def get_token_plaintext_for_user(db_path, token_id: int, user_id: int) -> str | None:
+    """Déchiffre et renvoie le jeton en clair, uniquement pour son propriétaire.
+
+    Renvoie None si : SECRET_KEY absent, jeton inexistant/appartenant à un autre
+    utilisateur, jamais chiffré (token_enc NULL), ou indéchiffrable (clé changée).
+    """
+    key = _fernet_key()
+    if key is None:
+        return None
+    with _connect(db_path) as conn:
+        row = conn.execute(
+            "SELECT token_enc FROM api_tokens WHERE id = ? AND user_id = ?",
+            (token_id, user_id),
+        ).fetchone()
+    if row is None or row["token_enc"] is None:
+        return None
+    try:
+        return Fernet(key).decrypt(row["token_enc"].encode()).decode()
+    except InvalidToken:
+        return None
 
 
 def revoke_token(db_path, token_id: int) -> None:
