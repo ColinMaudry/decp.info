@@ -46,7 +46,7 @@ def _free_access_view():
 
     return html.Div(
         [
-            html.H3(
+            html.H5(
                 "Vous avez temporairement accès à toutes les fonctionnalités",
                 className="mb-3",
             ),

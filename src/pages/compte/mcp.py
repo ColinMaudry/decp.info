@@ -52,14 +52,15 @@ def client_instructions(url: str, token: str):
                     html.Ol(
                         [
                             html.Li(
-                                "Paramètres → Connecteurs → Ajouter un connecteur personnalisé."
+                                "Icône utilisateur → Paramètres → Connecteurs → Ajouter → Ajouter un connecteur personnalisé."
                             ),
-                            html.Li(f"URL du serveur MCP : {url}"),
+                            html.Li("Nom : colibre"),
+                            html.Li(f"URL du serveur MCP distant : {url}"),
                             html.Li(
-                                "Laissez le champ « Client Secret » vide (client public)."
+                                'Laissez les champs "Client ID" et "Client secret" vides.'
                             ),
                             html.Li(
-                                "Connectez-vous avec votre compte colibre, puis « Autoriser »."
+                                'Connectez-vous avec votre compte colibre, puis "Autoriser".'
                             ),
                         ]
                     ),

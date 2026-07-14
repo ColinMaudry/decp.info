@@ -2,12 +2,60 @@ import dash_bootstrap_components as dbc
 from dash import Input, Output, State, callback, dcc, html, register_page
 
 from src.figures import DataTable
+from src.pages.a_propos.abonnement import abonnement_features
 from src.utils.data import DF_ACHETEURS, DF_TITULAIRES
 from src.utils.search import search_org
 from src.utils.seo import META_CONTENT
 from src.utils.table import setup_table_columns
 
 NAME = "Recherche"
+
+_features_gratuites = dcc.Markdown("""
+- Recherche d'acheteurs et de titulaires
+- [Tableau](/tableau) filtrable et personnalisable sur des dizaines de colonnes et exports Excel
+- Fiches détaillées : acheteur, titulaire, marché
+- Cartes, statistiques et [observatoire](/observatoire) national personnalisable
+""")
+
+home_intro = html.Div(
+    id="home_intro",
+    className="container",
+    style={"maxWidth": "900px", "marginTop": "1rem"},
+    children=[
+        html.P(
+            "colibre ouvre les données des marchés publics français à toutes et "
+            "tous : recherchez, filtrez, cartographiez, exportez — gratuitement "
+            "et sans compte.",
+            className="text-center text-muted",
+            style={"maxWidth": "700px", "margin": "0 auto 1.5rem"},
+        ),
+        dbc.Row(
+            [
+                dbc.Col(
+                    [html.H4("✅ Gratuit, sans compte"), _features_gratuites],
+                    md=6,
+                    style={
+                        "borderRight": "1px solid var(--bs-border-color)",
+                        "paddingRight": "2rem",
+                    },
+                ),
+                dbc.Col(
+                    [
+                        html.H4("⭐ Avec un abonnement"),
+                        abonnement_features,
+                        dcc.Link(
+                            "En savoir plus et s'abonner",
+                            href="/a-propos/abonnement",
+                        ),
+                    ],
+                    md=6,
+                    style={"paddingLeft": "2rem"},
+                ),
+            ],
+            className="align-items-start",
+        ),
+    ],
+)
 
 register_page(
     __name__,
@@ -71,6 +119,7 @@ layout = html.Div(
             style={"textAlign": "center"},
             id="mention_tableau",
         ),
+        home_intro,
         # html.Div(
         #     className="search_options",
         #     children=[dcc.RadioItems(options=["Acheteur(s)"])],
@@ -83,6 +132,7 @@ layout = html.Div(
 @callback(
     Output("search_results", "children"),
     Output("mention_tableau", "style"),
+    Output("home_intro", "style"),
     Input("search", "n_submit"),
     Input("search-button", "n_clicks"),
     State("search", "value"),
@@ -128,5 +178,5 @@ def update_search_results(n_submit, n_clicks, query):
             cols.append(col)
 
         style = {"textAlign": "center", "display": "none"}
-        return cols, style
-    return html.P(""), {"textAlign": "center"}
+        return cols, style, {"display": "none"}
+    return html.P(""), {"textAlign": "center"}, home_intro.style
