@@ -48,9 +48,10 @@ sous-ensemble à maintenir à la main.
 
 ### `src/mcp/queries.py`
 
-- Construire à l'import :
+- Construire à l'import (cf. section « Source de vérité ») :
   ```python
-  SELECTABLE_COLUMNS = tuple(name for name in DATA_SCHEMA if name in duckdb_schema)
+  _filtrables = tuple(name for name in DATA_SCHEMA if name in duckdb_schema)
+  SELECTABLE_COLUMNS = tuple(dict.fromkeys((*MARCHES_COLUMNS, *_filtrables)))
   ColonneMarche = Literal[SELECTABLE_COLUMNS]
   ```
 - `search_marches(..., colonnes: list[str] | None = None)` :
