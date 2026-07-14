@@ -22,10 +22,15 @@ def layout(**_):
         return guard
     balance = subs_db.credit_pending(current_user.id)
     next_recharge = subs_db.next_recharge_at(current_user.id)
+    sub = subs_db.get_current(current_user.id)
     return account_shell(
         "roadmap",
         roadmap_ui.roadmap_content(
-            editable=True, balance=balance, next_recharge=next_recharge
+            editable=True,
+            balance=balance,
+            next_recharge=next_recharge,
+            sub_status=sub["status"] if sub else None,
+            trial_ends_at=sub["current_period_end"] if sub else None,
         ),
     )
 

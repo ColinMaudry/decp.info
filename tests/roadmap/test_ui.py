@@ -44,3 +44,35 @@ def test_roadmap_content_renders(monkeypatch):
     assert "Au vote Y" in s
     assert "Votes restants" in s
     assert "value='2'" in s
+
+
+def test_roadmap_content_shows_trial_hint(monkeypatch):
+    monkeypatch.setattr(
+        ui.github,
+        "fetch_roadmap_issues",
+        lambda: {"en_cours": [], "au_vote": []},
+    )
+    monkeypatch.setattr(ui.roadmap_db, "vote_counts", lambda: {})
+    content = ui.roadmap_content(
+        editable=True,
+        balance=0,
+        sub_status="trial",
+        trial_ends_at="2026-07-20T10:00:00+00:00",
+    )
+    assert "20/07/2026" in str(content)
+
+
+def test_roadmap_content_no_trial_hint_when_active(monkeypatch):
+    monkeypatch.setattr(
+        ui.github,
+        "fetch_roadmap_issues",
+        lambda: {"en_cours": [], "au_vote": []},
+    )
+    monkeypatch.setattr(ui.roadmap_db, "vote_counts", lambda: {})
+    content = ui.roadmap_content(
+        editable=True,
+        balance=3,
+        sub_status="active",
+        trial_ends_at=None,
+    )
+    assert "période d'essai" not in str(content)
