@@ -16,7 +16,7 @@ register_page(
     description="Connectez votre agent IA aux données colibre via le protocole MCP.",
 )
 
-MCP_ENABLED = os.getenv("DASH_MCP_ENABLED") == "true"
+MCP_ENABLED = os.getenv("DASH_MCP_ENABLED", "").lower() == "true"
 _TOKEN_PLACEHOLDER = "<VOTRE_JETON>"
 
 
@@ -36,7 +36,7 @@ def _csrf(index: str):
 def client_instructions(url: str, token: str):
     """Construit les blocs d'instructions par client (fonction pure, testable)."""
     claude = f'claude mcp add colibre --scope user --transport http {url} --header "Authorization: Bearer {token}"'
-    gemini = f'gemini mcp add --transport http --header "Authorization: Bearer {token}" colibre {url}'
+    gemini = f'gemini mcp add --scope user --transport http --header "Authorization: Bearer {token}" colibre {url}'
     return dbc.Accordion(
         start_collapsed=True,
         always_open=False,
@@ -70,20 +70,20 @@ def client_instructions(url: str, token: str):
                 title="Gemini CLI",
                 children=[
                     html.Pre(html.Code(gemini)),
-                    html.P(
-                        "Ou dans ~/.gemini/settings.json : un serveur mcpServers.colibre "
-                        f'avec "httpUrl": "{url}" et "headers": '
-                        f'{{"Authorization": "Bearer {token}"}}.'
-                    ),
                 ],
             ),
             dbc.AccordionItem(
-                title="Mistral Le Chat",
-                children=html.P(
-                    "Dans les connecteurs MCP, ajoutez un serveur HTTP d'URL "
-                    f"{url}, authentification « API Token », en-tête "
-                    f"« Authorization » = « Bearer {token} »."
-                ),
+                title="Mistral Vibe",
+                children=dcc.Markdown(f"""
+                    1. Sur l'[interface Work](https://chat.mistral.ai/work), cliquez sur **Connectez vos applications...**
+                    2. Cliquez sur **+ Ajouter un connecteur**
+                    3. Cliquez sur **Connecteur personnalisé**
+                    4. Titre : colibre, Description : Base de données ouverte des marchés publics français (par exemple)
+                    5. Serveur : `{url}`
+                    6. Méthode d'authentification : Authentification par token API
+                    7. Valeur du header : Bearer <VOTRE_JETON>
+                    8. Cliquez sur **Créer**
+                    """),
             ),
             dbc.AccordionItem(
                 title="ChatGPT",
@@ -107,6 +107,36 @@ def client_instructions(url: str, token: str):
                 ],
             ),
         ],
+    )
+
+
+def prompt_tips():
+    """Exemples de prompts pour guider l'utilisateur (fonction pure, testable)."""
+    exemples = [
+        "Depuis colibre, trouve le dernier marché public attribué par le "
+        "département du Morbihan.",
+        "Donne-moi les statistiques de l'acheteur Rennes Métropole : nombre de "
+        "marchés, montant total et principaux titulaires.",
+        "Quelles entreprises ont remporté le plus de marchés d'informatique "
+        "(CPV 72) en Ille-et-Vilaine depuis 2023 ?",
+        "Reprends ces marchés en n'affichant que l'objet, le montant et la date "
+        "de notification, avec le lien vers chaque fiche.",
+    ]
+    return html.Div(
+        [
+            html.P(
+                "L'assistant découvre seul les outils disponibles : décrivez "
+                "votre besoin en langage naturel. Quelques exemples :"
+            ),
+            html.Ul([html.Li(html.Em(f"« {p} »")) for p in exemples]),
+            html.P(
+                "Astuce colonnes : demandez à l'assistant de vous proposer les "
+                "colonnes disponibles pour choisir précisément ce qui s'affiche sous la forme, si possible d'une liste de cases à cocher "
+                "(les colonnes par défaut restent pré-sélectionnées). Chaque "
+                "marché renvoyé inclut un lien direct vers sa fiche sur colibre.",
+                className="text-muted",
+            ),
+        ]
     )
 
 
@@ -218,19 +248,24 @@ def layout(**_):
         [
             html.H2("Connecteur MCP"),
             html.P(
-                "Les clients en ligne de commande (Claude Code, Gemini, Mistral) se "
-                "connectent avec un jeton généré ci-dessous. Les applications grand "
-                "public (Claude.ai, ChatGPT) se connectent par OAuth, sans jeton à "
-                "copier. Dans tous les cas, un abonnement actif est requis."
+                "Un connecteur MCP est une interface proposée par un outil (ici colibre) pour faciliter "
+                "son interrogation par un agent IA tel que Mistral, Claude ou ChatGPT. "
+                "Dans le cas de colibre, cela vous permet de poser des questions très précises aux données, "
+                "et d'obtenir une réponse rapide, précise et peu couteuse."
             ),
+            html.P(
+                "L'utilisation de cette fonctionnalité étant liée à un abonnement, vous devez d'abord vous authentifiez auprès "
+                "dans les options de votre agent IA. La méthode varie selon les outils."
+            ),
+            html.H4("Connecter un client", className="mt-4"),
+            client_instructions(url, snippet_token),
             *alerts,
             html.H4("Générer un jeton", className="mt-3"),
             create_form,
             html.H4("Mes jetons", className="mt-4"),
             table,
-            html.H4("Connecter un client", className="mt-4"),
-            html.P(f"URL du serveur MCP : {url}"),
-            client_instructions(url, snippet_token),
+            html.H4("Conseils de prompts", className="mt-4"),
+            prompt_tips(),
         ]
     )
     return account_shell("mcp", contenu)
