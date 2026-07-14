@@ -1,6 +1,7 @@
 from dash.mcp import mcp_enabled
 
 from src.mcp import queries
+from src.mcp.queries import ColonneMarche
 from src.utils.tracking import track_mcp_tool
 
 
@@ -74,6 +75,7 @@ def rechercher_marches(
     departement: str | None = None,
     page: int = 1,
     filtres_avances: dict | None = None,
+    colonnes: list[ColonneMarche] | None = None,
 ) -> dict:
     """Recherche paginée de marchés publics (DECP).
 
@@ -84,6 +86,13 @@ def rechercher_marches(
     filtres_avances : dict optionnel {"colonne__operateur": valeur} pour les
     besoins pointus. Colonnes et opérateurs disponibles via l'outil
     schema_donnees().
+    colonnes : liste optionnelle de colonnes à renvoyer. Par défaut, un jeu
+    standard (uid, objet, montant, dateNotification, codeCPV, acheteur_id,
+    acheteur_nom, acheteur_departement_code, titulaire_id, titulaire_nom). Si
+    fournie, REMPLACE le jeu par défaut (le champ uid reste toujours présent).
+    Colonnes disponibles via schema_donnees().colonnes_disponibles.
+    Chaque marché renvoyé contient en plus un champ `lien` (URL de la fiche
+    marché sur colibre).
     page : numéro de page (50 résultats par page).
     Retourne {meta: {page, page_size, total}, marches: [...]}.
     """
@@ -100,4 +109,5 @@ def rechercher_marches(
         departement=departement,
         page=page,
         filtres_avances=filtres_avances,
+        colonnes=colonnes,
     )

@@ -31,3 +31,26 @@ def test_stats_acheteur_returns_stats():
 def test_stats_titulaire_returns_stats():
     result = tools.stats_titulaire("345")
     assert result["nb_marches"] >= 1
+
+
+def test_rechercher_marches_colonnes_param_is_enum():
+    import typing
+
+    from pydantic import TypeAdapter
+
+    hints = typing.get_type_hints(tools.rechercher_marches)
+    schema = TypeAdapter(hints["colonnes"]).json_schema()
+    # list[ColonneMarche] | None -> anyOf[array(items.enum), null]
+    array_schema = next(s for s in schema["anyOf"] if s.get("type") == "array")
+    enum = array_schema["items"]["enum"]
+    assert "objet" in enum
+    assert "montant" in enum
+    assert "uid" in enum
+
+
+def test_rechercher_marches_colonnes_passthrough(monkeypatch):
+    monkeypatch.setenv("APP_BASE_URL", "https://colibre.fr")
+    result = tools.rechercher_marches(acheteur_id="123", colonnes=["objet"])
+    m = result["marches"][0]
+    assert set(m.keys()) == {"uid", "objet", "lien"}
+    assert m["lien"] == f"https://colibre.fr/marche/{m['uid']}"
