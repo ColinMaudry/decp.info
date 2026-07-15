@@ -402,3 +402,16 @@ def test_015_org_pages_filter_date(dash_duo: DashComposite):
         # la mise à jour de la grille plutôt que de lire les lignes immédiatement
         # (sinon on lit l'état pré-filtre).
         dash_duo.wait_for_no_elements(filter_cell_result, timeout=4)
+
+
+def test_016_search_button_matches_input_height():
+    # Import app first to initialize Dash
+    from src.app import app  # noqa: F401
+    from src.pages.recherche import layout
+
+    search_input, search_button = layout().children[1].children
+
+    assert search_input.style["height"] == search_button.style["height"], (
+        "Le bouton de recherche doit avoir la même hauteur que le champ de "
+        "recherche pour ne pas déborder en bas"
+    )

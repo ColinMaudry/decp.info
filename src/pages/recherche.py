@@ -1,14 +1,46 @@
+import math
+
 import dash_bootstrap_components as dbc
 from dash import Input, Output, State, callback, dcc, html, register_page
 
+from src.db import count_unique_marches
 from src.figures import DataTable
 from src.pages.a_propos.abonnement import abonnement_features
+from src.utils.cache import cache
 from src.utils.data import DF_ACHETEURS, DF_TITULAIRES
 from src.utils.search import search_org
 from src.utils.seo import META_CONTENT
-from src.utils.table import setup_table_columns
+from src.utils.table import format_number, setup_table_columns
 
 NAME = "Recherche"
+
+_STAT_STYLE = {"fontWeight": "bold", "color": "var(--primary-color-text)"}
+
+
+@cache.memoize(timeout=12 * 60 * 60)
+def _tagline_stats() -> tuple[str, str, str]:
+    nb_acheteurs = format_number(round(DF_ACHETEURS.height, -3))
+    nb_titulaires = format_number(round(DF_TITULAIRES.height, -3))
+    nb_marches_millions = math.floor(count_unique_marches() / 100_000) / 10
+    unite_marches = "million" if nb_marches_millions < 2 else "millions"
+    nb_marches = f"{nb_marches_millions:.1f}".replace(".", ",") + " " + unite_marches
+    return nb_acheteurs, nb_titulaires, nb_marches
+
+
+def _tagline() -> html.P:
+    nb_acheteurs, nb_titulaires, nb_marches = _tagline_stats()
+    return html.P(
+        [
+            "Recherchez parmi ",
+            html.Span(nb_acheteurs, style=_STAT_STYLE),
+            " acheteurs et ",
+            html.Span(nb_titulaires, style=_STAT_STYLE),
+            " titulaires dans une base de données de plus de ",
+            html.Span(nb_marches, style=_STAT_STYLE),
+            " de marchés publics",
+        ]
+    )
+
 
 _features_gratuites = dcc.Markdown("""
 - Recherche d'acheteurs et de titulaires
@@ -52,6 +84,7 @@ home_intro = html.Div(
                         dcc.Link(
                             "En savoir plus et s'abonner",
                             href="/a-propos/abonnement",
+                            style={"marginLeft": "20px"},
                         ),
                     ],
                     md=6,
@@ -73,66 +106,68 @@ register_page(
     order=0,
 )
 
-layout = html.Div(
-    className="container",
-    children=[
-        html.Div(
-            className="tagline",
-            children=html.P("Recherchez un acheteur ou un titulaire de marché public"),
-        ),
-        html.Div(
-            style={
-                "display": "flex",
-                "justifyContent": "center",
-                "marginTop": "30px",
-                "marginBottom": "30px",
-            },
-            children=[
-                dcc.Input(
-                    id="search",
-                    type="text",
-                    placeholder="Nom d'acheteur/entreprise, SIREN/SIRET, code département",
-                    autoFocus=True,
-                    style={
-                        "margin": "0",
-                        "width": "500px",
-                        "border": "1px solid #ccc",
-                        "borderRight": "none",
-                        "borderRadius": "3px 0 0 3px",
-                        "padding": "5px 10px",
-                        "outline": "none",
-                        "height": "34px",
-                    },
-                ),
-                html.Button(
-                    "=>",
-                    id="search-button",
-                    className="btn btn-secondary",
-                    style={
-                        "border": "1px solid #ccc",
-                        "borderRadius": "0 3px 3px 0",
-                        "marginLeft": "0",
-                        "height": "auto",  # Ensure it matches input height if necessary, often relying on padding/line-height
-                    },
-                ),
-            ],
-        ),
-        html.P(
-            [
-                "...ou bien filtrez les marchés publics dans la vue ",
-                dcc.Link("Tableau", href="/tableau"),
-            ],
-            style={"textAlign": "center"},
-            id="mention_tableau",
-        ),
-        home_intro,
-        # html.Div(
-        #     className="search_options",
-        #     children=[dcc.RadioItems(options=["Acheteur(s)"])],
-        # ),
-        dbc.Row(id="search_results"),
-    ],
-)
+
+def layout(**_):
+    return html.Div(
+        className="container",
+        children=[
+            html.Div(
+                className="tagline",
+                children=_tagline(),
+            ),
+            html.Div(
+                style={
+                    "display": "flex",
+                    "justifyContent": "center",
+                    "marginTop": "30px",
+                    "marginBottom": "30px",
+                },
+                children=[
+                    dcc.Input(
+                        id="search",
+                        type="text",
+                        placeholder="Nom d'acheteur/entreprise, SIREN/SIRET, code département",
+                        autoFocus=True,
+                        style={
+                            "margin": "0",
+                            "width": "500px",
+                            "border": "1px solid #ccc",
+                            "borderRight": "none",
+                            "borderRadius": "3px 0 0 3px",
+                            "padding": "5px 10px",
+                            "outline": "none",
+                            "height": "34px",
+                        },
+                    ),
+                    html.Button(
+                        "=>",
+                        id="search-button",
+                        className="btn btn-secondary",
+                        style={
+                            "border": "1px solid #ccc",
+                            "borderRadius": "0 3px 3px 0",
+                            "marginLeft": "0",
+                            "height": "34px",
+                        },
+                    ),
+                ],
+            ),
+            html.P(
+                [
+                    "...ou bien filtrez les marchés publics dans la vue ",
+                    dcc.Link("Tableau", href="/tableau"),
+                ],
+                style={"textAlign": "center"},
+                id="mention_tableau",
+            ),
+            home_intro,
+            # html.Div(
+            #     className="search_options",
+            #     children=[dcc.RadioItems(options=["Acheteur(s)"])],
+            # ),
+            dbc.Row(id="search_results"),
+        ],
+    )
 
 
 @callback(
