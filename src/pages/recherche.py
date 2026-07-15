@@ -15,6 +15,7 @@ _features_gratuites = dcc.Markdown("""
 - [Tableau](/tableau) filtrable et personnalisable sur des dizaines de colonnes et exports Excel
 - Fiches détaillées : acheteur, titulaire, marché
 - Cartes, statistiques et [observatoire](/observatoire) national personnalisable
+- 100 % open source et Open Data
 """)
 
 home_intro = html.Div(
@@ -24,10 +25,15 @@ home_intro = html.Div(
     children=[
         html.P(
             "colibre ouvre les données des marchés publics français à toutes et "
-            "tous : recherchez, filtrez, cartographiez, exportez — gratuitement "
+            "tous : recherchez, filtrez, cartographiez, exportez. Gratuitement "
             "et sans compte.",
-            className="text-center text-muted",
-            style={"maxWidth": "700px", "margin": "0 auto 1.5rem"},
+            className="text-center",
+            style={
+                "fontWeight": 600,
+                "maxWidth": "700px",
+                "margin": "4rem auto 1.5rem",
+                "color": "var(--primary-color-text)",
+            },
         ),
         dbc.Row(
             [

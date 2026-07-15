@@ -17,9 +17,10 @@ register_page(
 )
 
 abonnement_features = dcc.Markdown("""
-    - sauvegarde et partage de **vues** dans la page Tableau
-    - interrogation des données depuis un agent IA via le **connecteur MCP** (ChatGPT, Claude, Mistral...)
-    - vote pour les fonctionnalités à développer en priorité dans la **roadmap**
+    - sauvegardez et partagez des **vues** dans la page Tableau
+    - interrogez les données depuis un agent IA via le **connecteur MCP** (ChatGPT, Claude, Mistral...)
+    - votez pour les fonctionnalités à développer en priorité dans la **roadmap**
+    - participez à la pérennité du projet
       """)
 
 
@@ -78,7 +79,7 @@ def _explainer():
                         "de cette non-publication."
                     ),
                     html.Li(
-                        "fédération des bonnes volontés souhaitant militer pour une "
+                        "militer aux côtés des bonnes volontés pour une "
                         "législation plus ambitieuse sur la transparence de la "
                         "commande publique."
                     ),
@@ -130,8 +131,7 @@ subscription_terms = html.Div(
         html.H2("Abonnement"),
         dcc.Markdown(
             """
-L'accès aux fonctionnalités de base de colibre est gratuit et sans inscription. Il est également possible de créer un compte gratuitement via le menu [Connexion](/connexion). Une fois le compte créé,
-il est possible de souscrire à un abonnement mensuel qui donne accès à des fonctionnalités supplémentaires. Cet abonnement s'adresse tant aux professionnel·les qu'aux particuliers.
+L'accès aux fonctionnalités de base de colibre est gratuit et sans inscription. Il est possible de souscrire à un abonnement mensuel qui donne accès à des fonctionnalités supplémentaires. Cet abonnement s'adresse tant aux professionnel·les qu'aux particuliers.
 """
         ),
         html.H4("Tarifs"),
@@ -150,7 +150,7 @@ La TVA applicable en France est de 20 %.
             """
 Les cartes bancaires des réseaux Visa et Mastercard sont acceptées.
 
-Il est également possible de payer par virement bancaire à condition de payer un an d'abonnement.
+Il est également possible de payer par virement bancaire à condition de payer un an d'abonnement. [Contactez-moi](/a-propos/contact) si vous êtes intéressé·e.
 """
         ),
         html.H4("Période d'essai"),
