@@ -12,6 +12,7 @@
 - Nouvelle interface de tableau : plus d'options de filtres, plus performante ([#47](https://github.com/ColinMaudry/colibre/issues/47))
 - Ajout des codes et libellés NAF des titulaires, affichés sur leur page /titulaire
 - Export Excel mis en forme (styles) ([#83](https://github.com/ColinMaudry/colibre/issues/83))
+- Chat intégré 💬 pour répondre à vos questions et recueillir vos suggestions en direct
 - Réduction du nombre de colonnes affichées par défaut et ajout de la colonne "Marché" dans la page Tableau ([#84](https://github.com/ColinMaudry/colibre/issues/84))
 - Refonte et mise en page pleine largeur de la page À propos
 - Ajout des conditions générales d'utilisation (CGU) ([#93](https://github.com/ColinMaudry/colibre/issues/93))

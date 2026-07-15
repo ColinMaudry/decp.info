@@ -18,6 +18,7 @@ def layout(**_):
             html.H2("Contact"),
             dcc.Markdown(
                 """
+- Chat en direct (💬 en bas à droite de l'écran)
 - Email : [colin@colmo.tech](mailto:colin@colmo.tech)
 - Bluesky : [@col1m.bsky.social](https://bsky.app/profile/col1m.bsky.social)
 - Mastodon : [col1m@mamot.fr](https://mamot.fr/@col1m)

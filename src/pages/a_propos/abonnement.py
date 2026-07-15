@@ -198,6 +198,10 @@ au bon fonctionnement du site et de la facturation.
 
 Ces données sont utilisées uniquement pour la gestion de votre abonnement et ne sont pas transmises à des tiers à des fins commerciales.
 Conformément au RGPD, vous pouvez demander l'accès, la rectification ou la suppression de vos données en [me contactant](/a-propos/contact).
+
+**Conversations en direct depuis le site Web 💬**
+
+Le contenu des conversations est transmis au prestataire Chatwoot et au logiciel Slack.
 """
         ),
         html.H4("Contact"),
