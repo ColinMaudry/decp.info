@@ -35,6 +35,7 @@ from flask_login import current_user
 from src.auth.setup import init_auth
 from src.utils import DEVELOPMENT
 from src.utils.cache import cache
+from src.utils.chatwoot import build_widget_script
 
 load_dotenv()
 
@@ -222,6 +223,10 @@ with open("./pyproject.toml", "rb") as f:
     pyproject = tomllib.load(f)
     version = "v" + pyproject["project"]["version"]
 
+# Widget de chat Chatwoot (essai, issue #120) : chaîne vide si la variable
+# d'env n'est pas définie, ce qui désactive le widget (utilisé notamment
+# pour ne jamais le charger pendant les tests/CI).
+chatwoot_script = build_widget_script(os.getenv("CHATWOOT_WEBSITE_TOKEN"))
 
 app.index_string = """
 <!DOCTYPE html>
@@ -266,9 +271,10 @@ app.index_string = """
                 g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
             })();
         </script>
+        __CHATWOOT_SCRIPT__
     </body>
 </html>
-"""
+""".replace("__CHATWOOT_SCRIPT__", chatwoot_script)
 
 navbar = dbc.Navbar(
     dbc.Container(
