@@ -218,7 +218,7 @@ def grid_column_defs(hidden_columns=None):
             # on pointe vers la copie texte brut posée par add_links() dans
             # src.utils.table plutôt que d'afficher ce balisage tel quel.
             col_def["tooltipField"] = f"{col}_tooltip" if col in _LINK_COLUMNS else col
-        if col == "objet":
+        if col in ["objet", "acheteur_nom", "titulaire_nom"]:
             # autoHeight n'est pas supporté avec rowModelType="infinite" (la
             # grille doit pouvoir calculer la position des lignes non
             # chargées, donc une hauteur de ligne fixe) : cf. ag_grid(),

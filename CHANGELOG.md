@@ -3,16 +3,16 @@
 **Fonctionnalités par abonnement**
 
 - Abonnement payant à colibre : période d'essai gratuite, souscription et gestion du moyen de paiement, résiliation, historique de facturation ([#90](https://github.com/ColinMaudry/colibre/issues/90))
-- Sauvegarde de vues personnalisées (filtres, tris, colonnes) dans la page Tableau, réservée aux abonné·es ([#95](https://github.com/ColinMaudry/colibre/issues/95))
+- Sauvegarde de vues personnalisées (filtres, tris, colonnes) dans la page Tableau ([#95](https://github.com/ColinMaudry/colibre/issues/95))
 - Vote pour prioriser les fonctionnalités de la roadmap, réservé aux abonné·es une fois leur période d'essai terminée, avec une page roadmap publique en lecture seule ([#94](https://github.com/ColinMaudry/colibre/issues/94))
-- Accès aux données de la commande publique via un serveur MCP (Model Context Protocol), pour interroger colibre directement depuis un agent IA (Claude, Mistral, Gemini, Cursor…) ([#111](https://github.com/ColinMaudry/colibre/issues/111))
+- Accès aux données de colibre via un connecteur MCP (Model Context Protocol), pour interroger colibre directement depuis un agent IA (Claude, Mistral, Gemini, Cursor…) ([#111](https://github.com/ColinMaudry/colibre/issues/111))
 
 **Autres améliorations**
 
 - Nouvelle interface de tableau : plus d'options de filtres, plus performante ([#47](https://github.com/ColinMaudry/colibre/issues/47))
 - Ajout des codes et libellés NAF des titulaires, affichés sur leur page /titulaire
 - Export Excel mis en forme (styles) ([#83](https://github.com/ColinMaudry/colibre/issues/83))
-- Chat intégré 💬 pour répondre à vos questions et recueillir vos suggestions en direct
+- Chat intégré 💬 pour répondre à vos questions et recueillir vos suggestions en direct ([#120](https://github.com/ColinMaudry/colibre/issues/120))
 - Réduction du nombre de colonnes affichées par défaut et ajout de la colonne "Marché" dans la page Tableau ([#84](https://github.com/ColinMaudry/colibre/issues/84))
 - Refonte et mise en page pleine largeur de la page À propos
 - Ajout des conditions générales d'utilisation (CGU) ([#93](https://github.com/ColinMaudry/colibre/issues/93))

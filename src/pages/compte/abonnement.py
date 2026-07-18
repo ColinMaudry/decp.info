@@ -269,7 +269,7 @@ def _tous_abonnes_banner():
     return dbc.Alert(
         "Les fonctionnalités normalement accessibles contre un abonnement de "
         "20 € HT par mois sont accessibles à tous et toutes en attendant la "
-        "validation de mon dossier pour recevoir des paiements.",
+        "validation du dossier pour recevoir des paiements.",
         color="info",
     )
 
