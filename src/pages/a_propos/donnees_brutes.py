@@ -21,7 +21,7 @@ def layout(**_):
 Vous pouvez consommer les données qui alimentent colibre en les téléchargeant [sur data.gouv.fr](https://www.data.gouv.fr/datasets/donnees-essentielles-de-la-commande-publique-consolidees-format-tabulaire) (Parquet, CSV), pensez à lire la description du jeu de données
 
 Une API REST tabulaire (JSON) est également disponible par abonnement mensuel pour accéder aux mêmes données et alimenter une application.
-Documentation interactive : [Swagger UI](/api/v1/swagger). Si cela vous intéresse, [contactez-moi](/a-propos/contact)."""
+Documentation interactive : [Swagger UI](/api/v1/swagger). Si cela vous intéresse, [envoyez un message](/a-propos/contact)."""
             ),
         ]
     )

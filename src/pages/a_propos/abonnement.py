@@ -102,7 +102,7 @@ def _subscribe_button(
                 dbc.Alert(
                     "Les fonctionnalités normalement accessibles contre un abonnement "
                     "mensuel sont accessibles à tous et toutes en attendant "
-                    "la validation de mon dossier pour recevoir des paiements par carte bancaire.",
+                    "la validation du dossier pour recevoir des paiements par carte bancaire.",
                     color="info",
                 ),
                 html.A(
@@ -150,7 +150,7 @@ La TVA applicable en France est de 20 %.
             """
 Les cartes bancaires des réseaux Visa et Mastercard sont acceptées.
 
-Il est également possible de payer par virement bancaire à condition de payer un an d'abonnement. [Contactez-moi](/a-propos/contact) si vous êtes intéressé·e.
+Il est également possible de payer par virement bancaire à condition de payer un an d'abonnement. [Envoyez un message](/a-propos/contact) si vous êtes intéressé·e.
 """
         ),
         html.H4("Période d'essai"),

@@ -41,7 +41,7 @@
 
 ##### 2.7.7 (11 mai 2026)
 
-- Suppression des mentions sur les profils d'acheteur. Omnikles/Safetender publie via l'API DUME et Klekoon ne publie pas, mais c'est peut-être pas le seul, donc je préfère supprimer et refaire un tour.
+- Suppression des mentions sur les profils d'acheteur. Omnikles/Safetender publie via l'API DUME et Klekoon ne publie pas, mais c'est peut-être pas le seul, donc il est préfèrable de supprimer et refaire un tour.
 
 ##### 2.7.6 (5 mai 2026)
 

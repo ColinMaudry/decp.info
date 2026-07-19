@@ -23,10 +23,9 @@ def layout(**_):
                 qualité est donc principalement liée à la qualité de leur saisie par les agents publics, parfois
                 peu aidé·es par la qualité des outils à leur disposition.
 
-Je pense que l'analyse de marchés
-individuels et le comptage de marchés sur des critères autres que financiers sont plutôt fiables. En revanche, certains montants de marché estimés à des valeurs farfelues ([1 euro](https://colibre.fr/marches/432766947000192025S01301), [1 milliard](https://colibre.fr/marches/2459004280001320210000000271)) faussent les calculs par aggrégation (sommes, moyennes, médianes) et donc la production de statistiques financières fiables. Acheteurs, acheteuses : s'il vous plaît, essayez d'estimer les montants des marchés publics attribués de manière plus précise.
+L'analyse de marchés individuels et le comptage de marchés sur des critères autres que financiers sont plutôt fiables. En revanche, certains montants de marché estimés à des valeurs farfelues ([1 euro](https://colibre.fr/marches/432766947000192025S01301), [1 milliard](https://colibre.fr/marches/2459004280001320210000000271)) faussent les calculs par aggrégation (sommes, moyennes, médianes) et donc la production de statistiques financières fiables. Acheteurs, acheteuses : s'il vous plaît, essayez d'estimer les montants des marchés publics attribués de manière plus précise.
 
-Quant à l'exhaustivité, je consolide toutes les sources de données exploitables que j'ai pu identifier (voir [Sources de données](/a-propos/sources)). Je tiens à souligner la belle continuité de la publication par la DGFiP des données des marchés publics remontées via le [protocole PES](https://www.collectivites-locales.gouv.fr/finances-locales/le-protocole-dechange-standard-pes). Merci à leurs équipes."""
+Quant à l'exhaustivité, [decp-processing](https://github.com/ColinMaudry/decp-processing) consolide toutes les sources de données exploitables ayant été identifiées (voir [Sources de données](/a-propos/sources)). Il faut souligner la belle continuité de la publication par la DGFiP des données des marchés publics remontées via le [protocole PES](https://www.collectivites-locales.gouv.fr/finances-locales/le-protocole-dechange-standard-pes). Merci à leurs équipes."""
             ),
         ]
     )

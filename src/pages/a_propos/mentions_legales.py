@@ -19,7 +19,7 @@ def layout(**_):
             html.H4("Publication", id="publication"),
             dcc.Markdown(
                 """
-Site Web développé et édité par [SAS Colmo](https://annuaire-entreprises.data.gouv.fr/entreprise/colmo-989393350), 989 393 350 RCS Rennes au capital de 3 000 euros.
+Site Web développé et administré par [SAS Colmo](https://annuaire-entreprises.data.gouv.fr/entreprise/colmo-989393350), 989 393 350 RCS Rennes au capital de 3 000 euros, société présidée par Colin Maudry.
 
 Siège social : 1 carrefour Jouaust, 35000 Rennes
 
@@ -35,11 +35,11 @@ Ce site dépose un petit fichier texte (un « cookie ») sur votre ordinateur lo
 
 C'est vrai, vous n'avez pas eu à cliquer sur un bloc qui recouvre la moitié de la page pour dire que vous êtes d'accord avec le dépôt de cookies.
 
-Rien d'exceptionnel, je respecte simplement la loi, qui dit que certains outils de suivi d'audience, correctement configurés pour respecter la vie privée, sont exemptés d'autorisation préalable.
+Rien d'exceptionnel, ce site respecte simplement la loi, qui dit que certains outils de suivi d'audience, correctement configurés pour respecter la vie privée, sont exemptés d'autorisation préalable.
 
-J'utilise pour cela [Matomo](https://matomo.org/), un outil [libre](https://matomo.org/free-software/), paramétré pour être en conformité avec [la recommandation « Cookies »](https://www.cnil.fr/fr/solutions-pour-les-cookies-de-mesure-daudience) de la CNIL. Cela signifie que votre adresse IP, par exemple, est anonymisée avant d'être enregistrée. Il m'est donc impossible d'associer vos visites sur ce site à votre personne.
+L'outil utilisé pour le suivi d'audience est [Matomo](https://matomo.org/), un [logiciel libre](https://matomo.org/free-software/), paramétré pour être en conformité avec [la recommandation « Cookies »](https://www.cnil.fr/fr/solutions-pour-les-cookies-de-mesure-daudience) de la CNIL. Cela signifie que votre adresse IP, par exemple, est anonymisée avant d'être enregistrée. Il m'est donc impossible d'associer vos visites sur ce site à votre personne.
 
-J'enregistre également les données suivantes, de manière anonyme, afin de mieux comprendre comment vous utilisez le site et l'améliorer :
+Les données suivantes sont également enregistrées, de manière anonyme, afin de mieux comprendre comment vous utilisez le site et l'améliorer :
 
 - recherches sur la page d'accueil
 - filtres appliqués aux données

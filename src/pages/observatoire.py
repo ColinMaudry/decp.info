@@ -108,11 +108,16 @@ layout = [
                 [
                     dcc.Markdown(
                         """
-Les données saisies et publiées par les acheteurs comportent de nombreux montants farfelus qui sabotent les statistiques, au lieu de montants estimés avec rigueur. On parle de montants atteignant parfois les millions de milliards. Certains réutilisateurs des données mettent de côté ces marchés ou bien modifient les montants selon des règles fatalement arbitraires. J'ai fait le choix de ne quasiment pas modifier les données* afin de visibiliser le problème.
+Les données saisies et publiées par les acheteurs comportent de nombreux montants farfelus qui sabotent les statistiques,
+au lieu de montants estimés avec rigueur. Ils atteignent parfois les millions de milliards.
+Certains réutilisateurs des données mettent de côté ces marchés ou bien modifient les montants selon des règles fatalement arbitraires.
+*Les données ne sont quasiment pas modifiées* afin de visibiliser le problème.
 
-Alors, on fait comment ?
+Alors, comment fait-on ?
 
-\\* Les montants composés de plus de 11 chiffres, sans les décimales, [sont ramenés](https://github.com/ColinMaudry/decp-processing/blob/main/src/tasks/clean.py#L63-L71) à 12 311 111 111, un nombre qui reste très élevé et qui est facilement reconnaissable.
+\\* Les montants composés de plus de 11 chiffres, sans les décimales,
+[sont ramenés](https://github.com/ColinMaudry/decp-processing/blob/main/src/tasks/clean.py#L63-L71) à
+12 311 111 111, un nombre qui reste très élevé et qui est facilement reconnaissable.
 """
                     ),
                 ]
