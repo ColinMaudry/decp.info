@@ -3,11 +3,11 @@ import math
 import dash_bootstrap_components as dbc
 from dash import Input, Output, State, callback, dcc, html, register_page
 
-from src.db import count_unique_marches
+from src.db import count_unique_marches, schema
 from src.figures import DataTable
 from src.pages.a_propos.abonnement import abonnement_features
 from src.utils.cache import cache
-from src.utils.data import DATA_SCHEMA, DF_ACHETEURS, DF_TITULAIRES
+from src.utils.data import DF_ACHETEURS, DF_TITULAIRES
 from src.utils.search import search_org
 from src.utils.seo import META_CONTENT
 from src.utils.table import format_number, setup_table_columns
@@ -62,7 +62,7 @@ home_intro = html.Div(
                         html.P(
                             [
                                 "Trouvez exactement les marchés que vous cherchez grâce aux ",
-                                html.Span(len(DATA_SCHEMA), style=_STAT_STYLE),
+                                html.Span(len(schema.names()), style=_STAT_STYLE),
                                 " colonnes filtrables du ",
                                 dcc.Link("Tableau", href="/tableau"),
                             ]
@@ -100,7 +100,7 @@ home_intro = html.Div(
                 dbc.Col(
                     [
                         dcc.Link(
-                            html.Img(src="/assets/table-thumbnail.svg"), href="/tableau"
+                            html.Img(src="/assets/table-thumbnail.png"), href="/tableau"
                         ),
                     ],
                     md=5,
@@ -109,7 +109,7 @@ home_intro = html.Div(
                 dbc.Col(
                     [
                         dcc.Link(
-                            html.Img(src="/assets/dashboard-thumbnail.svg"),
+                            html.Img(src="/assets/dashboard-thumbnail.png"),
                             href="/observatoire",
                         ),
                     ],
