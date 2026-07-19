@@ -1,6 +1,37 @@
+// --- Garde du Leaflet global (issue #121) ---
+// Le bundle dash-ag-grid (async-community.js) fuit un helper esbuild sous le
+// nom global `L`, écrasant le `window.L` de Leaflet. Nos fonctions
+// pointToLayer/clusterToLayer (ci-dessous) ont besoin du vrai Leaflet. Comme
+// dash-leaflet ne passe pas Leaflet en argument, on capture en privé la
+// dernière valeur de `window.L` exposant `circleMarker` (= le vrai Leaflet) en
+// écoutant les affectations, SANS modifier ce que `window.L` renvoie (AG Grid
+// continue d'utiliser son helper). `leafletReal()` renvoie ce vrai Leaflet.
+(function () {
+  var real = window.L && window.L.circleMarker ? window.L : null;
+  var last = window.L;
+  try {
+    Object.defineProperty(window, "L", {
+      configurable: true,
+      get: function () {
+        return last;
+      },
+      set: function (v) {
+        last = v;
+        if (v && v.circleMarker) real = v;
+      },
+    });
+  } catch (e) {
+    /* propriété non configurable : on garde le comportement natif */
+  }
+  window.leafletReal = function () {
+    return real || last;
+  };
+})();
+
 window.dash_clientside = Object.assign({}, window.dash_clientside, {
   leaflet: {
     pointToLayer: function (feature, latlng, context) {
+      const L = window.leafletReal ? window.leafletReal() : window.L;
       // Le point de l'organisme consulté (is_home) est rendu comme une
       // icône (comme les clusters), pas comme un circleMarker SVG : les
       // icônes vivent dans le markerPane, toujours au-dessus du overlayPane
@@ -28,13 +59,9 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
       }).bindTooltip(feature.properties.tooltip);
     },
     clusterToLayer: function (feature, latlng, index, context) {
-      console.log(feature);
-      console.log(index);
-      console.log(context);
-
+      const L = window.leafletReal ? window.leafletReal() : window.L;
       const count = feature.properties.point_count;
       const size = count < 100 ? 30 : count < 1000 ? 40 : 50;
-      const color = "#555"; // Default cluster color
       const icon = L.divIcon({
         html: `<div style="background-color: ${context.fillColor}; width: ${size}px; height: ${size}px; border-radius: 50%; display: flex; align-items:center; justify-content:center; color: white; border: 2px solid white; font-weight: bold;">${count}</div>`,
         className: "marker-cluster",
