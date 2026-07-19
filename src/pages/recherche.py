@@ -56,15 +56,23 @@ home_intro = html.Div(
     style={"maxWidth": "900px", "marginTop": "1rem"},
     children=[
         html.P(
-            "colibre ouvre les données des marchés publics français à toutes et "
-            "tous : recherchez, filtrez, cartographiez, exportez. Gratuitement "
-            "et sans compte.",
+            [
+                html.Span(
+                    "colibre",
+                    style={
+                        "fontWeight": 600,
+                        "fontSize": "1.5rem",
+                        "color": "var(--primary-color-text)",
+                    },
+                ),
+                " ouvre les données des marchés publics français à toutes et "
+                "tous : recherchez, filtrez, cartographiez, téléchargez.",
+            ],
             className="text-center",
             style={
-                "fontWeight": 600,
-                "maxWidth": "700px",
-                "margin": "4rem auto 1.5rem",
-                "color": "var(--primary-color-text)",
+                "maxWidth": "750px",
+                "fontSize": "1.5rem",
+                "margin": "6rem auto 1.5rem",
             },
         ),
         dbc.Row(
