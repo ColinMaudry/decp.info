@@ -7,7 +7,7 @@ from src.db import count_unique_marches
 from src.figures import DataTable
 from src.pages.a_propos.abonnement import abonnement_features
 from src.utils.cache import cache
-from src.utils.data import DF_ACHETEURS, DF_TITULAIRES
+from src.utils.data import DATA_SCHEMA, DF_ACHETEURS, DF_TITULAIRES
 from src.utils.search import search_org
 from src.utils.seo import META_CONTENT
 from src.utils.table import format_number, setup_table_columns
@@ -46,15 +46,62 @@ _features_gratuites = dcc.Markdown("""
 - Recherche d'acheteurs et de titulaires
 - [Tableau](/tableau) filtrable et personnalisable sur des dizaines de colonnes et exports Excel
 - Fiches détaillées : acheteur, titulaire, marché
-- Cartes, statistiques et [observatoire](/observatoire) national personnalisable
+- Cartes, statistiques et [Observatoire](/observatoire) national personnalisable
 - 100 % open source et Open Data
 """)
 
 home_intro = html.Div(
     id="home_intro",
-    className="container",
+    className="container px-4",
     style={"maxWidth": "900px", "marginTop": "1rem"},
     children=[
+        dbc.Row(
+            [
+                dbc.Col(
+                    [
+                        html.P(
+                            [
+                                "Trouvez exactement les marchés que vous cherchez grâce aux ",
+                                html.Span(len(DATA_SCHEMA), style=_STAT_STYLE),
+                                " colonnes filtrables du ",
+                                dcc.Link("Tableau", href="/tableau"),
+                            ]
+                        ),
+                        dcc.Link(
+                            html.Img(src="/assets/table-thumbnail.svg"), href="/tableau"
+                        ),
+                    ],
+                    md=5,
+                    className="text-center",
+                ),
+                dbc.Col(
+                    [
+                        html.P(
+                            [
+                                "Visualisez les données sous tous les angles dans l'",
+                                dcc.Link("Observatoire", href="/observatoire"),
+                            ]
+                        ),
+                        dcc.Link(
+                            html.Img(src="/assets/dashboard-thumbnail.svg"),
+                            href="/observatoire",
+                        ),
+                    ],
+                    # L'offset doit rester sur le breakpoint md : passé via
+                    # `width` il s'appliquerait aussi en xs (col-5 offset-2),
+                    # écrasant la colonne sur petit écran au lieu de la laisser
+                    # s'empiler en pleine largeur.
+                    md={"size": 5, "offset": 2},
+                    # mt-5 : respiration quand les colonnes s'empilent (xs/sm) ;
+                    # mt-md-0 : annulé dès qu'elles sont côte à côte. On n'utilise
+                    # pas gy-* sur la Row : son margin-top négatif serait écrasé
+                    # par le style inline marginTop de celle-ci.
+                    className="text-center mt-5 mt-md-0",
+                ),
+            ],
+            style={"marginTop": "6rem"},
+            className="gx-5",
+        ),
         html.P(
             [
                 html.Span(
@@ -170,14 +217,6 @@ def layout(**_):
                     ),
                 ],
             ),
-            html.P(
-                [
-                    "...ou bien filtrez les marchés publics dans la vue ",
-                    dcc.Link("Tableau", href="/tableau"),
-                ],
-                style={"textAlign": "center"},
-                id="mention_tableau",
-            ),
             home_intro,
             # html.Div(
             #     className="search_options",
@@ -190,7 +229,6 @@ def layout(**_):
 
 @callback(
     Output("search_results", "children"),
-    Output("mention_tableau", "style"),
     Output("home_intro", "style"),
     Input("search", "n_submit"),
     Input("search-button", "n_clicks"),
@@ -236,6 +274,5 @@ def update_search_results(n_submit, n_clicks, query):
             )
             cols.append(col)
 
-        style = {"textAlign": "center", "display": "none"}
-        return cols, style, {"display": "none"}
-    return html.P(""), {"textAlign": "center"}, home_intro.style
+        return cols, {"display": "none"}
+    return html.P(""), home_intro.style
