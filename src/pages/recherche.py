@@ -148,6 +148,16 @@ def layout(**_):
                             "borderRadius": "0 3px 3px 0",
                             "marginLeft": "0",
                             "height": "34px",
+                            # Le padding vertical (.375rem) et le line-height
+                            # (1.5) de .btn dépassent la hauteur fixe de 34px :
+                            # le glyphe débordait vers le bas. On centre en flex
+                            # et on neutralise le padding vertical.
+                            "display": "flex",
+                            "alignItems": "center",
+                            "justifyContent": "center",
+                            "paddingTop": "0",
+                            "paddingBottom": "0",
+                            "lineHeight": "1",
                         },
                     ),
                 ],
