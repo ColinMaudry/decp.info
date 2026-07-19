@@ -1,4 +1,5 @@
 import datetime
+import json
 
 import dash_bootstrap_components as dbc
 import polars as pl
@@ -23,7 +24,7 @@ from src.figures import (
 from src.utils.data import DF_ACHETEURS, get_annuaire_data, get_departement_region
 from src.utils.entity_grid import entity_scope, register_entity_grid_callbacks
 from src.utils.frontend import DROPDOWN_LABELS_FR, get_button_properties
-from src.utils.seo import META_CONTENT
+from src.utils.seo import META_CONTENT, make_org_jsonld
 from src.utils.table import (
     COLUMNS,
     format_number,
@@ -64,6 +65,7 @@ def layout(acheteur_id=None, **kwargs):
         dcc.Store(id="acheteur-total-unique"),
         dcc.Store(id="entity-grid-columns-state", storage_type="local"),
         dcc.Location(id="acheteur_url", refresh="callback-nav"),
+        html.Script(type="application/ld+json", id="acheteur_jsonld"),
         html.Div(
             children=[
                 html.Div(
@@ -250,6 +252,7 @@ def layout(acheteur_id=None, **kwargs):
     Output(component_id="acheteur_departement", component_property="children"),
     Output(component_id="acheteur_region", component_property="children"),
     Output(component_id="acheteur_lien_annuaire", component_property="href"),
+    Output(component_id="acheteur_jsonld", component_property="children"),
     Input(component_id="acheteur_url", component_property="pathname"),
 )
 def update_acheteur_infos(url):
@@ -276,6 +279,13 @@ def update_acheteur_infos(url):
         raison_sociale = ""
         libelle_commune = ""
 
+    jsonld = make_org_jsonld(
+        acheteur_siret, "acheteur", org_name=raison_sociale, annuaire_data=data
+    )
+    jsonld_script = (
+        json.dumps({"@context": "https://schema.org", **jsonld}) if jsonld else ""
+    )
+
     return (
         acheteur_siret,
         raison_sociale,
@@ -283,6 +293,7 @@ def update_acheteur_infos(url):
         departement,
         nom_region,
         lien_annuaire,
+        jsonld_script,
     )
 
 

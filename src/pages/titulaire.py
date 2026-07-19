@@ -1,4 +1,5 @@
 import datetime
+import json
 
 import dash_bootstrap_components as dbc
 import polars as pl
@@ -22,7 +23,7 @@ from src.figures import (
 from src.utils.data import DF_TITULAIRES, get_annuaire_data, get_departement_region
 from src.utils.entity_grid import entity_scope, register_entity_grid_callbacks
 from src.utils.frontend import DROPDOWN_LABELS_FR, get_button_properties
-from src.utils.seo import META_CONTENT
+from src.utils.seo import META_CONTENT, make_org_jsonld
 from src.utils.table import (
     COLUMNS,
     format_number,
@@ -63,6 +64,7 @@ def layout(titulaire_id=None, **kwargs):
         dcc.Store(id="titulaire-total-unique"),
         dcc.Store(id="entity-grid-columns-state", storage_type="local"),
         dcc.Location(id="titulaire_url", refresh="callback-nav"),
+        html.Script(type="application/ld+json", id="titulaire_jsonld"),
         html.Div(
             children=[
                 html.Div(
@@ -266,6 +268,7 @@ def layout(titulaire_id=None, **kwargs):
     Output(component_id="titulaire_region", component_property="children"),
     Output(component_id="titulaire_lien_annuaire", component_property="href"),
     Output(component_id="titulaire_activite_libelle", component_property="children"),
+    Output(component_id="titulaire_jsonld", component_property="children"),
     Input(component_id="titulaire_url", component_property="pathname"),
 )
 def update_titulaire_infos(url):
@@ -303,6 +306,19 @@ def update_titulaire_infos(url):
         )
         libelle_commune = ""
 
+    # raison_sociale peut être un composant html.Span (SIRET inconnu de l'INSEE),
+    # non sérialisable en JSON : on n'émet du JSON-LD que si c'est une chaîne.
+    jsonld = (
+        make_org_jsonld(
+            titulaire_siret, "titulaire", org_name=raison_sociale, annuaire_data=data
+        )
+        if isinstance(raison_sociale, str)
+        else {}
+    )
+    jsonld_script = (
+        json.dumps({"@context": "https://schema.org", **jsonld}) if jsonld else ""
+    )
+
     return (
         titulaire_siret,
         raison_sociale,
@@ -311,6 +327,7 @@ def update_titulaire_infos(url):
         nom_region,
         lien_annuaire,
         activite_libelle,
+        jsonld_script,
     )
 
 

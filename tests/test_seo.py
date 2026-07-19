@@ -66,3 +66,57 @@ def test_index_has_canonical_link(client):
     resp = client.get("/")
     assert resp.status_code == 200
     assert 'rel="canonical"' in resp.get_data(as_text=True)
+
+
+def test_index_has_static_social_tags(client):
+    resp = client.get("/")
+    body = resp.get_data(as_text=True)
+    assert 'property="og:site_name" content="colibre"' in body
+    assert 'property="og:locale" content="fr_FR"' in body
+
+
+def test_index_has_per_request_og_url(client):
+    resp = client.get("/tableau")
+    body = resp.get_data(as_text=True)
+    assert 'property="og:url" content="http://localhost/tableau"' in body
+
+
+def test_make_org_jsonld_reuses_supplied_annuaire_data():
+    from src.utils.seo import make_org_jsonld
+
+    fake = {
+        "matching_etablissements": [
+            {
+                "code_postal": "75001",
+                "libelle_commune": "Paris",
+                "adresse": "1 rue de Paris 75001 Paris",
+            }
+        ]
+    }
+    result = make_org_jsonld(
+        "21750001500010", "acheteur", org_name="Mairie de Paris", annuaire_data=fake
+    )
+    assert result["name"] == "Mairie de Paris"
+    assert result["address"]["postalCode"] == "75001"
+    assert isinstance(result["address"], dict)
+
+
+def test_make_org_jsonld_empty_matching_etablissements_returns_empty_dict():
+    from src.utils.seo import make_org_jsonld
+
+    result = make_org_jsonld(
+        "21750001500010",
+        "acheteur",
+        org_name="X",
+        annuaire_data={"matching_etablissements": []},
+    )
+    assert result == {}
+
+
+def test_make_org_jsonld_none_annuaire_data_returns_empty_dict():
+    from src.utils.seo import make_org_jsonld
+
+    result = make_org_jsonld(
+        "21750001500010", "acheteur", org_name="X", annuaire_data=None
+    )
+    assert result == {}

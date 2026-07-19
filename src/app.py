@@ -48,6 +48,10 @@ META_TAGS = [
         "name": "keywords",
         "content": "commande publique, decp, marchés publics, données essentielles, colibre",
     },
+    # og:title/description/image/twitter:* sont générées par page (register_page),
+    # celles-ci sont statiques et communes à toutes les pages.
+    {"property": "og:site_name", "content": "colibre"},
+    {"property": "og:locale", "content": "fr_FR"},
 ]
 
 if DEVELOPMENT:
@@ -275,6 +279,24 @@ app.index_string = """
     </body>
 </html>
 """.replace("__CHATWOOT_SCRIPT__", chatwoot_script)
+
+# Dash génère automatiquement twitter:url par page (via register_page), mais pas
+# og:url. On l'injecte ici à partir de l'URL de la requête en cours, pour que les
+# crawlers sociaux (qui n'exécutent pas de JS, contrairement au canonical ci-dessus)
+# reçoivent la bonne URL directement dans le HTML servi.
+_default_interpolate_index = app.interpolate_index
+
+
+def _interpolate_index_with_og_url(**kwargs):
+    from flask import request as _request
+    from markupsafe import escape as _escape
+
+    og_url_tag = f'<meta property="og:url" content="{_escape(_request.url)}"/>'
+    kwargs["metas"] = f"{kwargs.get('metas', '')}\n      {og_url_tag}"
+    return _default_interpolate_index(**kwargs)
+
+
+app.interpolate_index = _interpolate_index_with_og_url
 
 navbar = dbc.Navbar(
     dbc.Container(
