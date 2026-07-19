@@ -67,9 +67,6 @@ home_intro = html.Div(
                                 dcc.Link("Tableau", href="/tableau"),
                             ]
                         ),
-                        dcc.Link(
-                            html.Img(src="/assets/table-thumbnail.svg"), href="/tableau"
-                        ),
                     ],
                     md=5,
                     className="text-center",
@@ -82,6 +79,35 @@ home_intro = html.Div(
                                 dcc.Link("Observatoire", href="/observatoire"),
                             ]
                         ),
+                    ],
+                    # L'offset doit rester sur le breakpoint md : passé via
+                    # `width` il s'appliquerait aussi en xs (col-5 offset-2),
+                    # écrasant la colonne sur petit écran au lieu de la laisser
+                    # s'empiler en pleine largeur.
+                    md={"size": 5, "offset": 2},
+                    # mt-5 : respiration quand les colonnes s'empilent (xs/sm) ;
+                    # mt-md-0 : annulé dès qu'elles sont côte à côte. On n'utilise
+                    # pas gy-* sur la Row : son margin-top négatif serait écrasé
+                    # par le style inline marginTop de celle-ci.
+                    className="text-center mt-5 mt-md-0",
+                ),
+            ],
+            style={"marginTop": "6rem"},
+            className="gx-5",
+        ),
+        dbc.Row(
+            [
+                dbc.Col(
+                    [
+                        dcc.Link(
+                            html.Img(src="/assets/table-thumbnail.svg"), href="/tableau"
+                        ),
+                    ],
+                    md=5,
+                    className="text-center",
+                ),
+                dbc.Col(
+                    [
                         dcc.Link(
                             html.Img(src="/assets/dashboard-thumbnail.svg"),
                             href="/observatoire",
@@ -99,7 +125,6 @@ home_intro = html.Div(
                     className="text-center mt-5 mt-md-0",
                 ),
             ],
-            style={"marginTop": "6rem"},
             className="gx-5",
         ),
         html.P(
