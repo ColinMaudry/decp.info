@@ -179,7 +179,7 @@ def normalize_sort_by(sort_by) -> tuple:
 def format_number(number) -> str:
     if not number:
         return ""
-    number = "{:,}".format(number).replace(",", " ")
+    number = "{:,}".format(number).replace(",", chr(160))
     return number
 
 
