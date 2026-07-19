@@ -16,7 +16,6 @@ _HASH_MAP = {
     "#donnees-brutes": "/a-propos/donnees-brutes",
     "#api-privee": "/a-propos/api-privee",
     "#contact": "/a-propos/contact",
-    "#contribuer": "/a-propos/contribuer",
     "#explorer": "/a-propos/explorer",
     "#qualite-exhausitivite": "/a-propos/qualite",
     "#sources": "/a-propos/sources",

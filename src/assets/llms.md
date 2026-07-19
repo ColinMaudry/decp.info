@@ -13,6 +13,10 @@ Les données sont publiées en Open Data aux formats Parquet et CSV :
 - Parquet : <https://www.data.gouv.fr/api/1/datasets/r/11cea8e8-df3e-4ed1-932b-781e2635e432>
 - CSV : <https://www.data.gouv.fr/api/1/datasets/r/22847056-61df-452d-837d-8b8ceadbfc52>
 
+## Serveur MCP
+
+Les abonné·es à colibre peuvent utiliser une série d'outils pour agents IA via le serveur MCP, exposé à l'adresse https://colibre.fr/_mcp.
+
 ## API
 
 L'API nécessite un jeton d'authentification pour se connecter. Elle utilise le même schéma que les données et renvoie les données au format JSON.

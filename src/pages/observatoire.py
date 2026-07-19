@@ -111,7 +111,7 @@ layout = [
 Les données saisies et publiées par les acheteurs comportent de nombreux montants farfelus qui sabotent les statistiques,
 au lieu de montants estimés avec rigueur. Ils atteignent parfois les millions de milliards.
 Certains réutilisateurs des données mettent de côté ces marchés ou bien modifient les montants selon des règles fatalement arbitraires.
-*Les données ne sont quasiment pas modifiées* afin de visibiliser le problème.
+Les données ne sont quasiment pas modifiées afin de visibiliser le problème.
 
 Alors, comment fait-on ?
 

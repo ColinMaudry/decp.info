@@ -512,6 +512,10 @@ table.cell-table th {
   font-weight: 400;
 }
 
+div#admin-table.dash-table-container {
+  --bs-body-font-size: 0.7rem;
+}
+
 /* Bootstrap's CSS cascade defeats dash_table's own inline `display: none`
    toggle on dropdown-cell menus (react-select v1 renders the menu hidden
    first to measure it, then flips to visible — Bootstrap's reset wins that
