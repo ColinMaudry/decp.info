@@ -794,15 +794,15 @@ def compute_considerations_stats(lff: pl.LazyFrame) -> dict[str, tuple[int, int,
 
     Clés renvoyées :
       - "champs_renseignes"        : (count_ren_sociales, pct / total)
-      - "{key}_renseignees"        : (count_ren, pct positifs parmi renseignés)
-    Colonne absente -> (0, 0).
+      - "{key}_renseignees"        : (count_ren, count_pos_ren, pct positifs parmi renseignés)
+    Colonne absente/vide -> "champs_renseignes" (0, 0), "{key}_renseignees" (0, 0, 0).
     """
     names = lff.collect_schema().names()
     present = {key: col for key, col in CONSIDERATIONS_COLUMNS.items() if col in names}
 
-    stats: dict[str, tuple[int, int, int]] = {"champs_renseignes": (0, 0)}
+    stats: dict[str, tuple[int, ...]] = {"champs_renseignes": (0, 0)}
     for key in CONSIDERATIONS_COLUMNS:
-        stats[f"{key}_renseignees"] = (0, 0)
+        stats[f"{key}_renseignees"] = (0, 0, 0)
 
     if not present:
         return stats
