@@ -1,0 +1,51 @@
+name: Déploiement
+on:
+  workflow_dispatch:
+  pull_request:
+    types:
+      - closed
+  push:
+    branches:
+      - dev
+jobs:
+  deploy:
+    # Trigger deploy workflow if
+    # ...I clicked on "Run workflow" in Github actions, thus deploy main to production env (main)
+    # or
+    # ...I merged a PR or pushed on the dev branch, thus deploy to the test env (dev)
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.ref_name == 'main') ||
+      ((github.event_name == 'pull_request' || github.event_name == 'push') && github.ref_name == 'dev')
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up SSH key
+        run: |
+          env
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ARTIFACT_SSH_KEY }}" > /home/runner/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p ${{ secrets.ARTIFACT_PORT }} ${{ secrets.ARTIFACT_HOST }} >> ~/.ssh/known_hosts
+          sudo apt-get install sshpass python3 python3-pip
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@master
+        with:
+            host: ${{ secrets.ARTIFACT_HOST }}
+            username: ${{ secrets.USER }}
+            port: ${{ secrets.ARTIFACT_PORT }}
+            key: ${{ secrets.ARTIFACT_SSH_KEY }}
+            passphrase: ${{ secrets.SSH_PSWD }}
+            command_timeout: 5m
+            script: |
+              systemctl stop ${{ vars.APP_NAME }}
+              cd /var/www/${{ vars.APP_NAME }}
+              git pull
+              source .venv/bin/activate
+              pip install .
+              deactivate
+              chown -R ${{ vars.APP_NAME }}:www-data *
+              systemctl start ${{ vars.APP_NAME }}
