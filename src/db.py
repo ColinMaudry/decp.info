@@ -1,5 +1,6 @@
 import fcntl
 import os
+import re
 from pathlib import Path
 from time import sleep
 
@@ -9,6 +10,51 @@ import polars.selectors as cs
 from polars.exceptions import ComputeError
 
 from src.utils import get_last_modified, logger
+
+# Format accepté par DuckDB pour memory_limit, ex. « 2GB », « 512MiB ».
+# Validé plutôt qu'interpolé tel quel : SET n'accepte pas de paramètre lié.
+_MEMORY_LIMIT_RE = re.compile(r"^\d+(\.\d+)?\s*(B|[KMGT]B|[KMGT]iB)$", re.IGNORECASE)
+
+
+def configure_connection(conn: duckdb.DuckDBPyConnection) -> None:
+    """Borne les ressources de l'instance DuckDB de ce processus.
+
+    Les défauts DuckDB (`threads` = tous les cœurs, `memory_limit` = 80 % de la
+    RAM) s'appliquent **par processus** et ignorent les limites cgroup. Avec
+    plusieurs workers gunicorn, chaque processus croit donc disposer de la
+    machine entière, ce qui mène à la sursouscription CPU et à l'OOM kill.
+
+    Ces réglages valent pour l'instance, pas par requête : les curseurs rendus
+    par `get_cursor()` partagent le même ordonnanceur. Le plafond CPU d'un
+    conteneur vaut donc `workers × DUCKDB_THREADS`.
+
+    Sans variable d'environnement, les défauts DuckDB sont préservés (on ne
+    change pas le comportement d'un déploiement existant), mais l'absence de
+    bornage est signalée dans les logs.
+    """
+    threads = os.getenv("DUCKDB_THREADS", "").strip()
+    memory_limit = os.getenv("DUCKDB_MEMORY_LIMIT", "").strip()
+
+    if threads:
+        conn.execute(f"SET threads = {int(threads)}")
+    if memory_limit:
+        if not _MEMORY_LIMIT_RE.match(memory_limit):
+            raise ValueError(
+                f"DUCKDB_MEMORY_LIMIT invalide : {memory_limit!r} "
+                "(format attendu, ex. « 2GB » ou « 512MiB »)"
+            )
+        conn.execute(f"SET memory_limit = '{memory_limit}'")
+
+    if not threads or not memory_limit:
+        actuel_threads = conn.execute("SELECT current_setting('threads')").fetchone()[0]
+        actuel_memoire = conn.execute(
+            "SELECT current_setting('memory_limit')"
+        ).fetchone()[0]
+        logger.warning(
+            "DuckDB non borné (DUCKDB_THREADS / DUCKDB_MEMORY_LIMIT) : ce processus "
+            f"utilisera jusqu'à {actuel_threads} threads et {actuel_memoire}. "
+            "Ces limites s'appliquent par worker : à définir en production."
+        )
 
 
 def should_rebuild(db_path: Path, parquet_path: str) -> bool:
@@ -156,6 +202,7 @@ def _ensure_database() -> Path:
 
 DB_PATH = _ensure_database()
 conn: duckdb.DuckDBPyConnection = duckdb.connect(str(DB_PATH), read_only=True)
+configure_connection(conn)
 schema: pl.Schema = conn.execute("SELECT * FROM decp LIMIT 0").pl().schema
 
 
