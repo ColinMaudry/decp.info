@@ -52,6 +52,8 @@ META_TAGS = [
     # celles-ci sont statiques et communes à toutes les pages.
     {"property": "og:site_name", "content": "colibre"},
     {"property": "og:locale", "content": "fr_FR"},
+    {"property": "og:image:width", "content": "1200"},
+    {"property": "og:image:height", "content": "630"},
 ]
 
 if DEVELOPMENT:
