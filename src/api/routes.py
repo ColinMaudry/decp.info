@@ -1,3 +1,6 @@
+from datetime import datetime, timezone
+from pathlib import Path
+
 import orjson
 from flask import Response, g, request
 from flask_smorest import Blueprint, abort
@@ -5,8 +8,9 @@ from flask_smorest import Blueprint, abort
 from src.api import tracking
 from src.api.auth import require_token
 from src.api.filters import FilterError, build_where, parse_aggregators
-from src.db import aggregate_marches, count_marches, query_marches
+from src.db import DB_PATH, aggregate_marches, count_marches, get_cursor, query_marches
 from src.db import schema as duckdb_schema
+from src.utils import logger
 from src.utils.data import DATA_SCHEMA
 
 bp = Blueprint(
@@ -82,8 +86,31 @@ def _track_consumption(response):
 
 @bp.route("/health")
 def health():
-    """Sonde de santé, sans authentification."""
-    return {"status": "ok"}
+    """Sonde de santé, sans authentification.
+
+    Interroge réellement DuckDB : un 200 statique resterait vert avec une base
+    absente ou corrompue. Expose aussi la fraîcheur des données, car
+    `_ensure_database` rattrape un rebuild raté en réutilisant la base
+    existante — l'app démarre alors normalement, en servant des données
+    périmées sans que rien ne le signale.
+    """
+    try:
+        get_cursor().execute("SELECT 1 FROM decp LIMIT 1").fetchone()
+        construites_le = datetime.fromtimestamp(
+            Path(DB_PATH).stat().st_mtime, tz=timezone.utc
+        )
+    except Exception:
+        logger.exception("Sonde /health : DuckDB injoignable")
+        return {"status": "error"}, 503
+
+    age_heures = (datetime.now(timezone.utc) - construites_le).total_seconds() / 3600
+    return {
+        "status": "ok",
+        "donnees": {
+            "construites_le": construites_le.isoformat(),
+            "age_heures": round(age_heures, 1),
+        },
+    }
 
 
 @bp.route("/schema")
