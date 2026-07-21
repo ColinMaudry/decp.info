@@ -90,7 +90,8 @@ def test_apply_saved_view_new_format_returns_view(monkeypatch, users_db_path):
     # rappelé (revue finale #41, round 2) : seules les colonnes avec hide=True.
     assert hidden_columns == ["acheteur_nom"]
     # active-view alimente le bloc de partage (token + URL courte).
-    assert active["token"] and active["url"].endswith(f"_{active['token']}")
+    # token en tête depuis 108a214 : ?vue=<token>_<slug>
+    assert active["token"] and f"vue={active['token']}" in active["url"]
 
 
 def test_apply_saved_view_missing_ast_key_degrades_gracefully(
