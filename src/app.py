@@ -225,6 +225,24 @@ def llms():
     return redirect("/assets/llms.md")
 
 
+# Fichier .ics d'une rencontre (voir src.rencontres). La route appelle
+# openagenda.fetch_rencontres() via le module pour rester monkeypatchable.
+from src.rencontres import openagenda as _openagenda  # noqa: E402
+from src.rencontres.calendrier import ics_evenement as _ics_evenement  # noqa: E402
+
+
+@app.server.route("/rencontres/<uid>.ics")
+def rencontre_ics(uid: str):
+    for ev in _openagenda.fetch_rencontres():
+        if ev.uid == uid:
+            return Response(
+                _ics_evenement(ev),
+                mimetype="text/calendar",
+                headers={"Content-Disposition": 'attachment; filename="rencontre.ics"'},
+            )
+    return Response("Not found", status=404)
+
+
 with open("./pyproject.toml", "rb") as f:
     pyproject = tomllib.load(f)
     version = "v" + pyproject["project"]["version"]
