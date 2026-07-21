@@ -93,10 +93,10 @@ def test_compute_considerations_stats_missing_column():
 
     stats = compute_considerations_stats(lff)
 
-    # Colonne env absente -> (0, 0). Social : 2 non-null, 1 != "Sans objet" -> (2, 1, 50%).
+    # Colonne env absente -> (0, 0, 0). Social : 2 non-null, 1 != "Sans objet" -> (2, 1, 50%).
     assert stats["champs_renseignes"] == (2, 100)
     assert stats["sociales_renseignees"] == (2, 1, 50)
-    assert stats["environnementales_renseignees"] == (0, 0)
+    assert stats["environnementales_renseignees"] == (0, 0, 0)
 
 
 def test_compute_considerations_stats_empty():
@@ -113,8 +113,8 @@ def test_compute_considerations_stats_empty():
     stats = compute_considerations_stats(lff)
 
     assert stats["champs_renseignes"] == (0, 0)
-    assert stats["sociales_renseignees"] == (0, 0)
-    assert stats["environnementales_renseignees"] == (0, 0)
+    assert stats["sociales_renseignees"] == (0, 0, 0)
+    assert stats["environnementales_renseignees"] == (0, 0, 0)
 
 
 def test_get_considerations_card_content_returns_three_progress_bars():
