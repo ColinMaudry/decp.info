@@ -325,6 +325,10 @@ def test_lien_google_convertit_en_utc():
     # 10:00+02:00 -> 08:00Z ; les jetons compacts apparaissent littéralement
     assert "20260727T080000Z" in url
     assert "20260727T090000Z" in url
+    # le lien visio est aussi dans le corps (details) — "Visioconf" et l'hôte
+    # ne sont pas percent-encodés, ils apparaissent littéralement
+    assert "Visioconf" in url
+    assert "visio.example" in url
 
 
 def test_lien_outlook_utilise_iso_utc():
@@ -333,6 +337,9 @@ def test_lien_outlook_utilise_iso_utc():
     assert "rru=addevent" in url
     # ISO UTC, encodé (les ':' deviennent %3A)
     assert "2026-07-27T08%3A00%3A00Z" in url
+    # le lien visio est aussi dans le corps (body)
+    assert "Visioconf" in url
+    assert "visio.example" in url
 
 
 def test_ics_structure_et_dates_utc():
@@ -345,11 +352,30 @@ def test_ics_structure_et_dates_utc():
     assert "DTEND:20260727T090000Z" in ics
     assert "SUMMARY:Rencontre colibre" in ics
     assert "URL:https://visio.example/xyz" in ics
+    # le lien visio est aussi dans la DESCRIPTION
+    assert "Visioconférence : https://visio.example/xyz" in ics
+
+
+def test_visio_dans_le_corps_meme_avec_lieu_physique():
+    # Cas hybride : lieu physique ET visio. La visio ne doit PAS être perdue.
+    ev = _ev()
+    ev.lieu_nom = "Mairie"
+    ev.lieu_ville = "Nantes"
+    google = lien_google(ev)
+    assert "Nantes" in google  # location = lieu physique
+    assert "visio.example" in google  # visio conservée dans le corps
+    outlook = lien_outlook(ev)
+    assert "visio.example" in outlook
+    ics = ics_evenement(ev)
+    assert "LOCATION:Mairie — Nantes" in ics
+    assert "URL:https://visio.example/xyz" in ics
+    assert "Visioconférence : https://visio.example/xyz" in ics  # dans DESCRIPTION
 
 
 def test_ics_echappe_les_caracteres_speciaux():
     ics = ics_evenement(_ev(titre="Atelier, DECP; libre", description="a\nb"))
     assert "SUMMARY:Atelier\\, DECP\\; libre" in ics
+    # description "a\nb" échappée en tête de DESCRIPTION (avant la ligne visio)
     assert "DESCRIPTION:a\\nb" in ics
 ```
 
@@ -385,12 +411,27 @@ def _query(params: dict[str, str]) -> str:
     return "&".join(f"{k}={quote(str(v))}" for k, v in params.items())
 
 
+def _corps(ev: Evenement) -> str:
+    """Corps de l'événement : description + lien visio (si présent).
+
+    Le lien visio est ajouté ici — en plus de location/URL — pour qu'il soit
+    présent et cliquable dans le corps des trois cibles, y compris pour un
+    événement hybride (lieu physique + visio) où location porte l'adresse.
+    """
+    parties = []
+    if ev.description:
+        parties.append(ev.description)
+    if ev.visio_url:
+        parties.append(f"Visioconférence : {ev.visio_url}")
+    return "\n\n".join(parties)
+
+
 def lien_google(ev: Evenement) -> str:
     params = {
         "action": "TEMPLATE",
         "text": ev.titre,
         "dates": f"{_compact_utc(ev.debut)}/{_compact_utc(ev.fin)}",
-        "details": ev.description or "",
+        "details": _corps(ev),
         "location": _lieu(ev) or ev.visio_url or "",
     }
     return f"https://calendar.google.com/calendar/render?{_query(params)}"
@@ -403,7 +444,7 @@ def lien_outlook(ev: Evenement) -> str:
         "subject": ev.titre,
         "startdt": _iso_utc(ev.debut),
         "enddt": _iso_utc(ev.fin),
-        "body": ev.description or "",
+        "body": _corps(ev),
         "location": _lieu(ev) or ev.visio_url or "",
     }
     return f"https://outlook.live.com/calendar/0/deeplink/compose?{_query(params)}"
@@ -431,8 +472,9 @@ def ics_evenement(ev: Evenement) -> str:
         f"DTEND:{_compact_utc(ev.fin)}",
         f"SUMMARY:{_echapper(ev.titre)}",
     ]
-    if ev.description:
-        lignes.append(f"DESCRIPTION:{_echapper(ev.description)}")
+    corps = _corps(ev)
+    if corps:
+        lignes.append(f"DESCRIPTION:{_echapper(corps)}")
     lieu = _lieu(ev) or ev.visio_url
     if lieu:
         lignes.append(f"LOCATION:{_echapper(lieu)}")
@@ -445,7 +487,7 @@ def ics_evenement(ev: Evenement) -> str:
 - [ ] **Step 4: Lancer les tests pour vérifier le succès**
 
 Run: `uv run pytest tests/rencontres/test_calendrier.py -v`
-Expected: PASS (4 tests)
+Expected: PASS (5 tests)
 
 - [ ] **Step 5: Commit**
 

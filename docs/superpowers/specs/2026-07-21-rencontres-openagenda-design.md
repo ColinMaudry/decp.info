@@ -86,7 +86,11 @@ def fetch_rencontres() -> list[Evenement]:
 ### `src/rencontres/calendrier.py` — fonctions pures
 
 Aucune dépendance externe (pas de lib ICS). Trois fonctions prenant un
-`Evenement` :
+`Evenement`. **Lien visio** : quand `visio_url` est présent, il est ajouté au
+**corps** de l'événement (`details` Google, `body` Outlook, `DESCRIPTION` ICS,
+sous la forme `Visioconférence : <url>`) **en plus** de `location`/`URL`. Ainsi
+la visio reste présente et cliquable dans les trois cibles même pour un
+événement hybride (lieu physique + visio), où `location` porte l'adresse.
 
 - `lien_google(ev) -> str` →
   `https://calendar.google.com/calendar/render?action=TEMPLATE&text=…&dates=…&details=…&location=…`
