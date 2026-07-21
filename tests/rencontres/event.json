@@ -1,0 +1,112 @@
+{
+  "success": true,
+  "event": {
+    "firstTiming": {
+      "end": "2026-07-27T11:00:00.000+02:00",
+      "begin": "2026-07-27T10:00:00.000+02:00"
+    },
+    "nextTiming": {
+      "begin": "2026-07-27T10:00:00+02:00",
+      "end": "2026-07-27T11:00:00+02:00"
+    },
+    "lastTiming": {
+      "end": "2026-07-27T11:00:00.000+02:00",
+      "begin": "2026-07-27T10:00:00.000+02:00"
+    },
+    "dateRange": {
+      "ar": "الإثنين ٢٧ يوليو, 10:00",
+      "de": "Montag 27 Juli, 10:00",
+      "en": "Monday 27 July, 10:00",
+      "it": "Lunedì 27 luglio, 10:00",
+      "fr": "Lundi 27 juillet, 10h00",
+      "es": "Lunes 27 julio, 10:00",
+      "nl": "Maandag 27 juli, 10u00"
+    },
+    "state": 2,
+    "featured": false,
+    "motive": null,
+    "originAgenda": {
+      "uid": 3512069,
+      "image": "https://cdn.openagenda.com/main/agendaundefined.541ec9179765434399d4c14fc8e6c480.jpg?__ts=1784624242802",
+      "description": "Évènements organisés par l'entreprise Colmo autour de sa suite d'outils dédiée à l'exploration des marchés publics, colibre.fr.",
+      "official": false,
+      "title": "Colmo",
+      "slug": "colmo",
+      "url": "https://colibre.fr",
+      "_agg": "eyJ1aWQiOjM1MTIwNjksInRpdGxlIjoiQ29sbW8iLCJpbWFnZSI6Imh0dHBzOi8vY2RuLm9wZW5hZ2VuZGEuY29tL21haW4vYWdlbmRhdW5kZWZpbmVkLjU0MWVjOTE3OTc2NTQzNDM5OWQ0YzE0ZmM4ZTZjNDgwLmpwZz9fX3RzPTE3ODQ2MjQyNDI4MDIiLCJ1cmwiOiJodHRwczovL2NvbGlicmUuZnIiLCJzbHVnIjoiY29sbW8ifQ=="
+    },
+    "sourceAgendas": [],
+    "image": {
+      "filename": "e1cfcd4c748c41728c4f34c670b5f5f6.base.image.jpg",
+      "size": {
+        "width": 700,
+        "height": 425
+      },
+      "variants": [
+        {
+          "filename": "e1cfcd4c748c41728c4f34c670b5f5f6.full.image.jpg",
+          "size": {
+            "width": 1920,
+            "height": 1166
+          },
+          "type": "full"
+        },
+        {
+          "filename": "e1cfcd4c748c41728c4f34c670b5f5f6.thumb.image.jpg",
+          "size": {
+            "width": 200,
+            "height": 200
+          },
+          "type": "thumbnail"
+        }
+      ],
+      "base": "https://cdn.openagenda.com/main/"
+    },
+    "imageCredits": "Colmo",
+    "title": {
+      "fr": "Nouveautés decp.info/colibre et discussion libre"
+    },
+    "description": {
+      "fr": "Rencontre avec les utilisateurs et utilisatrices de decp.info/colibre afin de mieux comprendre les usages et discuter des fonctionnalités à développer."
+    },
+    "keywords": {},
+    "longDescription": {
+      "fr": "Ce webinaire débute une série de rencontres régulières destinées à mieux comprendre les enjeux autour de l'accès aux données de la commande publique, les cas d'usages à impact et comment colibre peut les couvrir."
+    },
+    "conditions": {
+      "fr": "Participation libre, sans inscription"
+    },
+    "age": {
+      "min": null,
+      "max": null
+    },
+    "registration": [],
+    "accessibility": {
+      "ii": false,
+      "hi": false,
+      "vi": false,
+      "pi": false,
+      "mi": false
+    },
+    "attendanceMode": 2,
+    "onlineAccessLink": "https://kmeet.infomaniak.com/0kywff4pcpetv425cfutesvz",
+    "status": 1,
+    "timings": [
+      {
+        "begin": "2026-07-27T10:00:00+02:00",
+        "end": "2026-07-27T11:00:00+02:00"
+      }
+    ],
+    "uid": 41344161,
+    "slug": "nouveautes-decpinfocolibre-et-discussion-libre",
+    "private": 0,
+    "timezone": "Europe/Paris",
+    "draft": 0,
+    "createdAt": "2026-07-21T11:42:58.000Z",
+    "creatorUid": 229894294695334,
+    "ownerUid": 229894294695334,
+    "updatedAt": "2026-07-21T11:43:00.000Z",
+    "links": [],
+    "extIds": null
+  }
+}
