@@ -30,7 +30,7 @@ def test_resolve_vue_from_url_found(monkeypatch, users_db_path):
     saved_views_db.init_schema()
     uid = _make_user()
     token = _seed(uid)
-    out = tableau.resolve_vue_from_url(f"?vue=ma-vue_{token}")
+    out = tableau.resolve_vue_from_url(f"?vue={token}_ma-vue")
     assert out["found"] is True
     assert out["token"] == token
 
@@ -50,7 +50,7 @@ def test_apply_vue_resolution_found_shows_box(users_db_path):
         "column_state": [{"colId": "montant", "hide": True}],
         "hidden_columns": ["montant"],
         "token": "abc123",
-        "url": "https://test.colibre.fr/tableau?vue=ma-vue_abc123",
+        "url": "https://test.colibre.fr/tableau?vue=abc123_ma-vue",
         "error": None,
     }
     fm, cs, hidden, active, feedback = tableau.apply_vue_resolution(resolution)
@@ -96,11 +96,11 @@ class _Ctx:
 
 def test_render_share_box_visible_when_active():
     class_name, value = tableau.render_share_box(
-        {"token": "abc123", "url": "https://x/tableau?vue=a_abc123"}
+        {"token": "abc123", "url": "https://x/tableau?vue=abc123_a"}
     )
     assert "d-flex" in class_name
     assert "d-none" not in class_name
-    assert value == "https://x/tableau?vue=a_abc123"
+    assert value == "https://x/tableau?vue=abc123_a"
 
 
 def test_render_share_box_hidden_when_none():
@@ -124,7 +124,7 @@ def test_apply_saved_view_sets_active(monkeypatch, users_db_path):
     # (filter_model, column_state, hidden, active-view)
     assert out[3] == {
         "token": token,
-        "url": f"https://test.colibre.fr/tableau?vue=ma-vue_{token}",
+        "url": f"https://test.colibre.fr/tableau?vue={token}_ma-vue",
     }
 
 
@@ -136,7 +136,7 @@ def test_save_view_shows_box(monkeypatch, users_db_path):
     with patch.object(tableau, "current_user", _fake_user(uid)):
         out = tableau.save_view(1, "Nouvelle", {}, [])
     # (is_open, feedback, refresh, active-view)
-    assert out[3]["url"].startswith("https://test.colibre.fr/tableau?vue=nouvelle_")
+    assert out[3]["url"].endswith("_nouvelle")
 
 
 def _type_in_first_filter(dash_duo):
@@ -166,7 +166,7 @@ def test_open_shared_view_applies_and_shows_box(dash_duo, users_db_path):
 
     dash_duo.start_server(app)
     dash_duo.wait_for_text_to_equal(".logo > h1", "colibre", timeout=6)
-    dash_duo.wait_for_page(dash_duo.server_url + f"/tableau?vue=ma-vue_{token}")
+    dash_duo.wait_for_page(dash_duo.server_url + f"/tableau?vue={token}_ma-vue")
 
     # Le bloc de partage est visible et affiche l'URL courte (jeton). Le texte est
     # renseigné par le même callback que l'affichage : le lire non vide prouve que

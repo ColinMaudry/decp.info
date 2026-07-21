@@ -27,17 +27,17 @@ def slugify(name: str | None) -> str:
 
 def build_view_url(name: str, token: str) -> str:
     slug = slugify(name)
-    prefix = f"{slug}_" if slug else ""
-    return f"https://{DOMAIN_NAME}/tableau?vue={prefix}{token}"
+    suffix = f"_{slug}" if slug else ""
+    return f"https://{DOMAIN_NAME}/tableau?vue={token}{suffix}"
 
 
 def token_from_vue_param(value: str | None) -> str | None:
-    """Extrait le jeton du paramètre ?vue=. Le jeton base62 ne contient pas d'`_`
-    et le slug est en tirets, donc le segment après le dernier `_` est le jeton
+    """Extrait le jeton du paramètre ?vue=. Le jeton base36 ne contient pas d'`_`
+    et le slug est en tirets, donc le segment avant le premier `_` est le jeton
     (`?vue=abc123` sans slug fonctionne aussi)."""
     if not value:
         return None
-    token = value.rsplit("_", 1)[-1]
+    token = value.split("_", 1)[0]
     return token or None
 
 

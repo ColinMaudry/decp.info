@@ -81,7 +81,7 @@ def test_build_view_url_dev_domain(monkeypatch):
     # DOMAIN_NAME est résolu à l'import ; on patche l'attribut du module ui.
     monkeypatch.setattr(ui, "DOMAIN_NAME", "test.colibre.fr")
     url = ui.build_view_url("Mes Marchés", "abc123")
-    assert url == "https://test.colibre.fr/tableau?vue=mes-marches_abc123"
+    assert url == "https://test.colibre.fr/tableau?vue=abc123_mes-marches"
 
 
 def test_build_view_url_empty_slug_omits_prefix(monkeypatch):
@@ -91,8 +91,8 @@ def test_build_view_url_empty_slug_omits_prefix(monkeypatch):
 
 
 def test_token_from_vue_param():
-    assert ui.token_from_vue_param("mes-marches-2024_abc123") == "abc123"
-    assert ui.token_from_vue_param("zzz_abc123") == "abc123"
+    assert ui.token_from_vue_param("abc123_mes-marches-2024") == "abc123"
+    assert ui.token_from_vue_param("abc123_zzz") == "abc123"
     assert ui.token_from_vue_param("abc123") == "abc123"
     assert ui.token_from_vue_param("") is None
     assert ui.token_from_vue_param(None) is None
@@ -102,7 +102,7 @@ def test_view_row_open_uses_short_url(monkeypatch):
     monkeypatch.setattr(ui, "DOMAIN_NAME", "test.colibre.fr")
     row = ui._view_row(_view(1, "Mes Marchés", "q", token="tok123"))
     text = str(row)
-    assert "https://test.colibre.fr/tableau?vue=mes-marches_tok123" in text
+    assert "https://test.colibre.fr/tableau?vue=tok123_mes-marches" in text
 
 
 def test_view_row_has_clipboard_with_url(monkeypatch):

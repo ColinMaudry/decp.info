@@ -28,7 +28,7 @@ def test_resolve_found_applies_view(monkeypatch, users_db_path):
     uid = _make_user()
     token = _seed_view(uid, "Mes Marchés")
 
-    out = resolve.resolve_vue_param(f"mes-marches_{token}", schema)
+    out = resolve.resolve_vue_param(f"{token}_mes-marches", schema)
 
     assert out["found"] is True
     assert out["filter_model"] == {
@@ -36,7 +36,7 @@ def test_resolve_found_applies_view(monkeypatch, users_db_path):
     }
     assert out["hidden_columns"] == ["acheteur_nom"]
     assert out["token"] == token
-    assert out["url"] == f"https://test.colibre.fr/tableau?vue=mes-marches_{token}"
+    assert out["url"] == f"https://test.colibre.fr/tableau?vue={token}_mes-marches"
     assert out["error"] is None
 
 
@@ -46,7 +46,7 @@ def test_resolve_slug_is_ignored(monkeypatch, users_db_path):
     uid = _make_user()
     token = _seed_view(uid)
     # Slug bidon → même résolution.
-    out = resolve.resolve_vue_param(f"nimportequoi_{token}", schema)
+    out = resolve.resolve_vue_param(f"{token}_nimportequoi", schema)
     assert out["found"] is True
     assert out["token"] == token
 
@@ -54,7 +54,7 @@ def test_resolve_slug_is_ignored(monkeypatch, users_db_path):
 def test_resolve_unknown_token_returns_error(users_db_path):
     saved_views_db.init_schema()
     _make_user()
-    out = resolve.resolve_vue_param("slug_zzzzzz", schema)
+    out = resolve.resolve_vue_param("zzzzzz_slug", schema)
     assert out["found"] is False
     assert out["error"] == resolve.NOT_FOUND_MESSAGE
     assert out["filter_model"] is None
@@ -72,6 +72,6 @@ def test_resolve_corrupt_query_returns_error(users_db_path):
     uid = _make_user()
     # query pré-migration (pas du JSON) → même message de repli.
     token = saved_views_db.upsert(uid, "tableau", "Vieille", "filtres=a&tris=b")
-    out = resolve.resolve_vue_param(f"vieille_{token}", schema)
+    out = resolve.resolve_vue_param(f"{token}_vieille", schema)
     assert out["found"] is False
     assert out["error"] == resolve.NOT_FOUND_MESSAGE

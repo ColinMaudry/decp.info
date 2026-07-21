@@ -1,4 +1,4 @@
-"""Résolution publique d'une vue depuis le paramètre d'URL ?vue=<slug>_<token>.
+"""Résolution publique d'une vue depuis le paramètre d'URL ?vue=<token>_<slug>.
 
 Fonction pure (aucune dépendance à Dash), testable directement : elle prend le
 paramètre brut et le schéma, renvoie un dict décrivant la vue à appliquer ou une
