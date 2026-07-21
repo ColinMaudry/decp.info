@@ -75,6 +75,21 @@ def test_fetch_rencontres_ignore_evenement_malforme(monkeypatch):
     assert result[0].uid == "41344161"
 
 
+def test_normaliser_nettoie_visio_url_des_caracteres_de_controle():
+    ev_dict = {
+        "uid": 1,
+        "title": {"fr": "Titre"},
+        "nextTiming": {
+            "begin": "2026-07-27T10:00:00+02:00",
+            "end": "2026-07-27T11:00:00+02:00",
+        },
+        "onlineAccessLink": "https://visio.example/x\r\nBEGIN:VALARM",
+    }
+    ev = openagenda._normaliser(ev_dict)
+    assert ev.visio_url is not None
+    assert "\r" not in ev.visio_url and "\n" not in ev.visio_url
+
+
 def test_fetch_rencontres_renvoie_liste_vide_si_payload_non_dict(monkeypatch):
     class _FakeResp:
         def raise_for_status(self):

@@ -238,7 +238,9 @@ def rencontre_ics(uid: str):
             return Response(
                 _ics_evenement(ev),
                 mimetype="text/calendar",
-                headers={"Content-Disposition": 'attachment; filename="rencontre.ics"'},
+                headers={
+                    "Content-Disposition": f'attachment; filename="rencontre-{uid}.ics"'
+                },
             )
     return Response("Not found", status=404)
 

@@ -60,9 +60,11 @@ def lien_outlook(ev: Evenement) -> str:
 
 
 def _echapper(texte: str) -> str:
-    # RFC 5545 : backslash d'abord, puis ; , et sauts de ligne.
+    # RFC 5545 : \r bare retiré en premier (un \r\n ne doit pas laisser de \r
+    # isolé dans la valeur TEXT), puis backslash, puis ; , et sauts de ligne.
     return (
-        texte.replace("\\", "\\\\")
+        texte.replace("\r", "")
+        .replace("\\", "\\\\")
         .replace(";", "\\;")
         .replace(",", "\\,")
         .replace("\n", "\\n")
@@ -70,6 +72,9 @@ def _echapper(texte: str) -> str:
 
 
 def ics_evenement(ev: Evenement) -> str:
+    # Le folding de ligne à 75 octets (RFC 5545) est volontairement omis :
+    # descriptions courtes et internes, tolérées non foldées par tous les
+    # clients majeurs (Google, Outlook, Apple Calendar…).
     lignes = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",

@@ -31,6 +31,18 @@ def _fr(champ: dict | None) -> str | None:
     return champ.get("fr") or next(iter(champ.values()), None)
 
 
+def _nettoyer_url(url: str | None) -> str | None:
+    """Retire les caractères de contrôle (CR, LF, C0) et espace en trop.
+
+    Frontière unique contre l'injection de ligne dans l'ICS (URL:) et les
+    vecteurs javascript:/saut de ligne dans le href de la page.
+    """
+    if not url:
+        return None
+    nettoye = "".join(c for c in url if ord(c) >= 32).strip()
+    return nettoye or None
+
+
 def _creneau(ev: dict) -> dict | None:
     """Prochain créneau : nextTiming (déjà calculé) sinon premier timing."""
     timing = ev.get("nextTiming")
@@ -53,7 +65,7 @@ def _normaliser(ev: dict) -> Evenement | None:
         lieu_nom=location.get("name"),
         lieu_ville=location.get("city"),
         description=_fr(ev.get("description")),
-        visio_url=ev.get("onlineAccessLink"),
+        visio_url=_nettoyer_url(ev.get("onlineAccessLink")),
     )
 
 

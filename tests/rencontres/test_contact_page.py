@@ -7,14 +7,14 @@ from src.rencontres.openagenda import Evenement
 _PARIS = timezone(timedelta(hours=2))
 
 
-def _ev():
+def _ev(lieu_nom=None, lieu_ville=None):
     return Evenement(
         uid="42",
         titre="Rencontre colibre juillet",
         debut=datetime(2026, 7, 27, 10, 0, tzinfo=_PARIS),
         fin=datetime(2026, 7, 27, 11, 0, tzinfo=_PARIS),
-        lieu_nom=None,
-        lieu_ville=None,
+        lieu_nom=lieu_nom,
+        lieu_ville=lieu_ville,
         description="Discussion libre",
         visio_url="https://visio.example/xyz",
     )
@@ -34,3 +34,20 @@ def test_section_message_si_aucun_evenement(monkeypatch):
     monkeypatch.setattr(openagenda, "fetch_rencontres", lambda: [])
     rendu = str(contact.layout())
     assert "bientôt annoncées" in rendu
+
+
+def test_carte_affiche_le_lieu(monkeypatch):
+    monkeypatch.setattr(
+        openagenda,
+        "fetch_rencontres",
+        lambda: [_ev(lieu_nom="Mairie", lieu_ville="Nantes")],
+    )
+    rendu = str(contact.layout())
+    assert "Mairie — Nantes" in rendu
+
+
+def test_carte_affiche_les_liens_calendrier(monkeypatch):
+    monkeypatch.setattr(openagenda, "fetch_rencontres", lambda: [_ev()])
+    rendu = str(contact.layout())
+    assert "calendar.google.com" in rendu
+    assert "outlook.live.com" in rendu

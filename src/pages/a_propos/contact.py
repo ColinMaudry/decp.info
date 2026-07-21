@@ -1,4 +1,5 @@
 from datetime import datetime
+from urllib.parse import quote
 
 import dash_bootstrap_components as dbc
 from dash import dcc, html, register_page
@@ -76,7 +77,7 @@ def _carte(ev) -> dbc.Card:
                 ),
                 dbc.Button(
                     ".ics",
-                    href=f"/rencontres/{ev.uid}.ics",
+                    href=f"/rencontres/{quote(ev.uid, safe='')}.ics",
                     color="secondary",
                     outline=True,
                     size="sm",

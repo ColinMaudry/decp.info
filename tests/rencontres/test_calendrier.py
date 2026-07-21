@@ -30,8 +30,10 @@ def test_lien_google_convertit_en_utc():
     # 10:00+02:00 -> 08:00Z ; les jetons compacts apparaissent littéralement
     assert "20260727T080000Z" in url
     assert "20260727T090000Z" in url
-    # le lien visio est aussi dans le corps (details) — "Visioconf" et l'hôte
-    # ne sont pas percent-encodés, ils apparaissent littéralement
+    # le lien visio est aussi dans le corps (details) : "Visioconf" et l'hôte
+    # sont des sous-chaînes ASCII sans caractère réservé, donc inchangées par
+    # quote() — mais quote() encode bien ':' en %3A ailleurs dans la valeur
+    # (ex. "https:" -> "https%3A", voir test_lien_outlook_utilise_iso_utc).
     assert "Visioconf" in url
     assert "visio.example" in url
 
@@ -82,3 +84,20 @@ def test_ics_echappe_les_caracteres_speciaux():
     assert "SUMMARY:Atelier\\, DECP\\; libre" in ics
     # description "a\nb" échappée en tête de DESCRIPTION (avant la ligne visio)
     assert "DESCRIPTION:a\\nb" in ics
+
+
+def test_ics_echappe_le_backslash_dans_le_titre():
+    ics = ics_evenement(_ev(titre="Atelier \\ pratique"))
+    lignes = ics.split("\r\n")
+    ligne_summary = next(ligne for ligne in lignes if ligne.startswith("SUMMARY:"))
+    assert ligne_summary == "SUMMARY:Atelier \\\\ pratique"
+
+
+def test_ics_description_sans_cr_bare():
+    ics = ics_evenement(_ev(description="a\r\nb"))
+    lignes = ics.split("\r\n")
+    ligne_description = next(
+        ligne for ligne in lignes if ligne.startswith("DESCRIPTION:")
+    )
+    assert "\r" not in ligne_description
+    assert "a\\nb" in ligne_description
