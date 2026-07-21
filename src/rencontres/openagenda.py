@@ -82,14 +82,14 @@ def fetch_rencontres() -> list[Evenement]:
         )
         resp.raise_for_status()
         events = resp.json().get("events", [])
-    except (httpx.HTTPError, ValueError, KeyError) as exc:
+    except Exception as exc:
         logger.warning("Récupération OpenAgenda échouée : %s", exc)
         return []
     resultats: list[Evenement] = []
     for ev in events:
         try:
             norm = _normaliser(ev)
-        except (KeyError, ValueError) as exc:
+        except Exception as exc:
             logger.warning("Événement OpenAgenda ignoré : %s", exc)
             continue
         if norm is not None:

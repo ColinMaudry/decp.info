@@ -55,3 +55,35 @@ def test_fetch_rencontres_renvoie_liste_vide_si_non_configure(monkeypatch):
     monkeypatch.delenv("OPENAGENDA_API_KEY", raising=False)
     monkeypatch.delenv("OPENAGENDA_AGENDA_UID", raising=False)
     assert openagenda.fetch_rencontres.uncached() == []
+
+
+def test_fetch_rencontres_ignore_evenement_malforme(monkeypatch):
+    evenement_malforme = {**_EVENT, "title": "pas un dict"}
+
+    class _FakeResp:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"events": [evenement_malforme, _EVENT]}
+
+    monkeypatch.setenv("OPENAGENDA_API_KEY", "k")
+    monkeypatch.setenv("OPENAGENDA_AGENDA_UID", "3512069")
+    monkeypatch.setattr(openagenda.httpx, "get", lambda *a, **k: _FakeResp())
+    result = openagenda.fetch_rencontres.uncached()
+    assert len(result) == 1
+    assert result[0].uid == "41344161"
+
+
+def test_fetch_rencontres_renvoie_liste_vide_si_payload_non_dict(monkeypatch):
+    class _FakeResp:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return []
+
+    monkeypatch.setenv("OPENAGENDA_API_KEY", "k")
+    monkeypatch.setenv("OPENAGENDA_AGENDA_UID", "3512069")
+    monkeypatch.setattr(openagenda.httpx, "get", lambda *a, **k: _FakeResp())
+    assert openagenda.fetch_rencontres.uncached() == []
