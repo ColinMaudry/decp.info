@@ -62,15 +62,23 @@ def fetch_rencontres() -> list[Evenement]:
   - filtre « à venir » : `timings[gte]=<maintenant ISO 8601>`
   - tri chronologique : `sort=timings.asc`
   - `detailed=1` (pour obtenir description, location, onlineAccessLink)
-- **Normalisation** du JSON OpenAgenda vers `list[Evenement]` :
+- **Normalisation** du JSON OpenAgenda vers `list[Evenement]` (mapping confirmé
+  sur un payload réel, cf. `event.json` — l'endpoint liste renvoie
+  `{"events": [ … ]}`, chaque élément ayant la même forme) :
+  - `uid` → `uid` (entier dans le payload → cast `str`).
   - champs multilingues (`title`, `description`) sont des objets `{"fr": …}` →
     on extrait le français (avec repli sur la première langue disponible).
-  - `timings` est une liste `[{begin, end}]` → on prend le premier timing à venir.
-  - `location` → `location.name`, `location.city`.
-  - `onlineAccessLink` → `visio_url`.
-  - Les mappings de champs exacts sont à confirmer contre une réponse réelle de
-    l'API pendant l'implémentation (fixture de test figée à partir d'un vrai
-    payload). Réf. structure : <https://developers.openagenda.com/evenements/structure/>
+    `titre = title.fr` ; `description = description.fr` (le **court**, pas
+    `longDescription`).
+  - dates : on utilise `nextTiming` (déjà calculé par l'API = prochain créneau à
+    venir) → `debut = nextTiming.begin`, `fin = nextTiming.end`. Les valeurs
+    sont ISO 8601 **avec offset** (ex. `2026-07-27T10:00:00+02:00`), parsées via
+    `datetime.fromisoformat`, puis converties en UTC pour les liens calendrier.
+  - `location` : **peut être absent** (événements en ligne, `attendanceMode: 2`).
+    Quand présent → `location.name`, `location.city` ; sinon `lieu_nom`/
+    `lieu_ville = None` et l'affichage du lieu est omis.
+  - `onlineAccessLink` → `visio_url` (peut être absent).
+  - Réf. structure : <https://developers.openagenda.com/evenements/structure/>
 - **Résilience** : toute erreur (réseau, quota, HTTP, parsing) est attrapée,
   loggée, et la fonction renvoie `[]` — la page ne plante jamais. Le cache 1 h
   absorbe la latence et le débit de l'API.
@@ -100,7 +108,7 @@ actuel**, une section :
 
 - Titre `## Prochaines rencontres`.
 - Une carte `dbc.Card` par événement (liste verticale, déjà triée par date) :
-  - titre, date/heure formatée en français, lieu (`nom — ville`),
+  - titre, date/heure formatée en français, lieu (`nom — ville`) **si présent**,
   - description courte,
   - si `visio_url` : un lien « Rejoindre en visio »,
   - une ligne de 3 boutons : **Google Agenda** (`lien_google`), **Outlook**
@@ -139,9 +147,10 @@ Deux variables dans `.env` (et `.template.env`) :
   d'un `Evenement` fixture, vérifier le format des URLs Google et Outlook, et la
   conformité du `.ics` (présence et format de `DTSTART`/`DTEND`, échappement des
   caractères spéciaux, CRLF).
-- **`openagenda.py`** : test de normalisation sur un extrait de réponse
-  OpenAgenda figé (fixture JSON) → `list[Evenement]` attendue ; test que l'échec
-  API (mock httpx qui lève) renvoie `[]`.
+- **`openagenda.py`** : test de normalisation sur une fixture JSON figée à
+  partir d'un payload réel (`event.json`), couvrant le cas d'un événement **en
+  ligne sans `location`** → `list[Evenement]` attendue ; test que l'échec API
+  (mock httpx qui lève) renvoie `[]`.
 - **Route `.ics`** : uid connu → `200` + `text/calendar` ; uid inconnu → `404`.
 - Pas de test Selenium (rendu statique de données mockées).
 
