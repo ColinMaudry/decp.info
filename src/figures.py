@@ -102,11 +102,15 @@ def get_barchart_sources(lff: pl.LazyFrame, type_date: str):
 
     dff: pl.DataFrame = lff.collect(engine="streaming")
 
+    # ~24 sources distinctes : la palette Plotly par défaut (10 couleurs) se
+    # répète. Dark24 fournit 24 couleurs uniques, ce qui suffit à toutes les
+    # distinguer sans recourir à des motifs.
     fig = px.bar(
         dff,
         x=type_date,
         y="len",
         color="sourceDataset",
+        color_discrete_sequence=px.colors.qualitative.Dark24,
         labels={
             "len": "Nombre de marchés",
             type_date: f"Mois de {labels[type_date]}",
