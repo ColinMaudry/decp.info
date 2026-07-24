@@ -517,7 +517,7 @@ def make_chloropleth_map(region: dict) -> dcc.Graph:
     return graph
 
 
-def make_clusters_map(region: dict) -> dl.Map:
+def make_clusters_map(region: dict) -> html.Div:
     # JavaScript functions for styling
     ns = Namespace("dash_clientside", "leaflet")
     point_to_layer = ns("pointToLayer")
@@ -568,7 +568,37 @@ def make_clusters_map(region: dict) -> dl.Map:
         },
         id=f"map-{region_id}",
     )
-    return leaflet_map
+
+    # Légende superposée en bas à gauche : rappelle la couleur des points
+    # acheteur (orange) et titulaire (bleu). Les couleurs viennent de
+    # ORG_COLORS pour rester synchrones avec les marqueurs.
+    legend = html.Div(
+        [
+            html.Div(
+                [
+                    html.Span(
+                        className="map-legend-dot",
+                        style={"backgroundColor": color_acheteur},
+                    ),
+                    "Acheteur",
+                ],
+                className="map-legend-item",
+            ),
+            html.Div(
+                [
+                    html.Span(
+                        className="map-legend-dot",
+                        style={"backgroundColor": color_titulaire},
+                    ),
+                    "Titulaire",
+                ],
+                className="map-legend-item",
+            ),
+        ],
+        className="map-legend",
+    )
+
+    return html.Div([leaflet_map, legend], className="map-with-legend")
 
 
 _MERCATOR_TILE_SIZE = 256
