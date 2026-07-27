@@ -23,6 +23,8 @@ Ce projet vise à démocratiser l'accès aux données des marchés publics dans 
 Si vous le trouvez utile, [envoyez un message](/a-propos/contact) pour exposer vos cas d'usages et vos besoins. Cet outil ne peut rester
 performant qu'avec la connaissance des problèmes à résoudre.
 Ce projet est financé par ses [abonné·es](/a-propos/abonnement) et par des missions de conseil et de développement.
+
+Si vous êtes acheteur public et que vous cherchez des outils libre et gratuits pour la passation : [magaliparlemarches.fr](https://magaliparlemarches.fr/#outils), par Magali Chamla-Pernin.
 """
             ),
         ]
