@@ -73,6 +73,20 @@ def test_cgu_terms_trimmed_of_features_section():
     assert "Tarifs" in text
 
 
+def test_subscription_terms_limited_to_commercial_clauses():
+    from src.app import app  # noqa: F401
+    from src.pages.a_propos import abonnement as page
+
+    text = str(page.subscription_terms)
+    assert "Droit de rétractation" in text
+    assert "se renouvelle automatiquement" in text
+    assert "L441-10" in text
+    # les conditions d'utilisation ont migré vers les mentions légales
+    assert "Chatwoot" not in text
+    assert "Adresse e-mail (identification du compte)" not in text
+    assert "/a-propos/mentions-legales#conditions-utilisation" in text
+
+
 def test_plan_card_ttc_price_for_current_real_prices():
     from src.app import app  # noqa: F401
     from src.pages.a_propos import abonnement as page

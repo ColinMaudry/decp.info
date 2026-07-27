@@ -51,9 +51,49 @@ def test_selection_state_soutien():
 def test_submit_disabled_without_plan():
     from src.pages.compte import abonnement_mes_infos as m
 
-    assert m._toggle_submit(["ok"], ["ok"], "") is True
-    assert m._toggle_submit(["ok"], ["ok"], "simple") is False
-    assert m._toggle_submit([], ["ok"], "simple") is True
+    assert m._toggle_submit(["ok"], ["ok"], ["ok"], "") is True
+    assert m._toggle_submit(["ok"], ["ok"], ["ok"], "simple") is False
+    assert m._toggle_submit([], ["ok"], ["ok"], "simple") is True
+    # les conditions d'utilisation et d'abonnement sont acceptées séparément
+    assert m._toggle_submit(["ok"], [], ["ok"], "simple") is True
+    assert m._toggle_submit(["ok"], ["ok"], [], "simple") is True
+
+
+def test_recap_lines_cover_fields_required_in_checkout():
+    from datetime import date
+
+    from src.pages.compte import abonnement_mes_infos as m
+
+    lines = dict(m._recap_lines("simple", 2, date(2026, 7, 27)))
+    assert "SAS Colmo" in lines["Vendeur"]
+    assert "98939335000016" in lines["Vendeur"]
+    assert "Abonnement" in lines["Prestation"]
+    assert lines["Période d'essai gratuite"].startswith("du 27/07/2026 au 29/07/2026")
+    # l'abonnement payant démarre à la fin de l'essai, pas à la saisie de carte
+    assert lines["Début de l'abonnement payant"] == "29/07/2026"
+    assert "1 mois" in lines["Durée"]
+    assert "20 € HT" in lines["Prix"]
+    assert "24 € TTC" in lines["Prix"]
+    assert "EUR" in lines["Prix"]
+
+
+def test_recap_lines_without_trial_start_today():
+    from datetime import date
+
+    from src.pages.compte import abonnement_mes_infos as m
+
+    lines = dict(m._recap_lines("soutien", None, date(2026, 7, 27)))
+    assert "Période d'essai gratuite" not in lines
+    assert lines["Début de l'abonnement payant"] == "27/07/2026"
+    assert "50 € HT" in lines["Prix"]
+
+
+def test_recap_placeholder_without_selected_plan():
+    from src.pages.compte import abonnement_mes_infos as m
+
+    text = str(m._recap(None, None))
+    assert "Choisissez une formule" in text
+    assert "Vendeur" not in text
 
 
 def test_mode_for_derives_from_status():
@@ -131,16 +171,17 @@ def test_change_hint_hidden_in_subscribe_mode():
 
 
 def test_consent_checklists_ids_always_present_in_configure_mode():
-    # Régression : le callback _toggle_submit référence inf-cb-retractation
-    # et inf-cb-cgu en Input inconditionnellement, donc ces composants
-    # doivent exister dans le layout même en mode "configure" (sinon Dash
-    # lève "A nonexistent object was used in an Input").
+    # Régression : le callback _toggle_submit référence inf-cb-retractation,
+    # inf-cb-cgu et inf-cb-cgv en Input inconditionnellement, donc ces
+    # composants doivent exister dans le layout même en mode "configure"
+    # (sinon Dash lève "A nonexistent object was used in an Input").
     from src.pages.compte import abonnement_mes_infos as m
 
     div = m._consent_checklists(hidden=True)
     text = str(div)
     assert "inf-cb-retractation" in text
     assert "inf-cb-cgu" in text
+    assert "inf-cb-cgv" in text
     assert "d-none" in div.className
 
 
@@ -148,16 +189,18 @@ def test_consent_checklists_pre_accepted_when_hidden():
     from src.pages.compte import abonnement_mes_infos as m
 
     div = m._consent_checklists(hidden=True)
-    retractation, cgu = div.children
+    retractation, cgu, cgv = div.children
     assert retractation.value == ["ok"]
     assert cgu.value == ["ok"]
+    assert cgv.value == ["ok"]
 
 
 def test_consent_checklists_visible_and_empty_in_subscribe_mode():
     from src.pages.compte import abonnement_mes_infos as m
 
     div = m._consent_checklists(hidden=False)
-    retractation, cgu = div.children
+    retractation, cgu, cgv = div.children
     assert retractation.value == []
     assert cgu.value == []
+    assert cgv.value == []
     assert div.className is None

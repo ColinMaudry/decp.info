@@ -6,16 +6,112 @@ from src.utils.seo import META_CONTENT
 register_page(
     __name__,
     path="/a-propos/mentions-legales",
-    title="Mentions légales | À propos | colibre",
-    description="Mentions légales de colibre : éditeur, hébergement, suivi d'audience, attributions.",
+    title="Conditions d'utilisation et mentions légales | À propos | colibre",
+    description=(
+        "Conditions d'utilisation de colibre et mentions légales : éditeur, "
+        "hébergement, responsabilité, données personnelles, suivi d'audience."
+    ),
     image_url=META_CONTENT["image_url"],
 )
 
 
-def layout(**_):
-    contenu = html.Div(
+def _conditions_utilisation():
+    return html.Div(
         [
-            html.H2("Mentions légales"),
+            html.H3("Conditions d'utilisation", id="conditions-utilisation"),
+            html.H4("Objet et acceptation", id="cu-objet"),
+            dcc.Markdown(
+                """
+colibre est un service d'exploration des données de la commande publique française, édité par SAS Colmo (voir [Publication](#publication)).
+
+L'utilisation du site vaut acceptation des présentes conditions d'utilisation.
+
+Les fonctionnalités de base sont accessibles gratuitement et sans inscription. Certaines fonctionnalités nécessitent un compte et un abonnement : elles sont régies par les [conditions d'abonnement](/a-propos/abonnement), distinctes des présentes conditions.
+"""
+            ),
+            html.H4("Compte utilisateur", id="cu-compte"),
+            dcc.Markdown(
+                """
+La création d'un compte requiert une adresse e-mail valide. Vous êtes responsable de la confidentialité de vos identifiants et des actions effectuées depuis votre compte.
+
+Vous pouvez demander la suppression de votre compte à tout moment depuis la [page de contact](/a-propos/contact).
+"""
+            ),
+            html.H4("Usage du service", id="cu-usage"),
+            dcc.Markdown(
+                """
+colibre est mis à disposition pour une consultation normale. Sont notamment proscrits :
+
+- l'extraction massive automatisée des pages du site ;
+- le partage d'un compte entre plusieurs personnes ;
+- toute action portant atteinte à la disponibilité ou à la sécurité du service.
+
+Les données sont par ailleurs disponibles en [téléchargement libre](/a-propos/donnees-brutes) : merci de les récupérer par ce biais plutôt que par moissonnage du site.
+
+En cas de manquement, l'accès au service peut être suspendu.
+"""
+            ),
+            html.H4("Données affichées", id="cu-donnees"),
+            dcc.Markdown(
+                """
+Les données présentées proviennent des Données Essentielles de la Commande Publique (DECP) publiées par les acheteurs publics, mises à disposition sous [Licence Ouverte](https://www.etalab.gouv.fr/licence-ouverte-open-licence/) et retraitées par colibre.
+
+Elles sont fournies en l'état. colibre s'engage sur une obligation de moyens quant à leur qualité et leur fraîcheur, sans garantie d'exhaustivité ni d'exactitude : celles-ci dépendent de la publication par les acheteurs publics eux-mêmes.
+
+Toute erreur constatée peut être signalée depuis la [page de contact](/a-propos/contact).
+"""
+            ),
+            html.H4("Disponibilité du service", id="cu-disponibilite"),
+            dcc.Markdown(
+                """
+colibre est accessible en continu, sous réserve des opérations de maintenance et des cas d'indisponibilité indépendants de notre volonté.
+
+Les fonctionnalités du site peuvent évoluer, être ajoutées ou retirées.
+"""
+            ),
+            html.H4("Responsabilité", id="cu-responsabilite"),
+            dcc.Markdown(
+                """
+La responsabilité de Colmo est limitée aux dommages directs résultant d'une faute prouvée.
+
+Sont exclus les dommages indirects (perte d'exploitation, perte de chance, préjudice commercial), les conséquences de l'inexactitude ou de l'absence de mise à jour des données publiées par des tiers, ainsi que les cas de force majeure et les indisponibilités imputables à un tiers (hébergeur, opérateur réseau).
+"""
+            ),
+            html.H4("Données personnelles", id="cu-donnees-personnelles"),
+            dcc.Markdown(
+                """
+Conformément au RGPD, colibre ne recueille que les données strictement nécessaires au bon fonctionnement du site.
+
+**Données stockées par Colmo pour l'administration de colibre :**
+
+- Adresse e-mail (identification du compte)
+- Numéro SIRET (optionnel, si renseigné, conservé pour pré-remplir les futures souscriptions)
+
+**Conversations en direct depuis le site Web 💬**
+
+Le contenu des conversations est transmis au prestataire Chatwoot et au logiciel Slack.
+
+Ces données ne sont pas transmises à des tiers à des fins commerciales. Vous pouvez demander l'accès, la rectification ou la suppression de vos données en [me contactant](/a-propos/contact).
+
+Les données de facturation et de paiement des abonné·es sont traitées séparément par le prestataire de paiement : voir les [conditions d'abonnement](/a-propos/abonnement).
+"""
+            ),
+            html.H4("Loi applicable", id="cu-loi"),
+            dcc.Markdown(
+                """
+Les présentes conditions d'utilisation sont soumises au droit français.
+
+En cas de litige, les parties s'efforceront de trouver une solution amiable avant toute action contentieuse.
+"""
+            ),
+        ]
+    )
+
+
+def _mentions_legales():
+    return html.Div(
+        [
+            html.H3("Mentions légales", id="mentions-legales"),
             html.H4("Publication", id="publication"),
             dcc.Markdown(
                 """
@@ -56,6 +152,16 @@ Les polices de caractères sont distribuées par [Bunny fonts](https://fonts.bun
             ),
             html.H4("Marchés par département", id="liste_marches"),
             dcc.Markdown("- [Marchés par département](/departements)"),
+        ]
+    )
+
+
+def layout(**_):
+    contenu = html.Div(
+        [
+            html.H2("Conditions d'utilisation et mentions légales"),
+            _conditions_utilisation(),
+            _mentions_legales(),
         ]
     )
     return apropos_shell("mentions-legales", contenu)

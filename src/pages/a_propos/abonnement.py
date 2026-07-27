@@ -12,7 +12,7 @@ register_page(
     __name__,
     path="/a-propos/abonnement",
     title="Abonnement | À propos | colibre",
-    description="Conditions d'abonnement à colibre : tarifs, facturation, résiliation et données personnelles.",
+    description="Conditions d'abonnement à colibre : tarifs, facturation, rétractation et résiliation.",
     image_url=META_CONTENT["image_url"],
 )
 
@@ -128,10 +128,13 @@ def _subscribe_button(
 
 subscription_terms = html.Div(
     [
-        html.H2("Abonnement"),
+        html.H2("Conditions d'abonnement"),
         dcc.Markdown(
             """
-L'accès aux fonctionnalités de base de colibre est gratuit et sans inscription. Il est possible de souscrire à un abonnement mensuel qui donne accès à des fonctionnalités supplémentaires. Cet abonnement s'adresse tant aux professionnel·les qu'aux particuliers.
+L'accès aux fonctionnalités de base de colibre est gratuit et sans inscription. Il est possible de souscrire à un abonnement mensuel qui donne accès à des fonctionnalités supplémentaires.
+L'abonnement est souscrit auprès de la société Colmo dont le SIRET est 98939335000016 ([annuaire des entreprises](https://annuaire-entreprises.data.gouv.fr/etablissement/98939335000016)).
+
+Les présentes conditions régissent l'abonnement. L'utilisation du site est par ailleurs régie par les [conditions d'utilisation](/a-propos/mentions-legales#conditions-utilisation).
 """
         ),
         html.H4("Tarifs"),
@@ -143,6 +146,16 @@ Deux formules sont proposées :
 - **Abonnement de soutien ✊** — 50 € HT / mois (soit 60 € TTC) — mêmes fonctionnalités, contribution renforcée au projet
 
 La TVA applicable en France est de 20 %.
+"""
+        ),
+        html.H4("Début et durée de l'abonnement"),
+        dcc.Markdown(
+            """
+La souscription ouvre immédiatement l'accès aux fonctionnalités réservées aux abonné·es, d'abord au titre de la période d'essai gratuite.
+
+**L'abonnement payant ne démarre qu'à l'issue de la période d'essai**, à la date indiquée avant validation. Aucun prélèvement n'a lieu avant cette date. Si vous avez déjà bénéficié d'une période d'essai, l'abonnement payant démarre dès la souscription.
+
+L'abonnement est conclu pour une durée d'un mois à compter de son démarrage, et se renouvelle automatiquement de mois en mois jusqu'à résiliation.
 """
         ),
         html.H4("Modes de paiement"),
@@ -157,8 +170,8 @@ Il est également possible de payer par virement bancaire à condition de payer 
         dcc.Markdown(
             """
 Une période d'essai gratuite est proposée lors de la souscription.
-Sa durée est indiquée avant validation. Aucun prélèvement n'est effectué pendant cette période.
-À son terme, l'abonnement est activé et facturé automatiquement.
+Ses dates de début et de fin sont indiquées avant validation. Aucun prélèvement n'est effectué pendant cette période.
+À son terme, l'abonnement payant démarre et la première facture est émise.
 
 La période d'essai est accordée une seule fois par compte.
 """
@@ -166,9 +179,21 @@ La période d'essai est accordée une seule fois par compte.
         html.H4("Facturation et paiement"),
         dcc.Markdown(
             """
-L'abonnement est facturé mensuellement, à la date anniversaire de la souscription, et donne lieu à l'émission d'une facture visible sur le compte de l'abonné·e.
+La première facture est émise au démarrage de l'abonnement payant, c'est-à-dire à l'issue de la période d'essai. Les suivantes le sont chaque mois à cette date anniversaire, et non à la date de saisie des informations de paiement.
+
+Chaque échéance donne lieu à l'émission d'une facture visible sur le compte de l'abonné·e.
 Le paiement est traité par [Frisbii](https://www.frisbii.com), prestataire européen de paiement en ligne.
 Les coordonnées bancaires sont conservées exclusivement par Frisbii et ne sont pas transmises à colibre.
+
+Le paiement est exigible à la date de facturation. En cas de retard de paiement, des pénalités sont dues au taux de trois fois le taux d'intérêt légal, ainsi qu'une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du code de commerce). En cas d'échec du prélèvement, l'accès aux fonctionnalités payantes est suspendu.
+"""
+        ),
+        html.H4("Droit de rétractation"),
+        dcc.Markdown(
+            """
+Vous disposez d'un délai de rétractation de 14 jours à compter de la souscription.
+
+L'accès aux fonctionnalités réservées aux abonné·es étant ouvert dès la souscription, période d'essai comprise, il vous est demandé de renoncer expressément à ce droit lors de la souscription ; à défaut, la souscription ne peut pas être finalisée.
 """
         ),
         html.H4("Résiliation"),
@@ -181,14 +206,7 @@ La résiliation prend effet à la fin de la période mensuelle en cours : l'acc�
         html.H4("Données recueillies"),
         dcc.Markdown(
             """
-La gestion de l'abonnement implique le traitement de données, réparties entre colibre et Frisbii (prestataire de paiement). Conformément au RGPD,
-colibre ne receuille que les données strictement nécessaires
-au bon fonctionnement du site et de la facturation.
-
-**Données stockées par Colmo pour l'administration de colibre :**
-
-- Adresse e-mail (identification du compte)
-- Numéro SIRET (optionnel, si renseigné, conservé pour pré-remplir les futures souscriptions)
+La gestion de l'abonnement implique le traitement de données par Frisbii, prestataire de paiement. Conformément au RGPD, seules les données strictement nécessaires à la facturation sont recueillies.
 
 **Données stockées par Frisbii :**
 
@@ -197,11 +215,17 @@ au bon fonctionnement du site et de la facturation.
 - Historique des factures
 
 Ces données sont utilisées uniquement pour la gestion de votre abonnement et ne sont pas transmises à des tiers à des fins commerciales.
-Conformément au RGPD, vous pouvez demander l'accès, la rectification ou la suppression de vos données en [me contactant](/a-propos/contact).
+Vous pouvez demander l'accès, la rectification ou la suppression de vos données en [me contactant](/a-propos/contact).
 
-**Conversations en direct depuis le site Web 💬**
+Les données recueillies par colibre en dehors de l'abonnement (compte, conversations, suivi d'audience) sont décrites dans les [conditions d'utilisation](/a-propos/mentions-legales#cu-donnees-personnelles).
+"""
+        ),
+        html.H4("Loi applicable"),
+        dcc.Markdown(
+            """
+Les présentes conditions d'abonnement sont soumises au droit français.
 
-Le contenu des conversations est transmis au prestataire Chatwoot et au logiciel Slack.
+En cas de litige, les parties s'efforceront de trouver une solution amiable avant toute action contentieuse.
 """
         ),
         html.H4("Contact"),

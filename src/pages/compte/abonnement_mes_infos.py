@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 import dash_bootstrap_components as dbc
 from dash import Input, Output, State, callback, ctx, dcc, html, register_page
 from flask_login import current_user
@@ -19,7 +21,7 @@ register_page(
     description="Informations de facturation pour votre abonnement colibre.",
 )
 
-_CGU_MARKDOWN = subscription_terms
+_SUBSCRIPTION_TERMS = subscription_terms
 
 
 def _csrf_input():
@@ -31,6 +33,78 @@ def _csrf_input():
 def _trial_for(user_id):
     used = sub_db.has_used_trial(user_id)
     return lambda key: None if used else plans.trial_days(key)
+
+
+_VENDEUR = "SAS Colmo (SIRET 98939335000016)"
+
+
+def _jj_mm_aaaa(d: date) -> str:
+    return f"{d.day:02d}/{d.month:02d}/{d.year}"
+
+
+def _recap_lines(
+    plan_key: str, trial: int | None, today: date
+) -> list[tuple[str, str]]:
+    """Récapitulatif de commande affiché avant la saisie de la carte bancaire.
+
+    Reprend les informations exigées « in the checkout process » par l'organisme
+    de validation des paiements : raison sociale complète, description de la
+    prestation, date de début et durée de l'abonnement, prix et devise. Le
+    panneau équivalent côté Frisbii est replié derrière « Aperçu des détails »,
+    d'où ce doublon volontaire.
+    """
+    meta = plans.plan_meta(plan_key)
+    if meta is None:
+        return []
+    debut = today + timedelta(days=trial) if trial else today
+    ttc = round(meta["prix_ht"] * 1.2, 2)
+    lines = [
+        ("Vendeur", _VENDEUR),
+        ("Prestation", f"{meta['label']}. {meta['description']}"),
+    ]
+    if trial:
+        lines.append(
+            (
+                "Période d'essai gratuite",
+                f"du {_jj_mm_aaaa(today)} au {_jj_mm_aaaa(debut)} "
+                f"({trial} jours). Aucun prélèvement pendant cette période.",
+            )
+        )
+    lines += [
+        ("Début de l'abonnement payant", _jj_mm_aaaa(debut)),
+        (
+            "Durée",
+            "1 mois, reconduit automatiquement chaque mois jusqu'à résiliation",
+        ),
+        (
+            "Prix",
+            f"{meta['prix_ht']:g} € HT par mois, soit {ttc:g} € TTC par mois "
+            "(TVA 20 %), en euros (EUR)",
+        ),
+    ]
+    return lines
+
+
+def _recap(plan_key: str | None, trial: int | None, today: date | None = None):
+    lines = _recap_lines(plan_key, trial, today or date.today()) if plan_key else []
+    if not lines:
+        return html.Div(
+            "Choisissez une formule ci-dessus pour afficher le récapitulatif.",
+            className="text-muted mb-4",
+        )
+    return dbc.Card(
+        dbc.CardBody(
+            [html.H5("Récapitulatif de votre commande", className="mb-3")]
+            + [
+                html.Div(
+                    [html.Span(f"{label} : ", className="fw-bold"), html.Span(value)],
+                    className="mb-1",
+                )
+                for label, value in lines
+            ]
+        ),
+        className="mb-4",
+    )
 
 
 def _mode_for(row) -> str:
@@ -108,6 +182,7 @@ def _change_hint(selected: str, sub_info: dict | None) -> tuple[str, str]:
     Output("inf-plan-invite", "className"),
     Output("inf-change-hint", "className"),
     Output("inf-change-hint", "children"),
+    Output("inf-recap", "children"),
     Input("plan-card-simple", "n_clicks"),
     Input("plan-card-soutien", "n_clicks"),
     State("inf-sub-info", "data"),
@@ -117,7 +192,13 @@ def _select_plan(_n_simple, _n_soutien, sub_info):
     selected = "simple" if ctx.triggered_id == "plan-card-simple" else "soutien"
     value, cls_simple, cls_soutien, cls_invite = _selection_state(selected)
     hint_cls, hint_txt = _change_hint(selected, sub_info)
-    return value, cls_simple, cls_soutien, cls_invite, hint_cls, hint_txt
+    sub_info = sub_info or {}
+    recap = (
+        _recap(selected, (sub_info.get("trials") or {}).get(selected))
+        if sub_info.get("mode") == "subscribe"
+        else None
+    )
+    return value, cls_simple, cls_soutien, cls_invite, hint_cls, hint_txt, recap
 
 
 def _legal_note():
@@ -151,9 +232,32 @@ def _consent_checklists(hidden: bool = False):
                             [
                                 "J'ai lu et accepte les ",
                                 html.A(
-                                    "conditions générales d'utilisation du service",
-                                    href="#",
+                                    "conditions d'utilisation du service",
+                                    href="/a-propos/mentions-legales"
+                                    "#conditions-utilisation",
+                                    target="_blank",
                                     id="inf-cgu-link",
+                                ),
+                                ".",
+                            ]
+                        ),
+                        "value": "ok",
+                    }
+                ],
+                value=default_value,
+                className="mb-2",
+            ),
+            dcc.Checklist(
+                id="inf-cb-cgv",
+                options=[
+                    {
+                        "label": html.Span(
+                            [
+                                "J'ai lu et accepte les ",
+                                html.A(
+                                    "conditions d'abonnement",
+                                    href="#",
+                                    id="inf-cgv-link",
                                     style={"cursor": "pointer"},
                                 ),
                                 ".",
@@ -170,21 +274,21 @@ def _consent_checklists(hidden: bool = False):
     )
 
 
-def _cgu_modal():
+def _cgv_modal():
     return dbc.Modal(
         [
-            dbc.ModalHeader(dbc.ModalTitle("Conditions générales d'utilisation")),
+            dbc.ModalHeader(dbc.ModalTitle("Conditions d'abonnement")),
             dbc.ModalBody(
-                dcc.Markdown(_CGU_MARKDOWN),
+                _SUBSCRIPTION_TERMS,
                 style={"maxHeight": "60vh", "overflowY": "auto"},
             ),
             dbc.ModalFooter(
                 dbc.Button(
-                    "Fermer", id="inf-cgu-close", className="ms-auto", color="secondary"
+                    "Fermer", id="inf-cgv-close", className="ms-auto", color="secondary"
                 )
             ),
         ],
-        id="inf-cgu-modal",
+        id="inf-cgv-modal",
         size="lg",
         is_open=False,
     )
@@ -212,11 +316,13 @@ def layout(**query):
         if mode == "configure" and row["current_period_end"]
         else None
     )
-    sub_info = (
-        {"current_plan": selected, "status": row["status"], "echeance": echeance}
-        if mode == "configure"
-        else {}
-    )
+    trial_for = _trial_for(current_user.id)
+    trials = {key: trial_for(key) for key in ("simple", "soutien")}
+    sub_info: dict = {"mode": mode, "trials": trials}
+    if mode == "configure":
+        sub_info.update(
+            {"current_plan": selected, "status": row["status"], "echeance": echeance}
+        )
 
     prefill: dict = {}
     try:
@@ -363,7 +469,7 @@ def layout(**query):
                 id="inf-plan-invite",
                 className="fw-bold mb-2",
             ),
-            _selectable_cards(_trial_for(current_user.id), selected=selected),
+            _selectable_cards(trial_for, selected=selected),
             html.Div(id="inf-change-hint", className="d-none"),
             dcc.Store(id="inf-sub-info", data=sub_info),
             dcc.Input(
@@ -371,6 +477,13 @@ def layout(**query):
             ),
             dbc.Row([col1, col2], className="g-4 mb-4"),
             _legal_note(),
+            # Toujours présent, même vide en mode "configure" : _select_plan
+            # référence inf-recap en Output inconditionnellement.
+            html.Div(
+                _recap(selected, trials.get(selected)) if mode == "subscribe" else None,
+                id="inf-recap",
+                className="mt-4",
+            ),
             _consent_checklists(hidden=(mode == "configure")),
             _submit_button(mode),
         ],
@@ -389,7 +502,7 @@ def layout(**query):
                 if prefill
                 else None,
                 form,
-                _cgu_modal(),
+                _cgv_modal(),
             ]
         ),
     )
@@ -439,18 +552,19 @@ def _lookup_siret(_, siret):
     Output("inf-submit", "disabled"),
     Input("inf-cb-retractation", "value"),
     Input("inf-cb-cgu", "value"),
+    Input("inf-cb-cgv", "value"),
     Input("inf-plan-hidden", "value"),
 )
-def _toggle_submit(retractation, cgu, plan):
-    return not (retractation and cgu and plan)
+def _toggle_submit(retractation, cgu, cgv, plan):
+    return not (retractation and cgu and cgv and plan)
 
 
 @callback(
-    Output("inf-cgu-modal", "is_open"),
-    Input("inf-cgu-link", "n_clicks"),
-    Input("inf-cgu-close", "n_clicks"),
-    State("inf-cgu-modal", "is_open"),
+    Output("inf-cgv-modal", "is_open"),
+    Input("inf-cgv-link", "n_clicks"),
+    Input("inf-cgv-close", "n_clicks"),
+    State("inf-cgv-modal", "is_open"),
     prevent_initial_call=True,
 )
-def _toggle_cgu(_, __, is_open):
+def _toggle_cgv(_, __, is_open):
     return not is_open
