@@ -165,6 +165,6 @@ def roadmap_content(
         )
     )
     body.append(html.Hr())
-    body.append(html.H3("Historique des versions"))
+    body.append(html.H3("Historique des versions", id="versions"))
     body.append(changelog_markdown())
     return html.Div(body)
