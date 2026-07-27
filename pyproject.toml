@@ -5,7 +5,7 @@ version = "3.0.0"
 requires-python = ">= 3.10"
 authors = [{ name = "Colin Maudry", email = "colin@colmo.tech" }]
 dependencies = [
-  "dash[compress]==4.4.0",
+  "dash[compress]==4.4.1",
   "polars",
   "gunicorn",
   "dash-bootstrap-components",
@@ -41,7 +41,7 @@ dev = [
   "pre-commit",
   "selenium",
   "webdriver-manager",
-  "dash[testing]==4.4.0",
+  "dash[testing]==4.4.1",
   "fastexcel",
   "openpyxl",
   "moto[s3]",
