@@ -15,14 +15,14 @@ Les données sont publiées en Open Data aux formats Parquet et CSV :
 
 ## Serveur MCP
 
-Les abonné·es à colibre peuvent utiliser une série d'outils pour agents IA via le serveur MCP, exposé à l'adresse https://colibre.fr/_mcp.
+Les abonné·es à colibre peuvent utiliser une série d'outils pour agents IA via le serveur MCP, exposé à l'adresse <https://colibre.fr/_mcp>.
 
 ## API
 
-L'API nécessite un jeton d'authentification pour se connecter. Elle utilise le même schéma que les données et renvoie les données au format JSON.
+L'API nécessite un jeton d'authentification pour se connecter, accessible via un abonnement spécifique. [Envoyez un message](https://colibre.fr/a-propos/contact) si vous souhaitez souscrire à un abonnement API. L'API utilise le même schéma que les données et renvoie les données au format JSON.
 
 - Point d'accès : <https://colibre.fr/api/v1/data>
-- Spec Open API : <https://colibre.fr/api/v1/openapi.json>
+- Spec Open API/Swagger : <https://colibre.fr/api/v1/openapi.json>
 - Health : <https://colibre.fr/api/v1/health>
 
 ## Sources de données
