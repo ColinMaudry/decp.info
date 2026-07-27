@@ -4,7 +4,7 @@ from flask_login import current_user
 
 from src.pages._compte_shell import account_guard, account_shell
 from src.subscriptions import db, plans
-from src.utils.frontend import format_date_french
+from src.utils.frontend import format_datetime_french
 
 register_page(
     __name__,
@@ -76,7 +76,13 @@ def _no_sub_view(tous_abonnes: bool, row):
 
 def _active_view(row):
     meta = plans.plan_meta(row["plan"]) or {"label": row["plan"]}
-    end = format_date_french(row["current_period_end"])
+    # Horodatages Frisbii en UTC : affichés en heure de Paris et avec l'heure,
+    # une fin d'essai de quelques jours se jouant à l'heure près.
+    end = (
+        format_datetime_french(row["current_period_end"])
+        if row["current_period_end"]
+        else None
+    )
     blocks = [html.H3(meta["label"], className="mb-1")]
     price = _price_text(meta)
     if price:
@@ -106,17 +112,20 @@ def _active_view(row):
             ]
         )
     elif row["status"] == "trial":
-        blocks.append(
-            dbc.Alert(
-                f"Essai gratuit jusqu'au {end}, puis facturation et débit automatique à chaque date anniversaire.",
-                color="info",
-            )
+        texte = (
+            f"Essai gratuit jusqu'au {end}, puis facturation et débit automatique à chaque date anniversaire."
+            if end
+            else "Essai gratuit en cours, puis facturation et débit automatique à chaque date anniversaire."
         )
+        blocks.append(dbc.Alert(texte, color="info"))
     elif row["status"] == "cancelled":
-        blocks.append(
-            dbc.Alert(f"Abonnement résilié, actif jusqu'au {end}.", color="warning")
+        texte = (
+            f"Abonnement résilié, actif jusqu'au {end}."
+            if end
+            else "Abonnement résilié."
         )
-    elif row["status"] == "active":
+        blocks.append(dbc.Alert(texte, color="warning"))
+    elif row["status"] == "active" and end:
         blocks.append(html.P(f"Prochaine facturation : {end}"))
 
     if row["status"] in ("pending", "trial", "active"):
@@ -159,7 +168,7 @@ def _active_view(row):
 
 
 def _resiliation_modal(end_raw):
-    end = format_date_french(end_raw) if end_raw else None
+    end = format_datetime_french(end_raw) if end_raw else None
     if end:
         body_text = (
             f"Êtes-vous sûr de vouloir mettre fin à votre abonnement ? "

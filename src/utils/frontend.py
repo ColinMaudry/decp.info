@@ -1,6 +1,9 @@
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from src.utils.data import DATA_SCHEMA
+
+_PARIS = ZoneInfo("Europe/Paris")
 
 DROPDOWN_LABELS_FR = {
     "select_all": "Tout sélectionner",
@@ -46,6 +49,29 @@ def format_date_french(date_input) -> str:
         return f"1er {month}"
     else:
         return f"{day} {month}"
+
+
+def format_datetime_french(date_input) -> str:
+    """Format a datetime as '29 juillet 2026 à 15h57', heure de Paris.
+
+    Les horodatages Frisbii arrivent en UTC : ils sont convertis vers
+    Europe/Paris avant affichage, sans quoi une fin de période d'essai est
+    annoncée avec une à deux heures d'écart selon la saison.
+    """
+    if isinstance(date_input, datetime):
+        date_obj = date_input
+    elif isinstance(date_input, str):
+        try:
+            date_obj = datetime.fromisoformat(date_input.replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            return str(date_input)
+    else:
+        return str(date_input)
+
+    if date_obj.tzinfo is not None:
+        date_obj = date_obj.astimezone(_PARIS)
+    jour = format_date_french(date_obj)
+    return f"{jour} {date_obj.year} à {date_obj.hour}h{date_obj.minute:02d}"
 
 
 def get_button_properties(height):

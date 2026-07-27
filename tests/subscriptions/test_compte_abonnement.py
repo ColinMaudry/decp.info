@@ -62,6 +62,67 @@ def test_active_view_trial_banner(monkeypatch):
     assert "Essai gratuit" in str(compte_abonnement._active_view(row))
 
 
+def test_active_view_trial_banner_shows_date_and_time():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    row = {
+        "plan": "simple",
+        "status": "trial",
+        "current_period_end": "2026-07-29T13:57:43.177+00:00",
+    }
+    text = str(compte_abonnement._active_view(row))
+    # essai de 2 jours : l'heure de fin compte autant que le jour
+    assert "29 juillet 2026 à 15h57" in text
+
+
+def test_active_view_trial_banner_without_end_date():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    row = {"plan": "simple", "status": "trial", "current_period_end": None}
+    text = str(compte_abonnement._active_view(row))
+    assert "Essai gratuit" in text
+    assert "None" not in text
+
+
+def test_active_view_cancelled_shows_date_and_time():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    row = {
+        "plan": "simple",
+        "status": "cancelled",
+        "current_period_end": "2026-08-08T08:09:21.244+00:00",
+    }
+    assert "8 août 2026 à 10h09" in str(compte_abonnement._active_view(row))
+
+
+def test_active_view_active_shows_date_and_time():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    row = {
+        "plan": "simple",
+        "status": "active",
+        "current_period_end": "2026-08-08T08:09:21.244+00:00",
+    }
+    assert "Prochaine facturation : 8 août 2026 à 10h09" in str(
+        compte_abonnement._active_view(row)
+    )
+
+
+def test_active_view_never_prints_none_without_end_date():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    for status in ("trial", "cancelled", "active"):
+        row = {"plan": "simple", "status": status, "current_period_end": None}
+        assert "None" not in str(compte_abonnement._active_view(row))
+
+
+def test_resiliation_modal_shows_date_and_time():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    text = str(compte_abonnement._resiliation_modal("2026-08-08T08:09:21.244+00:00"))
+    assert "8 août 2026 à 10h09" in text
+
+
 def test_banner_present_when_tous_abonnes(monkeypatch):
     monkeypatch.setattr("src.utils.TOUS_ABONNES", True)
     from src.pages.compte import abonnement as compte_abonnement
