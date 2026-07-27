@@ -113,6 +113,21 @@ def _mode_for(row) -> str:
     return "subscribe"
 
 
+_DEFAULT_PLAN = "simple"
+
+
+def _initial_plan(mode: str, row) -> str:
+    """Formule pré-sélectionnée à l'ouverture de la page.
+
+    En souscription, la formule de base est retenue par défaut : le
+    récapitulatif de commande est ainsi visible dès l'arrivée sur la page,
+    sans clic préalable sur une carte.
+    """
+    if mode == "configure" and row is not None:
+        return row["plan"]
+    return _DEFAULT_PLAN
+
+
 def _submit_button(mode: str):
     label = (
         "Mettre à jour mon abonnement"
@@ -155,7 +170,6 @@ def _selection_state(selected):
         selected,
         f"{base} selected" if selected == "simple" else base,
         f"{base} selected" if selected == "soutien" else base,
-        "d-none",
     )
 
 
@@ -179,7 +193,6 @@ def _change_hint(selected: str, sub_info: dict | None) -> tuple[str, str]:
     Output("inf-plan-hidden", "value"),
     Output("plan-card-simple", "className"),
     Output("plan-card-soutien", "className"),
-    Output("inf-plan-invite", "className"),
     Output("inf-change-hint", "className"),
     Output("inf-change-hint", "children"),
     Output("inf-recap", "children"),
@@ -190,7 +203,7 @@ def _change_hint(selected: str, sub_info: dict | None) -> tuple[str, str]:
 )
 def _select_plan(_n_simple, _n_soutien, sub_info):
     selected = "simple" if ctx.triggered_id == "plan-card-simple" else "soutien"
-    value, cls_simple, cls_soutien, cls_invite = _selection_state(selected)
+    value, cls_simple, cls_soutien = _selection_state(selected)
     hint_cls, hint_txt = _change_hint(selected, sub_info)
     sub_info = sub_info or {}
     recap = (
@@ -198,7 +211,7 @@ def _select_plan(_n_simple, _n_soutien, sub_info):
         if sub_info.get("mode") == "subscribe"
         else None
     )
-    return value, cls_simple, cls_soutien, cls_invite, hint_cls, hint_txt, recap
+    return value, cls_simple, cls_soutien, hint_cls, hint_txt, recap
 
 
 def _legal_note():
@@ -310,7 +323,7 @@ def layout(**query):
 
     row = sub_db.get_current(current_user.id)
     mode = _mode_for(row)
-    selected = row["plan"] if mode == "configure" else None
+    selected = _initial_plan(mode, row)
     echeance = (
         format_date_french(row["current_period_end"])
         if mode == "configure" and row["current_period_end"]

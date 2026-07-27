@@ -32,17 +32,16 @@ def test_selectable_cards_render_both_plans():
 def test_selection_state_simple():
     from src.pages.compte import abonnement_mes_infos as m
 
-    value, cls_simple, cls_soutien, cls_invite = m._selection_state("simple")
+    value, cls_simple, cls_soutien = m._selection_state("simple")
     assert value == "simple"
     assert "selected" in cls_simple
     assert "selected" not in cls_soutien
-    assert cls_invite == "d-none"
 
 
 def test_selection_state_soutien():
     from src.pages.compte import abonnement_mes_infos as m
 
-    value, cls_simple, cls_soutien, _ = m._selection_state("soutien")
+    value, cls_simple, cls_soutien = m._selection_state("soutien")
     assert value == "soutien"
     assert "selected" in cls_soutien
     assert "selected" not in cls_simple
@@ -94,6 +93,46 @@ def test_recap_placeholder_without_selected_plan():
     text = str(m._recap(None, None))
     assert "Choisissez une formule" in text
     assert "Vendeur" not in text
+
+
+def test_selection_state_leaves_the_invite_label_alone():
+    from src.pages.compte import abonnement_mes_infos as m
+
+    # « Choisissez votre formule : » doit rester visible une fois une carte
+    # cliquée : _select_plan ne pilote plus la className de inf-plan-invite,
+    # donc _selection_state ne renvoie plus de classe pour ce composant.
+    assert len(m._selection_state("simple")) == 3
+    assert "d-none" not in m._selection_state("simple")
+
+
+def test_initial_plan_defaults_to_simple_in_subscribe_mode():
+    from src.pages.compte import abonnement_mes_infos as m
+
+    # sans pré-sélection, le bouton reste inactif et le récapitulatif vide
+    # tant qu'aucune carte n'est cliquée
+    assert m._initial_plan("subscribe", None) == "simple"
+    assert m._initial_plan("subscribe", {"plan": "soutien"}) == "simple"
+
+
+def test_initial_plan_keeps_current_plan_in_configure_mode():
+    from src.pages.compte import abonnement_mes_infos as m
+
+    assert m._initial_plan("configure", {"plan": "soutien"}) == "soutien"
+    assert m._initial_plan("configure", {"plan": "simple"}) == "simple"
+
+
+def test_default_plan_is_the_20_euros_one():
+    from src.pages.compte import abonnement_mes_infos as m
+    from src.subscriptions import plans
+
+    assert plans.PLANS[m._DEFAULT_PLAN]["prix_ht"] == 20
+
+
+def test_selectable_cards_mark_default_plan_selected():
+    from src.pages.compte import abonnement_mes_infos as m
+
+    text = str(m._selectable_cards(trial_for=lambda key: 2, selected="simple"))
+    assert "plan-selectable selected" in text
 
 
 def test_mode_for_derives_from_status():
