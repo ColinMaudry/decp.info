@@ -1086,10 +1086,28 @@ def _top_org_aggregate(data, org_type: str, extra_columns: list):
     return dff if dff.height > 0 else None
 
 
-def get_top_org_table(data, org_type: str, extra_columns: list, filters: bool = True):
+def get_top_org_table(
+    data,
+    org_type: str,
+    extra_columns: list,
+    filters: bool = True,
+    limit: int | None = 100,
+):
+    """Palmarès des organisations les plus attributaires.
+
+    La pagination de DataTable est côté client : toutes les lignes passées à
+    `data` transitent par le navigateur, même si seules `page_size` sont
+    visibles. Sans `limit`, l'observatoire expédiait ainsi 82 934 titulaires
+    (33,6 Mo de JSON) pour en afficher 10. L'agrégat étant déjà trié par
+    nombre d'attributions décroissant, tronquer conserve bien les mieux
+    classés. `limit=None` restaure l'envoi intégral.
+    """
     dff = _top_org_aggregate(data, org_type, extra_columns)
     if dff is None:
         return html.Div()
+
+    if limit is not None:
+        dff = dff.head(limit)
 
     columns, tooltip = setup_table_columns(
         dff, hideable=False, exclude=[f"{org_type}_id"]

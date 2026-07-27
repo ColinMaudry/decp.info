@@ -465,3 +465,58 @@ def test_top_org_aggregate_does_not_mutate_extra_columns():
         query_marches("TRUE", (), columns=None).lazy(), "titulaire", extra
     )
     assert extra == ["titulaire_distance"]
+
+
+def _fake_marches(n_orgs: int, org_type: str = "titulaire"):
+    """Jeu synthétique avec n_orgs organisations distinctes.
+
+    La base de test n'agrège qu'une seule organisation : la troncature du
+    palmarès n'y est pas observable. L'organisation i reçoit n_orgs - i
+    attributions, donc le classement est strictement décroissant et la
+    troncature déterministe (avec des ex æquo, l'ordre du tri ne l'est pas).
+    """
+    import polars as pl
+
+    uid, ids, noms = [], [], []
+    for i in range(n_orgs):
+        for j in range(n_orgs - i):
+            uid.append(f"m{i}-{j}")
+            ids.append(f"{i:014d}")
+            noms.append(f"Org {i}")
+    rows = {"uid": uid, f"{org_type}_id": ids, f"{org_type}_nom": noms}
+    if org_type == "titulaire":
+        rows["titulaire_typeIdentifiant"] = ["SIRET"] * len(uid)
+    return pl.DataFrame(rows).lazy()
+
+
+def test_get_top_org_table_truncates_to_limit():
+    """La pagination de DataTable est côté client : sans troncature, toutes
+    les lignes transitent par le navigateur pour n'en afficher que 10."""
+    from src.figures import get_top_org_table
+
+    lff = _fake_marches(120)
+    complet = get_top_org_table(lff, "titulaire", [], filters=False, limit=None)
+    tronque = get_top_org_table(lff, "titulaire", [], filters=False, limit=100)
+
+    assert len(complet.data) == 120
+    assert len(tronque.data) == 100
+    # l'agrégat est trié par Attributions décroissant : on garde bien la tête
+    # du classement, pas 100 lignes au hasard
+    gardes = {row["titulaire_nom_tooltip"] for row in tronque.data}
+    assert gardes == {f"Org {i}" for i in range(100)}
+
+
+def test_get_top_org_table_defaults_to_100_rows():
+    from src.figures import get_top_org_table
+
+    table = get_top_org_table(_fake_marches(120), "titulaire", [], filters=False)
+    assert len(table.data) == 100
+
+
+def test_get_top_org_table_limit_above_row_count_is_harmless():
+    from src.figures import get_top_org_table
+
+    table = get_top_org_table(
+        _fake_marches(7, "acheteur"), "acheteur", [], filters=False
+    )
+    assert len(table.data) == 7
