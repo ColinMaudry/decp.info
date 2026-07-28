@@ -17,7 +17,7 @@
 - Refonte et mise en page pleine largeur de la page À propos
 - Ajout des conditions générales d'utilisation (CGU) ([#93](https://github.com/ColinMaudry/colibre/issues/93))
 - Amélioration du référencement (sitemaps acheteurs/titulaires)
-- Amélioration des performances des pages acheteur et titulaire
+- Amélioration significative des performances des pages observatoire, acheteur et titulaire
 - decp.info devient **colibre** : nouveau nom, nouvelles icônes ([#57](https://github.com/ColinMaudry/colibre/issues/57))
 
 ##### 2.8.1 (25 juin 2026)
