@@ -30,6 +30,15 @@ def _activate(uid, cursor_iso=None):
     )
 
 
+def _set_votes_cursor(uid, days_ago):
+    """Recule le curseur d'accumulation pour simuler le temps écoulé."""
+    cursor = (datetime.now(timezone.utc) - timedelta(days=days_ago)).isoformat()
+    get_conn().execute(
+        "UPDATE subscriber_state SET votes_last_credited_at = ? WHERE user_id = ?",
+        (cursor, uid),
+    )
+
+
 def test_init_schema_creates_tables(users_db_path):
     db.init_schema()
     conn = auth_db.get_conn()
@@ -300,6 +309,89 @@ def test_spend_vote_refused_when_balance_zero(users_db_path):
     _activate(uid, cursor_iso=None)
     # solde reste 0 tant que credit_pending n'est pas appelé
     assert db.spend_vote(uid) is False
+
+
+def test_credit_pending_no_credit_without_subscription_row(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    # jamais passé par create_pending : aucune ligne subscriptions ni subscriber_state
+    assert db.credit_pending(uid) == 0
+    assert db.get_subscriber_state(uid) is None  # aucune ligne créée au passage
+
+
+def test_credit_pending_tous_abonnes_credits_without_subscription_row(
+    users_db_path, monkeypatch
+):
+    db.init_schema()
+    uid = _make_user()
+    monkeypatch.setattr("src.utils.TOUS_ABONNES", True)
+    assert db.get_current(uid) is None  # jamais souscrit
+    assert db.credit_pending(uid) == db.INITIAL_VOTES
+    state = db.get_subscriber_state(uid)
+    assert state["votes_balance"] == db.INITIAL_VOTES
+    assert state["votes_last_credited_at"] is not None
+
+
+def test_credit_pending_tous_abonnes_is_idempotent_same_day(users_db_path, monkeypatch):
+    db.init_schema()
+    uid = _make_user()
+    monkeypatch.setattr("src.utils.TOUS_ABONNES", True)
+    db.credit_pending(uid)
+    assert db.credit_pending(uid) == db.INITIAL_VOTES  # aucun crédit supplémentaire
+
+
+def test_credit_pending_tous_abonnes_recharges_after_a_week(users_db_path, monkeypatch):
+    """Le solde d'un accès gratuit se recharge chaque semaine, comme un abonné."""
+    db.init_schema()
+    uid = _make_user()
+    monkeypatch.setattr("src.utils.TOUS_ABONNES", True)
+    db.credit_pending(uid)
+    assert db.spend_vote(uid) is True
+    assert db.spend_vote(uid) is True
+    assert db.credit_pending(uid) == db.INITIAL_VOTES - 2  # pas encore de recharge
+    _set_votes_cursor(uid, days_ago=8)
+    assert db.credit_pending(uid) == db.VOTES_PER_WEEK
+
+
+def test_credit_pending_tous_abonnes_capped_at_votes_per_week(
+    users_db_path, monkeypatch
+):
+    db.init_schema()
+    uid = _make_user()
+    monkeypatch.setattr("src.utils.TOUS_ABONNES", True)
+    db.credit_pending(uid)
+    # 3 semaines d'absence ne cumulent pas : le solde reste plafonné
+    _set_votes_cursor(uid, days_ago=21)
+    assert db.credit_pending(uid) == db.VOTES_PER_WEEK
+
+
+def test_next_recharge_at_set_for_tous_abonnes_user(users_db_path, monkeypatch):
+    db.init_schema()
+    uid = _make_user()
+    monkeypatch.setattr("src.utils.TOUS_ABONNES", True)
+    assert db.next_recharge_at(uid) is None  # curseur pas encore posé
+    db.credit_pending(uid)
+    assert db.next_recharge_at(uid) is not None
+
+
+def test_spend_vote_works_under_tous_abonnes_without_subscription_row(
+    users_db_path, monkeypatch
+):
+    db.init_schema()
+    uid = _make_user()
+    monkeypatch.setattr("src.utils.TOUS_ABONNES", True)
+    db.credit_pending(uid)
+    assert db.spend_vote(uid) is True
+
+
+def test_credit_pending_tolerates_unknown_user_under_tous_abonnes(
+    users_db_path, monkeypatch
+):
+    """user_id absent de `users` : renvoie 0 sans lever d'IntegrityError (FK)."""
+    db.init_schema()
+    _make_user()  # garantit que la table users existe
+    monkeypatch.setattr("src.utils.TOUS_ABONNES", True)
+    assert db.credit_pending(999999) == 0
 
 
 def test_reactivation_resets_cursor_without_regranting(users_db_path):

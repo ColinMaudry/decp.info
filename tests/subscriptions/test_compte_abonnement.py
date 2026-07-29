@@ -128,7 +128,7 @@ def test_banner_present_when_tous_abonnes(monkeypatch):
     from src.pages.compte import abonnement as compte_abonnement
 
     text = str(compte_abonnement._tous_abonnes_banner())
-    assert "accessibles à tous et toutes" in text
+    assert "temporairement accessibles gratuitement" in text
 
 
 def test_banner_absent_when_flag_off(monkeypatch):

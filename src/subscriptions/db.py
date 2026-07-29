@@ -339,13 +339,28 @@ def credit_pending(user_id: int) -> int:
     +VOTES_PER_WEEK à la première activation, puis +VOTES_PER_WEEK par semaine
     pleine. Le solde est cappé à VOTES_PER_WEEK (pas d'accumulation).
     Idempotent : ne crédite que des semaines pleines.
+
+    Sous TOUS_ABONNES, les accès gratuits n'ont pas de ligne `subscriptions` :
+    on crée `subscriber_state` à la volée et on lève le garde-fou sur le statut,
+    pour que solde et recharge hebdomadaire fonctionnent comme pour un abonné.
     """
+    from src.utils import TOUS_ABONNES
+
+    if TOUS_ABONNES:
+        # Le SELECT ... FROM users garantit qu'aucune ligne n'est insérée pour un
+        # user_id inconnu : OR IGNORE n'avale PAS les violations de clé étrangère
+        # (seulement UNIQUE/NOT NULL/CHECK), on aurait donc une IntegrityError.
+        get_conn().execute(
+            "INSERT OR IGNORE INTO subscriber_state (user_id, updated_at) "
+            "SELECT id, ? FROM users WHERE id = ?",
+            (_now(), user_id),
+        )
     state = _get_state(user_id)
     if state is None:
         return 0
     balance = state["votes_balance"] or 0
     current = get_current(user_id)
-    if current is None or current["status"] != "active":
+    if not TOUS_ABONNES and (current is None or current["status"] != "active"):
         return balance
     now = datetime.now(timezone.utc)
     cursor = state["votes_last_credited_at"]

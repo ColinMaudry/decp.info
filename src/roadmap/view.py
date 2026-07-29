@@ -54,10 +54,10 @@ def content_for_current_user():
     prevent_initial_call=True,
 )
 def cast_vote(n_clicks):
-    # Le solde protège déjà d'une requête forgée (spend_vote ne débite qu'au-delà
-    # de zéro, credit_pending ne crédite que les abonnements actifs), mais ce
-    # callback est désormais exposé depuis une page publique : on vérifie
-    # l'abonnement explicitement plutôt que de s'en remettre à cet invariant.
+    # Le solde ne suffit pas à protéger d'une requête forgée : sous TOUS_ABONNES,
+    # credit_pending crédite tout utilisateur authentifié, sans exiger d'abonnement
+    # actif. Ce callback étant exposé depuis une page publique, la vérification
+    # explicite ci-dessous est la seule garantie — ne pas la retirer.
     if not current_user.is_authenticated or not current_user_has_subscription():
         return no_update
     if not ctx.triggered_id or not any(n_clicks):
