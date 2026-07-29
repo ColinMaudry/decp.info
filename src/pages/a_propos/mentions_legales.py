@@ -89,7 +89,7 @@ Conformément au RGPD, colibre ne recueille que les données strictement nécess
 
 **Conversations en direct depuis le site Web 💬**
 
-Le contenu des conversations est transmis au prestataire Chatwoot et au logiciel Slack.
+Le contenu des conversations est transmis au prestataire Chatwoot et au logiciel Slack. Si vous êtes connecté·e, votre adresse e-mail y est jointe pour vous identifier.
 
 Ces données ne sont pas transmises à des tiers à des fins commerciales. Vous pouvez demander l'accès, la rectification ou la suppression de vos données en [me contactant](/a-propos/contact).
 

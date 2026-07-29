@@ -35,7 +35,12 @@ from flask_login import current_user
 from src.auth.setup import init_auth
 from src.utils import DEVELOPMENT
 from src.utils.cache import cache
-from src.utils.chatwoot import build_widget_script
+from src.utils.chatwoot import (
+    build_identity_script,
+    build_reset_script,
+    build_widget_script,
+    subscription_attributes,
+)
 
 load_dotenv()
 
@@ -338,16 +343,37 @@ app.index_string = """
 _default_interpolate_index = app.interpolate_index
 
 
-def _interpolate_index_with_og_url(**kwargs):
+def _interpolate_index_per_request(**kwargs):
     from flask import request as _request
     from markupsafe import escape as _escape
 
     og_url_tag = f'<meta property="og:url" content="{_escape(_request.url)}"/>'
     kwargs["metas"] = f"{kwargs.get('metas', '')}\n      {og_url_tag}"
+
+    # Identité Chatwoot : le chargement du widget est figé dans index_string
+    # (même token pour tout le monde), mais setUser dépend de la session, donc
+    # il se pose ici, par requête. La connexion et la déconnexion passent par
+    # des routes Flask avec redirection — donc par un vrai rechargement de page
+    # —, ce qui suffit à resynchroniser l'identité malgré la navigation SPA.
+    if chatwoot_script:
+        if current_user.is_authenticated:
+            identity = build_identity_script(
+                current_user.id,
+                current_user.email,
+                os.getenv("CHATWOOT_HMAC_TOKEN"),
+                custom_attributes=subscription_attributes(current_user.id),
+            )
+        elif _request.args.get("deconnexion") or _request.args.get("account_deleted"):
+            identity = build_reset_script()
+        else:
+            identity = ""
+        if identity:
+            kwargs["scripts"] = f"{kwargs.get('scripts', '')}\n        {identity}"
+
     return _default_interpolate_index(**kwargs)
 
 
-app.interpolate_index = _interpolate_index_with_og_url
+app.interpolate_index = _interpolate_index_per_request
 
 navbar = dbc.Navbar(
     dbc.Container(

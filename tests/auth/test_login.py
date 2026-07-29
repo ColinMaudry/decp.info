@@ -71,7 +71,8 @@ def test_logout_clears_session(client, users_db_path):
     client.post("/auth/login", data={"email": "a@b.c", "password": "password12"})
     resp = client.post("/auth/logout")
     assert resp.status_code == 302
-    assert resp.headers["Location"].endswith("/")
+    # `?deconnexion=1` déclenche le reset du contact Chatwoot côté client.
+    assert resp.headers["Location"] == "/?deconnexion=1"
 
 
 # --- Tests CSRF (protection active, comme en production) ---

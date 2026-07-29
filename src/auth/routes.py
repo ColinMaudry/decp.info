@@ -133,7 +133,9 @@ def login():
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
     logout_user()
-    return redirect("/")
+    # `?deconnexion=1` n'est lu que par app._interpolate_index_per_request, pour
+    # dissocier le contact Chatwoot du navigateur (le SDK le garde en cookie).
+    return redirect("/?deconnexion=1")
 
 
 @auth_bp.route("/request-password-reset", methods=["POST"])
