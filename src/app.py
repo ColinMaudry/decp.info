@@ -191,7 +191,12 @@ app.server.register_blueprint(mcp_account_bp)
 # robots.txt
 @app.server.route("/robots.txt")
 def robots():
-    text = """User-agent: *
+    text = """
+# Blocage du robot d'entrainement d'IA de Meta
+User-agent: meta-externalagent
+Disallow: /
+
+User-agent: *
 Allow: /
 Sitemap: https://colibre.fr/sitemap.xml
 """
