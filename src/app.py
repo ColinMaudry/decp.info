@@ -215,6 +215,10 @@ Disallow: /
 User-agent: meta-externalagent
 Disallow: /
 
+# moz.com dotbot opensiteexplorer
+User-agent: dotbot
+Disallow: /
+
 User-agent: *
 Allow: /
 Sitemap: https://colibre.fr/sitemap.xml
