@@ -4,14 +4,10 @@ from flask import Blueprint, redirect, request
 from flask_login import current_user, login_required
 
 from src.auth import db as auth_db
-from src.subscriptions import client, db, plans, webhooks
+from src.subscriptions import client, db, handles, plans, webhooks
 from src.utils import logger
 
 subscriptions_bp = Blueprint("subscriptions", __name__)
-
-
-def _customer_handle(user_id: int) -> str:
-    return f"colibre-{user_id}"
 
 
 @subscriptions_bp.route("/subscriptions/subscribe", methods=["POST"])
@@ -26,7 +22,7 @@ def subscribe():
     if db.has_active_subscription(current_user.id):
         return redirect(f"{base}/compte/abonnement")
 
-    cust = _customer_handle(current_user.id)
+    cust = handles.customer_handle(current_user.id)
     meta = plans.plan_meta(plan_key)
     sub_handle, subscription_id = db.create_pending(
         current_user.id, cust, plan_key, meta["prix_ht"] if meta else None
@@ -91,7 +87,7 @@ def subscribe():
 @login_required
 def add_payment():
     base = os.getenv("APP_BASE_URL", "")
-    cust = _customer_handle(current_user.id)
+    cust = handles.customer_handle(current_user.id)
     try:
         url = client.create_recurring_session(
             cust,
@@ -108,7 +104,7 @@ def add_payment():
 @login_required
 def add_payment_callback():
     session_id = request.args.get("id", "")
-    cust = _customer_handle(current_user.id)
+    cust = handles.customer_handle(current_user.id)
     row = db.get_current(current_user.id)
     sub_handle = row["frisbii_subscription_handle"] if row else None
     if not sub_handle:
@@ -160,7 +156,7 @@ def update():
     if row is None or not row["frisbii_subscription_handle"]:
         return "Aucun abonnement à mettre à jour", 400
 
-    cust = _customer_handle(current_user.id)
+    cust = handles.customer_handle(current_user.id)
     siret = (request.form.get("siret") or "").strip()
     billing: dict = {
         "email": current_user.email,

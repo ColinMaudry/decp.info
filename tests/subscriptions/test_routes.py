@@ -30,7 +30,9 @@ def test_subscribe_redirects_to_hosted_url(logged_in_client, monkeypatch):
     assert resp.headers["Location"] == "https://pay.test/cs_1"
     row = db.get_current(uid)
     assert row["status"] == "pending"
-    assert row["frisbii_subscription_handle"] == f"abo-{uid}-1"
+    # APP_BASE_URL=http://localhost:8050 dans la fixture → préfixe colibre_dev (#126)
+    assert row["frisbii_customer_handle"] == f"colibre_dev-{uid}"
+    assert row["frisbii_subscription_handle"] == f"colibre_dev-{uid}-1"
 
 
 def test_subscribe_disables_trial_after_first_use(logged_in_client, monkeypatch):

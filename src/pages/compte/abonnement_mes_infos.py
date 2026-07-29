@@ -9,7 +9,7 @@ from src.pages._compte_shell import account_guard, account_shell
 from src.pages.a_propos.abonnement import _plan_card, subscription_terms
 from src.subscriptions import client as frisbii_client
 from src.subscriptions import db as sub_db
-from src.subscriptions import plans
+from src.subscriptions import handles, plans
 from src.utils.data import get_annuaire_data
 from src.utils.frontend import format_date_french
 
@@ -339,7 +339,7 @@ def layout(**query):
 
     prefill: dict = {}
     try:
-        prefill = frisbii_client.get_customer(f"colibre-{current_user.id}")
+        prefill = frisbii_client.get_customer(handles.customer_handle(current_user.id))
     except frisbii_client.FrisbiiError:
         prefill = {}
     stored_siret = auth_db.get_siret(current_user.id) or ""

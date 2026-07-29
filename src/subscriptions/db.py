@@ -167,20 +167,30 @@ def customer_known(customer_handle: str) -> bool:
     return row is not None
 
 
-def _next_handle(user_id: int) -> str:
-    prefix = f"abo-{user_id}-"
+def _next_handle(user_id: int, customer_handle: str) -> str:
+    """Prochain handle d'abonnement libre pour cet utilisateur.
+
+    Dérivé du handle customer, donc préfixé par l'environnement (#126) : un
+    `colibre-4-1` de production ne peut plus entrer en collision avec le
+    `colibre_test-4-1` de test.colibre.fr dans le compte Frisbii partagé.
+    """
+    prefix = f"{customer_handle}-"
     rows = (
         get_conn()
         .execute(
-            "SELECT frisbii_subscription_handle FROM subscriptions "
-            "WHERE user_id = ? AND frisbii_subscription_handle LIKE ?",
-            (user_id, f"{prefix}%"),
+            "SELECT frisbii_subscription_handle FROM subscriptions WHERE user_id = ?",
+            (user_id,),
         )
         .fetchall()
     )
+    # Filtrage en Python plutôt qu'en SQL : le préfixe contient un `_`, qui est
+    # un joker LIKE en SQLite.
     n = 0
     for row in rows:
-        suffix = row["frisbii_subscription_handle"][len(prefix) :]
+        handle = row["frisbii_subscription_handle"] or ""
+        if not handle.startswith(prefix):
+            continue
+        suffix = handle[len(prefix) :]
         if suffix.isdigit():
             n = max(n, int(suffix))
     return f"{prefix}{n + 1}"
@@ -195,7 +205,7 @@ def create_pending(
     avant tout appel à l'API Frisbii.
     """
     now = _now()
-    handle = _next_handle(user_id)
+    handle = _next_handle(user_id, customer_handle)
     conn = get_conn()
     conn.execute(
         "INSERT OR IGNORE INTO subscriber_state (user_id, updated_at) VALUES (?, ?)",

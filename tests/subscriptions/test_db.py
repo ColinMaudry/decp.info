@@ -97,7 +97,7 @@ def test_create_pending_and_get_current(users_db_path):
     db.init_schema()
     uid = _make_user()
     handle, subscription_id = db.create_pending(uid, "colibre-1", "simple")
-    assert handle == f"abo-{uid}-1"
+    assert handle == "colibre-1-1"
     row = db.get_current(uid)
     assert row["id"] == subscription_id
     assert row["status"] == "pending"
@@ -112,8 +112,18 @@ def test_create_pending_generates_incrementing_handle_per_user(users_db_path):
     first_handle, first_id = db.create_pending(uid, "colibre-1", "simple")
     db.mark_failed(first_id)
     second_handle, _ = db.create_pending(uid, "colibre-1", "simple")
-    assert first_handle == f"abo-{uid}-1"
-    assert second_handle == f"abo-{uid}-2"
+    assert first_handle == "colibre-1-1"
+    assert second_handle == "colibre-1-2"
+
+
+def test_create_pending_isole_les_compteurs_par_environnement(users_db_path):
+    """Un handle d'un autre environnement ne décale pas la numérotation (#126)."""
+    db.init_schema()
+    uid = _make_user()
+    prod_handle, _ = db.create_pending(uid, f"colibre-{uid}", "simple")
+    test_handle, _ = db.create_pending(uid, f"colibre_test-{uid}", "simple")
+    assert prod_handle == f"colibre-{uid}-1"
+    assert test_handle == f"colibre_test-{uid}-1"
 
 
 def test_mark_failed_sets_status_and_keeps_handle(users_db_path):
