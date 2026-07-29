@@ -110,6 +110,22 @@ _MIGRATIONS = [
 - `main` branch → manual deploy to colibre.fr via GitHub Actions
 - `dev` branch → auto-deploy to test.colibre.fr via GitHub Actions
 
+#### Redirection decp.info → colibre.fr
+
+Deux configurations nginx selon le serveur :
+
+- nginx **standalone** : `deploy/nginx-colibre.conf` (vhost complet, à lier dans
+  `sites-enabled`)
+- **YunoHost** : `deploy/nginx-yunohost-decp-info.conf` (301) et
+  `deploy/nginx-yunohost-test-decp-info.conf` (302), à déposer dans
+  `/etc/nginx/conf.d/<domaine>.d/`
+
+L'app YunoHost `redirect_ynh` n'est pas utilisable : son template code en dur
+`return 302`, et le choix 301 n'existe que dans la PR amont #69, non fusionnée.
+
+Sous YunoHost, aucune app ne doit occuper la racine `/` du domaine redirigé
+(`yunohost app map`), sinon nginx échoue sur `duplicate location "/"`.
+
 #### Sauvegarde de la base utilisateurs
 
 `users.sqlite` est sauvegardée toutes les heures sur S3 par un timer systemd
