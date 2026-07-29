@@ -1,6 +1,7 @@
 import uuid
 
 from dash.testing.composite import DashComposite
+from dash.testing.wait import until
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from werkzeug.security import generate_password_hash
@@ -57,6 +58,12 @@ def _login(dash_duo: DashComposite, email: str):
         PASSWORD
     )
     dash_duo.driver.find_element("css selector", "button[type=submit]").click()
+    # Attendre la fin de la redirection post-login. Sans ça, un driver.get()
+    # immédiat part en concurrence avec la navigation encore en vol, qui
+    # atterrit après et l'écrase : le test se retrouve sur /compte/abonnement
+    # au lieu de sa cible. On teste la sortie de /connexion plutôt que la page
+    # d'arrivée, qui dépend de TOUS_ABONNES (cf. src/auth/routes.py).
+    until(lambda: "/connexion" not in dash_duo.driver.current_url, timeout=8)
 
 
 def test_admin_anonymous_gets_404(dash_duo: DashComposite):
