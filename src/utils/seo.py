@@ -19,7 +19,7 @@ def make_org_jsonld(
     """
     org_types = {"acheteur": "GovernmentOrganization", "titulaire": "Organization"}
     address = None
-    if type_org_id.lower() == "siret" and len(org_id) == 14:
+    if type_org_id and type_org_id.lower() == "siret" and len(org_id) == 14:
         if annuaire_data is _ANNUAIRE_DATA_UNFETCHED:
             annuaire_data = get_annuaire_data(org_id)
         annuaire_etablissements = (annuaire_data or {}).get(

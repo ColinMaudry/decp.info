@@ -66,8 +66,7 @@ server = Flask(__name__)
 
 cache_dir = os.getenv("CACHE_DIR", "/tmp/colibre-cache")
 
-if os.path.exists(cache_dir):
-    rmtree(cache_dir)
+rmtree(cache_dir, ignore_errors=True)
 
 cache.init_app(
     server,
@@ -213,10 +212,8 @@ Disallow: /
     return """
 # Blocage du robot d'entrainement d'IA de Meta
 User-agent: meta-externalagent
-Disallow: /
-
-# moz.com dotbot opensiteexplorer
 User-agent: dotbot
+User-agent: Bytespider
 Disallow: /
 
 User-agent: *
