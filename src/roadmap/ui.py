@@ -106,6 +106,16 @@ def _en_cours_items(en_cours: list[dict]) -> list:
     ]
 
 
+def _subscribe_hint() -> html.P:
+    return html.P(
+        [
+            dcc.Link("Abonnez-vous", href="/a-propos/abonnement"),
+            " pour donner votre voix aux fonctionnalités qui vous seraient utiles.",
+        ],
+        className="text-muted",
+    )
+
+
 def _trial_hint(sub_status: str | None, trial_ends_at: str | None):
     if sub_status != "trial" or not trial_ends_at:
         return None
@@ -144,6 +154,10 @@ def roadmap_content(
             "Les abonné·es votent pour les fonctionnalités à développer en priorité."
         )
     )
+    if not editable:
+        # Seule la page publique passe ici : /compte/roadmap est réservée aux
+        # abonné·es, donc toujours en editable=True.
+        body.append(_subscribe_hint())
     trial_hint = _trial_hint(sub_status, trial_ends_at) if editable else None
     if trial_hint is not None:
         body.append(trial_hint)

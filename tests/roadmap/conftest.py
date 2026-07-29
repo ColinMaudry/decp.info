@@ -11,6 +11,18 @@ import pytest
 from src.app import app  # noqa: F401, E402
 
 
+@pytest.fixture(autouse=True)
+def _ensure_request_context():
+    """Contexte de requête Flask pour tous les tests du répertoire.
+
+    Les layouts roadmap lisent `current_user` (page publique comprise, depuis
+    l'ouverture du vote aux abonné·es), ce qui exige un contexte de requête.
+    Voir tests/subscriptions/conftest.py, même besoin.
+    """
+    with app.server.test_request_context():
+        yield
+
+
 @pytest.fixture
 def users_db_path(monkeypatch, tmp_path):
     from src.auth.db import reset_conn_for_tests

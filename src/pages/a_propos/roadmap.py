@@ -1,7 +1,7 @@
 from dash import register_page
 
 from src.pages._apropos_shell import apropos_shell
-from src.roadmap import ui as roadmap_ui
+from src.roadmap import view as roadmap_view
 from src.utils.seo import META_CONTENT
 
 register_page(
@@ -14,4 +14,6 @@ register_page(
 
 
 def layout(**_):
-    return apropos_shell("roadmap", roadmap_ui.roadmap_content(editable=False))
+    # Page publique, mais votable : une abonnée connectée y retrouve ses boutons
+    # de vote et son solde, exactement comme sur /compte/roadmap.
+    return apropos_shell("roadmap", roadmap_view.content_for_current_user())
