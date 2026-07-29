@@ -100,9 +100,7 @@ def _subscribe_button(
         return html.Div(
             [
                 dbc.Alert(
-                    "Les fonctionnalités normalement accessibles contre un abonnement "
-                    "mensuel sont accessibles à tous et toutes en attendant "
-                    "la validation du dossier pour recevoir des paiements par carte bancaire.",
+                    "Les fonctionnalités normalement accessibles contre un abonnement sont temporairement accessibles gratuitement.",
                     color="info",
                 ),
                 html.A(
