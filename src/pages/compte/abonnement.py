@@ -276,9 +276,7 @@ def _tous_abonnes_banner():
     if not TOUS_ABONNES:
         return None
     return dbc.Alert(
-        "Les fonctionnalités normalement accessibles contre un abonnement de "
-        "20 € HT par mois sont accessibles à tous et toutes en attendant la "
-        "validation du dossier pour recevoir des paiements.",
+        "Les fonctionnalités normalement accessibles contre un abonnement sont temporairement accessibles gratuitement.",
         color="info",
     )
 

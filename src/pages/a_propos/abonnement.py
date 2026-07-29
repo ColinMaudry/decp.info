@@ -140,8 +140,8 @@ Les présentes conditions régissent l'abonnement. L'utilisation du site est par
             """
 Deux formules sont proposées :
 
-- **Abonnement** — 20 € HT / mois (soit 24 € TTC)
-- **Abonnement de soutien ✊** — 50 € HT / mois (soit 60 € TTC) — mêmes fonctionnalités, contribution renforcée au projet
+- **Abonnement** : 20 € HT / mois (soit 24 € TTC)
+- **Abonnement de soutien ✊** : 50 € HT / mois (soit 60 € TTC) — mêmes fonctionnalités, contribution renforcée au projet
 
 La TVA applicable en France est de 20 %.
 """
