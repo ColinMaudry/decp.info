@@ -37,7 +37,7 @@ Vous pouvez consommer les données qui alimentent colibre en les téléchargeant
 pensez à lire la description du jeu de données
 
 Une API REST tabulaire (JSON) est également disponible par abonnement mensuel pour accéder aux mêmes données et alimenter une application.
-Documentation interactive : [Swagger UI](/api/v1/swagger). Si cela vous intéresse, [envoyez un message](/a-propos/contact)."""),
+Documentation interactive : [Swagger UI](/api/v1/swagger). Si vous souhaitez utiliser l'API, [envoyez un message](/a-propos/contact)."""),
             html.H2("Qualité et exhaustivité des données", className="mt-4"),
             dcc.Markdown(
                 """Les données visibles sur ce site proviennent exclusivement de la publication de données
