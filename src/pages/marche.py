@@ -236,8 +236,6 @@ def get_marche_jsonld(marche, titulaires) -> str:
             "description": marche.get("objet"),
             "orderNumber": marche.get("uid"),
             "orderDate": marche.get("dateNotification"),
-            "price": unformat_montant(marche.get("montant")),
-            "priceCurrency": "EUR",
             "customer": make_org_jsonld(
                 acheteur_id, org_name=marche.get("acheteur_nom"), org_type="acheteur"
             ),
@@ -259,5 +257,8 @@ def get_marche_jsonld(marche, titulaires) -> str:
                 # "serviceType": "Description du code CPV"
             },
         }
+        if marche.get("montant"):
+            jsonld["price"] = unformat_montant(marche.get("montant"))
+            jsonld["priceCurrency"] = "EUR"
         result.append(jsonld)
     return json.dumps(result, indent=2)
