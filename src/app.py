@@ -187,6 +187,13 @@ from src.mcp.account import mcp_account_bp  # noqa: E402
 
 app.server.register_blueprint(mcp_account_bp)
 
+# 404 sur les chemins qui ne correspondent à aucune page (#125). À déclarer
+# après les autres routes : le garde ne s'applique qu'au catch-all de Dash, donc
+# toute route enregistrée ici ou plus haut lui échappe par construction.
+from src.not_found import init_not_found  # noqa: E402
+
+init_not_found(app.server)
+
 
 # robots.txt
 def _build_robots_txt(development: bool) -> str:

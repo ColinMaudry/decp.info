@@ -8,7 +8,6 @@ from src.subscriptions import handles
     [
         ("https://colibre.fr", "colibre"),
         ("https://colibre.fr/", "colibre"),
-        ("https://www.colibre.fr", "colibre"),
         ("colibre.fr", "colibre"),
         ("https://test.colibre.fr", "colibre_test"),
         ("http://test.colibre.fr:8050", "colibre_test"),

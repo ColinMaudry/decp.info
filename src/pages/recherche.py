@@ -45,9 +45,9 @@ def _tagline() -> html.P:
 _features_gratuites = dcc.Markdown("""
 - Recherche d'acheteurs et de titulaires
 - [Tableau](/tableau) filtrable et personnalisable sur des dizaines de colonnes et exports Excel
-- Fiches détaillées : acheteur, titulaire, marché
 - Cartes, statistiques et [Observatoire](/observatoire) national personnalisable
-- 100 % open source et Open Data
+- Fiches détaillées : acheteur, titulaire, marché
+- 100 % [open source](/a-propos/explorer) et [Open Data](/a-propos/donnees)
 """)
 
 home_intro = html.Div(

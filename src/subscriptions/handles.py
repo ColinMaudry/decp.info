@@ -17,7 +17,6 @@ from urllib.parse import urlparse
 
 _PREFIX_BY_HOST = {
     "colibre.fr": "colibre",
-    "www.colibre.fr": "colibre",
     "test.colibre.fr": "colibre_test",
 }
 _DEFAULT_PREFIX = "colibre_dev"
