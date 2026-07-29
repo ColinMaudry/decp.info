@@ -16,11 +16,31 @@ def client():
     return app.server.test_client()
 
 
-def test_robots_declares_sitemap(client):
+def test_robots_prod_declares_sitemap():
+    from src.app import _build_robots_txt
+
+    body = _build_robots_txt(development=False)
+    assert "Sitemap: https://colibre.fr/sitemap.xml" in body
+    assert "User-agent: *\nAllow: /" in body
+    assert "meta-externalagent" in body
+
+
+def test_robots_hors_prod_interdit_tout():
+    from src.app import _build_robots_txt
+
+    body = _build_robots_txt(development=True)
+    assert "User-agent: *\nDisallow: /" in body
+    assert "Allow: /" not in body
+    assert "Sitemap:" not in body
+
+
+def test_robots_route_suit_l_environnement(client):
+    """La suite tourne avec DEVELOPMENT=true (pyproject.toml) : variante bloquée."""
     resp = client.get("/robots.txt")
     assert resp.status_code == 200
     body = resp.get_data(as_text=True)
-    assert "Sitemap: https://colibre.fr/sitemap.xml" in body
+    assert "User-agent: *\nDisallow: /" in body
+    assert "Sitemap:" not in body
 
 
 def test_sitemap_index_lists_children(client):

@@ -189,9 +189,21 @@ app.server.register_blueprint(mcp_account_bp)
 
 
 # robots.txt
-@app.server.route("/robots.txt")
-def robots():
-    text = """
+def _build_robots_txt(development: bool) -> str:
+    """Contenu du robots.txt, selon l'environnement.
+
+    Les instances non-prod (test.colibre.fr, dev) sont interdites d'indexation
+    dans leur intégralité, pour ne pas concurrencer colibre.fr dans les résultats
+    de recherche avec du contenu dupliqué. Complète la meta `robots: noindex`
+    ajoutée aux META_TAGS : le Disallow empêche l'exploration, la meta empêche
+    l'indexation des URLs découvertes par ailleurs (liens entrants).
+    """
+    if development:
+        return """
+User-agent: *
+Disallow: /
+"""
+    return """
 # Blocage du robot d'entrainement d'IA de Meta
 User-agent: meta-externalagent
 Disallow: /
@@ -200,7 +212,11 @@ User-agent: *
 Allow: /
 Sitemap: https://colibre.fr/sitemap.xml
 """
-    return Response(text, mimetype="text/plain")
+
+
+@app.server.route("/robots.txt")
+def robots():
+    return Response(_build_robots_txt(DEVELOPMENT), mimetype="text/plain")
 
 
 # Index de sitemaps + sous-sitemaps paginés (voir src.utils.sitemap).
@@ -451,3 +467,23 @@ def _generate_csrf_token(*_):
 )
 def _fill_csrf_inputs(token):
     return [token] * len(ctx.outputs_list)
+
+
+# Préchauffage du registre de ressources, à l'import donc AVANT que gunicorn ne
+# serve la moindre requête.
+#
+# Dash ne remplit `app.registered_paths` (la liste blanche de /_dash-component-
+# suites) que dans _generate_scripts_html, appelé par le before_request
+# `_setup_server`. Or _setup_server pose son drapeau `_got_first_request` AVANT
+# de faire le travail, et sans verrou : sur un worker gthread neuf, un 2e thread
+# qui arrive pendant ce laps de temps saute l'initialisation et lit un registre
+# à moitié construit. Le renderer demandant plotly.js à une URL codée en dur et
+# sans empreinte (`_dash-component-suites/plotly/package_data/plotly.min.js`,
+# cf. dash_renderer.min.js), la course se manifeste par des 500 « "plotly" is
+# not a registered library » quelques secondes après chaque recyclage de worker
+# (max_requests), comme observé sur test.colibre.fr du 23 au 29/07/2026.
+#
+# Ces deux méthodes sont idempotentes (rejouées à chaque rendu de page), donc
+# les appeler ici ne fait qu'avancer le remplissage du registre.
+app._generate_scripts_html()
+app._generate_css_dist_html()
