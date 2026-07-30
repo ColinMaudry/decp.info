@@ -57,10 +57,44 @@ def configure_connection(conn: duckdb.DuckDBPyConnection) -> None:
         )
 
 
+def schema_est_perime(db_path: Path) -> bool:
+    """La base existante a-t-elle été construite avec un schéma dépassé ?
+
+    Incident du 2026-07-30 : #128 a ajouté la colonne `nb_marches` aux tables
+    d'organismes sans toucher au parquet source. `should_rebuild` ne comparant
+    que les dates, la production a gardé sa base à l'ancien schéma et les pages
+    d'index ont répondu 500 jusqu'au rafraîchissement quotidien du parquet.
+
+    On compare donc aussi la version du schéma écrite dans la base. Une base
+    antérieure à ce mécanisme n'a pas la table `schema_version` : elle est
+    considérée périmée, ce qui provoque une reconstruction unique au premier
+    démarrage après déploiement.
+    """
+    try:
+        with duckdb.connect(str(db_path), read_only=True) as c:
+            version = c.execute("SELECT version FROM schema_version").fetchone()[0]
+    except (duckdb.Error, TypeError):
+        logger.info("Version de schéma illisible dans la base : reconstruction.")
+        return True
+    if version != SCHEMA_VERSION:
+        logger.info(
+            "Schéma de la base en version %s, code en version %s : reconstruction.",
+            version,
+            SCHEMA_VERSION,
+        )
+        return True
+    return False
+
+
 def should_rebuild(db_path: Path, parquet_path: str) -> bool:
     db_path = Path(db_path)
     if not db_path.exists():
         logger.info("Fichier DuckDB inexistant.")
+        return True
+    # Avant toute considération de fraîcheur : une base au mauvais schéma est
+    # inutilisable par le code courant, quels que soient l'environnement et
+    # l'âge du parquet. Ce test précède donc le raccourci `dev`.
+    if schema_est_perime(db_path):
         return True
     dev = os.getenv("DEVELOPMENT", "False").lower() == "true"
     force = os.getenv("REBUILD_DUCKDB", "False").lower() == "true"
@@ -123,6 +157,19 @@ def _load_source_frame() -> pl.DataFrame:
     return lff.collect()
 
 
+# Version du schéma des tables dérivées, écrite dans la base à sa construction
+# et vérifiée au démarrage par `schema_est_perime`.
+#
+# À INCRÉMENTER dès qu'une définition de table change ci-dessous. Sans cela,
+# une base déjà construite garde son ancien schéma tant que le parquet source
+# n'a pas changé, et le code neuf plante dessus — c'est ce qui a mis les pages
+# d'index en 500 en production le 2026-07-30 (colonne `nb_marches` ajoutée par
+# #128, parquet inchangé, donc aucune reconstruction déclenchée).
+#
+#   1 : schéma d'origine
+#   2 : #128 ajoute nb_marches à acheteurs_departement et titulaires_departement
+SCHEMA_VERSION = 2
+
 # Extraites en constantes de module (plutôt qu'inline dans build_database)
 # pour que tests/seo/test_tables_nb_marches.py puisse exécuter cette logique
 # de regroupement contre une table `decp` synthétique, sans dépendre du jeu
@@ -181,6 +228,12 @@ def build_database(db_path: Path) -> None:
             )
             w.execute(SQL_ACHETEURS_DEPARTEMENT)
             w.execute(SQL_TITULAIRES_DEPARTEMENT)
+            # Écrite en dernier : une base interrompue en cours de construction
+            # n'aura pas cette table et sera donc reconstruite au démarrage
+            # suivant plutôt que d'être prise pour valide.
+            w.execute(
+                f"CREATE TABLE schema_version AS SELECT {SCHEMA_VERSION} AS version"
+            )
     finally:
         if staging_parquet.exists():
             staging_parquet.unlink()

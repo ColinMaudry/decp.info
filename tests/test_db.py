@@ -33,6 +33,23 @@ def parquet_and_db(tmp_path, monkeypatch):
     return parquet, db
 
 
+def _base_au_schema_courant(db) -> None:
+    """Écrit une vraie base DuckDB portant la version de schéma attendue.
+
+    Un fichier bidon (`db.write_bytes(b"x")`) ne suffit plus : depuis l'ajout
+    du contrôle de version de schéma, `should_rebuild` conclut à juste titre
+    « base illisible donc périmée » et renvoie True avant d'atteindre la
+    comparaison de dates que ces tests visent. Les tests deviendraient alors
+    verts pour la mauvaise raison.
+    """
+    import duckdb
+
+    from src.db import SCHEMA_VERSION
+
+    with duckdb.connect(str(db)) as c:
+        c.execute(f"CREATE TABLE schema_version AS SELECT {SCHEMA_VERSION} AS version")
+
+
 def test_should_rebuild_when_db_missing(parquet_and_db):
     parquet, db = parquet_and_db
     assert should_rebuild(db, parquet) is True
@@ -40,7 +57,7 @@ def test_should_rebuild_when_db_missing(parquet_and_db):
 
 def test_should_rebuild_prod_when_parquet_newer(parquet_and_db, monkeypatch):
     parquet, db = parquet_and_db
-    db.write_bytes(b"x")
+    _base_au_schema_courant(db)
     parquet.touch()
     now = time.time()
     os.utime(db, (now, now))
@@ -53,7 +70,7 @@ def test_should_rebuild_prod_when_parquet_newer(parquet_and_db, monkeypatch):
 def test_should_not_rebuild_prod_when_parquet_older(parquet_and_db, monkeypatch):
     parquet, db = parquet_and_db
     parquet.touch()
-    db.write_bytes(b"x")
+    _base_au_schema_courant(db)
     now = time.time()
     os.utime(parquet, (now, now))
     os.utime(db, (now + 10, now + 10))
@@ -64,7 +81,7 @@ def test_should_not_rebuild_prod_when_parquet_older(parquet_and_db, monkeypatch)
 
 def test_should_not_rebuild_dev_even_when_parquet_newer(parquet_and_db, monkeypatch):
     parquet, db = parquet_and_db
-    db.write_bytes(b"x")
+    _base_au_schema_courant(db)
     parquet.touch()
     now = time.time()
     os.utime(db, (now, now))
@@ -76,7 +93,7 @@ def test_should_not_rebuild_dev_even_when_parquet_newer(parquet_and_db, monkeypa
 
 def test_should_rebuild_dev_when_rebuild_forced(parquet_and_db, monkeypatch):
     parquet, db = parquet_and_db
-    db.write_bytes(b"x")
+    _base_au_schema_courant(db)
     parquet.touch()
     now = time.time()
     os.utime(db, (now, now))
