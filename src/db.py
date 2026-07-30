@@ -159,13 +159,17 @@ def build_database(db_path: Path) -> None:
             )
             w.execute(
                 "CREATE TABLE acheteurs_departement AS "
-                "SELECT DISTINCT acheteur_id, acheteur_nom, acheteur_departement_code "
-                "FROM decp ORDER BY acheteur_nom"
+                "SELECT acheteur_id, any_value(acheteur_nom) AS acheteur_nom, "
+                "acheteur_departement_code, COUNT(DISTINCT uid) AS nb_marches "
+                "FROM decp GROUP BY acheteur_id, acheteur_departement_code "
+                "ORDER BY nb_marches DESC, acheteur_id"
             )
             w.execute(
                 "CREATE TABLE titulaires_departement AS "
-                "SELECT DISTINCT titulaire_id, titulaire_nom, titulaire_departement_code "
-                "FROM decp ORDER BY titulaire_nom"
+                "SELECT titulaire_id, any_value(titulaire_nom) AS titulaire_nom, "
+                "titulaire_departement_code, COUNT(DISTINCT uid) AS nb_marches "
+                "FROM decp GROUP BY titulaire_id, titulaire_departement_code "
+                "ORDER BY nb_marches DESC, titulaire_id"
             )
     finally:
         if staging_parquet.exists():
