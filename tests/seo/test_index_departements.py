@@ -230,3 +230,16 @@ def test_segment_non_renseigne_servi(client, acheteurs_sans_departement):
     assert "SANS DEPT UN" in body
     assert "SANS DEPT DEUX" in body
     assert "AVEC DEPT" not in body
+
+
+def test_pages_seo_declarent_la_favicon(client):
+    """Sans déclaration, le navigateur se rabat sur /favicon.ico à la racine,
+    qui répond 404 : icône générique dans l'onglet, et pas d'icône à côté du
+    résultat dans la recherche mobile. Les pages Dash la déclarent déjà."""
+    for url in (
+        "/departements",
+        "/departements/75/acheteurs",
+        "/acheteurs/123/marches",
+    ):
+        body = client.get(url).get_data(as_text=True)
+        assert 'href="/assets/icons/favicon.ico"' in body, url
