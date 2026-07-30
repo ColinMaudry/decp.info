@@ -215,10 +215,11 @@ User-agent: *
 Disallow: /
 """
     return """
-# Blocage du robot d'entrainement d'IA de Meta
 User-agent: meta-externalagent
 User-agent: dotbot
 User-agent: Bytespider
+User-agent: Baiduspider
+User-agent: ClaudeBot
 Disallow: /
 
 User-agent: *
