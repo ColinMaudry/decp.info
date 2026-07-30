@@ -89,9 +89,20 @@ def _arbre_locs() -> list[str]:
 
     Une entrée par page paginée : un crawler qui part du sitemap atteint
     chaque page d'index sans avoir à suivre la pagination.
+
+    Le segment "non-renseigne" a un sens unique et partagé avec
+    `src/seo/routes.py` (voir `SEGMENT_SANS_DEPARTEMENT`) : il ne désigne QUE
+    les organismes dont le code département est NULL. Un code non-NULL absent
+    de `DEPARTEMENTS` est une anomalie de données (le dictionnaire est censé
+    couvrir tous les codes réellement présents) : on ne l'y range pas — cela
+    produirait une URL qui ne liste jamais cet organisme (le filtre de
+    `index_departement` ne matche que `code_sql`, jamais "non-renseigne" pour
+    un code connu) — et on ne le publie pas non plus sous son propre code,
+    puisque la route 404 sur un code inconnu. On journalise et on l'ignore.
     """
     from src.db import get_cursor
-    from src.seo import pagination
+    from src.seo import SEGMENT_SANS_DEPARTEMENT, pagination
+    from src.utils import logger
     from src.utils.data import DEPARTEMENTS
 
     locs = ["/departements"]
@@ -105,11 +116,26 @@ def _arbre_locs() -> list[str]:
             .fetchall()
         )
         for code, total in rows:
-            segment_code = code if code in DEPARTEMENTS else "non-renseigne"
+            if code is None:
+                segment_code = SEGMENT_SANS_DEPARTEMENT
+            elif code in DEPARTEMENTS:
+                segment_code = code
+            else:
+                logger.warning(
+                    "sitemap : code département %r absent de data/departements.json "
+                    "(%s, %d organismes) — omis du sitemap",
+                    code,
+                    org_type,
+                    total,
+                )
+                continue
             base = f"/departements/{segment_code}/{segment}"
             for n in range(1, pagination.page_count(total) + 1):
                 locs.append(base if n == 1 else f"{base}?page={n}")
-    return locs
+    # dédoublonnage en préservant l'ordre : plusieurs codes source (ex. des
+    # codes anormaux avant filtrage, ou une future source de doublons) peuvent
+    # produire la même URL de segment.
+    return list(dict.fromkeys(locs))
 
 
 def build_arbre() -> str:
