@@ -35,7 +35,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 from src.auth.setup import init_auth
 from src.utils import DEVELOPMENT
-from src.utils.cache import cache
+from src.utils.cache import cache, cache_threshold_par_defaut
 from src.utils.chatwoot import (
     build_identity_script,
     build_reset_script,
@@ -90,7 +90,10 @@ cache.init_app(
         "CACHE_DEFAULT_TIMEOUT": int(
             os.getenv("CACHE_DEFAULT_TIMEOUT", 3600 * 24)
         ),  # 24h par défaut
-        "CACHE_THRESHOLD": 300,
+        # Voir cache_threshold_par_defaut() : seuil relevé (300 000 par défaut,
+        # pilotable via CACHE_THRESHOLD) pour ne pas évincer la mémoïsation des
+        # 242 005 SIRET de l'Annuaire des entreprises pendant le crawl SEO.
+        "CACHE_THRESHOLD": cache_threshold_par_defaut(),
     },
 )
 

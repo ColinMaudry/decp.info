@@ -9,10 +9,15 @@ from httpx import HTTPError, get
 
 from src.db import get_cursor, query_marches, schema
 from src.utils import logger
+from src.utils.cache import cache
 
 logging.getLogger("httpx").setLevel("WARNING")
 
 
+# Mémoïsé 30 jours : infos d'établissement quasi figées, dont la fraîcheur
+# n'a aucun enjeu pour un JSON-LD. Protège recherche-entreprises.api.gouv.fr
+# (quota par IP) du crawl des 242 005 fiches organisme de ce chantier SEO.
+@cache.memoize(timeout=3600 * 24 * 30)
 def get_annuaire_data(siret: str) -> dict | None:
     url = f"https://recherche-entreprises.api.gouv.fr/search?q={siret}"
     try:
