@@ -11,11 +11,11 @@ from src.utils.seo import META_CONTENT, make_org_jsonld
 from src.utils.table import format_values, unformat_montant
 
 
-def get_title(uid: str = None) -> str:
+def get_title(uid: str | None = None) -> str:
     return f"Marché {uid} | colibre"
 
 
-def get_description(uid: str = None) -> str:
+def get_description(uid: str | None = None) -> str:
     return (
         f"Détail du marché public {uid} : montant, acheteur, titulaires, "
         "durée, modifications."

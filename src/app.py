@@ -31,6 +31,7 @@ from dash import (
 from dotenv import load_dotenv
 from flask import Flask, Response, redirect
 from flask_login import current_user
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from src.auth.setup import init_auth
 from src.utils import DEVELOPMENT
@@ -69,12 +70,13 @@ if DEVELOPMENT:
 # fonctions memoizées (@cache.memoize) dès l'import (ex. tableau.py).
 server = Flask(__name__)
 
-from werkzeug.middleware.proxy_fix import ProxyFix  # noqa: E402
-
 # nginx transmet X-Forwarded-Proto (voir deploy/nginx-colibre.conf) ; sans ce
 # middleware Flask croit servir en http et le canonical pointerait vers une URL
-# qui redirige.
-server.wsgi_app = ProxyFix(server.wsgi_app, x_proto=1, x_host=1)
+# qui redirige. x_host=0 : nginx ne transmet PAS X-Forwarded-Host (voir le même
+# fichier), donc le faire lire par ProxyFix reviendrait à faire confiance à
+# l'en-tête Host envoyé par le client — un client malveillant pourrait alors
+# faire servir un canonical pointant vers un domaine tiers.
+server.wsgi_app = ProxyFix(server.wsgi_app, x_proto=1, x_host=0)
 
 cache_dir = os.getenv("CACHE_DIR", "/tmp/colibre-cache")
 
@@ -361,9 +363,9 @@ def _interpolate_index_per_request(**kwargs):
     og_url_tag = f'<meta property="og:url" content="{_escape(_request.url)}"/>'
     kwargs["metas"] = f"{kwargs.get('metas', '')}\n      {og_url_tag}"
 
-    from src.utils.page_meta import resolve
+    from src.utils.page_meta import resolve_title
 
-    titre, _description = resolve(_request.path)
+    titre = resolve_title(_request.path)
     if titre:
         kwargs["title"] = str(_escape(titre))
 

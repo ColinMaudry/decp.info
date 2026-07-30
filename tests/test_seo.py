@@ -307,16 +307,17 @@ def test_title_servi_contient_le_nom_de_l_organisme(client):
     assert nom in titre
 
 
-def test_resolve_chemin_inconnu_renvoie_none():
-    """`resolve` sur un chemin hors registre Dash : cas réellement « hors page connue ».
+def test_resolve_title_chemin_inconnu_renvoie_none():
+    """`resolve_title` sur un chemin hors registre Dash : cas réellement « hors page connue ».
 
     Un chemin inconnu passé à `client.get` est intercepté 404 par
     `src.not_found` avant même d'atteindre `interpolate_index` : un test HTTP
-    ne peut donc pas exercer ce cas, seul un appel direct à `resolve` le peut.
+    ne peut donc pas exercer ce cas, seul un appel direct à `resolve_title` le
+    peut.
     """
-    from src.utils.page_meta import resolve
+    from src.utils.page_meta import resolve_title
 
-    assert resolve("/ce-chemin-n-existe-pas-du-tout") == (None, None)
+    assert resolve_title("/ce-chemin-n-existe-pas-du-tout") is None
 
 
 def test_title_page_statique_prend_le_titre_declare(client):
@@ -374,3 +375,14 @@ def test_canonical_servi_dans_le_html(client):
 def test_canonical_ignore_la_query_string(client):
     body = client.get("/tableau?acheteur=X").get_data(as_text=True)
     assert 'href="http://localhost/tableau"' in body
+
+
+def test_canonical_ignore_x_forwarded_host_non_fiable(client):
+    """nginx ne transmet jamais X-Forwarded-Host (deploy/nginx-colibre.conf) :
+    ProxyFix ne doit donc pas s'y fier, sans quoi n'importe quel client pourrait
+    faire servir un canonical pointant vers un domaine tiers de son choix."""
+    body = client.get("/tableau", headers={"X-Forwarded-Host": "evil.tld"}).get_data(
+        as_text=True
+    )
+    assert "evil.tld" not in body
+    assert 'rel="canonical" href="http://localhost/tableau"' in body
