@@ -127,6 +127,17 @@ def test_titulaire_aussi_servi(client):
     assert '<a href="/marches/1">' in body
 
 
+def test_accord_singulier_sur_un_seul_marche(client):
+    """ "Les 1 marchés publics" était le défaut relevé en revue (#128) :
+    accord exact au singulier, sans "Les" ni pluriel fautif."""
+    import re
+
+    body = client.get("/acheteurs/123/marches").get_data(as_text=True)
+    titre = re.findall(r"<title>(.*?)</title>", body)[0]
+    assert titre == "1 marché public attribué par ACHETEUR 1 | colibre"
+    assert "1 marché public attribué par ACHETEUR 1." in body
+
+
 # --- Famille 2 : pagination multi-pages, base en mémoire monkeypatchée ------
 
 
@@ -138,11 +149,30 @@ def test_organisme_sans_marche_rend_200_et_aucun_resultat(
     assert "Aucun résultat." in response.get_data(as_text=True)
 
 
+def test_accord_pluriel_et_mot_cle_marches_publics(client, acheteur_a_5_marches):
+    import re
+
+    body = client.get("/acheteurs/999/marches").get_data(as_text=True)
+    titre = re.findall(r"<title>(.*?)</title>", body)[0]
+    assert titre == "5 marchés publics attribués par ACHETEUR 999 | colibre"
+
+
 def test_canonical_auto_referent_sur_page_2(client, acheteur_a_5_marches, monkeypatch):
+    """La balise canonical elle-même doit porter la query string de pagination.
+
+    `"/acheteurs/999/marches?page=2" in body` resterait vrai à cause du LIEN
+    DE PAGINATION (`<a class="page-link" href="...">`), même si la balise
+    canonical pointait ailleurs (ex. `request.base_url` seul, sans la query
+    string). On extrait donc précisément la valeur de l'attribut `href` de la
+    balise `rel="canonical"`.
+    """
+    import re
+
     monkeypatch.setattr(pagination, "PAGE_SIZE", 2)
     body = client.get("/acheteurs/999/marches?page=2").get_data(as_text=True)
-    assert 'rel="canonical"' in body
-    assert "/acheteurs/999/marches?page=2" in body
+    canonicals = re.findall(r'rel="canonical" href="(.*?)"', body)
+    assert len(canonicals) == 1
+    assert canonicals[0].endswith("/acheteurs/999/marches?page=2")
 
 
 def test_pagination_deterministe(client, acheteur_a_5_marches, monkeypatch):

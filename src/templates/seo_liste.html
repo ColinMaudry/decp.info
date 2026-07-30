@@ -10,9 +10,17 @@
     <link rel="stylesheet" href="/assets/css/style.css" />
   </head>
   <body>
+    <header class="border-bottom py-2 mb-4">
+      <div class="container">
+        <a href="/" class="text-decoration-none fw-bold">colibre</a>
+      </div>
+    </header>
     <div class="container py-4">
       <h1>{{ titre_h1 }}</h1>
       <p>{{ chapeau }}</p>
+      {% if lien_croise %}
+      <p><a href="{{ lien_croise.href }}">{{ lien_croise.libelle }}</a></p>
+      {% endif %}
       <ul>
         {% for e in entrees %}
         <li>
@@ -39,5 +47,6 @@
       {% endif %}
       <p><a href="{{ retour_href }}">{{ retour_libelle }}</a></p>
     </div>
+    {{ matomo_script | safe }}
   </body>
 </html>

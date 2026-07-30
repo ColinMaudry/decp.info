@@ -42,6 +42,7 @@ from src.utils.chatwoot import (
     build_widget_script,
     subscription_attributes,
 )
+from src.utils.matomo import build_tracker_script
 
 load_dotenv()
 
@@ -311,6 +312,13 @@ with open("./pyproject.toml", "rb") as f:
 # pour ne jamais le charger pendant les tests/CI).
 chatwoot_script = build_widget_script(os.getenv("CHATWOOT_WEBSITE_TOKEN"))
 
+# Traqueur Matomo (src/utils/matomo.py) : chaîne vide si MATOMO_TRACKING_ENABLED
+# n'est pas "true" (mis à "false" pendant les tests, pyproject.toml). Le même
+# fragment est servi par les pages SEO SSR (src/templates/seo_liste.html, via
+# le context_processor de src/seo/routes.py) : une seule source, pas de
+# duplication du bloc <script>.
+matomo_script = build_tracker_script()
+
 app.index_string = """
 <!DOCTYPE html>
 <html lang="fr">
@@ -331,24 +339,13 @@ app.index_string = """
             {%scripts%}
             {%renderer%}
         </footer>
-        <script type="application/javascript">
-            console.log("Matomo");
-            var _paq = window._paq = window._paq || [];
-            /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
-            _paq.push(['trackPageView']);
-            _paq.push(['enableLinkTracking']);
-            (function() {
-                var u="//analytics.maudry.com/";
-                _paq.push(['setTrackerUrl', u+'matomo.php']);
-                _paq.push(['setSiteId', '14']);
-                var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
-                g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
-            })();
-        </script>
+        __MATOMO_SCRIPT__
         __CHATWOOT_SCRIPT__
     </body>
 </html>
-""".replace("__CHATWOOT_SCRIPT__", chatwoot_script)
+""".replace("__MATOMO_SCRIPT__", matomo_script).replace(
+    "__CHATWOOT_SCRIPT__", chatwoot_script
+)
 
 # Dash génère automatiquement twitter:url par page (via register_page), mais pas
 # og:url : on l'injecte ici à partir de l'URL de la requête en cours. Ce point

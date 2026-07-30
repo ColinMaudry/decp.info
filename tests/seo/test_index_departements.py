@@ -80,6 +80,48 @@ def test_pagination_de_l_index(client, departement_76, monkeypatch):
     assert "ORGANISME 1" in page2
 
 
+def test_canonical_auto_referent_sur_page_2_index_departement(
+    client, departement_76, monkeypatch
+):
+    """Même garde que `test_liste_marches.py` : extraire le VRAI attribut
+    canonical, pas se fier à la présence de la chaîne dans le HTML (le lien de
+    pagination contient la même URL)."""
+    import re
+
+    monkeypatch.setattr(pagination, "PAGE_SIZE", 2)
+    body = client.get("/departements/76/acheteurs?page=2").get_data(as_text=True)
+    canonicals = re.findall(r'rel="canonical" href="(.*?)"', body)
+    assert len(canonicals) == 1
+    assert canonicals[0].endswith("/departements/76/acheteurs?page=2")
+
+
+def test_titre_singulier_avec_mot_cle_et_sans_contraction(client):
+    """« Titulaires de Alpes-Maritimes » (article contracté absent) et le
+    mot-clé « marchés publics » disparu du <title> étaient les deux défauts
+    relevés en revue (#128). Le séparateur (tiret cadratin) contourne le
+    problème d'article contracté plutôt que d'en inventer une règle."""
+    import re
+
+    body = client.get("/departements/75/acheteurs").get_data(as_text=True)
+    titre = re.findall(r"<title>(.*?)</title>", body)[0]
+    assert titre == "Acheteur public de marchés publics — Paris | colibre"
+
+
+def test_titre_pluriel_avec_mot_cle_et_sans_contraction(client, departement_76):
+    import re
+
+    body = client.get("/departements/76/acheteurs").get_data(as_text=True)
+    titre = re.findall(r"<title>(.*?)</title>", body)[0]
+    assert titre == "Acheteurs publics de marchés publics — Seine-Maritime | colibre"
+
+
+def test_chapeau_accorde_au_singulier(client):
+    """ "1 organismes dans Paris" était le défaut relevé en revue (#128)."""
+    body = client.get("/departements/75/acheteurs").get_data(as_text=True)
+    assert "1 organisme — Paris." in body
+    assert "1 organismes" not in body
+
+
 def test_departement_inconnu_404(client):
     assert client.get("/departements/zz/acheteurs").status_code == 404
 
@@ -129,6 +171,29 @@ def acheteurs_sans_departement(monkeypatch):
     monkeypatch.setattr("src.seo.queries.get_cursor", lambda: conn.cursor())
     yield
     conn.close()
+
+
+def test_lien_croise_vers_titulaires_depuis_acheteurs(client):
+    """Depuis l'index des acheteurs d'un département, un lien mène directement
+    à l'index des titulaires du même département (maillage interne, #128).
+
+    Un simple `"titulaires" in body` resterait vrai à cause du lien vers le
+    hub ou d'autres mentions du mot : on vérifie le href exact.
+    """
+    body = client.get("/departements/75/acheteurs").get_data(as_text=True)
+    assert '<a href="/departements/75/titulaires">' in body
+
+
+def test_lien_croise_vers_acheteurs_depuis_titulaires(client):
+    body = client.get("/departements/75/titulaires").get_data(as_text=True)
+    assert '<a href="/departements/75/acheteurs">' in body
+
+
+def test_en_tete_lien_vers_accueil(client):
+    """Un visiteur arrivant depuis un moteur de recherche a un repère : le nom
+    du site, cliquable vers l'accueil, avant le contenu de la page."""
+    body = client.get("/departements/75/acheteurs").get_data(as_text=True)
+    assert body.index('<a href="/"') < body.index("<h1>")
 
 
 def test_segment_non_renseigne_servi(client, acheteurs_sans_departement):

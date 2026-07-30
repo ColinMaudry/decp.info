@@ -115,6 +115,27 @@ def test_sitemap_unknown_segment_is_404(client):
     assert client.get("/sitemap-marches-1.xml").status_code == 404
 
 
+def test_matomo_absent_des_pages_dash_pendant_les_tests(client):
+    """MATOMO_TRACKING_ENABLED=false pendant les tests (pyproject.toml) :
+    le traqueur ne doit tourner ni en CI ni en dev."""
+    body = client.get("/tableau").get_data(as_text=True)
+    assert "trackPageView" not in body
+
+
+def test_matomo_absent_des_pages_seo_ssr_pendant_les_tests(client):
+    body = client.get("/departements").get_data(as_text=True)
+    assert "trackPageView" not in body
+
+
+def test_matomo_present_sur_une_page_seo_ssr_quand_active(client, monkeypatch):
+    """Le hub /departements était tracké avant l'introduction des pages SEO
+    SSR (#128) : ce test garantit qu'il l'est de nouveau une fois le
+    traqueur activé, via le même fragment que les pages Dash."""
+    monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    body = client.get("/departements").get_data(as_text=True)
+    assert "trackPageView" in body
+
+
 def test_index_has_canonical_link(client):
     resp = client.get("/")
     assert resp.status_code == 200
@@ -261,6 +282,87 @@ def test_sitemap_arbre_couvre_les_organismes_sans_departement(
     assert any("non-renseigne" in loc for loc in locs)
 
 
+@pytest.fixture
+def organisme_code_departement_inconnu(monkeypatch):
+    """Un acheteur dont le code département ("999") n'existe pas dans
+    `data/departements.json`.
+
+    Anomalie de données volontaire : elle ne doit produire ni une URL sous son
+    propre code (`index_departement` 404 sur tout code absent de
+    `DEPARTEMENTS`, donc une telle URL ne mènerait qu'à un 404), ni être
+    rangée sous "non-renseigne" — segment réservé aux organismes SANS code
+    département (NULL), pas aux codes inconnus du dictionnaire.
+    """
+    import duckdb
+
+    conn = duckdb.connect(":memory:")
+    conn.execute(
+        "CREATE TABLE acheteurs_departement ("
+        "acheteur_id VARCHAR, acheteur_nom VARCHAR, "
+        "acheteur_departement_code VARCHAR, nb_marches BIGINT)"
+    )
+    conn.execute(
+        "INSERT INTO acheteurs_departement VALUES ('a-1', 'CODE INCONNU', '999', 3)"
+    )
+    conn.execute(
+        "CREATE TABLE titulaires_departement ("
+        "titulaire_id VARCHAR, titulaire_nom VARCHAR, "
+        "titulaire_departement_code VARCHAR, nb_marches BIGINT)"
+    )
+    monkeypatch.setattr("src.db.get_cursor", lambda: conn.cursor())
+    yield
+    conn.close()
+
+
+def test_sitemap_arbre_n_assimile_pas_un_code_inconnu_a_non_renseigne(
+    organisme_code_departement_inconnu,
+):
+    from src.utils.sitemap import _arbre_locs
+
+    locs = _arbre_locs.uncached()
+    assert not any("999" in loc for loc in locs)
+    assert not any("non-renseigne" in loc for loc in locs)
+
+
+class _CurseurQuiDuplique:
+    """Simule une requête qui renverrait deux fois la même ligne groupée.
+
+    Le vrai `GROUP BY 1` de `_arbre_locs` ne peut pas produire un tel
+    résultat aujourd'hui : cette fausse implémentation de curseur sert
+    uniquement à vérifier que `_arbre_locs` dédoublonne bien ses URLs quelle
+    que soit leur origine, pas à reproduire un bug SQL existant.
+    """
+
+    def __init__(self, rows):
+        self._rows = rows
+
+    def execute(self, *_args, **_kwargs):
+        return self
+
+    def fetchall(self):
+        return self._rows
+
+
+def test_sitemap_arbre_dedoublonne_les_locs(client, monkeypatch):
+    """`client` force l'import de `src.app` (donc de `src.utils.data`, qui
+    construit `DF_ACHETEURS`/`DF_TITULAIRES` via `get_cursor()` à l'import)
+    AVANT le monkeypatch ci-dessous : sinon, exécuté seul, ce test ferait
+    passer ce chargement à travers le faux curseur et casserait sur un import
+    tardif, indépendamment du code sous test.
+    """
+    from src.utils.sitemap import _arbre_locs
+
+    # Même code renvoyé deux fois pour chaque table interrogée : sans
+    # dédoublonnage, la même URL de segment apparaîtrait deux fois.
+    monkeypatch.setattr(
+        "src.db.get_cursor", lambda: _CurseurQuiDuplique([("75", 3), ("75", 3)])
+    )
+    locs = _arbre_locs.uncached()
+    assert locs.count("/departements/75/acheteurs") == 1
+    assert locs.count("/departements/75/titulaires") == 1
+    assert len(locs) == len(set(locs))
+
+
 def test_sitemap_arbre_ne_contient_pas_les_listes_de_marches(client):
     """Les listes de marchés sont atteignables depuis les index, pas déclarées.
 
@@ -386,6 +488,17 @@ def test_canonical_ignore_x_forwarded_host_non_fiable(client):
     )
     assert "evil.tld" not in body
     assert 'rel="canonical" href="http://localhost/tableau"' in body
+
+
+def test_canonical_reflete_x_forwarded_proto_https(client):
+    """`ProxyFix(x_proto=1)` (src/app.py) : sans lui, Flask croit servir en
+    http derrière nginx et le canonical sortirait en http:// en production,
+    c'est-à-dire vers une URL qui redirige (voir deploy/nginx-yunohost-prod.conf).
+    """
+    body = client.get("/tableau", headers={"X-Forwarded-Proto": "https"}).get_data(
+        as_text=True
+    )
+    assert 'rel="canonical" href="https://localhost/tableau"' in body
 
 
 def test_jsonld_organisme_servi_dans_le_html(client):

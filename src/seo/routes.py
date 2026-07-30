@@ -9,15 +9,46 @@ Flask échappent au catch-all de Dash.
 
 from flask import Blueprint, abort, redirect, render_template, request
 
-from src.seo import pagination, queries
+from src.seo import SEGMENT_SANS_DEPARTEMENT, pagination, queries
 from src.utils.data import DEPARTEMENTS
+from src.utils.matomo import build_tracker_script
+from src.utils.pluriel import accorder
 
 seo_bp = Blueprint("seo", __name__)
 
+# `segment` : préfixe d'URL. `verbe_*`/`type_*` : formes singulier/pluriel des
+# libellés générés (voir `accorder`). Les noms de département ne sont jamais
+# accolés à une préposition contractable ("de"/"du"/"des"/"dans") dans les
+# gabarits ci-dessous : aucune règle fiable ne dérive l'article correct du
+# seul nom (« du Nord », « des Alpes-Maritimes », « de la Réunion », « de
+# Paris »), donc on sépare par un tiret cadratin plutôt que d'en inventer une.
 _LIBELLES = {
-    "acheteur": ("attribués par", "acheteurs"),
-    "titulaire": ("remportés par", "titulaires"),
+    "acheteur": {
+        "segment": "acheteurs",
+        "verbe_singulier": "attribué par",
+        "verbe_pluriel": "attribués par",
+        "type_singulier": "Acheteur public",
+        "type_pluriel": "Acheteurs publics",
+    },
+    "titulaire": {
+        "segment": "titulaires",
+        "verbe_singulier": "remporté par",
+        "verbe_pluriel": "remportés par",
+        "type_singulier": "Titulaire",
+        "type_pluriel": "Titulaires",
+    },
 }
+
+
+@seo_bp.context_processor
+def _inject_matomo():
+    """Rend `matomo_script` disponible dans tous les gabarits de ce blueprint.
+
+    Un seul point d'injection plutôt qu'un argument répété dans chaque
+    `render_template` : voir `src/utils/matomo.py` pour le conditionnement
+    par `MATOMO_TRACKING_ENABLED`.
+    """
+    return {"matomo_script": build_tracker_script()}
 
 
 class Entree:
@@ -45,20 +76,25 @@ def _marches_org(org_type: str, org_id: str):
     if page > pages:
         abort(404)
 
-    verbe, segment = _LIBELLES[org_type]
+    libelles = _LIBELLES[org_type]
+    segment = libelles["segment"]
+    verbe = accorder(total, libelles["verbe_singulier"], libelles["verbe_pluriel"])
+    marches_libelle = accorder(total, "marché public", "marchés publics")
+    article_partitif = accorder(total, "du", "des")
+    nombre = "" if total <= 1 else f"{total} "
     base = f"/{segment}/{org_id}/marches"
     rang = f" (page {page} sur {pages})" if pages > 1 else ""
 
     return render_template(
         "seo_liste.html",
-        titre=f"Les {total} marchés publics {verbe} {nom}{rang} | colibre",
+        titre=f"{total} {marches_libelle} {verbe} {nom}{rang} | colibre",
         description=(
-            f"Liste complète des {total} marchés publics {verbe} {nom}, "
+            f"Liste complète {article_partitif} {nombre}{marches_libelle} {verbe} {nom}, "
             "publiée par colibre."
         ),
         canonical=request.base_url + (f"?page={page}" if page > 1 else ""),
-        titre_h1=f"Marchés publics {verbe} {nom}",
-        chapeau=f"{total} marchés publics {verbe} {nom}.",
+        titre_h1=f"{marches_libelle.capitalize()} {verbe} {nom}",
+        chapeau=f"{total} {marches_libelle} {verbe} {nom}.",
         entrees=[
             Entree(href=f"/marches/{uid}", libelle=objet or uid) for uid, objet in rows
         ],
@@ -80,9 +116,6 @@ def marches_titulaire(org_id: str):
     return _marches_org("titulaire", org_id)
 
 
-_SEGMENT_SANS_DEPARTEMENT = "non-renseigne"
-
-
 @seo_bp.route("/departements")
 def hub_departements():
     entrees = []
@@ -101,13 +134,13 @@ def hub_departements():
         )
     entrees.append(
         Entree(
-            href=f"/departements/{_SEGMENT_SANS_DEPARTEMENT}/acheteurs",
+            href=f"/departements/{SEGMENT_SANS_DEPARTEMENT}/acheteurs",
             libelle="Département non renseigné — acheteurs",
         )
     )
     entrees.append(
         Entree(
-            href=f"/departements/{_SEGMENT_SANS_DEPARTEMENT}/titulaires",
+            href=f"/departements/{SEGMENT_SANS_DEPARTEMENT}/titulaires",
             libelle="Département non renseigné — titulaires",
         )
     )
@@ -136,7 +169,7 @@ def index_departement(code: str, type_org: str):
         abort(404)
     org_type = type_org[:-1]  # "acheteurs" -> "acheteur"
 
-    if code == _SEGMENT_SANS_DEPARTEMENT:
+    if code == SEGMENT_SANS_DEPARTEMENT:
         code_sql, nom_dept = None, "département non renseigné"
     elif code in DEPARTEMENTS:
         code_sql, nom_dept = code, DEPARTEMENTS[code]["departement"]
@@ -155,18 +188,21 @@ def index_departement(code: str, type_org: str):
 
     base = f"/departements/{code}/{type_org}"
     rang = f" (page {page} sur {pages})" if pages > 1 else ""
-    libelle_type = "Acheteurs publics" if org_type == "acheteur" else "Titulaires"
+    libelles = _LIBELLES[org_type]
+    libelle_type = accorder(total, libelles["type_singulier"], libelles["type_pluriel"])
+    organisme_libelle = accorder(total, "organisme", "organismes")
+    autre_type_org = "titulaires" if type_org == "acheteurs" else "acheteurs"
 
     return render_template(
         "seo_liste.html",
-        titre=f"{libelle_type} de {nom_dept}{rang} | colibre",
+        titre=f"{libelle_type} de marchés publics — {nom_dept}{rang} | colibre",
         description=(
-            f"Les {total} {libelle_type.lower()} de marchés publics "
-            f"de {nom_dept}, avec leur nombre de marchés."
+            f"{total} {libelle_type.lower()} — {nom_dept}, "
+            "avec leur nombre de marchés publics."
         ),
         canonical=request.base_url + (f"?page={page}" if page > 1 else ""),
-        titre_h1=f"{libelle_type} de {nom_dept}",
-        chapeau=f"{total} organismes dans {nom_dept}.",
+        titre_h1=f"{libelle_type} de marchés publics — {nom_dept}",
+        chapeau=f"{total} {organisme_libelle} — {nom_dept}.",
         entrees=[
             Entree(
                 href=f"/{type_org}/{org_id}",
@@ -181,6 +217,10 @@ def index_departement(code: str, type_org: str):
         url_page=lambda n: base if n == 1 else f"{base}?page={n}",
         retour_href="/departements",
         retour_libelle="Retour à la liste des départements",
+        lien_croise=Entree(
+            href=f"/departements/{code}/{autre_type_org}",
+            libelle=f"{nom_dept} — {autre_type_org}",
+        ),
     )
 
 
