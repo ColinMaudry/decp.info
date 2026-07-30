@@ -1,3 +1,7 @@
+##### 3.0.2
+
+- blocage et limitations dans le trafic des robots, en particulier ceux de Baidu
+
 ##### 3.0.1
 
 - optimisation du contenu généré pour le SEO (index des pages, sitemaps, titres, métadonnées, etc.) ([#128](https://github.com/ColinMaudry/colibre/issues/128))
