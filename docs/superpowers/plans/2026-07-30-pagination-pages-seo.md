@@ -16,7 +16,8 @@
 - Interface en français : titres, textes, messages d'erreur, noms de tests.
 - Avant tout `git add` ou `git commit`, exécuter `pre-commit run --files <fichiers>` pour que ruff formate.
 - Les tests se lancent avec `uv run pytest`, jamais `pytest` seul.
-- 100 entrées par page, exposé par la constante `PAGE_SIZE` dans `src/seo/pagination.py`. Les tests la monkeypatchent plutôt que de créer 100 lignes de données.
+- 100 entrées par page, exposé par la constante `PAGE_SIZE` dans `src/seo/pagination.py`. Les tests la monkeypatchent plutôt que de créer 100 lignes de données. L'accès se fait toujours par `pagination.PAGE_SIZE` : un `from src.seo.pagination import PAGE_SIZE` figerait la valeur à l'import et rendrait le monkeypatch inopérant.
+- **La connexion DuckDB du processus est ouverte en lecture seule** (`src/db.py:218`, pour que plusieurs workers gunicorn partagent le fichier). Aucun test ne peut insérer via `get_cursor()`, et DuckDB refuse une seconde connexion en écriture sur le même fichier. Les tests qui ont besoin de données supplémentaires substituent le curseur — `monkeypatch.setattr("src.seo.queries.get_cursor", lambda: conn.cursor())` sur une base `:memory:` qu'ils peuplent — plutôt que de modifier `src/db.py` ou `_TEST_DATA` dans `tests/conftest.py`.
 - Tout ajout de page publique doit être couvert par le sitemap ou listé dans les exclusions de `src/utils/sitemap.py` (le test-garde `test_sitemap_couvre_toutes_les_pages_publiques` ne voit que les pages Dash, pas les routes Flask).
 - Ne pas introduire de mécanisme de cache concurrent de `flask-caching` : le backend Redis arrive par #123 puis #62.
 
@@ -361,23 +362,38 @@ def client():
 
 
 @pytest.fixture
-def acheteur_a_5_marches():
-    """Insère 5 marchés pour un acheteur dédié, nettoyés après le test.
+def acheteur_a_5_marches(monkeypatch):
+    """5 marchés pour un acheteur dédié, sur une base DuckDB en mémoire.
 
-    On utilise l'identifiant 999 qu'aucun autre test n'emploie, pour ne pas
-    perturber les assertions des autres modules qui partagent la base DuckDB
-    du processus.
+    La connexion DuckDB du processus est ouverte en lecture seule
+    (`src/db.py:218`) : insérer via `get_cursor()` lève
+    `InvalidInputException`, et ouvrir une seconde connexion en écriture sur
+    le même fichier est refusé par DuckDB. On substitue donc le curseur
+    utilisé par les requêtes. La base meurt avec la fixture.
     """
-    from src.db import get_cursor
+    import duckdb
 
-    cur = get_cursor()
+    conn = duckdb.connect(":memory:")
+    conn.execute(
+        "CREATE TABLE acheteurs_marches "
+        "(uid VARCHAR, objet VARCHAR, acheteur_id VARCHAR)"
+    )
+    conn.execute(
+        "CREATE TABLE acheteurs_departement ("
+        "acheteur_id VARCHAR, acheteur_nom VARCHAR, "
+        "acheteur_departement_code VARCHAR, nb_marches BIGINT)"
+    )
+    conn.execute(
+        "INSERT INTO acheteurs_departement VALUES ('999', 'ACHETEUR 999', '75', 5)"
+    )
     for i in range(5):
-        cur.execute(
-            "INSERT INTO acheteurs_marches (uid, objet, acheteur_id) VALUES (?, ?, ?)",
-            [f"uid-{i:02d}", f"Objet {i}", "999"],
+        conn.execute(
+            "INSERT INTO acheteurs_marches VALUES (?, ?, '999')",
+            [f"uid-{i:02d}", f"Objet {i}"],
         )
+    monkeypatch.setattr("src.seo.queries.get_cursor", lambda: conn.cursor())
     yield "999"
-    cur.execute("DELETE FROM acheteurs_marches WHERE acheteur_id = '999'")
+    conn.close()
 
 
 def test_liste_rendue_cote_serveur(client):
@@ -648,20 +664,31 @@ def client():
 
 
 @pytest.fixture
-def departement_99():
-    """3 acheteurs dans un département dédié, nettoyés après le test."""
-    from src.db import get_cursor
+def departement_99(monkeypatch):
+    """3 acheteurs dans un département dédié, sur une base DuckDB en mémoire.
 
-    cur = get_cursor()
+    La connexion DuckDB du processus est ouverte en lecture seule
+    (`src/db.py:218`) : on ne peut donc PAS insérer via `get_cursor()`. On
+    substitue le curseur utilisé par les requêtes, pas la base réelle — même
+    précédent que `tests/seo/test_tables_nb_marches.py`. La base meurt avec la
+    fixture, donc aucun nettoyage à faire.
+    """
+    import duckdb
+
+    conn = duckdb.connect(":memory:")
+    conn.execute(
+        "CREATE TABLE acheteurs_departement ("
+        "acheteur_id VARCHAR, acheteur_nom VARCHAR, "
+        "acheteur_departement_code VARCHAR, nb_marches BIGINT)"
+    )
     for i, nb in enumerate([7, 3, 42]):
-        cur.execute(
-            "INSERT INTO acheteurs_departement "
-            "(acheteur_id, acheteur_nom, acheteur_departement_code, nb_marches) "
-            "VALUES (?, ?, '99', ?)",
+        conn.execute(
+            "INSERT INTO acheteurs_departement VALUES (?, ?, '99', ?)",
             [f"org-{i}", f"ORGANISME {i}", nb],
         )
+    monkeypatch.setattr("src.seo.queries.get_cursor", lambda: conn.cursor())
     yield "99"
-    cur.execute("DELETE FROM acheteurs_departement WHERE acheteur_departement_code = '99'")
+    conn.close()
 
 
 def test_hub_liste_les_departements(client):
