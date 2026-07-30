@@ -15,14 +15,38 @@ from src.utils.cache import cache
 BASE_URL = "https://colibre.fr"
 URLS_PER_SITEMAP = 50_000
 
-# Pages statiques indexables.
-STATIC_PAGES = [
+# Racines statiques indexables, listées explicitement (elles bougent rarement).
+STATIC_ROOTS = [
     "/",
     "/observatoire",
     "/tableau",
-    "/a-propos",
     "/etapes",
 ]
+
+# Préfixes dont les sous-pages sont découvertes automatiquement dans le registre
+# Dash : ajouter une section « À propos » suffit, le sitemap suit.
+AUTO_PREFIXES = ("/a-propos/",)
+
+# Pages volontairement hors sitemap. Le test-garde
+# `test_sitemap_couvre_toutes_les_pages_publiques` échoue si une page du
+# registre n'est ni couverte par le sitemap ni listée ici : ajouter une page
+# force donc un choix explicite.
+NON_INDEXABLE_PREFIXES = (
+    "/compte",  # espace connecté
+    "/admin",  # back-office
+    "/departements",  # navigation par arbre, on met en avant marchés et organismes
+)
+NON_INDEXABLE_PATHS = frozenset(
+    {
+        "/a-propos",  # redirection JS vers /a-propos/presentation, sans contenu
+        "/404",
+        "/connexion",
+        "/inscription",
+        "/mot-de-passe-oublie",
+        "/reinitialiser-mot-de-passe",
+        "/verification-email",
+    }
+)
 
 # (segment d'URL, table DuckDB, colonne identifiant)
 ORG_SITEMAPS = {
@@ -78,9 +102,35 @@ def build_index() -> str:
     )
 
 
+def is_non_indexable(path: str) -> bool:
+    """Vrai si `path` est délibérément tenu hors du sitemap."""
+    return path in NON_INDEXABLE_PATHS or any(
+        path == p or path.startswith(f"{p}/") for p in NON_INDEXABLE_PREFIXES
+    )
+
+
+def static_pages() -> list[str]:
+    """Chemins des pages statiques indexables.
+
+    Les racines sont explicites, les sous-pages des `AUTO_PREFIXES` sont lues
+    dans `dash.page_registry` (peuplé à la création de l'app, donc complet au
+    moment où un crawler appelle la route).
+    """
+    from dash import page_registry
+
+    auto = sorted(
+        page["path"]
+        for page in page_registry.values()
+        if not page.get("path_template")
+        and page["path"].startswith(AUTO_PREFIXES)
+        and not is_non_indexable(page["path"])
+    )
+    return STATIC_ROOTS + auto
+
+
 def build_pages() -> str:
     """Sous-sitemap des pages statiques."""
-    return _urlset([f"{BASE_URL}{p}" for p in STATIC_PAGES])
+    return _urlset([f"{BASE_URL}{p}" for p in static_pages()])
 
 
 def build_org_page(segment: str, page: int) -> str | None:

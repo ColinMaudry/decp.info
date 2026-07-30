@@ -13,17 +13,17 @@ register_page(
 )
 
 _HASH_MAP = {
-    "#donnees-brutes": "/a-propos/donnees-brutes",
-    "#api-privee": "/a-propos/api-privee",
+    "#donnees-brutes": "/a-propos/donnees#donnees-brutes",
+    "#api-privee": "/a-propos/donnees#donnees-brutes",
     "#contact": "/a-propos/contact",
     "#explorer": "/a-propos/explorer",
-    "#qualite-exhausitivite": "/a-propos/qualite",
-    "#sources": "/a-propos/sources",
+    "#qualite-exhausitivite": "/a-propos/donnees#qualite",
+    "#sources": "/a-propos/donnees#sources",
     "#mentions-legales": "/a-propos/mentions-legales",
-    "#publication": "/a-propos/mentions-legales",
-    "#audience": "/a-propos/mentions-legales",
-    "#attributions": "/a-propos/mentions-legales",
-    "#liste_marches": "/a-propos/mentions-legales",
+    "#publication": "/a-propos/mentions-legales#publication",
+    "#audience": "/a-propos/mentions-legales#audience",
+    "#attributions": "/a-propos/mentions-legales#attributions",
+    "#liste_marches": "/a-propos/mentions-legales#liste_marches",
 }
 
 

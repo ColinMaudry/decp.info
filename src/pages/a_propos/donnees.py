@@ -30,7 +30,7 @@ Ces données couvrent principalement l'étape d'attribution des marchés publics
             ),
             build_mobile(),
             build_chart(),
-            html.H2("Consommer les données brutes"),
+            html.H2("Consommer les données brutes", id="donnees-brutes"),
             dcc.Markdown("""
 Vous pouvez consommer les données qui alimentent colibre en les téléchargeant
 [sur data.gouv.fr](https://www.data.gouv.fr/datasets/donnees-essentielles-de-la-commande-publique-consolidees-format-tabulaire) (Parquet, CSV),
@@ -38,7 +38,9 @@ pensez à lire la description du jeu de données
 
 Une API REST tabulaire (JSON) est également disponible par abonnement mensuel pour accéder aux mêmes données et alimenter une application.
 Documentation interactive : [Swagger UI](/api/v1/swagger). Si vous souhaitez utiliser l'API, [envoyez un message](/a-propos/contact)."""),
-            html.H2("Qualité et exhaustivité des données", className="mt-4"),
+            html.H2(
+                "Qualité et exhaustivité des données", id="qualite", className="mt-4"
+            ),
             dcc.Markdown(
                 """Les données visibles sur ce site proviennent exclusivement de la publication de données
                 ouvertes par les acheteurs publics ou en leur nom, régie par
@@ -54,12 +56,12 @@ valeurs farfelues ([1 euro](https://colibre.fr/marches/432766947000192025S01301)
 Acheteurs, acheteuses : s'il vous plaît, essayez d'estimer les montants des marchés publics attribués de manière plus précise.
 
 Quant à l'exhaustivité, [decp-processing](https://github.com/ColinMaudry/decp-processing) consolide
-toutes les sources de données exploitables ayant pu être identifiées (voir [Sources de données](/a-propos/donnees)).
+toutes les sources de données exploitables ayant pu être identifiées (voir [Sources de données](#sources)).
 Il faut souligner la belle continuité de la publication par la DGFiP des données des marchés publics remontées via le
 [protocole PES](https://www.collectivites-locales.gouv.fr/finances-locales/le-protocole-dechange-standard-pes).
 Merci à leurs équipes."""
             ),
-            html.H2("Sources de données", className="mt-4"),
+            html.H2("Sources de données", id="sources", className="mt-4"),
             get_sources_tables(os.getenv("SOURCE_STATS_CSV_PATH")),
             html.P(
                 "Ce graphique illustre les doublons de marchés publics entre sources, c'est-à-dire la proportion de marchés publiés par plus d'une source."

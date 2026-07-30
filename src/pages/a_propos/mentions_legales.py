@@ -46,7 +46,7 @@ colibre est mis à disposition pour une consultation normale. Sont notamment pro
 - le partage d'un compte entre plusieurs personnes ;
 - toute action portant atteinte à la disponibilité ou à la sécurité du service.
 
-Les données sont par ailleurs disponibles en [téléchargement libre](/a-propos/donnees-brutes) : merci de les récupérer par ce biais plutôt que par moissonnage du site.
+Les données sont par ailleurs disponibles en [téléchargement libre](/a-propos/donnees#donnees-brutes) : merci de les récupérer par ce biais plutôt que par moissonnage du site.
 
 En cas de manquement, l'accès au service peut être suspendu.
 """

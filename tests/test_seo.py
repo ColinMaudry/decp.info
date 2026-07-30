@@ -62,6 +62,39 @@ def test_sitemap_pages_lists_static_pages(client):
     assert "https://colibre.fr/observatoire" in body
 
 
+def test_sitemap_pages_inclut_les_sous_pages_a_propos(client):
+    """Les sous-pages « À propos » sont découvertes dans le registre Dash."""
+    body = client.get("/sitemap-pages.xml").get_data(as_text=True)
+    for path in ("/a-propos/presentation", "/a-propos/donnees", "/a-propos/contact"):
+        assert f"<loc>https://colibre.fr{path}</loc>" in body
+
+
+def test_sitemap_pages_exclut_la_redirection_a_propos(client):
+    """`/a-propos` est une redirection JS sans contenu : hors sitemap."""
+    body = client.get("/sitemap-pages.xml").get_data(as_text=True)
+    assert "<loc>https://colibre.fr/a-propos</loc>" not in body
+
+
+def test_sitemap_couvre_toutes_les_pages_publiques(client):
+    """Filet : une nouvelle page doit rejoindre le sitemap ou les exclusions.
+
+    Évite qu'une page ajoutée hors des `AUTO_PREFIXES` soit oubliée en silence.
+    """
+    from dash import page_registry
+
+    from src.utils.sitemap import is_non_indexable, static_pages
+
+    couvertes = set(static_pages())
+    oubliees = {
+        page["path"]
+        for page in page_registry.values()
+        if not page.get("path_template")
+        and page["path"] not in couvertes
+        and not is_non_indexable(page["path"])
+    }
+    assert not oubliees, f"pages ni indexées ni exclues : {sorted(oubliees)}"
+
+
 def test_sitemap_acheteurs_lists_org_urls(client):
     resp = client.get("/sitemap-acheteurs-1.xml")
     assert resp.status_code == 200
