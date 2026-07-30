@@ -4,11 +4,16 @@ import sys
 
 from dotenv import load_dotenv
 
-from src.api import tokens_db
+# Doit précéder l'import de src.api : celui-ci importe transitivement src.db,
+# qui construit/ouvre la base DuckDB au chargement du module en lisant
+# DATA_FILE_PARQUET_PATH. Charger le .env après cet import est trop tard —
+# la variable est vide et la construction de la base échoue.
+load_dotenv()
+
+from src.api import tokens_db  # noqa: E402
 
 
 def main(argv=None, env=None) -> int:
-    load_dotenv()
     env = env if env is not None else os.environ
     parser = argparse.ArgumentParser(prog="python -m src.api.tokens_cli")
     sub = parser.add_subparsers(dest="cmd", required=True)
