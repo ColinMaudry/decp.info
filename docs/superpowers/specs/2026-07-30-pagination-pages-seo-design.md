@@ -239,6 +239,38 @@ C'est ce chantier qui crée le risque, il porte donc le correctif : un
 `@cache.memoize` sur la fonction, les données d'établissement ne bougeant
 quasiment jamais.
 
+#### Contrainte du backend actuel, et cible Redis
+
+`CACHE_THRESHOLD` vaut 300 (`app.py:84`). `set()` appelle `_prune()` à chaque
+écriture, et `_prune()` déclenche `_remove_older()`, qui supprime les entrées les
+plus anciennes jusqu'à repasser sous le seuil. Le cache plafonne donc à ~300
+entrées : mémoïser 242 005 SIRET contre ce plafond ne servirait à rien, et
+au-delà du seuil chaque écriture provoque un parcours complet du répertoire avec
+un `open` sur chaque fichier pour les trier par date.
+
+Correctif retenu **à court terme** : relever `CACHE_THRESHOLD` à 300 000, pilotable
+par variable d'environnement. `_over_threshold()` s'appuie sur un compteur
+maintenu, donc tant qu'on reste sous le seuil il n'y a aucun parcours de
+répertoire. Contreparties assumées : ~242 000 fichiers dans `CACHE_DIR`, effacés
+à chaque démarrage par le `rmtree` de `app.py:74` — donc cache froid après chaque
+déploiement, et Googlebot rappelle l'API. À vérifier au déploiement : si `/tmp`
+est un tmpfs sur le serveur cible, ces fichiers vivent en RAM et `CACHE_DIR` doit
+pointer ailleurs.
+
+**Cible** : le backend Redis prévu par [#62](https://github.com/ColinMaudry/colibre/issues/62),
+introduit par [#123](https://github.com/ColinMaudry/colibre/issues/123) (limitation
+de débit). Le passage se fait par configuration — `CACHE_TYPE` — sans toucher aux
+décorateurs `@cache.memoize`, qui sont agnostiques du backend. Rien à prévoir ici
+au-delà de ne pas construire de mécanisme concurrent.
+
+À noter pour ces deux issues : le commentaire de #62 justifie Redis par le fait
+que `FileSystemCache` donne « un cache distinct par processus ». Ce n'est pas le
+cas dans cette configuration — `CACHE_DIR` est un chemin fixe partagé et les noms
+de fichiers dérivent d'un hash de la clé, donc les workers partagent le même
+cache, avec des écritures atomiques par `os.replace`. Les motifs valables du
+passage à Redis sont le plafond d'entrées, la persistance au redémarrage et
+l'emplacement du stockage.
+
 ## Migration des URLs
 
 | URL actuelle                       | Devenir                                                                                                    |
@@ -285,3 +317,6 @@ union égale au total.
 - Les 373 acheteurs et 13 956 titulaires sans département sont rendus
   explorables, mais la correction de la donnée manquante elle-même relève de
   `decp-processing`.
+- Le passage du cache à Redis, qui relève de #123 puis #62. Ce spec se contente
+  de relever le seuil du backend fichier et de n'introduire aucun mécanisme de
+  cache concurrent.
