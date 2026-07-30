@@ -17,6 +17,12 @@ import os
 
 def build_tracker_script() -> str:
     """Bloc <script> du traqueur Matomo, ou chaîne vide si désactivé."""
+    # `MATOMO_TRACKING_ENABLED` conditionnait à l'origine seulement le suivi
+    # SERVEUR de l'API (src/api/tracking.py). Depuis cette factorisation, elle
+    # conditionne AUSSI l'émission du traqueur navigateur (ce fragment, injecté
+    # dans app.index_string ET dans seo_liste.html). Si `.env` en production
+    # ne porte pas `MATOMO_TRACKING_ENABLED=true`, toute l'analytique du site
+    # (serveur + navigateur) s'éteint silencieusement — pas seulement l'API.
     if os.getenv("MATOMO_TRACKING_ENABLED", "false").lower() != "true":
         return ""
     return """<script type="application/javascript">
