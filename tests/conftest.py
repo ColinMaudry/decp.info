@@ -45,7 +45,7 @@ _PARQUET_PATH = Path(os.path.abspath("tests/test.parquet"))
 # Base DuckDB de test ISOLÉE : src.db lit le chemin via DUCKDB_PATH (défaut
 # ./colibre.duckdb). On la place dans tests/ pour ne JAMAIS toucher au colibre.duckdb
 # de dev/prod — plus besoin de sauvegarder/restaurer. Le nom colibre.duckdb
-# correspond au motif **/colibre.duckdb déjà présent dans .gitignore.
+# est couvert par le motif **/colibre.duckdb ajouté au .gitignore.
 _DB_PATH = Path(os.path.abspath("tests/colibre.duckdb"))
 os.environ["DUCKDB_PATH"] = str(_DB_PATH)
 
