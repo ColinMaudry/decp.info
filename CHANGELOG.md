@@ -1,3 +1,8 @@
+##### 3.0.1
+
+- optimisation du contenu généré pour le SEO
+- correction du nombre de titulaires affiché en page d'accueil
+
 ### 3.0.0
 
 **Fonctionnalités par abonnement**
