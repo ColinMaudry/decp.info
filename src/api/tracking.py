@@ -53,6 +53,12 @@ def enqueue_matomo_event(
 ) -> None:
     if _queue is None:
         return
+    # `MATOMO_TRACKING_ENABLED` a été introduite ici pour ce suivi côté
+    # serveur de l'API, mais elle conditionne AUSSI, depuis la factorisation
+    # de src/utils/matomo.py, le traqueur <script> émis côté navigateur pour
+    # les pages Dash et SEO (build_tracker_script). Ne pas la couper sans
+    # vérifier les deux usages : une désactivation par erreur ici éteint
+    # aussi silencieusement l'analytique du site.
     if os.getenv("MATOMO_TRACKING_ENABLED", "false").lower() != "true":
         return
     url = os.getenv("MATOMO_URL")

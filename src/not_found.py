@@ -12,13 +12,14 @@ le serveur : elle est couverte par `src/pages/not_found_404.py`.
 
 import os
 
-# API privée de Dash, assumée : c'est la fonction que Dash utilise lui-même pour
-# router, donc la seule façon de renvoyer 404 exactement sur ce qu'il aurait
-# affiché comme introuvable, gabarits compris (`/marches/<uid>`). Les tests
-# épinglent son comportement : une montée de version qui la déplacerait casse la
-# CI avant le déploiement.
-from dash._pages import _path_to_page
+# Passe par src.utils.page_meta, qui porte désormais la justification de l'appel
+# à l'API privée `_path_to_page` de Dash (assumée : c'est la fonction que Dash
+# utilise lui-même pour router, donc la seule façon de renvoyer 404 exactement
+# sur ce qu'il aurait affiché comme introuvable, gabarits compris
+# (`/marches/<uid>`)).
 from flask import Flask, request, send_from_directory
+
+from src.utils.page_meta import page_for_path
 
 # Règle Flask du catch-all de Dash. Les vraies routes (/robots.txt, /api/…,
 # /assets/<path:filename>, /_dash-*, /_mcp, /oauth/*, /.well-known/*) ont la
@@ -36,7 +37,7 @@ def page_exists(pathname: str) -> bool:
     404 elle aussi, sans quoi on servirait un message « page introuvable » avec
     un statut 200.
     """
-    page, _ = _path_to_page(pathname.strip("/"))
+    page, _ = page_for_path(pathname)
     if not page:
         return False
     return page["module"].split(".")[-1] != "not_found_404"

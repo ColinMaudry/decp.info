@@ -31,16 +31,18 @@ from dash import (
 from dotenv import load_dotenv
 from flask import Flask, Response, redirect
 from flask_login import current_user
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from src.auth.setup import init_auth
 from src.utils import DEVELOPMENT
-from src.utils.cache import cache
+from src.utils.cache import cache, cache_threshold_par_defaut
 from src.utils.chatwoot import (
     build_identity_script,
     build_reset_script,
     build_widget_script,
     subscription_attributes,
 )
+from src.utils.matomo import build_tracker_script
 
 load_dotenv()
 
@@ -69,6 +71,14 @@ if DEVELOPMENT:
 # fonctions memoizées (@cache.memoize) dès l'import (ex. tableau.py).
 server = Flask(__name__)
 
+# nginx transmet X-Forwarded-Proto (voir deploy/nginx-colibre.conf) ; sans ce
+# middleware Flask croit servir en http et le canonical pointerait vers une URL
+# qui redirige. x_host=0 : nginx ne transmet PAS X-Forwarded-Host (voir le même
+# fichier), donc le faire lire par ProxyFix reviendrait à faire confiance à
+# l'en-tête Host envoyé par le client — un client malveillant pourrait alors
+# faire servir un canonical pointant vers un domaine tiers.
+server.wsgi_app = ProxyFix(server.wsgi_app, x_proto=1, x_host=0)
+
 cache_dir = os.getenv("CACHE_DIR", "/tmp/colibre-cache")
 
 rmtree(cache_dir, ignore_errors=True)
@@ -81,7 +91,10 @@ cache.init_app(
         "CACHE_DEFAULT_TIMEOUT": int(
             os.getenv("CACHE_DEFAULT_TIMEOUT", 3600 * 24)
         ),  # 24h par défaut
-        "CACHE_THRESHOLD": 300,
+        # Voir cache_threshold_par_defaut() : seuil relevé (300 000 par défaut,
+        # pilotable via CACHE_THRESHOLD) pour ne pas évincer la mémoïsation des
+        # 242 005 SIRET de l'Annuaire des entreprises pendant le crawl SEO.
+        "CACHE_THRESHOLD": cache_threshold_par_defaut(),
     },
 )
 
@@ -191,6 +204,12 @@ from src.mcp.account import mcp_account_bp  # noqa: E402
 
 app.server.register_blueprint(mcp_account_bp)
 
+# Pages SEO rendues côté serveur (voir src/seo/routes.py). Enregistrées avant
+# init_not_found pour être de vraies règles Flask, donc hors du catch-all Dash.
+from src.seo.routes import seo_bp  # noqa: E402
+
+app.server.register_blueprint(seo_bp)
+
 # 404 sur les chemins qui ne correspondent à aucune page (#125). À déclarer
 # après les autres routes : le garde ne s'applique qu'au catch-all de Dash, donc
 # toute route enregistrée ici ou plus haut lui échappe par construction.
@@ -247,6 +266,11 @@ def sitemap_pages():
     return Response(_sitemap.build_pages(), mimetype="application/xml")
 
 
+@app.server.route("/sitemap-arbre.xml")
+def sitemap_arbre():
+    return Response(_sitemap.build_arbre(), mimetype="application/xml")
+
+
 @app.server.route("/sitemap-<segment>-<int:page>.xml")
 def sitemap_org(segment: str, page: int):
     xml = _sitemap.build_org_page(segment, page)
@@ -289,6 +313,13 @@ with open("./pyproject.toml", "rb") as f:
 # pour ne jamais le charger pendant les tests/CI).
 chatwoot_script = build_widget_script(os.getenv("CHATWOOT_WEBSITE_TOKEN"))
 
+# Traqueur Matomo (src/utils/matomo.py) : chaîne vide si MATOMO_TRACKING_ENABLED
+# n'est pas "true" (mis à "false" pendant les tests, pyproject.toml). Le même
+# fragment est servi par les pages SEO SSR (src/templates/seo_liste.html, via
+# le context_processor de src/seo/routes.py) : une seule source, pas de
+# duplication du bloc <script>.
+matomo_script = build_tracker_script()
+
 app.index_string = """
 <!DOCTYPE html>
 <html lang="fr">
@@ -301,15 +332,6 @@ app.index_string = """
         <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png">
         <link rel="manifest" href="/assets/icons/site.webmanifest">
         {%css%}
-        <!-- canonical auto-référent : l'index_string Dash est partagé par toutes
-             les pages, donc on pose le href côté client d'après l'URL courante
-             (sans query string). Google exécute le JS au rendu. -->
-        <link rel="canonical" id="canonical-link">
-        <script type="application/javascript">
-            document.getElementById('canonical-link').setAttribute(
-                'href', window.location.origin + window.location.pathname
-            );
-        </script>
     </head>
     <body>
         {%app_entry%}
@@ -318,30 +340,60 @@ app.index_string = """
             {%scripts%}
             {%renderer%}
         </footer>
-        <script type="application/javascript">
-            console.log("Matomo");
-            var _paq = window._paq = window._paq || [];
-            /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
-            _paq.push(['trackPageView']);
-            _paq.push(['enableLinkTracking']);
-            (function() {
-                var u="//analytics.maudry.com/";
-                _paq.push(['setTrackerUrl', u+'matomo.php']);
-                _paq.push(['setSiteId', '14']);
-                var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
-                g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
-            })();
-        </script>
+        __MATOMO_SCRIPT__
         __CHATWOOT_SCRIPT__
     </body>
 </html>
-""".replace("__CHATWOOT_SCRIPT__", chatwoot_script)
+""".replace("__MATOMO_SCRIPT__", matomo_script).replace(
+    "__CHATWOOT_SCRIPT__", chatwoot_script
+)
 
 # Dash génère automatiquement twitter:url par page (via register_page), mais pas
-# og:url. On l'injecte ici à partir de l'URL de la requête en cours, pour que les
-# crawlers sociaux (qui n'exécutent pas de JS, contrairement au canonical ci-dessus)
-# reçoivent la bonne URL directement dans le HTML servi.
+# og:url : on l'injecte ici à partir de l'URL de la requête en cours. Ce point
+# d'interpolation, appelé par requête, sert aussi à poser le <title> (Dash le
+# résout déjà par page pour ses balises sociales, cf. src/utils/page_meta.py,
+# mais passe app.title à {%title%}) et le canonical (auparavant posé côté
+# client par un script, désormais servi directement dans le HTML).
 _default_interpolate_index = app.interpolate_index
+
+
+def _org_jsonld_tag(path: str) -> str:
+    """Balise JSON-LD servie pour les fiches acheteur et titulaire.
+
+    Chaîne vide pour tout autre chemin : le JSON-LD Organization n'a de sens
+    que sur une fiche d'organisme. Filtre uniquement sur des DataFrames Polars
+    déjà chargés en mémoire (DF_ACHETEURS/DF_TITULAIRES) : aucune requête base
+    ni appel réseau, cette fonction tourne à chaque requête HTTP.
+    """
+    import json
+
+    import polars as pl
+
+    from src.utils.data import DF_ACHETEURS, DF_TITULAIRES
+    from src.utils.seo import make_org_jsonld_minimal
+
+    segments = path.strip("/").split("/")
+    if len(segments) != 2:
+        return ""
+    segment, org_id = segments
+    org_type = {"acheteurs": "acheteur", "titulaires": "titulaire"}.get(segment)
+    if not org_type:
+        return ""
+
+    df = DF_ACHETEURS if org_type == "acheteur" else DF_TITULAIRES
+    row = df.filter(pl.col(f"{org_type}_id") == org_id)
+    if row.height == 0:
+        return ""
+    nom = row.select(f"{org_type}_nom").item(0, 0)
+
+    # NE PAS échapper en HTML : markupsafe.escape transformerait les guillemets
+    # du JSON en &quot; et rendrait le bloc illisible pour un parseur. Le seul
+    # risque réel dans un <script> est une séquence `</script>` dans une valeur ;
+    # neutraliser `<` en < suffit, et reste du JSON valide.
+    payload = json.dumps(
+        make_org_jsonld_minimal(org_id, org_type, nom), ensure_ascii=False
+    ).replace("<", "\\u003c")
+    return f'<script type="application/ld+json">{payload}</script>'
 
 
 def _interpolate_index_per_request(**kwargs):
@@ -350,6 +402,19 @@ def _interpolate_index_per_request(**kwargs):
 
     og_url_tag = f'<meta property="og:url" content="{_escape(_request.url)}"/>'
     kwargs["metas"] = f"{kwargs.get('metas', '')}\n      {og_url_tag}"
+
+    from src.utils.page_meta import resolve_title
+
+    titre = resolve_title(_request.path)
+    if titre:
+        kwargs["title"] = str(_escape(titre))
+
+    canonical_tag = f'<link rel="canonical" href="{_escape(_request.base_url)}"/>'
+    kwargs["metas"] = f"{kwargs.get('metas', '')}\n      {canonical_tag}"
+
+    jsonld_tag = _org_jsonld_tag(_request.path)
+    if jsonld_tag:
+        kwargs["metas"] = f"{kwargs.get('metas', '')}\n      {jsonld_tag}"
 
     # Identité Chatwoot : le chargement du widget est figé dans index_string
     # (même token pour tout le monde), mais setUser dépend de la session, donc

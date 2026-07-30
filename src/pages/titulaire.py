@@ -41,6 +41,17 @@ def get_title(titulaire_id: str = None) -> str:
     return "Marchés publics remportés | colibre"
 
 
+def get_description(titulaire_id: str | None = None) -> str:
+    row = DF_TITULAIRES.filter(pl.col("titulaire_id") == titulaire_id)
+    if row.height == 0:
+        return "Consultez les marchés publics remportés par ce titulaire."
+    nom = row.select("titulaire_nom").item(0, 0)
+    return (
+        f"Les marchés publics remportés par {nom} : objets, montants, "
+        "acheteurs, dates de notification."
+    )
+
+
 def _titulaire_scope(pathname: str, titulaire_year: str | None) -> tuple[str, list]:
     """WHERE SQL scopant les requêtes à ce titulaire (et éventuellement une année)."""
     return entity_scope("titulaire", pathname.split("/")[-1], titulaire_year)
@@ -51,7 +62,7 @@ register_page(
     path_template="/titulaires/<titulaire_id>",
     title=get_title,
     name="Titulaire",
-    description="Consultez les marchés publics remportés par ce titulaire.",
+    description=get_description,
     image_url=META_CONTENT["image_url"],
     order=5,
 )

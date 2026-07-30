@@ -123,6 +123,28 @@ def _load_source_frame() -> pl.DataFrame:
     return lff.collect()
 
 
+# Extraites en constantes de module (plutôt qu'inline dans build_database)
+# pour que tests/seo/test_tables_nb_marches.py puisse exécuter cette logique
+# de regroupement contre une table `decp` synthétique, sans dépendre du jeu
+# de données partagé de tests/conftest.py (qui ne contient qu'une ligne et ne
+# peut donc pas mettre en évidence un bug de duplication par graphie de nom).
+SQL_ACHETEURS_DEPARTEMENT = (
+    "CREATE TABLE acheteurs_departement AS "
+    "SELECT acheteur_id, any_value(acheteur_nom) AS acheteur_nom, "
+    "acheteur_departement_code, COUNT(DISTINCT uid) AS nb_marches "
+    "FROM decp GROUP BY acheteur_id, acheteur_departement_code "
+    "ORDER BY nb_marches DESC, acheteur_id"
+)
+
+SQL_TITULAIRES_DEPARTEMENT = (
+    "CREATE TABLE titulaires_departement AS "
+    "SELECT titulaire_id, any_value(titulaire_nom) AS titulaire_nom, "
+    "titulaire_departement_code, COUNT(DISTINCT uid) AS nb_marches "
+    "FROM decp GROUP BY titulaire_id, titulaire_departement_code "
+    "ORDER BY nb_marches DESC, titulaire_id"
+)
+
+
 def build_database(db_path: Path) -> None:
     """Build the DuckDB database atomically under an exclusive lock.
 
@@ -157,16 +179,8 @@ def build_database(db_path: Path) -> None:
                 "SELECT DISTINCT uid, objet, titulaire_id FROM decp "
                 "ORDER BY titulaire_id"
             )
-            w.execute(
-                "CREATE TABLE acheteurs_departement AS "
-                "SELECT DISTINCT acheteur_id, acheteur_nom, acheteur_departement_code "
-                "FROM decp ORDER BY acheteur_nom"
-            )
-            w.execute(
-                "CREATE TABLE titulaires_departement AS "
-                "SELECT DISTINCT titulaire_id, titulaire_nom, titulaire_departement_code "
-                "FROM decp ORDER BY titulaire_nom"
-            )
+            w.execute(SQL_ACHETEURS_DEPARTEMENT)
+            w.execute(SQL_TITULAIRES_DEPARTEMENT)
     finally:
         if staging_parquet.exists():
             staging_parquet.unlink()

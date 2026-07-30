@@ -60,6 +60,28 @@ def make_org_jsonld(
     return jsonld
 
 
+def make_org_jsonld_minimal(org_id: str, org_type: str, org_name: str) -> dict:
+    """JSON-LD organisme servi dans le HTML, sans appel réseau.
+
+    Le callback de la page enrichit ensuite avec l'adresse, qui dépend de
+    l'Annuaire des entreprises et ne peut pas être obtenue sans un appel HTTP
+    bloquant pendant le rendu.
+    """
+    org_types = {"acheteur": "GovernmentOrganization", "titulaire": "Organization"}
+    return {
+        "@context": "https://schema.org",
+        "@type": org_types[org_type],
+        "name": org_name,
+        "url": f"https://{DOMAIN_NAME}/{org_type}s/{org_id}",
+        "sameAs": (f"https://annuaire-entreprises.data.gouv.fr/etablissement/{org_id}"),
+        "identifier": {
+            "@type": "PropertyValue",
+            "propertyID": "siret",
+            "value": org_id,
+        },
+    }
+
+
 META_CONTENT = {
     "image_url": f"https://{DOMAIN_NAME}/assets/og-image.png",
     "title": "colibre - exploration des marchés publics français",

@@ -11,8 +11,15 @@ from src.utils.seo import META_CONTENT, make_org_jsonld
 from src.utils.table import format_values, unformat_montant
 
 
-def get_title(uid: str = None) -> str:
+def get_title(uid: str | None = None) -> str:
     return f"Marché {uid} | colibre"
+
+
+def get_description(uid: str | None = None) -> str:
+    return (
+        f"Détail du marché public {uid} : montant, acheteur, titulaires, "
+        "durée, modifications."
+    )
 
 
 register_page(
@@ -20,7 +27,7 @@ register_page(
     path_template="/marches/<uid>",
     title=get_title,
     name="Marché",
-    description="Consultez les détails de ce marché public : montant, acheteur, titulaires, modifications, etc.",
+    description=get_description,
     image_url=META_CONTENT["image_url"],
     order=7,
 )

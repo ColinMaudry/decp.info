@@ -75,6 +75,14 @@
     "departement": "Corrèze",
     "region": "Nouvelle-Aquitaine"
   },
+  "2A": {
+    "departement": "Corse-du-Sud",
+    "region": "Corse"
+  },
+  "2B": {
+    "departement": "Haute-Corse",
+    "region": "Corse"
+  },
   "21": {
     "departement": "Côte-d'Or",
     "region": "Bourgogne-Franche-Comté"
@@ -402,5 +410,21 @@
   "977": {
     "departement": "Saint-Barthelemy",
     "region": "Saint-Barthelemy"
+  },
+  "978": {
+    "departement": "Saint-Martin",
+    "region": "Saint-Martin"
+  },
+  "986": {
+    "departement": "Wallis-et-Futuna",
+    "region": "Wallis-et-Futuna"
+  },
+  "987": {
+    "departement": "Polynésie française",
+    "region": "Polynésie française"
+  },
+  "988": {
+    "departement": "Nouvelle-Calédonie",
+    "region": "Nouvelle-Calédonie"
   }
 }
