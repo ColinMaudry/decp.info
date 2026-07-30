@@ -191,6 +191,12 @@ from src.mcp.account import mcp_account_bp  # noqa: E402
 
 app.server.register_blueprint(mcp_account_bp)
 
+# Pages SEO rendues côté serveur (voir src/seo/routes.py). Enregistrées avant
+# init_not_found pour être de vraies règles Flask, donc hors du catch-all Dash.
+from src.seo.routes import seo_bp  # noqa: E402
+
+app.server.register_blueprint(seo_bp)
+
 # 404 sur les chemins qui ne correspondent à aucune page (#125). À déclarer
 # après les autres routes : le garde ne s'applique qu'au catch-all de Dash, donc
 # toute route enregistrée ici ou plus haut lui échappe par construction.
