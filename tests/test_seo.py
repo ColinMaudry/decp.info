@@ -154,6 +154,125 @@ def test_make_org_jsonld_reuses_supplied_annuaire_data():
     assert isinstance(result["address"], dict)
 
 
+def test_sitemap_index_reference_l_arbre(client):
+    body = client.get("/sitemap.xml").get_data(as_text=True)
+    assert "https://colibre.fr/sitemap-arbre.xml" in body
+
+
+def test_sitemap_arbre_liste_le_hub_et_les_index(client):
+    body = client.get("/sitemap-arbre.xml").get_data(as_text=True)
+    assert "<loc>https://colibre.fr/departements</loc>" in body
+    assert "<loc>https://colibre.fr/departements/75/acheteurs</loc>" in body
+
+
+@pytest.fixture
+def departement_75_trois_acheteurs(monkeypatch):
+    """3 acheteurs dans le département "75", sur une base à part.
+
+    Le conftest partagé n'en fournit qu'un seul, donc un total de 1 : avec
+    `PAGE_SIZE=1`, `page_count(1)` vaut déjà 1, la boucle de pagination de
+    `_arbre_locs` ne serait jamais exercée et un oubli du `for n in
+    range(...)` resterait invisible. 3 acheteurs forcent 3 pages avec
+    `PAGE_SIZE=1`.
+    """
+    import duckdb
+
+    conn = duckdb.connect(":memory:")
+    conn.execute(
+        "CREATE TABLE acheteurs_departement ("
+        "acheteur_id VARCHAR, acheteur_nom VARCHAR, "
+        "acheteur_departement_code VARCHAR, nb_marches BIGINT)"
+    )
+    for i in range(3):
+        conn.execute(
+            "INSERT INTO acheteurs_departement VALUES (?, ?, '75', 1)",
+            [f"a-{i}", f"ACHETEUR {i}"],
+        )
+    conn.execute(
+        "CREATE TABLE titulaires_departement ("
+        "titulaire_id VARCHAR, titulaire_nom VARCHAR, "
+        "titulaire_departement_code VARCHAR, nb_marches BIGINT)"
+    )
+    monkeypatch.setattr("src.db.get_cursor", lambda: conn.cursor())
+    yield
+    conn.close()
+
+
+def test_sitemap_arbre_declare_chaque_page_paginee(
+    monkeypatch, departement_75_trois_acheteurs
+):
+    """Un département de plus d'une page déclare chacune de ses pages.
+
+    On appelle `_arbre_locs.uncached` : la fonction est mémoïsée, donc un appel
+    par la route renverrait un résultat calculé avec l'ancien PAGE_SIZE.
+    """
+    from src.seo import pagination
+    from src.utils.sitemap import _arbre_locs
+
+    monkeypatch.setattr(pagination, "PAGE_SIZE", 1)
+    locs = _arbre_locs.uncached()
+    assert "/departements" in locs
+    assert "/departements/75/acheteurs" in locs
+    assert "/departements/75/acheteurs?page=2" in locs
+    assert "/departements/75/acheteurs?page=3" in locs
+
+
+@pytest.fixture
+def organismes_sans_departement(monkeypatch):
+    """Un acheteur et un titulaire sans département (NULL), sur une base à part.
+
+    Le conftest partagé ne fournit qu'un acheteur au code "75" et un
+    titulaire au code "35" : sans cette fixture, aucune ligne NULL n'existe
+    et `_arbre_locs` ne produirait jamais de segment `non-renseigne`, quelle
+    que soit la justesse de l'implémentation — le test serait rouge pour de
+    mauvaises raisons. On substitue le curseur (la connexion réelle est en
+    lecture seule), comme `tests/seo/test_index_departements.py`.
+    """
+    import duckdb
+
+    conn = duckdb.connect(":memory:")
+    conn.execute(
+        "CREATE TABLE acheteurs_departement ("
+        "acheteur_id VARCHAR, acheteur_nom VARCHAR, "
+        "acheteur_departement_code VARCHAR, nb_marches BIGINT)"
+    )
+    conn.execute(
+        "INSERT INTO acheteurs_departement VALUES ('a-1', 'SANS DEPT', NULL, 3)"
+    )
+    conn.execute(
+        "CREATE TABLE titulaires_departement ("
+        "titulaire_id VARCHAR, titulaire_nom VARCHAR, "
+        "titulaire_departement_code VARCHAR, nb_marches BIGINT)"
+    )
+    conn.execute(
+        "INSERT INTO titulaires_departement VALUES ('t-1', 'SANS DEPT', NULL, 2)"
+    )
+    monkeypatch.setattr("src.db.get_cursor", lambda: conn.cursor())
+    yield
+    conn.close()
+
+
+def test_sitemap_arbre_couvre_les_organismes_sans_departement(
+    organismes_sans_departement,
+):
+    from src.utils.sitemap import _arbre_locs
+
+    locs = _arbre_locs.uncached()
+    assert any("non-renseigne" in loc for loc in locs)
+
+
+def test_sitemap_arbre_ne_contient_pas_les_listes_de_marches(client):
+    """Les listes de marchés sont atteignables depuis les index, pas déclarées.
+
+    Un `assert "/marches" not in body` sur `/sitemap-pages.xml` serait vrai
+    quel que soit le code de cette tâche : cette route ne liste jamais de
+    marchés. C'est `/sitemap-arbre.xml`, produit par `_arbre_locs`, qu'il
+    faut vérifier.
+    """
+    body = client.get("/sitemap-arbre.xml").get_data(as_text=True)
+    assert "/marches" not in body
+
+
 def test_make_org_jsonld_empty_matching_etablissements_returns_empty_dict():
     from src.utils.seo import make_org_jsonld
 

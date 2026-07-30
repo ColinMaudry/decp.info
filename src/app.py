@@ -252,6 +252,11 @@ def sitemap_pages():
     return Response(_sitemap.build_pages(), mimetype="application/xml")
 
 
+@app.server.route("/sitemap-arbre.xml")
+def sitemap_arbre():
+    return Response(_sitemap.build_arbre(), mimetype="application/xml")
+
+
 @app.server.route("/sitemap-<segment>-<int:page>.xml")
 def sitemap_org(segment: str, page: int):
     xml = _sitemap.build_org_page(segment, page)

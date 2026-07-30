@@ -34,7 +34,6 @@ AUTO_PREFIXES = ("/a-propos/",)
 NON_INDEXABLE_PREFIXES = (
     "/compte",  # espace connecté
     "/admin",  # back-office
-    "/departements",  # navigation par arbre, on met en avant marchés et organismes
 )
 NON_INDEXABLE_PATHS = frozenset(
     {
@@ -84,9 +83,43 @@ def _urlset(locs: list[str]) -> str:
     )
 
 
+@cache.memoize(timeout=3600 * 24)
+def _arbre_locs() -> list[str]:
+    """Chemins du hub et de toutes les pages d'index par département.
+
+    Une entrée par page paginée : un crawler qui part du sitemap atteint
+    chaque page d'index sans avoir à suivre la pagination.
+    """
+    from src.db import get_cursor
+    from src.seo import pagination
+    from src.utils.data import DEPARTEMENTS
+
+    locs = ["/departements"]
+    for org_type, segment in (("acheteur", "acheteurs"), ("titulaire", "titulaires")):
+        table = f"{org_type}s_departement"
+        rows = (
+            get_cursor()
+            .execute(
+                f"SELECT {org_type}_departement_code, COUNT(*) FROM {table} GROUP BY 1"
+            )
+            .fetchall()
+        )
+        for code, total in rows:
+            segment_code = code if code in DEPARTEMENTS else "non-renseigne"
+            base = f"/departements/{segment_code}/{segment}"
+            for n in range(1, pagination.page_count(total) + 1):
+                locs.append(base if n == 1 else f"{base}?page={n}")
+    return locs
+
+
+def build_arbre() -> str:
+    """Sous-sitemap du hub et des index d'organismes par département."""
+    return _urlset([f"{BASE_URL}{loc}" for loc in _arbre_locs()])
+
+
 def build_index() -> str:
     """Index listant tous les sous-sitemaps."""
-    children = ["/sitemap-pages.xml"]
+    children = ["/sitemap-pages.xml", "/sitemap-arbre.xml"]
     for segment, (table, id_col) in ORG_SITEMAPS.items():
         pages = _chunk_count(len(_org_ids(table, id_col)))
         children += [f"/sitemap-{segment}-{i}.xml" for i in range(1, pages + 1)]
