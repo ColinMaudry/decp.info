@@ -243,3 +243,53 @@ def test_pages_seo_declarent_la_favicon(client):
     ):
         body = client.get(url).get_data(as_text=True)
         assert 'href="/assets/icons/favicon.ico"' in body, url
+
+
+@pytest.fixture
+def departement_76_gros_volume(monkeypatch):
+    """Un acheteur du 76 à 15 365 marchés, pour éprouver le formatage.
+
+    Le jeu partagé ne dépasse jamais la dizaine : sans un nombre à quatre
+    chiffres, une assertion sur le séparateur de milliers serait vraie quelle
+    que soit l'implémentation.
+    """
+    import duckdb
+
+    conn = duckdb.connect(":memory:")
+    conn.execute(
+        "CREATE TABLE acheteurs_departement ("
+        "acheteur_id VARCHAR, acheteur_nom VARCHAR, "
+        "acheteur_departement_code VARCHAR, nb_marches BIGINT)"
+    )
+    conn.execute(
+        "INSERT INTO acheteurs_departement VALUES ('gros', 'GROS ACHETEUR', '76', 15365)"
+    )
+    monkeypatch.setattr("src.seo.queries.get_cursor", lambda: conn.cursor())
+    yield
+    conn.close()
+
+
+def test_nombre_formate_a_la_francaise():
+    """Espace insécable comme le reste du site, et repli sur "0".
+
+    `format_number` renvoie "" pour 0 : sans le repli, un département sans
+    organisme afficherait « organismes — … » au lieu de « 0 organismes ».
+    L'insécable est écrite en \\u00a0 plutôt qu'en littéral : un caractère
+    invisible dans un test se fait normaliser sans que personne le remarque.
+    """
+    from src.seo.routes import _nombre
+
+    assert _nombre(15365) == "15\u00a0365"
+    assert _nombre(0) == "0"
+    assert _nombre(6) == "6"
+
+
+def test_le_formatage_est_applique_dans_la_page(client, departement_76_gros_volume):
+    """Le formatage doit atteindre le HTML servi, pas seulement l'utilitaire.
+
+    Un test qui n'interrogerait que `_nombre` resterait vert si les gabarits
+    repassaient à `{total}` brut.
+    """
+    body = client.get("/departements/76/acheteurs").get_data(as_text=True)
+    assert "15\u00a0365 marchés" in body
+    assert "15365" not in body
