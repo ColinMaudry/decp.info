@@ -48,7 +48,12 @@ def acheteur_a_5_marches(monkeypatch):
         "acheteur_id VARCHAR, acheteur_nom VARCHAR, "
         "acheteur_departement_code VARCHAR, nb_marches BIGINT)"
     )
-    for i in range(5):
+    # Insérées dans un ordre délibérément différent du tri alphabétique attendu :
+    # une table neuve jamais modifiée restitue sinon l'ordre de scan physique,
+    # qui coïnciderait par hasard avec l'ordre alphabétique et rendrait
+    # test_pagination_deterministe incapable de distinguer un ORDER BY présent
+    # d'un ORDER BY absent.
+    for i in (3, 1, 4, 0, 2):
         mem.execute(
             "INSERT INTO acheteurs_marches (uid, objet, acheteur_id) VALUES (?, ?, ?)",
             [f"uid-{i:02d}", f"Objet {i}", "999"],
@@ -60,6 +65,32 @@ def acheteur_a_5_marches(monkeypatch):
     )
     monkeypatch.setattr("src.seo.queries.get_cursor", lambda: mem.cursor())
     yield "999"
+    mem.close()
+
+
+@pytest.fixture
+def acheteur_sans_marches(monkeypatch):
+    """Un acheteur "998" connu mais sans aucun marché.
+
+    Couvre le cas limite du brief : organisme sans marché -> 200 avec
+    « Aucun résultat. », pas un 404.
+    """
+    mem = duckdb.connect(":memory:")
+    mem.execute(
+        "CREATE TABLE acheteurs_marches (uid VARCHAR, objet VARCHAR, acheteur_id VARCHAR)"
+    )
+    mem.execute(
+        "CREATE TABLE acheteurs_departement ("
+        "acheteur_id VARCHAR, acheteur_nom VARCHAR, "
+        "acheteur_departement_code VARCHAR, nb_marches BIGINT)"
+    )
+    mem.execute(
+        "INSERT INTO acheteurs_departement "
+        "(acheteur_id, acheteur_nom, acheteur_departement_code, nb_marches) "
+        "VALUES ('998', 'ACHETEUR 998', '75', 0)"
+    )
+    monkeypatch.setattr("src.seo.queries.get_cursor", lambda: mem.cursor())
+    yield "998"
     mem.close()
 
 
@@ -99,6 +130,14 @@ def test_titulaire_aussi_servi(client):
 # --- Famille 2 : pagination multi-pages, base en mémoire monkeypatchée ------
 
 
+def test_organisme_sans_marche_rend_200_et_aucun_resultat(
+    client, acheteur_sans_marches
+):
+    response = client.get("/acheteurs/998/marches")
+    assert response.status_code == 200
+    assert "Aucun résultat." in response.get_data(as_text=True)
+
+
 def test_canonical_auto_referent_sur_page_2(client, acheteur_a_5_marches, monkeypatch):
     monkeypatch.setattr(pagination, "PAGE_SIZE", 2)
     body = client.get("/acheteurs/999/marches?page=2").get_data(as_text=True)
@@ -107,16 +146,27 @@ def test_canonical_auto_referent_sur_page_2(client, acheteur_a_5_marches, monkey
 
 
 def test_pagination_deterministe(client, acheteur_a_5_marches, monkeypatch):
-    """Deux pages consécutives ne partagent aucun uid et couvrent tout.
+    """Chaque page rend exactement les uid attendus, dans l'ordre attendu.
 
-    C'est le défaut que la pagination introduirait sans ORDER BY : un même
-    marché sur deux pages, un autre sur aucune.
+    La fixture insère les marchés dans le désordre (uid-03, uid-01, uid-04,
+    uid-00, uid-02) précisément pour que ce test ne puisse pas passer « par
+    coïncidence » avec l'ordre de scan physique de la table. C'est le défaut
+    que la pagination introduirait sans ORDER BY : un même marché sur deux
+    pages, un autre sur aucune, ou un ordre non déterministe.
     """
     import re
 
     monkeypatch.setattr(pagination, "PAGE_SIZE", 2)
+    pages = {}
     vus = []
     for page in (1, 2, 3):
         body = client.get(f"/acheteurs/999/marches?page={page}").get_data(as_text=True)
-        vus.extend(re.findall(r'href="/marches/(uid-\d+)"', body))
+        uids = re.findall(r'href="/marches/(uid-\d+)"', body)
+        pages[page] = uids
+        vus.extend(uids)
+
+    assert pages[1] == ["uid-00", "uid-01"]
+    assert pages[2] == ["uid-02", "uid-03"]
+    assert pages[3] == ["uid-04"]
+    # Garde en plus l'assertion sur l'union : aucun doublon, couverture complète.
     assert len(vus) == len(set(vus)) == 5
