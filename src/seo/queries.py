@@ -45,3 +45,29 @@ def org_nom(org_type: str, org_id: str) -> str | None:
         .fetchone()
     )
     return row[0] if row else None
+
+
+def orgs_departement(org_type: str, code: str | None, page: int) -> tuple[list, int]:
+    """Organismes d'un département, triés par nombre de marchés décroissant.
+
+    `code=None` cible les organismes sans département renseigné : la colonne
+    vaut NULL, et `= ?` ne matche jamais NULL, d'où le IS NULL explicite.
+    """
+    table = _TABLES_ORGS[org_type]
+    filtre = (
+        f"{org_type}_departement_code IS NULL"
+        if code is None
+        else f"{org_type}_departement_code = ?"
+    )
+    params = [] if code is None else [code]
+    cur = get_cursor()
+    total = cur.execute(
+        f"SELECT COUNT(*) FROM {table} WHERE {filtre}", params
+    ).fetchone()[0]
+    rows = cur.execute(
+        f"SELECT {org_type}_id, {org_type}_nom, nb_marches FROM {table} "
+        f"WHERE {filtre} ORDER BY nb_marches DESC, {org_type}_id "
+        "LIMIT ? OFFSET ?",
+        [*params, pagination.PAGE_SIZE, pagination.offset(page)],
+    ).fetchall()
+    return rows, total
