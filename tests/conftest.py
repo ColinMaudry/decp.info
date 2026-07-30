@@ -95,6 +95,19 @@ def test_data():
     _cleanup_db_artifacts()
 
 
+def pytest_collection_modifyitems(items):
+    """Marque `selenium` tout test qui demande un navigateur.
+
+    Le marqueur se déduit de la présence de la fixture `dash_duo` plutôt que
+    d'être annoté à la main : un nouveau test navigateur est donc désélectionné
+    de la suite courte sans que personne ait à y penser, et il n'y a pas de
+    liste à tenir à jour. Voir `markers` et `addopts` dans pyproject.toml.
+    """
+    for item in items:
+        if "dash_duo" in getattr(item, "fixturenames", ()):
+            item.add_marker(pytest.mark.selenium)
+
+
 def pytest_setup_options():
     """Options Chrome pour les tests d'intégration Selenium.
 

@@ -67,11 +67,24 @@ env = [
   "MATOMO_TRACKING_ENABLED=false",
   "DATA_SCHEMA_LOCAL=/home/colin/git/decp-processing/dist/schema.json",
 ]
-addopts = "-p no:warnings -m 'not integration'"
+addopts = "-p no:warnings -m 'not integration and not selenium'"
 markers = [
   # Ces tests sortent sur le réseau : Brevo refuse les IP non déclarées dans sa
   # liste d'autorisation, donc ils échouent depuis un lieu de travail nouveau ou
   # depuis la CI. Désélectionnés par défaut via addopts ; pour les lancer
   # délibérément depuis une IP autorisée : `uv run pytest -m integration`.
   "integration: tests touchant des services externes (Brevo)",
+  # Tests navigateur : ils démarrent un serveur Dash et pilotent Chrome, donc
+  # coûtent quelques secondes chacun là où les autres se comptent en
+  # millisecondes. Désélectionnés par défaut pour garder une boucle de retour
+  # courte pendant le développement ; ils restent indispensables avant de
+  # livrer. Le marqueur est posé automatiquement (voir
+  # `pytest_collection_modifyitems` dans tests/conftest.py), rien à annoter.
+  #   suite courte      : uv run pytest                      (~24 s)
+  #   navigateur seul   : uv run pytest -m selenium          (~71 s)
+  #   avant de livrer   : uv run pytest -m "not integration" (~84 s)
+  # `-m ""` réinclut aussi les tests `integration`, qui échouent depuis une IP
+  # non déclarée chez Brevo : à réserver aux cas où c'est justement ce qu'on
+  # veut vérifier.
+  "selenium: tests pilotant un vrai navigateur via dash_duo",
 ]
