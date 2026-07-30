@@ -115,6 +115,25 @@ def test_mcp_token_active_subscription_passes_and_increments(mcp_app):
     assert tokens_db.get_token_by_plaintext(db_path, token)["count_total"] == 1
 
 
+def test_mcp_get_authenticates_but_does_not_increment_usage(mcp_app):
+    import sqlite3
+
+    from src.api import tokens_db
+
+    app, db_path = mcp_app
+    uid = _subscribed_uid()
+    token, _ = tokens_db.create_token(db_path, "x", user_id=uid, kind="mcp")
+    resp = app.test_client().get("/_mcp", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    assert tokens_db.get_token_by_plaintext(db_path, token)["count_total"] == 0
+
+    conn = sqlite3.connect(db_path)
+    try:
+        assert conn.execute("SELECT COUNT(*) FROM mcp_usage").fetchone()[0] == 0
+    finally:
+        conn.close()
+
+
 def test_tous_abonnes_bypasses_subscription(mcp_app, monkeypatch):
     from src.api import tokens_db
     from src.auth import db as auth_db

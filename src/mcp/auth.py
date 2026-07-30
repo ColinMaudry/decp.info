@@ -83,12 +83,18 @@ def _authenticate_mcp():
     if not (TOUS_ABONNES or has_active_subscription(user_id)):
         return _forbidden()
 
-    kind, token_id = meta
-    if kind == "static":
-        tokens_db.increment_usage(db_path, token_id)
-    else:
-        store.increment_usage(db_path, token_id)
-    usage.record(db_path, user_id, token_id, kind)
+    if request.method == "POST":
+        # Les GET ne font qu'ouvrir/rouvrir le flux SSE (immédiatement refermé
+        # par dash.mcp) : un client MCP standard les répète en boucle tant que
+        # la connexion reste ouverte côté serveur. Ne compter l'usage que sur
+        # les vrais appels JSON-RPC (POST) évite de polluer mcp_usage et les
+        # compteurs de jeton avec ce bruit de reconnexion.
+        kind, token_id = meta
+        if kind == "static":
+            tokens_db.increment_usage(db_path, token_id)
+        else:
+            store.increment_usage(db_path, token_id)
+        usage.record(db_path, user_id, token_id, kind)
     return None
 
 
