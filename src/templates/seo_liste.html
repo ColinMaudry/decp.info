@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ titre }}</title>
+    <meta name="description" content="{{ description }}" />
+    <link rel="canonical" href="{{ canonical }}" />
+    <link rel="stylesheet" href="/assets/css/bootstrap.simplex.css" />
+    <link rel="stylesheet" href="/assets/css/style.css" />
+  </head>
+  <body>
+    <div class="container py-4">
+      <h1>{{ titre_h1 }}</h1>
+      <p>{{ chapeau }}</p>
+      <ul>
+        {% for e in entrees %}
+        <li>
+          <a href="{{ e.href }}">{{ e.libelle }}</a>
+          {%- if e.suffixe %} <span class="text-muted">{{ e.suffixe }}</span>{%
+          endif %} {%- if e.lien_secondaire %} —
+          <a href="{{ e.lien_secondaire }}">liste des marchés</a>{% endif %}
+        </li>
+        {% else %}
+        <li>Aucun résultat.</li>
+        {% endfor %}
+      </ul>
+      {% if pages > 1 %}
+      <nav aria-label="Pagination">
+        <p>Page {{ page }} sur {{ pages }}</p>
+        <ul class="pagination">
+          {% for n in range(1, pages + 1) %}
+          <li class="page-item {% if n == page %}active{% endif %}">
+            <a class="page-link" href="{{ url_page(n) }}">{{ n }}</a>
+          </li>
+          {% endfor %}
+        </ul>
+      </nav>
+      {% endif %}
+      <p><a href="{{ retour_href }}">{{ retour_libelle }}</a></p>
+    </div>
+  </body>
+</html>
