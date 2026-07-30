@@ -292,3 +292,85 @@ def test_make_org_jsonld_none_annuaire_data_returns_empty_dict():
         "21750001500010", "acheteur", org_name="X", annuaire_data=None
     )
     assert result == {}
+
+
+def test_title_servi_contient_le_nom_de_l_organisme(client):
+    """Le <title> est le signal principal pour une requête « nom d'organisme »."""
+    import re
+
+    from src.utils.data import DF_ACHETEURS
+
+    org_id = DF_ACHETEURS.item(0, "acheteur_id")
+    nom = DF_ACHETEURS.item(0, "acheteur_nom")
+    body = client.get(f"/acheteurs/{org_id}").get_data(as_text=True)
+    titre = re.findall(r"<title>(.*?)</title>", body)[0]
+    assert nom in titre
+
+
+def test_resolve_chemin_inconnu_renvoie_none():
+    """`resolve` sur un chemin hors registre Dash : cas réellement « hors page connue ».
+
+    Un chemin inconnu passé à `client.get` est intercepté 404 par
+    `src.not_found` avant même d'atteindre `interpolate_index` : un test HTTP
+    ne peut donc pas exercer ce cas, seul un appel direct à `resolve` le peut.
+    """
+    from src.utils.page_meta import resolve
+
+    assert resolve("/ce-chemin-n-existe-pas-du-tout") == (None, None)
+
+
+def test_title_page_statique_prend_le_titre_declare(client):
+    """La page d'accueil a un titre statique (non callable) déclaré dans register_page.
+
+    Un simple "le <title> n'est pas vide" resterait vrai même sans le
+    correctif (app.title="Colibre" est déjà non vide) : on vérifie ici la
+    valeur exacte du titre déclaré par la page, qui ne peut être posée que par
+    la résolution serveur ajoutée dans cette tâche.
+    """
+    import re
+
+    body = client.get("/").get_data(as_text=True)
+    titre = re.findall(r"<title>(.*?)</title>", body)[0]
+    # L'apostrophe est échappée en entité HTML par _escape (markupsafe).
+    assert titre == "Outils pour l&#39;exploration des marchés publics | colibre"
+
+
+def test_descriptions_distinctes_entre_deux_acheteurs(client):
+    """Deux acheteurs doivent avoir des descriptions différentes.
+
+    Comparer un acheteur à un titulaire (deux gabarits de page différents)
+    serait toujours vrai : chaque `register_page` déclare une description
+    statique différente ("cet acheteur" vs "ce titulaire"), qu'elle soit
+    dynamique ou non. Comparer deux instances du MÊME gabarit (un acheteur
+    réel et un identifiant inconnu) exerce réellement `get_description`.
+    """
+    import re
+
+    def description(url):
+        body = client.get(url).get_data(as_text=True)
+        return re.findall(r'<meta name="description" content="(.*?)"', body)[0]
+
+    assert description("/acheteurs/123") != description("/acheteurs/999-inexistant")
+
+
+def test_description_contient_le_nom_de_l_organisme(client):
+    import re
+
+    from src.utils.data import DF_ACHETEURS
+
+    org_id = DF_ACHETEURS.item(0, "acheteur_id")
+    nom = DF_ACHETEURS.item(0, "acheteur_nom")
+    body = client.get(f"/acheteurs/{org_id}").get_data(as_text=True)
+    description = re.findall(r'<meta name="description" content="(.*?)"', body)[0]
+    assert nom in description
+
+
+def test_canonical_servi_dans_le_html(client):
+    """Plus de href posé par JavaScript : la balise est servie remplie."""
+    body = client.get("/tableau").get_data(as_text=True)
+    assert 'rel="canonical" href="http://localhost/tableau"' in body
+
+
+def test_canonical_ignore_la_query_string(client):
+    body = client.get("/tableau?acheteur=X").get_data(as_text=True)
+    assert 'href="http://localhost/tableau"' in body

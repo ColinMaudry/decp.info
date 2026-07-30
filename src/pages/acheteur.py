@@ -42,6 +42,17 @@ def get_title(acheteur_id: str | None = None) -> str:
     return "Marchés publics attribués | colibre"
 
 
+def get_description(acheteur_id: str | None = None) -> str:
+    row = DF_ACHETEURS.filter(pl.col("acheteur_id") == acheteur_id)
+    if row.height == 0:
+        return "Consultez les marchés publics attribués par cet acheteur."
+    nom = row.select("acheteur_nom").item(0, 0)
+    return (
+        f"Les marchés publics attribués par {nom} : objets, montants, "
+        "titulaires, dates de notification."
+    )
+
+
 def _acheteur_scope(pathname: str, ach_year: str | None) -> tuple[str, list]:
     """WHERE SQL scopant les requêtes à cet acheteur (et éventuellement une année)."""
     return entity_scope("acheteur", pathname.split("/")[-1], ach_year)
@@ -52,7 +63,7 @@ register_page(
     path_template="/acheteurs/<acheteur_id>",
     title=get_title,
     name="Acheteur",
-    description="Consultez les marchés publics attribués par cet acheteur.",
+    description=get_description,
     image_url=META_CONTENT["image_url"],
     order=5,
 )

@@ -69,6 +69,13 @@ if DEVELOPMENT:
 # fonctions memoizées (@cache.memoize) dès l'import (ex. tableau.py).
 server = Flask(__name__)
 
+from werkzeug.middleware.proxy_fix import ProxyFix  # noqa: E402
+
+# nginx transmet X-Forwarded-Proto (voir deploy/nginx-colibre.conf) ; sans ce
+# middleware Flask croit servir en http et le canonical pointerait vers une URL
+# qui redirige.
+server.wsgi_app = ProxyFix(server.wsgi_app, x_proto=1, x_host=1)
+
 cache_dir = os.getenv("CACHE_DIR", "/tmp/colibre-cache")
 
 rmtree(cache_dir, ignore_errors=True)
@@ -311,15 +318,6 @@ app.index_string = """
         <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png">
         <link rel="manifest" href="/assets/icons/site.webmanifest">
         {%css%}
-        <!-- canonical auto-référent : l'index_string Dash est partagé par toutes
-             les pages, donc on pose le href côté client d'après l'URL courante
-             (sans query string). Google exécute le JS au rendu. -->
-        <link rel="canonical" id="canonical-link">
-        <script type="application/javascript">
-            document.getElementById('canonical-link').setAttribute(
-                'href', window.location.origin + window.location.pathname
-            );
-        </script>
     </head>
     <body>
         {%app_entry%}
@@ -348,9 +346,11 @@ app.index_string = """
 """.replace("__CHATWOOT_SCRIPT__", chatwoot_script)
 
 # Dash génère automatiquement twitter:url par page (via register_page), mais pas
-# og:url. On l'injecte ici à partir de l'URL de la requête en cours, pour que les
-# crawlers sociaux (qui n'exécutent pas de JS, contrairement au canonical ci-dessus)
-# reçoivent la bonne URL directement dans le HTML servi.
+# og:url : on l'injecte ici à partir de l'URL de la requête en cours. Ce point
+# d'interpolation, appelé par requête, sert aussi à poser le <title> (Dash le
+# résout déjà par page pour ses balises sociales, cf. src/utils/page_meta.py,
+# mais passe app.title à {%title%}) et le canonical (auparavant posé côté
+# client par un script, désormais servi directement dans le HTML).
 _default_interpolate_index = app.interpolate_index
 
 
@@ -360,6 +360,15 @@ def _interpolate_index_per_request(**kwargs):
 
     og_url_tag = f'<meta property="og:url" content="{_escape(_request.url)}"/>'
     kwargs["metas"] = f"{kwargs.get('metas', '')}\n      {og_url_tag}"
+
+    from src.utils.page_meta import resolve
+
+    titre, _description = resolve(_request.path)
+    if titre:
+        kwargs["title"] = str(_escape(titre))
+
+    canonical_tag = f'<link rel="canonical" href="{_escape(_request.base_url)}"/>'
+    kwargs["metas"] = f"{kwargs.get('metas', '')}\n      {canonical_tag}"
 
     # Identité Chatwoot : le chargement du widget est figé dans index_string
     # (même token pour tout le monde), mais setUser dépend de la session, donc
