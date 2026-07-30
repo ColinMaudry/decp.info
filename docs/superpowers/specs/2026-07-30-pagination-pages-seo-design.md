@@ -7,11 +7,14 @@ Issue : [#128](https://github.com/ColinMaudry/colibre/issues/128) — « Paginer
 `/departements/06` et `/departements/06/<org_id>` affichent des milliers d'entrées
 et font planter la page. Mesures sur `decp_prod.parquet` (1,5 M lignes) :
 
-| Page                                         | Maximum observé         | Pages > 100 entrées                |
-| -------------------------------------------- | ----------------------- | ---------------------------------- |
-| `/departements/<code>` — acheteurs           | 637 (Nord)              | 98 départements                    |
-| `/departements/<code>` — titulaires          | 13 511 (Paris)          | 104 départements                   |
-| `/departements/<code>/<type>/<id>` — marchés | 15 337 (Ville de Paris) | 3 225 acheteurs + 2 613 titulaires |
+| Page                                         | Entrées sur la page la plus chargée | Pages > 100 entrées                |
+| -------------------------------------------- | ----------------------------------- | ---------------------------------- |
+| `/departements/<code>` — acheteurs           | 637 (Nord)                          | 98 départements                    |
+| `/departements/<code>` — titulaires          | 13 511 (Paris)                      | 104 départements                   |
+| `/departements/<code>/<type>/<id>` — marchés | 15 337 (Ville de Paris)             | 3 225 acheteurs + 2 613 titulaires |
+
+Ce sont des volumes **par page**, pas des totaux : la base compte 28 706
+acheteurs et 213 299 titulaires, soit 242 005 fiches d'organisme.
 
 `/departements/75` rend donc ~14 000 `<li>` en un seul callback, les deux listes
 confondues. La médiane des marchés par acheteur est de 6, le p90 de 118 : c'est
