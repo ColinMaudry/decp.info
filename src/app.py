@@ -356,6 +356,45 @@ app.index_string = """
 _default_interpolate_index = app.interpolate_index
 
 
+def _org_jsonld_tag(path: str) -> str:
+    """Balise JSON-LD servie pour les fiches acheteur et titulaire.
+
+    Chaîne vide pour tout autre chemin : le JSON-LD Organization n'a de sens
+    que sur une fiche d'organisme. Filtre uniquement sur des DataFrames Polars
+    déjà chargés en mémoire (DF_ACHETEURS/DF_TITULAIRES) : aucune requête base
+    ni appel réseau, cette fonction tourne à chaque requête HTTP.
+    """
+    import json
+
+    import polars as pl
+
+    from src.utils.data import DF_ACHETEURS, DF_TITULAIRES
+    from src.utils.seo import make_org_jsonld_minimal
+
+    segments = path.strip("/").split("/")
+    if len(segments) != 2:
+        return ""
+    segment, org_id = segments
+    org_type = {"acheteurs": "acheteur", "titulaires": "titulaire"}.get(segment)
+    if not org_type:
+        return ""
+
+    df = DF_ACHETEURS if org_type == "acheteur" else DF_TITULAIRES
+    row = df.filter(pl.col(f"{org_type}_id") == org_id)
+    if row.height == 0:
+        return ""
+    nom = row.select(f"{org_type}_nom").item(0, 0)
+
+    # NE PAS échapper en HTML : markupsafe.escape transformerait les guillemets
+    # du JSON en &quot; et rendrait le bloc illisible pour un parseur. Le seul
+    # risque réel dans un <script> est une séquence `</script>` dans une valeur ;
+    # neutraliser `<` en < suffit, et reste du JSON valide.
+    payload = json.dumps(
+        make_org_jsonld_minimal(org_id, org_type, nom), ensure_ascii=False
+    ).replace("<", "\\u003c")
+    return f'<script type="application/ld+json">{payload}</script>'
+
+
 def _interpolate_index_per_request(**kwargs):
     from flask import request as _request
     from markupsafe import escape as _escape
@@ -371,6 +410,10 @@ def _interpolate_index_per_request(**kwargs):
 
     canonical_tag = f'<link rel="canonical" href="{_escape(_request.base_url)}"/>'
     kwargs["metas"] = f"{kwargs.get('metas', '')}\n      {canonical_tag}"
+
+    jsonld_tag = _org_jsonld_tag(_request.path)
+    if jsonld_tag:
+        kwargs["metas"] = f"{kwargs.get('metas', '')}\n      {jsonld_tag}"
 
     # Identité Chatwoot : le chargement du widget est figé dans index_string
     # (même token pour tout le monde), mais setUser dépend de la session, donc

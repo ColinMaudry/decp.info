@@ -386,3 +386,76 @@ def test_canonical_ignore_x_forwarded_host_non_fiable(client):
     )
     assert "evil.tld" not in body
     assert 'rel="canonical" href="http://localhost/tableau"' in body
+
+
+def test_jsonld_organisme_servi_dans_le_html(client):
+    import json
+    import re
+
+    body = client.get("/acheteurs/123").get_data(as_text=True)
+    blocs = re.findall(
+        r'<script type="application/ld\+json">(.*?)</script>', body, re.S
+    )
+    donnees = [json.loads(b) for b in blocs if b.strip()]
+    assert any(d.get("name") == "ACHETEUR 1" for d in donnees)
+
+
+def test_jsonld_minimal_sans_appel_reseau(monkeypatch):
+    """La version servie ne doit jamais appeler l'Annuaire des entreprises."""
+    from src.utils import data, seo
+
+    def interdit(*_a, **_k):
+        raise AssertionError("appel réseau interdit dans le rendu serveur")
+
+    monkeypatch.setattr(data, "get_annuaire_data", interdit)
+    resultat = seo.make_org_jsonld_minimal("123", "acheteur", "ACHETEUR 1")
+    assert resultat["name"] == "ACHETEUR 1"
+    assert "address" not in resultat
+
+
+def test_jsonld_minimal_pas_pour_une_page_non_organisme(client):
+    """Aucun bloc JSON-LD, quel que soit son contenu, sur une page non-organisme.
+
+    Un simple `"GovernmentOrganization" not in body` resterait vrai si le code
+    posait par erreur un bloc JSON-LD de type "Organization" (titulaire) sur
+    cette page : on vérifie l'absence de la balise <script ld+json> elle-même.
+    `/tableau` a un seul segment de chemin (échoue tôt sur la vérification de
+    longueur) ; `/a-propos/presentation` a deux segments comme une fiche
+    acheteur/titulaire mais un premier segment différent, ce qui exerce
+    réellement le filtre sur le nom du segment plutôt que sur sa seule
+    longueur.
+    """
+    for chemin in ("/tableau", "/a-propos/presentation"):
+        body = client.get(chemin).get_data(as_text=True)
+        assert "application/ld+json" not in body, chemin
+
+
+def test_jsonld_minimal_echappe_uniquement_les_chevrons(monkeypatch):
+    """Un nom d'organisme avec guillemets et chevrons reste du JSON analysable.
+
+    Échapper en HTML (markupsafe.escape) transformerait les guillemets en
+    `&quot;` et casserait le parsing JSON-LD ; seule la séquence `<` doit être
+    neutralisée, pour empêcher une fermeture prématurée de la balise
+    <script>.
+    """
+    import json
+
+    import polars as pl
+
+    from src.app import _org_jsonld_tag
+    from src.utils import data
+
+    nom_piege = 'Mairie "Test" <script>alert(1)</script>'
+    faux_df = pl.DataFrame({"acheteur_id": ["999"], "acheteur_nom": [nom_piege]})
+    monkeypatch.setattr(data, "DF_ACHETEURS", faux_df)
+
+    tag = _org_jsonld_tag("/acheteurs/999")
+
+    assert "&quot;" not in tag
+    assert "</script>alert" not in tag
+
+    payload = tag.removeprefix('<script type="application/ld+json">').removesuffix(
+        "</script>"
+    )
+    parsed = json.loads(payload)
+    assert parsed["name"] == nom_piege
