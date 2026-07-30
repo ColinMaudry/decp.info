@@ -274,8 +274,14 @@ def organismes_sans_departement(monkeypatch):
 
 
 def test_sitemap_arbre_couvre_les_organismes_sans_departement(
-    organismes_sans_departement,
+    client, organismes_sans_departement
 ):
+    """`client` force l'import de `src.app` (donc de `src.utils.data`, qui
+    construit `DF_ACHETEURS`/`DF_TITULAIRES` via `get_cursor()` à l'import)
+    AVANT le monkeypatch de la fixture : sinon, exécuté seul, ce test ferait
+    passer ce chargement à travers le faux curseur et casserait sur un import
+    tardif, indépendamment du code sous test (voir
+    `test_sitemap_arbre_dedoublonne_les_locs`)."""
     from src.utils.sitemap import _arbre_locs
 
     locs = _arbre_locs.uncached()
@@ -315,8 +321,14 @@ def organisme_code_departement_inconnu(monkeypatch):
 
 
 def test_sitemap_arbre_n_assimile_pas_un_code_inconnu_a_non_renseigne(
-    organisme_code_departement_inconnu,
+    client, organisme_code_departement_inconnu
 ):
+    """`client` force l'import de `src.app` (donc de `src.utils.data`, qui
+    construit `DF_ACHETEURS`/`DF_TITULAIRES` via `get_cursor()` à l'import)
+    AVANT le monkeypatch de la fixture : sinon, exécuté seul, ce test ferait
+    passer ce chargement à travers le faux curseur et casserait sur un import
+    tardif, indépendamment du code sous test (voir
+    `test_sitemap_arbre_dedoublonne_les_locs`)."""
     from src.utils.sitemap import _arbre_locs
 
     locs = _arbre_locs.uncached()
