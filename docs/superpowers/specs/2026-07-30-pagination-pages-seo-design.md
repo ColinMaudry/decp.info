@@ -188,9 +188,14 @@ Le JSON-LD organisme reçoit une version minimale servie dans le HTML :
 }
 ```
 
-Le callback existant continue d'enrichir avec l'adresse côté client : cette
-partie dépend d'un appel à l'Annuaire des entreprises et ne peut pas être servie
-sans coût de latence.
+Le callback existant continue d'enrichir avec l'adresse côté client. Ce n'est pas
+le JSON-LD qui motive l'appel à l'Annuaire : `acheteur.py:260` l'exécute déjà
+pour le panneau d'infos et le lien « annuaire-entreprises » de la fiche, puis
+passe le résultat à `make_org_jsonld(..., annuaire_data=data)` — c'est la raison
+d'être du paramètre, documentée dans `seo.py:16-17`. L'adresse est donc obtenue
+sans appel supplémentaire. La servir côté serveur exigerait en revanche un appel
+HTTP **bloquant** pendant le rendu de chaque page, y compris pour chaque hit de
+crawler : c'est cela qu'on évite.
 
 ### 4. Données
 
@@ -223,6 +228,17 @@ Les index et les listes sont mémoïsés avec le `cache` existant, clé
 sitemap : les données ne changent qu'à la reconstruction de la base. Les crawlers
 tapent les mêmes URLs en rafale.
 
+**`get_annuaire_data` doit être mise en cache** (`src/utils/data.py:16`). Elle
+émet aujourd'hui un `get()` brut vers `recherche-entreprises.api.gouv.fr` à
+chaque exécution du callback, sans mémoïsation. C'est supportable au trafic
+actuel, mais tout l'objet de ce chantier est de faire crawler les 242 005 fiches
+organisme — et Googlebot exécute le JS, donc déclenche le callback. On enverrait
+des centaines de milliers d'appels non cachés vers une API publique à quota par
+IP, avec pour conséquence un throttling et un ralentissement de chaque fiche.
+C'est ce chantier qui crée le risque, il porte donc le correctif : un
+`@cache.memoize` sur la fonction, les données d'établissement ne bougeant
+quasiment jamais.
+
 ## Migration des URLs
 
 | URL actuelle                       | Devenir                                                                                                    |
@@ -254,6 +270,7 @@ limites.
 | `tests/test_seo.py`                          | `<title>` résolu par page dans le HTML servi, descriptions distinctes entre deux organismes, canonical présent et en `https`, JSON-LD servi                                  |
 | `tests/seo/test_pages_ssr.py` _(nouveau)_    | 100 entrées par page, bornes (`?page=0`, `abc`, hors limite → 404), organisme sans marché → 200, ordre déterministe, présence des deux liens par ligne, `nb_marches` affiché |
 | `tests/seo/test_redirections.py` _(nouveau)_ | `/departements/<code>/<type>/<id>` → 301 vers `/<type>s/<id>/marches`, `/departements/<code>` → 301                                                                          |
+| `tests/cache/`                               | `get_annuaire_data` mémoïsée : deux appels pour le même SIRET ne déclenchent qu'une requête HTTP                                                                             |
 
 Le test le plus important est celui de l'ordre déterministe : c'est le défaut que
 la pagination introduirait si l'on gardait la requête actuelle. Il est écrit en
