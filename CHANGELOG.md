@@ -1,6 +1,6 @@
 ##### 3.0.1
 
-- optimisation du contenu généré pour le SEO
+- optimisation du contenu généré pour le SEO (index des pages, sitemaps, titres, métadonnées, etc.) ([#128](https://github.com/ColinMaudry/colibre/issues/128))
 - correction du nombre de titulaires affiché en page d'accueil
 
 ### 3.0.0
