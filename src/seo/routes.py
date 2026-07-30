@@ -29,6 +29,9 @@ _LIBELLES = {
         "verbe_pluriel": "attribués par",
         "type_singulier": "Acheteur public",
         "type_pluriel": "Acheteurs publics",
+        # "Acheteur public" porte déjà le mot "public" : il se suffit à
+        # lui-même dans le titre de catégorie, pas besoin du complément.
+        "titre_departement": "Acheteurs publics",
     },
     "titulaire": {
         "segment": "titulaires",
@@ -36,6 +39,9 @@ _LIBELLES = {
         "verbe_pluriel": "remportés par",
         "type_singulier": "Titulaire",
         "type_pluriel": "Titulaires",
+        # "Titulaire" seul ne porte pas le mot-clé et reste ambigu : il a
+        # besoin du complément pour être compréhensible hors contexte.
+        "titre_departement": "Titulaires de marchés publics",
     },
 }
 
@@ -189,19 +195,30 @@ def index_departement(code: str, type_org: str):
     base = f"/departements/{code}/{type_org}"
     rang = f" (page {page} sur {pages})" if pages > 1 else ""
     libelles = _LIBELLES[org_type]
-    libelle_type = accorder(total, libelles["type_singulier"], libelles["type_pluriel"])
+    # Libellé de catégorie : une constante par type, indépendante du nombre
+    # d'organismes du département (#128 — un libellé accordé sur `total`
+    # ferait basculer le titre au singulier pour les départements à 0 ou 1
+    # organisme, et il changerait d'une livraison de données à l'autre).
+    libelle_type = libelles["titre_departement"]
+    # Ici, en revanche, l'accord porte sur un décompte réel affiché en toutes
+    # lettres ("1 acheteur public" / "3 acheteurs publics") : légitime, comme
+    # pour le chapeau.
+    libelle_compte = accorder(
+        total, libelles["type_singulier"], libelles["type_pluriel"]
+    )
+    possessif = accorder(total, "son", "leur")
     organisme_libelle = accorder(total, "organisme", "organismes")
     autre_type_org = "titulaires" if type_org == "acheteurs" else "acheteurs"
 
     return render_template(
         "seo_liste.html",
-        titre=f"{libelle_type} de marchés publics — {nom_dept}{rang} | colibre",
+        titre=f"{libelle_type} — {nom_dept}{rang} | colibre",
         description=(
-            f"{total} {libelle_type.lower()} — {nom_dept}, "
-            "avec leur nombre de marchés publics."
+            f"{total} {libelle_compte.lower()} — {nom_dept}, "
+            f"avec {possessif} nombre de marchés publics."
         ),
         canonical=request.base_url + (f"?page={page}" if page > 1 else ""),
-        titre_h1=f"{libelle_type} de marchés publics — {nom_dept}",
+        titre_h1=f"{libelle_type} — {nom_dept}",
         chapeau=f"{total} {organisme_libelle} — {nom_dept}.",
         entrees=[
             Entree(

@@ -95,24 +95,46 @@ def test_canonical_auto_referent_sur_page_2_index_departement(
     assert canonicals[0].endswith("/departements/76/acheteurs?page=2")
 
 
-def test_titre_singulier_avec_mot_cle_et_sans_contraction(client):
-    """« Titulaires de Alpes-Maritimes » (article contracté absent) et le
-    mot-clé « marchés publics » disparu du <title> étaient les deux défauts
-    relevés en revue (#128). Le séparateur (tiret cadratin) contourne le
-    problème d'article contracté plutôt que d'en inventer une règle."""
+def test_titre_departement_acheteurs_sans_contraction_ni_redondance(client):
+    """« Titulaires de Alpes-Maritimes » (article contracté absent) était l'un
+    des défauts relevés en revue (#128). Le séparateur (tiret cadratin)
+    contourne le problème d'article contracté plutôt que d'en inventer une
+    règle.
+
+    Le libellé de catégorie est une constante par type de page, indépendante
+    du nombre d'organismes du département (#128, régression corrigée) :
+    « Acheteur(s) public(s) » ne varie donc pas avec `total`, et ne répète
+    pas « marchés publics » (déjà porté par le mot « public »).
+    """
     import re
 
     body = client.get("/departements/75/acheteurs").get_data(as_text=True)
     titre = re.findall(r"<title>(.*?)</title>", body)[0]
-    assert titre == "Acheteur public de marchés publics — Paris | colibre"
+    assert titre == "Acheteurs publics — Paris | colibre"
 
 
-def test_titre_pluriel_avec_mot_cle_et_sans_contraction(client, departement_76):
+def test_titre_departement_ne_varie_pas_avec_le_nombre_d_organismes(
+    client, departement_76
+):
+    """Le libellé de catégorie reste "Acheteurs publics" (pluriel constant),
+    que le département compte 1 ou 3 organismes — contrairement au
+    comportement fautif (#128) où il basculait au singulier pour 0 ou 1."""
     import re
 
     body = client.get("/departements/76/acheteurs").get_data(as_text=True)
     titre = re.findall(r"<title>(.*?)</title>", body)[0]
-    assert titre == "Acheteurs publics de marchés publics — Seine-Maritime | colibre"
+    assert titre == "Acheteurs publics — Seine-Maritime | colibre"
+
+
+def test_titre_departement_titulaires_porte_le_mot_cle(client):
+    """« Titulaire » seul est ambigu hors contexte : le titre porte le
+    complément « de marchés publics » pour rester compréhensible et garder le
+    mot-clé, sans dupliquer « acheteurs publics de marchés publics »."""
+    import re
+
+    body = client.get("/departements/75/titulaires").get_data(as_text=True)
+    titre = re.findall(r"<title>(.*?)</title>", body)[0]
+    assert titre == "Titulaires de marchés publics — Paris | colibre"
 
 
 def test_chapeau_accorde_au_singulier(client):
