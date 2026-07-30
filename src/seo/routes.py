@@ -13,6 +13,18 @@ from src.seo import SEGMENT_SANS_DEPARTEMENT, pagination, queries
 from src.utils.data import DEPARTEMENTS
 from src.utils.matomo import build_tracker_script
 from src.utils.pluriel import accorder
+from src.utils.table import format_number
+
+
+def _nombre(n: int) -> str:
+    """Nombre formaté à la française, avec espace insécable comme le reste du site.
+
+    `format_number` renvoie une chaîne vide pour 0 : sans ce repli, un
+    département sans organisme afficherait « organismes — Wallis-et-Futuna »
+    au lieu de « 0 organismes ».
+    """
+    return format_number(n) or "0"
+
 
 seo_bp = Blueprint("seo", __name__)
 
@@ -87,20 +99,20 @@ def _marches_org(org_type: str, org_id: str):
     verbe = accorder(total, libelles["verbe_singulier"], libelles["verbe_pluriel"])
     marches_libelle = accorder(total, "marché public", "marchés publics")
     article_partitif = accorder(total, "du", "des")
-    nombre = "" if total <= 1 else f"{total} "
+    nombre = "" if total <= 1 else f"{_nombre(total)} "
     base = f"/{segment}/{org_id}/marches"
     rang = f" (page {page} sur {pages})" if pages > 1 else ""
 
     return render_template(
         "seo_liste.html",
-        titre=f"{total} {marches_libelle} {verbe} {nom}{rang} | colibre",
+        titre=f"{_nombre(total)} {marches_libelle} {verbe} {nom}{rang} | colibre",
         description=(
             f"Liste complète {article_partitif} {nombre}{marches_libelle} {verbe} {nom}, "
             "publiée par colibre."
         ),
         canonical=request.base_url + (f"?page={page}" if page > 1 else ""),
         titre_h1=f"{marches_libelle.capitalize()} {verbe} {nom}",
-        chapeau=f"{total} {marches_libelle} {verbe} {nom}.",
+        chapeau=f"{_nombre(total)} {marches_libelle} {verbe} {nom}.",
         entrees=[
             Entree(href=f"/marches/{uid}", libelle=objet or uid) for uid, objet in rows
         ],
@@ -214,17 +226,17 @@ def index_departement(code: str, type_org: str):
         "seo_liste.html",
         titre=f"{libelle_type} — {nom_dept}{rang} | colibre",
         description=(
-            f"{total} {libelle_compte.lower()} — {nom_dept}, "
+            f"{_nombre(total)} {libelle_compte.lower()} — {nom_dept}, "
             f"avec {possessif} nombre de marchés publics."
         ),
         canonical=request.base_url + (f"?page={page}" if page > 1 else ""),
         titre_h1=f"{libelle_type} — {nom_dept}",
-        chapeau=f"{total} {organisme_libelle} — {nom_dept}.",
+        chapeau=f"{_nombre(total)} {organisme_libelle} — {nom_dept}.",
         entrees=[
             Entree(
                 href=f"/{type_org}/{org_id}",
                 libelle=nom or org_id,
-                suffixe=f"{nb} marché{'s' if nb > 1 else ''}",
+                suffixe=f"{_nombre(nb)} marché{'s' if nb > 1 else ''}",
                 lien_secondaire=f"/{type_org}/{org_id}/marches",
             )
             for org_id, nom, nb in rows
