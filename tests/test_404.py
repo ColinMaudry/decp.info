@@ -52,12 +52,15 @@ def test_pages_statiques_inchangees(client, path):
         "/marches/abc",
         "/acheteurs/123",
         "/titulaires/345",
-        "/departements/44",
-        "/departements/44/acheteur/123",
     ],
 )
 def test_pages_a_gabarit_inchangees(client, path):
-    """Les gabarits `/marches/<uid>` & co. restent servis par Dash."""
+    """Les gabarits `/marches/<uid>` & co. restent servis par Dash.
+
+    `/departements/<code>` et `/departements/<code>/<type_org>/<org_id>` ne
+    sont plus des gabarits Dash depuis #128 : ce sont désormais des
+    redirections 301, couvertes par tests/seo/test_redirections.py.
+    """
     assert client.get(path).status_code == 200
 
 

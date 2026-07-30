@@ -7,7 +7,7 @@ raison d'être. `src/not_found.py` documente le fait que les vraies routes
 Flask échappent au catch-all de Dash.
 """
 
-from flask import Blueprint, abort, render_template, request
+from flask import Blueprint, abort, redirect, render_template, request
 
 from src.seo import pagination, queries
 from src.utils.data import DEPARTEMENTS
@@ -182,3 +182,20 @@ def index_departement(code: str, type_org: str):
         retour_href="/departements",
         retour_libelle="Retour à la liste des départements",
     )
+
+
+@seo_bp.route("/departements/<code>/<org_type>/<org_id>")
+def redirige_ancienne_liste(code: str, org_type: str, org_id: str):
+    """L'ancien arbre plaçait la liste de marchés sous le département.
+
+    Le segment `code` n'était déjà pas utilisé par l'ancien callback : la
+    correspondance vers la nouvelle URL est donc exacte.
+    """
+    if org_type not in ("acheteur", "titulaire"):
+        abort(404)
+    return redirect(f"/{org_type}s/{org_id}/marches", code=301)
+
+
+@seo_bp.route("/departements/<code>")
+def redirige_ancien_departement(code: str):
+    return redirect(f"/departements/{code}/acheteurs", code=301)
