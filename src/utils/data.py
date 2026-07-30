@@ -153,7 +153,12 @@ def build_org_frame(org_type: str) -> pl.DataFrame:
         c
         for c in schema.names()
         if c.startswith(f"{org_type}_")
-        and c not in (f"{org_type}_latitude", f"{org_type}_longitude")
+        and c
+        not in (
+            f"{org_type}_latitude",
+            f"{org_type}_longitude",
+            f"{org_type}_distance",
+        )
     ]
     select_list = ", ".join(org_cols)
     group_list = ", ".join(org_cols)
