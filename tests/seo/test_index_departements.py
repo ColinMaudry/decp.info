@@ -88,6 +88,58 @@ def test_type_inconnu_404(client):
     assert client.get("/departements/75/autre").status_code == 404
 
 
-def test_segment_non_renseigne_servi(client):
-    """Les organismes sans département ont un chemin explorable."""
-    assert client.get("/departements/non-renseigne/titulaires").status_code == 200
+@pytest.mark.parametrize("page", ["0", "abc", "-1"])
+def test_page_invalide_404(client, page):
+    assert client.get(f"/departements/75/acheteurs?page={page}").status_code == 404
+
+
+def test_page_hors_limites_404(client):
+    assert client.get("/departements/75/acheteurs?page=99").status_code == 404
+
+
+@pytest.fixture
+def acheteurs_sans_departement(monkeypatch):
+    """2 acheteurs sans département (NULL) et 1 avec un département renseigné.
+
+    Un `WHERE acheteur_departement_code = ?` avec `None` en paramètre ne
+    matche jamais NULL en SQL (`x = NULL` s'évalue à faux, jamais à vrai) :
+    la requête renverrait alors un total de 0, donc une page vide, donc un
+    200 — un simple `assert status_code == 200` resterait donc vert même en
+    l'absence du `IS NULL` explicite. Cette fixture peuple une base
+    `:memory:` avec deux lignes réellement NULL et une ligne à département
+    renseigné, pour que le test associé puisse vérifier la présence des deux
+    premières ET l'absence de la troisième — la seule combinaison qui échoue
+    à la fois si `IS NULL` est remplacé par `= ?` (plus aucune ligne) et si un
+    filtre trop large était utilisé par erreur (toutes les lignes).
+    """
+    import duckdb
+
+    conn = duckdb.connect(":memory:")
+    conn.execute(
+        "CREATE TABLE acheteurs_departement ("
+        "acheteur_id VARCHAR, acheteur_nom VARCHAR, "
+        "acheteur_departement_code VARCHAR, nb_marches BIGINT)"
+    )
+    conn.execute(
+        "INSERT INTO acheteurs_departement VALUES "
+        "('sd-1', 'SANS DEPT UN', NULL, 5), "
+        "('sd-2', 'SANS DEPT DEUX', NULL, 2), "
+        "('avec-dept', 'AVEC DEPT', '75', 9)"
+    )
+    monkeypatch.setattr("src.seo.queries.get_cursor", lambda: conn.cursor())
+    yield
+    conn.close()
+
+
+def test_segment_non_renseigne_servi(client, acheteurs_sans_departement):
+    """Les organismes sans département ont un chemin explorable.
+
+    Voir le docstring de `acheteurs_sans_departement` : c'est l'assertion
+    d'absence de « AVEC DEPT » qui fait mordre ce test sur un `= ?` naïf.
+    """
+    response = client.get("/departements/non-renseigne/acheteurs")
+    body = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert "SANS DEPT UN" in body
+    assert "SANS DEPT DEUX" in body
+    assert "AVEC DEPT" not in body
