@@ -1,3 +1,5 @@
+import logging
+
 import src.utils.tracking as tracking
 
 
@@ -100,3 +102,44 @@ def test_n_exceptionne_pas_si_envoi_echoue(monkeypatch):
     monkeypatch.setattr(tracking, "post", fake_post)
 
     tracking._envoyer({"e_a": "subscription_active"})  # ne doit pas lever
+
+
+def _preparer_echec_envoi(monkeypatch):
+    """Configure `_envoyer` pour échouer, et remet `_echec_signale` à `False`.
+
+    Sans cette remise à zéro, l'ordre d'exécution des tests déciderait de ce
+    qui passe : `_echec_signale` est un drapeau au niveau module, donc un
+    test qui tourne après un autre échec déjà signalé le trouverait à `True`
+    et ne verrait jamais son propre warning.
+    """
+    monkeypatch.setattr(tracking, "_echec_signale", False)
+    monkeypatch.setenv("DEVELOPMENT", "false")
+    monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    monkeypatch.setenv("MATOMO_URL", "https://matomo.example/matomo.php")
+    monkeypatch.setenv("MATOMO_SITE_ID", "1")
+
+    def fake_post(url, data, timeout):
+        raise RuntimeError("matomo est tombé")
+
+    monkeypatch.setattr(tracking, "post", fake_post)
+
+
+def test_premier_echec_emet_un_warning(monkeypatch, caplog):
+    _preparer_echec_envoi(monkeypatch)
+
+    with caplog.at_level(logging.WARNING, logger="colibre"):
+        tracking._envoyer({"e_a": "subscription_active"})
+
+    assert any(r.levelno == logging.WARNING for r in caplog.records)
+    assert "Matomo" in caplog.text
+
+
+def test_second_echec_consecutif_n_emet_pas_de_nouveau_warning(monkeypatch, caplog):
+    _preparer_echec_envoi(monkeypatch)
+
+    with caplog.at_level(logging.WARNING, logger="colibre"):
+        tracking._envoyer({"e_a": "subscription_active"})  # signale, une fois
+        caplog.clear()
+        tracking._envoyer({"e_a": "subscription_active"})  # ne re-signale pas
+
+    assert caplog.records == []

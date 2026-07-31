@@ -7,6 +7,15 @@ from httpx import post
 from src.utils import logger
 from src.utils.matomo import matomo_config, tracking_enabled
 
+# Un seul warning par processus (et non par requête) : le logger "colibre"
+# n'est relevé à DEBUG que sous DEVELOPMENT=true (src/utils/__init__.py), donc
+# un logger.debug ici serait filtré en production — silence total sur une
+# panne Matomo durable, exactement ce que cette branche corrige par ailleurs.
+# Un logger.warning à chaque requête inonderait les journaux en cas de panne
+# prolongée ; un seul suffit à donner le signal. Ne pas "corriger" ce drapeau
+# pour réémettre à chaque échec : c'est voulu.
+_echec_signale = False
+
 
 def _envoyer(params: dict) -> None:
     """POST best-effort vers la Tracking API Matomo. Ne lève jamais.
@@ -32,10 +41,12 @@ def _envoyer(params: dict) -> None:
         # doit pas ajouter sa latence à la requête de l'utilisateur.
         post(url=url, data={**params, "idsite": site_id}, timeout=2.0)
     except Exception:  # noqa: BLE001
-        # debug et non warning : ce chemin s'exécute par requête, une panne
-        # Matomo prolongée logguerait sinon en continu. Trace laissée pour ne
-        # pas répéter le silence total qui a caché l'incident #128.
-        logger.debug("Matomo : échec d'envoi", exc_info=True)
+        # Ne propage jamais (invariant de ce module), mais avertit une fois
+        # par processus — cf. commentaire sur _echec_signale ci-dessus.
+        global _echec_signale
+        if not _echec_signale:
+            logger.warning("Matomo : échec d'envoi", exc_info=True)
+            _echec_signale = True
 
 
 def _horodatage() -> dict:
