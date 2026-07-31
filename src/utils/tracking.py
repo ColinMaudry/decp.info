@@ -25,7 +25,10 @@ def _envoyer(params: dict) -> None:
         return
     url, site_id = config
     try:
-        post(url=url, data={**params, "idsite": site_id})
+        # timeout court : track_search s'exécute de façon synchrone dans une
+        # recherche utilisateur (src/utils/search.py), un Matomo qui pend ne
+        # doit pas ajouter sa latence à la requête de l'utilisateur.
+        post(url=url, data={**params, "idsite": site_id}, timeout=2.0)
     except Exception:  # noqa: BLE001
         pass
 
