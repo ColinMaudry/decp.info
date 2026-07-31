@@ -43,7 +43,6 @@ jobs:
             script: |
               systemctl stop ${{ vars.APP_NAME }}
               cd /var/www/${{ vars.APP_NAME }}
-              # Annule les modifications locales des fichiers SUIVIS : sans ça,
               git restore .
               git pull
               source .venv/bin/activate
