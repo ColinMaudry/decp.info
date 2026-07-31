@@ -4,6 +4,7 @@ from time import localtime
 
 from httpx import post
 
+from src.utils import logger
 from src.utils.matomo import matomo_config, tracking_enabled
 
 
@@ -31,7 +32,10 @@ def _envoyer(params: dict) -> None:
         # doit pas ajouter sa latence à la requête de l'utilisateur.
         post(url=url, data={**params, "idsite": site_id}, timeout=2.0)
     except Exception:  # noqa: BLE001
-        pass
+        # debug et non warning : ce chemin s'exécute par requête, une panne
+        # Matomo prolongée logguerait sinon en continu. Trace laissée pour ne
+        # pas répéter le silence total qui a caché l'incident #128.
+        logger.debug("Matomo : échec d'envoi", exc_info=True)
 
 
 def _horodatage() -> dict:
@@ -81,15 +85,25 @@ def track_mcp_tool(tool_name: str, query: str | None = None) -> None:
     _envoyer(params)
 
 
-def _envoyer_async(params: dict) -> threading.Thread:
+def _envoyer_async(params: dict) -> threading.Thread | None:
     """Envoie en tâche de fond et retourne le thread (pour que les tests joignent).
 
     Un POST synchrone retarderait de plusieurs secondes la réponse 200 au
     webhook Frisbii, qui pourrait alors considérer la livraison en échec et
     réessayer — donc émettre l'événement en double.
+
+    `threading.Thread(...).start()` peut lever (ex. RuntimeError sous
+    épuisement de ressources) : sans ce try/except, l'exception remonterait
+    jusqu'à `update_from_webhook` (src/subscriptions/db.py), ferait répondre
+    500 à Frisbii, et déclencherait un nouveau essai — rejouant la transaction
+    et l'événement. Aucun émetteur ne doit jamais lever.
     """
-    thread = threading.Thread(target=_envoyer, args=(params,), daemon=True)
-    thread.start()
+    try:
+        thread = threading.Thread(target=_envoyer, args=(params,), daemon=True)
+        thread.start()
+    except Exception:  # noqa: BLE001
+        logger.debug("Matomo : échec de démarrage du thread d'envoi", exc_info=True)
+        return None
     return thread
 
 

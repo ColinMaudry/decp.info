@@ -55,6 +55,28 @@ def test_envoyer_async_appelle_envoyer(monkeypatch):
     assert recu["e_a"] == "subscription_active"
 
 
+def test_envoyer_async_ne_leve_pas_si_thread_start_echoue(monkeypatch):
+    """Une panne au démarrage du thread (ex. RuntimeError sous épuisement de
+    ressources) ne doit pas remonter jusqu'à l'appelant : dans
+    `update_from_webhook` (src/subscriptions/db.py), une exception non
+    rattrapée ici ferait répondre 500 à Frisbii et déclencherait un nouvel
+    essai — rejouant la transaction et l'événement.
+    """
+
+    class ThreadQuiEchoue:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def start(self):
+            raise RuntimeError("can't start new thread")
+
+    monkeypatch.setattr(tracking.threading, "Thread", ThreadQuiEchoue)
+
+    resultat = tracking._envoyer_async({"e_a": "subscription_active"})
+
+    assert resultat is None
+
+
 def test_n_exceptionne_pas_si_envoi_echoue(monkeypatch):
     """Une panne Matomo ne doit pas faire répondre 502 au webhook Frisbii.
 
