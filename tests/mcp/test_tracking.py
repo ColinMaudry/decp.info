@@ -14,6 +14,7 @@ def test_track_mcp_tool_sends_action_and_dimension(monkeypatch):
     def fake_post(url, data, timeout=None):
         captured["url"] = url
         captured["data"] = data
+        captured["timeout"] = timeout
 
     _activer(monkeypatch)
     monkeypatch.setattr(tracking, "post", fake_post)
@@ -26,6 +27,7 @@ def test_track_mcp_tool_sends_action_and_dimension(monkeypatch):
     assert captured["data"]["dimension1"] == "rechercher_marches"
     assert captured["data"]["search"] == "informatique"
     assert set(captured["data"]) >= {"rand", "apiv", "h", "m", "s", "rec"}
+    assert captured["timeout"] == 2.0
 
 
 def test_aucun_token_auth_envoye(monkeypatch):
