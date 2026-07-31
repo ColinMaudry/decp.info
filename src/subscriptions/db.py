@@ -2,6 +2,7 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 
 from src.auth.db import get_conn
+from src.utils import tracking
 
 SUBSCRIPTIONS_SCHEMA = """
 CREATE TABLE IF NOT EXISTS subscriptions (
@@ -285,6 +286,13 @@ def update_from_webhook(
         )
     if prev["status"] != "active" and status == "active":
         freeze_votes_cursor(prev["user_id"])
+        # Couvre trial → active (transformation d'un essai) et pending → active
+        # (souscription directe d'un utilisateur ayant déjà consommé son essai).
+        # La condition rend l'émission idempotente : un webhook redélivré trouve
+        # prev["status"] déjà à "active" et ne repasse pas ici.
+        tracking.track_subscription_goal(
+            "subscription_active", prev["plan"], prev["prix_ht"]
+        )
 
 
 def set_cancelled(subscription_id: int, current_period_end: str | None) -> None:
