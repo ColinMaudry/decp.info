@@ -86,7 +86,11 @@ def signup():
         db.delete_user(user_id)
         return _redirect_with_error("/inscription", "email_send_failed", email)
 
-    return redirect("/connexion?pending_verification=1")
+    # `compte_cree` déclenche l'événement `account_created` côté navigateur
+    # (src/assets/goals.js). Posé ici et non sur `db.create_user` ligne 80 :
+    # l'échec d'envoi du mail supprime le compte trois lignes plus haut, un
+    # événement posé plus tôt compterait des comptes qui n'existent plus.
+    return redirect("/connexion?pending_verification=1&compte_cree=email")
 
 
 @auth_bp.route("/verify-email", methods=["GET"])
