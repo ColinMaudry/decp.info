@@ -1,62 +1,77 @@
-import os
 import uuid
 from time import localtime
 
 from httpx import post
 
-from src.utils import DEVELOPMENT
+from src.utils.matomo import matomo_config, tracking_enabled
+
+
+def _envoyer(params: dict) -> None:
+    """POST best-effort vers la Tracking API Matomo. Ne lève jamais.
+
+    `data=` et non `params=` : la charge utile passe dans le corps de la requête
+    plutôt que dans la query string, où elle atterrirait dans les journaux
+    d'accès du serveur Matomo.
+
+    Aucun `token_auth` : l'endpoint matomo.php est public par construction —
+    c'est celui qu'appelle le matomo.js de chaque visiteur. Le token n'est
+    requis que pour les paramètres privilégiés (cip, cdt au-delà de ~24 h,
+    country/region/city/lat/long), qu'aucun émetteur du projet n'utilise.
+    """
+    if not tracking_enabled():
+        return
+    config = matomo_config()
+    if config is None:
+        return
+    url, site_id = config
+    try:
+        post(url=url, data={**params, "idsite": site_id})
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _horodatage() -> dict:
+    maintenant = localtime()
+    return {
+        "rand": uuid.uuid4().hex,
+        "apiv": "1",
+        "h": maintenant.tm_hour,
+        "m": maintenant.tm_min,
+        "s": maintenant.tm_sec,
+    }
 
 
 def track_search(query, category):
-    if len(query) >= 4 and not DEVELOPMENT and os.getenv("MATOMO_DOMAIN"):
-        url = "https://colibre.fr"
-        params = {
-            "idsite": os.getenv("MATOMO_ID_SITE"),
-            "url": url,
+    """Enregistre une recherche dans Matomo (best-effort)."""
+    if len(query) < 4:
+        return
+    _envoyer(
+        {
             "rec": "1",
+            "url": "https://colibre.fr",
             "action_name": "search" if category == "home_page_search" else "filter",
             "search_cat": category,
-            "rand": uuid.uuid4().hex,
-            "apiv": "1",
-            "h": localtime().tm_hour,
-            "m": localtime().tm_min,
-            "s": localtime().tm_sec,
             "search": query,
-            "token_auth": os.getenv("MATOMO_TOKEN"),
+            **_horodatage(),
         }
-        post(
-            url=f"https://{os.getenv('MATOMO_DOMAIN')}/matomo.php",
-            params=params,
-        ).raise_for_status()
+    )
 
 
 def track_mcp_tool(tool_name: str, query: str | None = None) -> None:
-    """Enregistre un appel d'outil MCP dans Matomo (best-effort, prod uniquement).
+    """Enregistre un appel d'outil MCP dans Matomo (best-effort).
 
     `action_name="MCP / <tool>"`, `dimension1=<tool>`. Si l'outil porte une
     requête texte, elle est envoyée en `search`. Nécessite un Custom Dimension
     slot 1 (scope Action) configuré côté Matomo — sinon `dimension1` est ignoré.
-    Ne lève jamais : une panne Matomo ne doit pas casser l'appel du tool.
     """
-    if DEVELOPMENT or not os.getenv("MATOMO_DOMAIN"):
-        return
     params = {
-        "idsite": os.getenv("MATOMO_ID_SITE"),
-        "url": "https://colibre.fr/_mcp",
         "rec": "1",
+        "url": "https://colibre.fr/_mcp",
         "action_name": f"MCP / {tool_name}",
         "dimension1": tool_name,
-        "rand": uuid.uuid4().hex,
-        "apiv": "1",
-        "h": localtime().tm_hour,
-        "m": localtime().tm_min,
-        "s": localtime().tm_sec,
-        "token_auth": os.getenv("MATOMO_TOKEN"),
+        **_horodatage(),
     }
     if query:
         params["search"] = query
         params["search_cat"] = "mcp"
-    try:
-        post(url=f"https://{os.getenv('MATOMO_DOMAIN')}/matomo.php", params=params)
-    except Exception:
-        pass
+    _envoyer(params)
