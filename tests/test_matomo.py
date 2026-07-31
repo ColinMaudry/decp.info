@@ -1,6 +1,10 @@
 """Fragment de suivi Matomo partagé entre les pages Dash et SEO SSR (#128)."""
 
+import json
 import os
+import re
+
+import pytest
 
 
 def test_desactive_par_defaut(monkeypatch):
@@ -22,9 +26,88 @@ def test_active_rend_le_script_trackpageview(monkeypatch):
     from src.utils.matomo import build_tracker_script
 
     monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    monkeypatch.setenv("DEVELOPMENT", "false")
+    monkeypatch.setenv("MATOMO_URL", "https://matomo.example/matomo.php")
+    monkeypatch.setenv("MATOMO_SITE_ID", "42")
     script = build_tracker_script()
     assert "trackPageView" in script
     assert "<script" in script and "</script>" in script
+
+
+def test_script_vide_si_config_incomplete(monkeypatch):
+    """La garde passe mais l'URL manque : pas de script muet à moitié valide."""
+    from src.utils.matomo import build_tracker_script
+
+    monkeypatch.setenv("DEVELOPMENT", "false")
+    monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    monkeypatch.delenv("MATOMO_URL", raising=False)
+    monkeypatch.setenv("MATOMO_SITE_ID", "14")
+    assert build_tracker_script() == ""
+
+
+def test_script_utilise_les_variables_d_environnement(monkeypatch):
+    from src.utils.matomo import build_tracker_script
+
+    monkeypatch.setenv("DEVELOPMENT", "false")
+    monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    monkeypatch.setenv("MATOMO_URL", "https://matomo.example/matomo.php")
+    monkeypatch.setenv("MATOMO_SITE_ID", "42")
+
+    script = build_tracker_script()
+
+    assert "https://matomo.example/" in script
+    assert '"42"' in script
+    # Les anciennes constantes ont disparu du fragment.
+    assert "analytics.maudry.com" not in script
+    assert "'14'" not in script
+
+
+def _base_du_tracker(script: str) -> str:
+    """Extrait la racine (`var u=...`) que le script attribue au loader JS."""
+    correspondance = re.search(r"var u=(\"(?:[^\"\\]|\\.)*\")", script)
+    assert correspondance, script
+    return json.loads(correspondance.group(1))
+
+
+@pytest.mark.parametrize(
+    "matomo_url, base_attendue",
+    [
+        # Cas canonique : MATOMO_URL pointe la Tracking API.
+        ("https://matomo.example/matomo.php", "https://matomo.example/"),
+        # Sans le suffixe matomo.php : la racine est l'URL telle quelle,
+        # avec un slash ajouté.
+        ("https://matomo.example", "https://matomo.example/"),
+        # Sans slash final et sans le suffixe matomo.php.
+        ("https://matomo.example/sub", "https://matomo.example/sub/"),
+    ],
+)
+def test_derivation_de_la_base_depuis_matomo_url(
+    monkeypatch, matomo_url, base_attendue
+):
+    """MATOMO_URL est saisi à la main dans un `.env` de production : un typo
+    (suffixe manquant, slash final oublié) y dégraderait silencieusement.
+    """
+    from src.utils.matomo import build_tracker_script
+
+    monkeypatch.setenv("DEVELOPMENT", "false")
+    monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    monkeypatch.setenv("MATOMO_URL", matomo_url)
+    monkeypatch.setenv("MATOMO_SITE_ID", "42")
+
+    script = build_tracker_script()
+
+    assert _base_du_tracker(script) == base_attendue
+
+
+def test_script_vide_en_development(monkeypatch):
+    """Régression : test.colibre.fr ne doit rien émettre vers le site prod."""
+    from src.utils.matomo import build_tracker_script
+
+    monkeypatch.setenv("DEVELOPMENT", "true")
+    monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    monkeypatch.setenv("MATOMO_URL", "https://matomo.example/matomo.php")
+    monkeypatch.setenv("MATOMO_SITE_ID", "42")
+    assert build_tracker_script() == ""
 
 
 def test_page_dash_emet_le_script_matomo_quand_actif():
@@ -49,7 +132,13 @@ def test_page_dash_emet_le_script_matomo_quand_actif():
     from pathlib import Path
 
     repo_root = Path(__file__).resolve().parents[1]
-    env = {**os.environ, "MATOMO_TRACKING_ENABLED": "true"}
+    env = {
+        **os.environ,
+        "MATOMO_TRACKING_ENABLED": "true",
+        "DEVELOPMENT": "false",
+        "MATOMO_URL": "https://matomo.example/matomo.php",
+        "MATOMO_SITE_ID": "42",
+    }
     resultat = subprocess.run(
         [sys.executable, "-c", "from src.app import app; print(app.index_string)"],
         cwd=repo_root,
@@ -61,3 +150,142 @@ def test_page_dash_emet_le_script_matomo_quand_actif():
     assert resultat.returncode == 0, resultat.stderr
     assert "trackPageView" in resultat.stdout
     assert "<script" in resultat.stdout
+
+
+def test_avertissement_emis_au_demarrage_apres_load_dotenv():
+    """Régression : `avertir_si_config_incomplete()` s'exécutait à l'import de
+    `src.utils.matomo` (src/app.py:45, ex ligne 66 de matomo.py), avant le
+    `load_dotenv()` de `src/app.py:47`. `tracking_enabled()` lisait alors un
+    environnement sans les variables du `.env`, valait donc `False`, et la
+    garde se taisait — y compris quand la configuration réelle, une fois le
+    `.env` chargé, était incomplète.
+
+    Passer les variables directement dans l'environnement du sous-processus
+    ne suffit pas à exercer ce bug : elles seraient déjà lisibles avant même
+    l'import de `src.app`, masquant l'ordre d'import fautif. Il faut qu'elles
+    n'arrivent QUE via `load_dotenv()`, donc on les dépose dans un `.env`
+    temporaire à la racine du dépôt (le seul que `find_dotenv()` trouvera,
+    avant tout `.env` d'un dépôt parent) et on les retire explicitement de
+    l'environnement transmis au sous-processus.
+
+    Le dépôt principal a un `.env` (requis à l'exécution, cf. CLAUDE.md) :
+    plutôt que d'exiger son absence — ce qui casserait la suite sur toute
+    installation standard —, on le met de côté le temps du test et on le
+    restaure dans le `finally`. Un `SIGKILL` pendant la fenêtre du test (donc
+    ni un échec normal, ni un Ctrl-C, tous deux couverts par le `finally`)
+    laisserait le `.env` original sous son nom de sauvegarde ; le `.env` de
+    test, lui, serait orphelin à la racine — un résidu à nettoyer à la main,
+    mais qui ne masque pas silencieusement le vrai `.env`.
+    """
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parents[1]
+    env_file = repo_root / ".env"
+    sauvegarde = repo_root / ".env.bak-test-matomo"
+    existe_deja = env_file.exists()
+    if existe_deja:
+        os.replace(env_file, sauvegarde)
+    env_file.write_text(
+        "MATOMO_TRACKING_ENABLED=true\nDEVELOPMENT=false\nMATOMO_SITE_ID=42\n"
+    )
+    try:
+        env = {
+            k: v
+            for k, v in os.environ.items()
+            if k
+            not in {
+                "MATOMO_TRACKING_ENABLED",
+                "DEVELOPMENT",
+                "MATOMO_URL",
+                "MATOMO_SITE_ID",
+            }
+        }
+        resultat = subprocess.run(
+            [sys.executable, "-c", "import src.app"],
+            cwd=repo_root,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    finally:
+        env_file.unlink()
+        if existe_deja:
+            os.replace(sauvegarde, env_file)
+    assert resultat.returncode == 0, resultat.stderr
+    assert "Matomo" in resultat.stderr
+    assert "MATOMO_URL" in resultat.stderr
+
+
+def test_tracking_enabled_faux_en_development(monkeypatch):
+    """Protection de test.colibre.fr : DEVELOPMENT prime sur le drapeau."""
+    from src.utils.matomo import tracking_enabled
+
+    monkeypatch.setenv("DEVELOPMENT", "true")
+    monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    assert tracking_enabled() is False
+
+
+def test_tracking_enabled_faux_sans_drapeau(monkeypatch):
+    from src.utils.matomo import tracking_enabled
+
+    monkeypatch.setenv("DEVELOPMENT", "false")
+    monkeypatch.delenv("MATOMO_TRACKING_ENABLED", raising=False)
+    assert tracking_enabled() is False
+
+
+def test_tracking_enabled_vrai_hors_development(monkeypatch):
+    from src.utils.matomo import tracking_enabled
+
+    monkeypatch.setenv("DEVELOPMENT", "false")
+    monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    assert tracking_enabled() is True
+
+
+def test_matomo_config_none_si_incomplete(monkeypatch):
+    from src.utils.matomo import matomo_config
+
+    monkeypatch.setenv("MATOMO_URL", "https://matomo.example/matomo.php")
+    monkeypatch.delenv("MATOMO_SITE_ID", raising=False)
+    assert matomo_config() is None
+
+
+def test_matomo_config_retourne_le_couple(monkeypatch):
+    from src.utils.matomo import matomo_config
+
+    monkeypatch.setenv("MATOMO_URL", "https://matomo.example/matomo.php")
+    monkeypatch.setenv("MATOMO_SITE_ID", "42")
+    assert matomo_config() == ("https://matomo.example/matomo.php", "42")
+
+
+def test_avertissement_si_active_mais_incomplet(monkeypatch, caplog):
+    import logging
+
+    from src.utils.matomo import avertir_si_config_incomplete
+
+    monkeypatch.setenv("DEVELOPMENT", "false")
+    monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    monkeypatch.delenv("MATOMO_URL", raising=False)
+    monkeypatch.setenv("MATOMO_SITE_ID", "14")
+
+    with caplog.at_level(logging.WARNING, logger="colibre"):
+        avertir_si_config_incomplete()
+
+    assert "MATOMO_URL" in caplog.text
+    assert "MATOMO_SITE_ID" not in caplog.text
+
+
+def test_pas_d_avertissement_si_suivi_desactive(monkeypatch, caplog):
+    import logging
+
+    from src.utils.matomo import avertir_si_config_incomplete
+
+    monkeypatch.setenv("DEVELOPMENT", "true")
+    monkeypatch.delenv("MATOMO_URL", raising=False)
+
+    with caplog.at_level(logging.WARNING, logger="colibre"):
+        avertir_si_config_incomplete()
+
+    assert caplog.text == ""

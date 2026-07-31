@@ -104,7 +104,7 @@ def _subscribe_button(
                     color="info",
                 ),
                 html.A(
-                    "Je m'abonne gratuitement",
+                    "Je crée mon compte",
                     href=href,
                     className="btn btn-secondary",
                 ),
@@ -179,7 +179,7 @@ La période d'essai est accordée une seule fois par compte.
             """
 La première facture est émise au démarrage de l'abonnement payant, c'est-à-dire à l'issue de la période d'essai. Les suivantes le sont chaque mois à cette date anniversaire, et non à la date de saisie des informations de paiement.
 
-Chaque échéance donne lieu à l'émission d'une facture visible sur le compte de l'abonné·e.
+Chaque échéance donne lieu à l'émission d'une facture, envoyée par email à l'abonné·e.
 Le paiement est traité par [Frisbii](https://www.frisbii.com), prestataire européen de paiement en ligne.
 Les coordonnées bancaires sont conservées exclusivement par Frisbii et ne sont pas transmises à colibre.
 

@@ -33,6 +33,7 @@ from flask import Flask, Response, redirect
 from flask_login import current_user
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+from src.admin.guard import is_admin
 from src.auth.setup import init_auth
 from src.utils import DEVELOPMENT
 from src.utils.cache import cache, cache_threshold_par_defaut
@@ -42,9 +43,17 @@ from src.utils.chatwoot import (
     build_widget_script,
     subscription_attributes,
 )
-from src.utils.matomo import build_tracker_script
+from src.utils.matomo import avertir_si_config_incomplete, build_tracker_script
 
 load_dotenv()
+
+# Appelé ici, après load_dotenv() et non à l'import de src.utils.matomo : la
+# garde y lit os.environ, qui ne contient pas encore les variables du .env au
+# moment où ce module est importé (ligne 45, avant le load_dotenv() ci-dessus).
+# Un appel au chargement du module verrait donc toujours une configuration
+# absente et ne s'alerterait jamais — c'est précisément le bug que cette
+# fonction existe pour rendre bruyant. Ne pas la redéplacer dans matomo.py.
+avertir_si_config_incomplete()
 
 # if os.getenv("PYTEST_CURRENT_TEST"):
 #     os.environ["DATA_FILE_PARQUET_PATH"]
@@ -497,7 +506,15 @@ navbar = dbc.Navbar(
                         if page["name"]
                         in ["Recherche", "À propos", "Tableau", "Observatoire"]
                     ]
-                    + [html.Div(id="auth-nav-slot")],
+                    + [
+                        html.Div(id="auth-nav-slot"),
+                        # Créneau distinct plutôt qu'un second élément dans
+                        # `auth-nav-slot` : les NavItem rendent des <li>, et
+                        # deux <li> dans un même <div> s'empileraient
+                        # verticalement. `navbar-nav` étant en flex, deux <div>
+                        # frères sont deux éléments côte à côte.
+                        html.Div(id="admin-nav-slot"),
+                    ],
                     className="ms-auto",
                     navbar=True,
                 ),
@@ -548,6 +565,26 @@ def _auth_nav(_):
         display = "★★★"
         return dbc.NavItem(dbc.NavLink(display, href="/compte/admin"))
     return dbc.NavItem(dbc.NavLink("Connexion", href="/connexion"))
+
+
+@callback(
+    Output("admin-nav-slot", "children"),
+    Input("admin-nav-slot", "id"),
+)
+def _admin_nav(_):
+    """Raccourci vers le panneau admin, réservé à ADMIN_EMAIL.
+
+    Simple ergonomie : `/admin` revérifie `is_admin()` dans son layout ET dans
+    ses callbacks (issue #110), donc masquer ce lien ne protège rien — c'est la
+    page qui protège.
+
+    Même déclencheur que `_auth_nav` (`Input(<slot>, "id")`) : il se joue au
+    chargement de page, ce qui suffit puisque connexion et déconnexion passent
+    par des routes Flask avec redirection, donc par un vrai rechargement.
+    """
+    if not is_admin():
+        return None
+    return dbc.NavItem(dbc.NavLink("Administration", href="/admin"))
 
 
 @callback(

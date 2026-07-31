@@ -1,7 +1,9 @@
+import os
 import sqlite3
 from datetime import datetime, timedelta, timezone
 
 from src.auth.db import get_conn
+from src.utils import tracking
 
 SUBSCRIPTIONS_SCHEMA = """
 CREATE TABLE IF NOT EXISTS subscriptions (
@@ -34,7 +36,7 @@ CREATE TABLE IF NOT EXISTS subscriber_state (
 _ACCESS_STATUSES = ("trial", "active")
 
 INITIAL_VOTES = 3
-VOTES_PER_WEEK = 3
+VOTES_PER_WEEK = int(os.getenv("VOTES_PER_WEEK", "5"))
 WEEK_SECONDS = 7 * 24 * 3600
 
 
@@ -285,6 +287,16 @@ def update_from_webhook(
         )
     if prev["status"] != "active" and status == "active":
         freeze_votes_cursor(prev["user_id"])
+        # Couvre trial → active (transformation d'un essai), pending → active
+        # (souscription directe d'un utilisateur ayant déjà consommé son essai)
+        # et aussi cancelled/expired → active (réabonnement après résiliation
+        # ou expiration) : c'est voulu, un réabonnement est un nouvel abonné
+        # payant à comptabiliser au même titre. La condition rend l'émission
+        # idempotente : un webhook redélivré trouve prev["status"] déjà à
+        # "active" et ne repasse pas ici.
+        tracking.track_subscription_goal(
+            "subscription_active", prev["plan"], prev["prix_ht"]
+        )
 
 
 def set_cancelled(subscription_id: int, current_period_end: str | None) -> None:
@@ -333,6 +345,28 @@ def _set_votes(user_id: int, balance: int, cursor_iso: str) -> None:
     )
 
 
+def _accrues_votes(user_id: int) -> bool:
+    """Vrai si l'utilisateur gagne encore des votes chaque semaine.
+
+    L'accumulation suit l'accès (`has_active_subscription`), l'essai excepté :
+    un désabonnement en cours de période reste payé jusqu'à
+    `current_period_end`, donc continue d'accumuler ; l'essai, lui, n'ouvre pas
+    encore le vote (cf. `_trial_hint` côté UI).
+
+    `credit_pending` et `next_recharge_at` DOIVENT partager cette définition :
+    dès qu'elles divergent, la page roadmap annonce à un utilisateur qui
+    n'accumule pas une date calculée sur un curseur gelé, donc dans le passé.
+    """
+    from src.utils import TOUS_ABONNES
+
+    if TOUS_ABONNES:
+        return True
+    current = get_current(user_id)
+    if current is None or current["status"] == "trial":
+        return False
+    return has_active_subscription(user_id)
+
+
 def credit_pending(user_id: int) -> int:
     """Crédite paresseusement les votes acquis et renvoie le solde courant.
 
@@ -359,8 +393,7 @@ def credit_pending(user_id: int) -> int:
     if state is None:
         return 0
     balance = state["votes_balance"] or 0
-    current = get_current(user_id)
-    if not TOUS_ABONNES and (current is None or current["status"] != "active"):
+    if not _accrues_votes(user_id):
         return balance
     now = datetime.now(timezone.utc)
     cursor = state["votes_last_credited_at"]
@@ -388,9 +421,27 @@ def spend_vote(user_id: int) -> bool:
 
 
 def next_recharge_at(user_id: int) -> datetime | None:
-    """Retourne la date du prochain rechargement de votes, ou None si non applicable."""
+    """Retourne la date du prochain rechargement de votes, ou None si non applicable.
+
+    None dès qu'aucun rechargement n'aura lieu : soit l'utilisateur n'accumule
+    plus (curseur gelé, la date qu'on en déduirait serait dans le passé), soit
+    son abonnement se termine avant l'échéance.
+    """
     row = _get_state(user_id)
     if not row or not row["votes_last_credited_at"]:
         return None
+    if not _accrues_votes(user_id):
+        return None
     cursor = datetime.fromisoformat(row["votes_last_credited_at"])
-    return cursor + timedelta(seconds=WEEK_SECONDS)
+    nxt = cursor + timedelta(seconds=WEEK_SECONDS)
+    current = get_current(user_id)
+    if current and current["status"] == "cancelled" and current["current_period_end"]:
+        try:
+            end = datetime.fromisoformat(
+                current["current_period_end"].replace("Z", "+00:00")
+            )
+        except ValueError:
+            return nxt
+        if nxt > end:
+            return None
+    return nxt

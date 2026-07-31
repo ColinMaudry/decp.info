@@ -132,6 +132,9 @@ def test_matomo_present_sur_une_page_seo_ssr_quand_active(client, monkeypatch):
     SSR (#128) : ce test garantit qu'il l'est de nouveau une fois le
     traqueur activé, via le même fragment que les pages Dash."""
     monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    monkeypatch.setenv("DEVELOPMENT", "false")
+    monkeypatch.setenv("MATOMO_URL", "https://matomo.example/matomo.php")
+    monkeypatch.setenv("MATOMO_SITE_ID", "42")
     body = client.get("/departements").get_data(as_text=True)
     assert "trackPageView" in body
 
