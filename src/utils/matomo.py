@@ -12,7 +12,6 @@ Gardé derrière `MATOMO_TRACKING_ENABLED`, comme le suivi côté API
 script, en dev comme en CI.
 """
 
-import json  # noqa: F401
 import os
 
 from src.utils import logger
