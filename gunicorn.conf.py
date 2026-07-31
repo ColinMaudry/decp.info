@@ -42,7 +42,7 @@ graceful_timeout = int(os.getenv("GUNICORN_GRACEFUL_TIMEOUT", "30"))
 max_requests = int(os.getenv("GUNICORN_MAX_REQUESTS", "1000"))
 max_requests_jitter = int(os.getenv("GUNICORN_MAX_REQUESTS_JITTER", "100"))
 
-# Logs sur stdout/stderr : captés par systemd aujourd'hui, par l'orchestrateur
+# Logs sur stderr : captés par systemd aujourd'hui, par l'orchestrateur
 # de conteneurs demain.
-accesslog = "-"
+accesslog = None
 errorlog = "-"
