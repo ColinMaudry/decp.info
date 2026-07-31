@@ -1,8 +1,20 @@
 """L'asset est servi automatiquement par Dash (tout .js de src/assets/)."""
 
+import re
 from pathlib import Path
 
 ASSET = Path(__file__).resolve().parents[1] / "src" / "assets" / "goals.js"
+
+
+def _code_sans_commentaires() -> str:
+    """Le source privé de ses commentaires `//`.
+
+    Sans ce dépouillement, les assertions ci-dessous passeraient alors même que
+    les littéraux n'apparaîtraient que dans un commentaire — elles vérifieraient
+    la présence de texte, pas l'existence d'une logique.
+    """
+    lignes = ASSET.read_text(encoding="utf-8").splitlines()
+    return "\n".join(re.sub(r"//.*$", "", ligne) for ligne in lignes)
 
 
 def test_asset_present():
@@ -11,19 +23,19 @@ def test_asset_present():
 
 def test_valide_les_valeurs_avant_emission():
     """Une valeur arbitraire de query string ne doit pas atterrir dans Matomo."""
-    contenu = ASSET.read_text(encoding="utf-8")
-    assert '"email"' in contenu and '"linkedin"' in contenu
-    assert '"simple"' in contenu and '"soutien"' in contenu
+    code = _code_sans_commentaires()
+    assert re.search(r'METHODES\s*=\s*\[\s*"email"\s*,\s*"linkedin"\s*\]', code)
+    assert re.search(r'PLANS\s*=\s*\[\s*"simple"\s*,\s*"soutien"\s*\]', code)
 
 
 def test_garde_sur_paq_et_nettoyage_de_l_url():
-    contenu = ASSET.read_text(encoding="utf-8")
-    assert "window._paq" in contenu
+    code = _code_sans_commentaires()
+    assert "window._paq" in code
     # Sans replaceState, un F5 recompterait la conversion.
-    assert "replaceState" in contenu
+    assert "replaceState" in code
 
 
 def test_emet_les_deux_evenements():
-    contenu = ASSET.read_text(encoding="utf-8")
-    assert "account_created" in contenu
-    assert "subscription_trial" in contenu
+    code = _code_sans_commentaires()
+    assert "account_created" in code
+    assert "subscription_trial" in code
