@@ -110,7 +110,13 @@ def _envoyer_async(params: dict) -> threading.Thread | None:
 def track_subscription_goal(
     action: str, plan: str | None = None, revenue: float | None = None
 ) -> None:
-    """Événement de conversion d'abonnement (`subscription_trial`/`_active`).
+    """Événement de conversion d'abonnement.
+
+    N'émet en pratique que `subscription_active` : c'est l'unique valeur
+    passée par son seul site d'appel en production (src/subscriptions/db.py).
+    `subscription_trial` est émis séparément, côté navigateur, par
+    `src/assets/goals.js`, sans passer par cette fonction. Le paramètre
+    `action` reste un point d'entrée explicite plutôt qu'une valeur figée.
 
     Sous TOUS_ABONNES, l'accès est offert et la souscription payante est
     désactivée : aucun essai ni abonnement ne doit être comptabilisé. L'import

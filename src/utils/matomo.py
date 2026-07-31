@@ -7,9 +7,11 @@ Dash) en étaient donc dépourvues, y compris `/departements` qui était pourtan
 tracké avant l'introduction des pages SEO SSR.
 
 Gardé derrière `tracking_enabled()`, qui combine `DEVELOPMENT` et
-`MATOMO_TRACKING_ENABLED` : cette dernière vaut "false" pendant les tests
-(pyproject.toml, `[tool.pytest_env]`), donc aucune page de test n'émet ce
-script, en dev comme en CI.
+`MATOMO_TRACKING_ENABLED` : c'est `DEVELOPMENT=true` qui est opérant pendant
+les tests (pyproject.toml, `[tool.pytest_env]`) et qui prime sur l'autre
+drapeau, donc aucune page de test n'émet ce script, en dev comme en CI —
+`MATOMO_TRACKING_ENABLED` aurait beau valoir "true", le résultat serait
+identique.
 """
 
 import json
