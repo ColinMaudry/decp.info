@@ -707,10 +707,12 @@ git commit -m "Migre les émetteurs recherche et MCP sur la convention Matomo un
 Run:
 
 ```bash
-grep -rn "MATOMO_DOMAIN\|MATOMO_ID_SITE\|MATOMO_TOKEN\|MATOMO_BASE_URL" --include=*.py src/ tests/
+grep -rn "MATOMO_DOMAIN\|MATOMO_ID_SITE\|MATOMO_TOKEN\|MATOMO_BASE_URL" --include=*.py src/
 ```
 
-Expected: aucune sortie. Si une occurrence subsiste, elle relève d'une tâche précédente non terminée — la corriger avant de continuer.
+Expected: aucune sortie. Si une occurrence subsiste dans `src/`, elle relève d'une tâche précédente non terminée — la corriger avant de continuer.
+
+Le périmètre est **`src/` uniquement**, délibérément. `tests/mcp/test_tracking.py` pose `MATOMO_TOKEN` dans l'environnement à dessein, pour prouver que l'émetteur l'ignore même lorsqu'elle est présente : c'est la forme adversariale de l'assertion, pas un vestige. Étendre le grep à `tests/` produit ce faux positif.
 
 - [ ] **Step 2 : supprimer les variables mortes du gabarit**
 
