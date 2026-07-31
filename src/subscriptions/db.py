@@ -286,10 +286,13 @@ def update_from_webhook(
         )
     if prev["status"] != "active" and status == "active":
         freeze_votes_cursor(prev["user_id"])
-        # Couvre trial → active (transformation d'un essai) et pending → active
-        # (souscription directe d'un utilisateur ayant déjà consommé son essai).
-        # La condition rend l'émission idempotente : un webhook redélivré trouve
-        # prev["status"] déjà à "active" et ne repasse pas ici.
+        # Couvre trial → active (transformation d'un essai), pending → active
+        # (souscription directe d'un utilisateur ayant déjà consommé son essai)
+        # et aussi cancelled/expired → active (réabonnement après résiliation
+        # ou expiration) : c'est voulu, un réabonnement est un nouvel abonné
+        # payant à comptabiliser au même titre. La condition rend l'émission
+        # idempotente : un webhook redélivré trouve prev["status"] déjà à
+        # "active" et ne repasse pas ici.
         tracking.track_subscription_goal(
             "subscription_active", prev["plan"], prev["prix_ht"]
         )
