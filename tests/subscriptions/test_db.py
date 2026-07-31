@@ -374,6 +374,81 @@ def test_next_recharge_at_set_for_tous_abonnes_user(users_db_path, monkeypatch):
     assert db.next_recharge_at(uid) is not None
 
 
+def test_cancelled_within_period_keeps_accruing(users_db_path):
+    """Désabonné en cours de période : il a payé, il continue d'accumuler.
+
+    Sans ce comportement, `credit_pending` sortait avant de faire avancer le
+    curseur et la page roadmap annonçait un rechargement déjà passé.
+    """
+    db.init_schema()
+    uid = _make_user()
+    handle, _ = db.create_pending(uid, "colibre-1", "simple")
+    _activate(uid, cursor_iso=None)
+    db.credit_pending(uid)  # pose le curseur
+    # désabonnement, accès conservé jusqu'à la fin de période
+    end = (datetime.now(timezone.utc) + timedelta(days=60)).isoformat()
+    db.update_from_webhook(handle, "cancelled", end)
+    assert db.has_active_subscription(uid) is True
+    _set_votes_cursor(uid, days_ago=17)  # deux semaines pleines écoulées
+    assert db.credit_pending(uid) == db.VOTES_PER_WEEK
+    nxt = db.next_recharge_at(uid)
+    assert nxt is not None
+    assert nxt > datetime.now(timezone.utc)
+
+
+def test_next_recharge_at_none_when_subscription_ends_first(users_db_path):
+    """Désabonnement qui expire avant l'échéance : aucun rechargement à annoncer."""
+    db.init_schema()
+    uid = _make_user()
+    handle, _ = db.create_pending(uid, "colibre-1", "simple")
+    _activate(uid, cursor_iso=None)
+    db.credit_pending(uid)  # curseur ~maintenant, échéance dans 7 jours
+    db.update_from_webhook(
+        handle,
+        "cancelled",
+        (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+    )
+    assert db.has_active_subscription(uid) is True  # accès encore ouvert
+    assert db.next_recharge_at(uid) is None
+
+
+def test_next_recharge_at_none_after_period_end(users_db_path):
+    """Abonnement expiré : plus d'accès, plus d'accumulation, pas de date."""
+    db.init_schema()
+    uid = _make_user()
+    handle, _ = db.create_pending(uid, "colibre-1", "simple")
+    _activate(uid, cursor_iso=None)
+    db.credit_pending(uid)
+    db.update_from_webhook(handle, "cancelled", _past())
+    assert db.has_active_subscription(uid) is False
+    _set_votes_cursor(uid, days_ago=17)
+    assert db.credit_pending(uid) == db.INITIAL_VOTES  # solde figé
+    assert db.next_recharge_at(uid) is None
+
+
+def test_next_recharge_at_none_during_trial(users_db_path):
+    """Période d'essai : le vote n'est pas encore ouvert, donc pas de date."""
+    db.init_schema()
+    uid = _make_user()
+    handle, _ = db.create_pending(uid, "colibre-1", "simple")
+    db.update_from_webhook(handle, "trial", _future())
+    assert db.next_recharge_at(uid) is None
+
+
+def test_next_recharge_at_in_future_for_active_subscriber(users_db_path):
+    """Abonné actif : la date annoncée est toujours à venir, jamais dans le passé."""
+    db.init_schema()
+    uid = _make_user()
+    db.create_pending(uid, "colibre-1", "simple")
+    _activate(uid, cursor_iso=None)
+    db.credit_pending(uid)
+    _set_votes_cursor(uid, days_ago=17)  # deux semaines pleines non créditées
+    db.credit_pending(uid)
+    nxt = db.next_recharge_at(uid)
+    assert nxt is not None
+    assert nxt > datetime.now(timezone.utc)
+
+
 def test_spend_vote_works_under_tous_abonnes_without_subscription_row(
     users_db_path, monkeypatch
 ):
