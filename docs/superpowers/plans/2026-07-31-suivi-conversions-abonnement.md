@@ -141,11 +141,12 @@ Expected: FAIL — `ImportError: cannot import name 'tracking_enabled' from 'src
 Dans `src/utils/matomo.py`, remplacer l'en-tête `import os` par :
 
 ```python
-import json
 import os
 
 from src.utils import logger
 ```
+
+Ne pas importer `json` ici : il ne sert qu'à la tâche 2, qui l'ajoutera elle-même. Un import inutilisé masqué par un `# noqa: F401` survivrait à la tâche qui devait le justifier.
 
 Puis insérer, avant `def build_tracker_script()` :
 
