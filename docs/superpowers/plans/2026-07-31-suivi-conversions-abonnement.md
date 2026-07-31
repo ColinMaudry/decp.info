@@ -290,7 +290,7 @@ Et dans `test_page_dash_emet_le_script_matomo_quand_actif` (`tests/test_matomo.p
     }
 ```
 
-Deux autres fichiers attendent un traqueur non vide et cassent pour la même raison. Dans `tests/test_seo.py:130` (`test_matomo_present_sur_une_page_seo_ssr_quand_active`) et `tests/test_linkedin_consent.py:174` (`test_page_seo_conserve_matomo`), ajouter à la suite du `monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")` déjà présent :
+Un autre fichier attend un traqueur non vide et casse pour la même raison. Dans `tests/test_seo.py` (`test_matomo_present_sur_une_page_seo_ssr_quand_active`), ajouter à la suite du `monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")` déjà présent :
 
 ```python
     monkeypatch.setenv("DEVELOPMENT", "false")
@@ -298,7 +298,9 @@ Deux autres fichiers attendent un traqueur non vide et cassent pour la même rai
     monkeypatch.setenv("MATOMO_SITE_ID", "42")
 ```
 
-Ces deux pages sont rendues côté serveur et appellent `build_tracker_script()` par requête via le `context_processor` de `src/seo/routes.py:65` : `monkeypatch.setenv` y est donc effectif, contrairement au cas Dash qui exige un sous-processus.
+Cette page est rendue côté serveur et appelle `build_tracker_script()` par requête via le `context_processor` de `src/seo/routes.py:49` : `monkeypatch.setenv` y est donc effectif, contrairement au cas Dash qui exige un sous-processus.
+
+> **Note de contexte (2026-07-31).** Le plan mentionnait aussi `tests/test_linkedin_consent.py`. Ce fichier — comme `src/utils/linkedin.py` et `src/assets/consent_pub.js` — a été sorti de `dev` lors de la reconstruction par cherry-pick du 31/07 (sauvegarde sous le tag `backup/pre-split-2026-07-31`) et vit désormais sur la branche `linkedin-banner`, non fusionnée. La bannière publicitaire LinkedIn n'est pas activée. La connexion OAuth LinkedIn, elle, est antérieure et intacte : la tâche 10 n'est pas concernée.
 
 - [ ] **Step 2 : lancer les tests pour vérifier qu'ils échouent**
 
@@ -1578,8 +1580,7 @@ Créer `src/assets/goals.js` :
 //
 // Chargé automatiquement par Dash sur ses pages (tout .js de src/assets/).
 // /connexion et /compte/abonnement sont des pages Dash, donc aucune référence
-// explicite n'est nécessaire dans le gabarit SEO SSR — contrairement à
-// consent_pub.js.
+// explicite n'est nécessaire dans le gabarit SEO SSR.
 (function () {
   var METHODES = ["email", "linkedin"];
   var PLANS = ["simple", "soutien"];
@@ -1640,7 +1641,7 @@ Expected: PASS
 C'est la seule tâche qui lance la suite entière, une fois toutes les pièces en place.
 
 Run: `uv run pytest`
-Expected: PASS. Les quatre fichiers de test attendant un traqueur non vide ont été traités en tâche 2 (`tests/test_matomo.py`, `tests/test_seo.py`, `tests/test_linkedin_consent.py`). En cas d'échec ici, la cause la plus probable reste un test qui pose `MATOMO_TRACKING_ENABLED=true` sans lever `DEVELOPMENT` : le repérer avec `grep -rn "MATOMO_TRACKING_ENABLED.*true" tests/`.
+Expected: PASS. Les fichiers de test attendant un traqueur non vide ont été traités en tâche 2 (`tests/test_matomo.py`, `tests/test_seo.py`). En cas d'échec ici, la cause la plus probable reste un test qui pose `MATOMO_TRACKING_ENABLED=true` sans lever `DEVELOPMENT` : le repérer avec `grep -rn "MATOMO_TRACKING_ENABLED.*true" tests/`.
 
 - [ ] **Step 6 : commiter**
 
