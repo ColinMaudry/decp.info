@@ -12,7 +12,58 @@ Gardé derrière `MATOMO_TRACKING_ENABLED`, comme le suivi côté API
 script, en dev comme en CI.
 """
 
+import json  # noqa: F401
 import os
+
+from src.utils import logger
+
+
+def tracking_enabled() -> bool:
+    """Interrupteur unique de tout le suivi Matomo du projet.
+
+    `DEVELOPMENT` prime sur `MATOMO_TRACKING_ENABLED` : c'est ce qui empêche
+    test.colibre.fr et les instances de développement d'alimenter le Matomo de
+    production, sans dépendre d'un `.env` correctement rempli sur le serveur.
+
+    La lecture se fait à l'appel et non via la constante `DEVELOPMENT` de
+    `src/utils/__init__.py:33`, figée au premier import : `pyproject.toml:56`
+    pinne `DEVELOPMENT=true` pour toute la suite de tests, donc une garde
+    reposant sur la constante rendrait intestable le chemin « traqueur émis
+    quand il est activé » — précisément celui que l'incident #128 avait laissé
+    passer.
+    """
+    if os.getenv("DEVELOPMENT", "False").lower() == "true":
+        return False
+    return os.getenv("MATOMO_TRACKING_ENABLED", "false").lower() == "true"
+
+
+def matomo_config() -> tuple[str, str] | None:
+    """(url de la Tracking API, id du site), ou None si l'un des deux manque."""
+    url = os.getenv("MATOMO_URL")
+    site_id = os.getenv("MATOMO_SITE_ID")
+    if not url or not site_id:
+        return None
+    return url, site_id
+
+
+def avertir_si_config_incomplete() -> None:
+    """Rend bruyante une configuration Matomo incomplète.
+
+    Le suivi de l'API est resté muet en production pendant des mois parce que
+    `MATOMO_URL`/`MATOMO_SITE_ID` manquaient au `.env` et que le code se
+    contentait d'un retour anticipé silencieux.
+    """
+    if not tracking_enabled() or matomo_config() is not None:
+        return
+    manquantes = [n for n in ("MATOMO_URL", "MATOMO_SITE_ID") if not os.getenv(n)]
+    logger.warning(
+        "Matomo : suivi activé mais configuration incomplète, variable(s) "
+        "manquante(s) : %s. Aucun événement ne sera émis.",
+        ", ".join(manquantes),
+    )
+
+
+avertir_si_config_incomplete()
 
 
 def build_tracker_script() -> str:

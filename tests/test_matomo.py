@@ -61,3 +61,75 @@ def test_page_dash_emet_le_script_matomo_quand_actif():
     assert resultat.returncode == 0, resultat.stderr
     assert "trackPageView" in resultat.stdout
     assert "<script" in resultat.stdout
+
+
+def test_tracking_enabled_faux_en_development(monkeypatch):
+    """Protection de test.colibre.fr : DEVELOPMENT prime sur le drapeau."""
+    from src.utils.matomo import tracking_enabled
+
+    monkeypatch.setenv("DEVELOPMENT", "true")
+    monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    assert tracking_enabled() is False
+
+
+def test_tracking_enabled_faux_sans_drapeau(monkeypatch):
+    from src.utils.matomo import tracking_enabled
+
+    monkeypatch.setenv("DEVELOPMENT", "false")
+    monkeypatch.delenv("MATOMO_TRACKING_ENABLED", raising=False)
+    assert tracking_enabled() is False
+
+
+def test_tracking_enabled_vrai_hors_development(monkeypatch):
+    from src.utils.matomo import tracking_enabled
+
+    monkeypatch.setenv("DEVELOPMENT", "false")
+    monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    assert tracking_enabled() is True
+
+
+def test_matomo_config_none_si_incomplete(monkeypatch):
+    from src.utils.matomo import matomo_config
+
+    monkeypatch.setenv("MATOMO_URL", "https://matomo.example/matomo.php")
+    monkeypatch.delenv("MATOMO_SITE_ID", raising=False)
+    assert matomo_config() is None
+
+
+def test_matomo_config_retourne_le_couple(monkeypatch):
+    from src.utils.matomo import matomo_config
+
+    monkeypatch.setenv("MATOMO_URL", "https://matomo.example/matomo.php")
+    monkeypatch.setenv("MATOMO_SITE_ID", "42")
+    assert matomo_config() == ("https://matomo.example/matomo.php", "42")
+
+
+def test_avertissement_si_active_mais_incomplet(monkeypatch, caplog):
+    import logging
+
+    from src.utils.matomo import avertir_si_config_incomplete
+
+    monkeypatch.setenv("DEVELOPMENT", "false")
+    monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    monkeypatch.delenv("MATOMO_URL", raising=False)
+    monkeypatch.setenv("MATOMO_SITE_ID", "14")
+
+    with caplog.at_level(logging.WARNING, logger="colibre"):
+        avertir_si_config_incomplete()
+
+    assert "MATOMO_URL" in caplog.text
+    assert "MATOMO_SITE_ID" not in caplog.text
+
+
+def test_pas_d_avertissement_si_suivi_desactive(monkeypatch, caplog):
+    import logging
+
+    from src.utils.matomo import avertir_si_config_incomplete
+
+    monkeypatch.setenv("DEVELOPMENT", "true")
+    monkeypatch.delenv("MATOMO_URL", raising=False)
+
+    with caplog.at_level(logging.WARNING, logger="colibre"):
+        avertir_si_config_incomplete()
+
+    assert caplog.text == ""
