@@ -1,4 +1,5 @@
 import os
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from email_validator import EmailNotValidError, validate_email
 from flask import Blueprint, redirect, request, session
@@ -33,21 +34,39 @@ _DUMMY_HASH = generate_password_hash("dummy-password-for-timing")
 
 def resolve_oauth_user(
     provider: str, subject: str, email: str, email_verified: bool
-) -> User:
+) -> tuple[User, bool]:
+    """Retourne (utilisateur, compte_vient_d_etre_cree).
+
+    Le booléen distingue la seule branche qui crée réellement un compte. Sans
+    lui, chaque connexion LinkedIn — et chaque rattachement d'identité à un
+    compte existant — serait comptée comme une inscription.
+    """
     identity = db.get_oauth_identity(provider, subject)
     if identity is not None:
-        return User(db.get_user_by_id(identity["user_id"]))
+        return User(db.get_user_by_id(identity["user_id"])), False
 
     row = db.get_user_by_email(email)
     if row is not None:
         db.link_oauth_identity(provider, subject, row["id"])
         if email_verified and not row["email_verified"]:
             db.set_email_verified(row["id"])
-        return User(db.get_user_by_id(row["id"]))
+        return User(db.get_user_by_id(row["id"])), False
 
     user_id = db.create_oauth_user(email)
     db.link_oauth_identity(provider, subject, user_id)
-    return User(db.get_user_by_id(user_id))
+    return User(db.get_user_by_id(user_id)), True
+
+
+def _avec_param(url: str, cle: str, valeur: str) -> str:
+    """Ajoute un paramètre à une URL, en préservant sa query string.
+
+    Le callback OAuth redirige vers une cible variable (`safe_next`), qui peut
+    déjà porter des paramètres : la concaténation naïve produirait deux `?`.
+    """
+    parts = urlsplit(url)
+    params = parse_qsl(parts.query, keep_blank_values=True)
+    params.append((cle, valeur))
+    return urlunsplit(parts._replace(query=urlencode(params)))
 
 
 def _redirect_with_error(path: str, error: str, email: str | None = None):
@@ -310,8 +329,12 @@ def linkedin_callback():
         logger.error("Réponse LinkedIn sans sub/email : %s", userinfo)
         return _redirect_with_error("/connexion", "oauth_failed")
 
-    user = resolve_oauth_user(
+    user, compte_cree = resolve_oauth_user(
         "linkedin", subject, email, bool(userinfo.get("email_verified"))
     )
     login_user(user, remember=True)
-    return redirect(safe_next(oauth_next, fallback=_post_login_url(user.id)))
+    dest = safe_next(oauth_next, fallback=_post_login_url(user.id))
+    if compte_cree:
+        # Déclenche `account_created` côté navigateur (src/assets/goals.js).
+        dest = _avec_param(dest, "compte_cree", "linkedin")
+    return redirect(dest)
