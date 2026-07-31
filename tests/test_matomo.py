@@ -111,6 +111,59 @@ def test_page_dash_emet_le_script_matomo_quand_actif():
     assert "<script" in resultat.stdout
 
 
+def test_avertissement_emis_au_demarrage_apres_load_dotenv():
+    """Régression : `avertir_si_config_incomplete()` s'exécutait à l'import de
+    `src.utils.matomo` (src/app.py:45, ex ligne 66 de matomo.py), avant le
+    `load_dotenv()` de `src/app.py:47`. `tracking_enabled()` lisait alors un
+    environnement sans les variables du `.env`, valait donc `False`, et la
+    garde se taisait — y compris quand la configuration réelle, une fois le
+    `.env` chargé, était incomplète.
+
+    Passer les variables directement dans l'environnement du sous-processus
+    ne suffit pas à exercer ce bug : elles seraient déjà lisibles avant même
+    l'import de `src.app`, masquant l'ordre d'import fautif. Il faut qu'elles
+    n'arrivent QUE via `load_dotenv()`, donc on les dépose dans un `.env`
+    temporaire à la racine du dépôt (le seul que `find_dotenv()` trouvera,
+    avant tout `.env` d'un dépôt parent) et on les retire explicitement de
+    l'environnement transmis au sous-processus.
+    """
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parents[1]
+    env_file = repo_root / ".env"
+    assert not env_file.exists(), "un .env existe déjà à la racine du dépôt"
+    env_file.write_text(
+        "MATOMO_TRACKING_ENABLED=true\nDEVELOPMENT=false\nMATOMO_SITE_ID=42\n"
+    )
+    try:
+        env = {
+            k: v
+            for k, v in os.environ.items()
+            if k
+            not in {
+                "MATOMO_TRACKING_ENABLED",
+                "DEVELOPMENT",
+                "MATOMO_URL",
+                "MATOMO_SITE_ID",
+            }
+        }
+        resultat = subprocess.run(
+            [sys.executable, "-c", "import src.app"],
+            cwd=repo_root,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    finally:
+        env_file.unlink()
+    assert resultat.returncode == 0, resultat.stderr
+    assert "Matomo" in resultat.stderr
+    assert "MATOMO_URL" in resultat.stderr
+
+
 def test_tracking_enabled_faux_en_development(monkeypatch):
     """Protection de test.colibre.fr : DEVELOPMENT prime sur le drapeau."""
     from src.utils.matomo import tracking_enabled

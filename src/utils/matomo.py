@@ -63,9 +63,6 @@ def avertir_si_config_incomplete() -> None:
     )
 
 
-avertir_si_config_incomplete()
-
-
 def build_tracker_script() -> str:
     """Bloc <script> du traqueur Matomo, ou chaîne vide si désactivé."""
     if not tracking_enabled():
