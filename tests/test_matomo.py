@@ -167,6 +167,15 @@ def test_avertissement_emis_au_demarrage_apres_load_dotenv():
     temporaire à la racine du dépôt (le seul que `find_dotenv()` trouvera,
     avant tout `.env` d'un dépôt parent) et on les retire explicitement de
     l'environnement transmis au sous-processus.
+
+    Le dépôt principal a un `.env` (requis à l'exécution, cf. CLAUDE.md) :
+    plutôt que d'exiger son absence — ce qui casserait la suite sur toute
+    installation standard —, on le met de côté le temps du test et on le
+    restaure dans le `finally`. Un `SIGKILL` pendant la fenêtre du test (donc
+    ni un échec normal, ni un Ctrl-C, tous deux couverts par le `finally`)
+    laisserait le `.env` original sous son nom de sauvegarde ; le `.env` de
+    test, lui, serait orphelin à la racine — un résidu à nettoyer à la main,
+    mais qui ne masque pas silencieusement le vrai `.env`.
     """
     import subprocess
     import sys
@@ -174,7 +183,10 @@ def test_avertissement_emis_au_demarrage_apres_load_dotenv():
 
     repo_root = Path(__file__).resolve().parents[1]
     env_file = repo_root / ".env"
-    assert not env_file.exists(), "un .env existe déjà à la racine du dépôt"
+    sauvegarde = repo_root / ".env.bak-test-matomo"
+    existe_deja = env_file.exists()
+    if existe_deja:
+        os.replace(env_file, sauvegarde)
     env_file.write_text(
         "MATOMO_TRACKING_ENABLED=true\nDEVELOPMENT=false\nMATOMO_SITE_ID=42\n"
     )
@@ -200,6 +212,8 @@ def test_avertissement_emis_au_demarrage_apres_load_dotenv():
         )
     finally:
         env_file.unlink()
+        if existe_deja:
+            os.replace(sauvegarde, env_file)
     assert resultat.returncode == 0, resultat.stderr
     assert "Matomo" in resultat.stderr
     assert "MATOMO_URL" in resultat.stderr

@@ -95,7 +95,7 @@ def _envoyer_async(params: dict) -> threading.Thread | None:
     `threading.Thread(...).start()` peut lever (ex. RuntimeError sous
     épuisement de ressources) : sans ce try/except, l'exception remonterait
     jusqu'à `update_from_webhook` (src/subscriptions/db.py), ferait répondre
-    500 à Frisbii, et déclencherait un nouveau essai — rejouant la transaction
+    500 à Frisbii, et déclencherait un nouvel essai — rejouant la transaction
     et l'événement. Aucun émetteur ne doit jamais lever.
     """
     try:
