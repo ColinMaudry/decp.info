@@ -1,6 +1,10 @@
 """Fragment de suivi Matomo partagé entre les pages Dash et SEO SSR (#128)."""
 
+import json
 import os
+import re
+
+import pytest
 
 
 def test_desactive_par_defaut(monkeypatch):
@@ -56,6 +60,43 @@ def test_script_utilise_les_variables_d_environnement(monkeypatch):
     # Les anciennes constantes ont disparu du fragment.
     assert "analytics.maudry.com" not in script
     assert "'14'" not in script
+
+
+def _base_du_tracker(script: str) -> str:
+    """Extrait la racine (`var u=...`) que le script attribue au loader JS."""
+    correspondance = re.search(r"var u=(\"(?:[^\"\\]|\\.)*\")", script)
+    assert correspondance, script
+    return json.loads(correspondance.group(1))
+
+
+@pytest.mark.parametrize(
+    "matomo_url, base_attendue",
+    [
+        # Cas canonique : MATOMO_URL pointe la Tracking API.
+        ("https://matomo.example/matomo.php", "https://matomo.example/"),
+        # Sans le suffixe matomo.php : la racine est l'URL telle quelle,
+        # avec un slash ajouté.
+        ("https://matomo.example", "https://matomo.example/"),
+        # Sans slash final et sans le suffixe matomo.php.
+        ("https://matomo.example/sub", "https://matomo.example/sub/"),
+    ],
+)
+def test_derivation_de_la_base_depuis_matomo_url(
+    monkeypatch, matomo_url, base_attendue
+):
+    """MATOMO_URL est saisi à la main dans un `.env` de production : un typo
+    (suffixe manquant, slash final oublié) y dégraderait silencieusement.
+    """
+    from src.utils.matomo import build_tracker_script
+
+    monkeypatch.setenv("DEVELOPMENT", "false")
+    monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    monkeypatch.setenv("MATOMO_URL", matomo_url)
+    monkeypatch.setenv("MATOMO_SITE_ID", "42")
+
+    script = build_tracker_script()
+
+    assert _base_du_tracker(script) == base_attendue
 
 
 def test_script_vide_en_development(monkeypatch):
