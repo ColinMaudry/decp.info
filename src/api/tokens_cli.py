@@ -4,10 +4,14 @@ import sys
 
 from dotenv import load_dotenv
 
-# Doit précéder l'import de src.api : celui-ci importe transitivement src.db,
-# qui construit/ouvre la base DuckDB au chargement du module en lisant
-# DATA_FILE_PARQUET_PATH. Charger le .env après cet import est trop tard —
-# la variable est vide et la construction de la base échoue.
+# Peuple l'environnement (USERS_DB_PATH notamment) depuis .env.
+#
+# Ce load_dotenv() ne protège PAS le paquet `src.api` : sous
+# `python -m src.api.tokens_cli`, runpy importe le paquet parent avant
+# d'exécuter ce fichier, donc `src/api/__init__.py` a déjà tourné quand cette
+# ligne s'exécute. C'est pourquoi `__init__.py` ne doit rien importer qui
+# dépende de l'environnement (voir le commentaire qui y explique l'absence de
+# `routes`).
 load_dotenv()
 
 from src.api import tokens_db  # noqa: E402

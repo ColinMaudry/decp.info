@@ -1,13 +1,20 @@
 from flask_smorest import Api
 
-from src.api import routes
+# `routes` n'est PAS importé ici : il importe `src.db`, qui construit ou ouvre
+# la base DuckDB en effet de bord d'import. Au niveau paquet, un simple
+# `from src.api import tokens_db` — du SQLite pur — déclencherait donc tout le
+# bootstrap des données. C'est ce qui cassait `python -m src.api.tokens_cli` en
+# production : runpy importe le paquet parent avant d'exécuter le corps du
+# module, donc avant le `load_dotenv()` du CLI ; sans .env, DUCKDB_PATH
+# retombait sur un chemin relatif inexistant et la reconstruction échouait.
+# L'import vit dans `init_api`, seul endroit qui utilise `routes`.
 
 
 def init_api(server) -> None:
     """Enregistre le blueprint d'API privée sur le serveur Flask."""
     import os
 
-    from src.api import tokens_db, tracking
+    from src.api import routes, tokens_db, tracking
 
     # Garantit que api_tokens existe avant que apply_pending (init_subscriptions,
     # plus tard) ne tente l'ALTER de la migration 0007.
