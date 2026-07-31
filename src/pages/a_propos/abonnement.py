@@ -104,7 +104,7 @@ def _subscribe_button(
                     color="info",
                 ),
                 html.A(
-                    "Je m'abonne gratuitement",
+                    "Je crée mon compte",
                     href=href,
                     className="btn btn-secondary",
                 ),
