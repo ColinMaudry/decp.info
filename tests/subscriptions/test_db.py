@@ -476,3 +476,74 @@ def test_subscription_statuses_constant():
         "expired",
         "pending",
     )
+
+
+def test_evenement_emis_sur_trial_vers_active(users_db_path, monkeypatch):
+    db.init_schema()
+    uid = _make_user()
+    appels = []
+    monkeypatch.setattr(
+        db.tracking,
+        "track_subscription_goal",
+        lambda action, plan=None, revenue=None: appels.append((action, plan, revenue)),
+    )
+
+    handle, _sub_id = db.create_pending(uid, "cust-1", "simple", 20)
+    db.update_from_webhook(handle, "trial", "2026-08-05T00:00:00Z")
+    appels.clear()
+
+    db.update_from_webhook(handle, "active", "2026-09-05T00:00:00Z")
+
+    assert appels == [("subscription_active", "simple", 20)]
+
+
+def test_evenement_emis_sur_pending_vers_active(users_db_path, monkeypatch):
+    """Souscription directe sans essai (no_trial) : même événement."""
+    db.init_schema()
+    uid = _make_user()
+    appels = []
+    monkeypatch.setattr(
+        db.tracking,
+        "track_subscription_goal",
+        lambda action, plan=None, revenue=None: appels.append((action, plan, revenue)),
+    )
+
+    handle, _ = db.create_pending(uid, "cust-2", "soutien", 50)
+    db.update_from_webhook(handle, "active", "2026-09-05T00:00:00Z")
+
+    assert appels == [("subscription_active", "soutien", 50)]
+
+
+def test_pas_d_evenement_sur_redelivrance(users_db_path, monkeypatch):
+    """Frisbii peut redélivrer un webhook : pas de double comptage."""
+    db.init_schema()
+    uid = _make_user()
+    appels = []
+    monkeypatch.setattr(
+        db.tracking,
+        "track_subscription_goal",
+        lambda action, plan=None, revenue=None: appels.append(action),
+    )
+
+    handle, _ = db.create_pending(uid, "cust-3", "simple", 20)
+    db.update_from_webhook(handle, "active", "2026-09-05T00:00:00Z")
+    db.update_from_webhook(handle, "active", "2026-09-05T00:00:00Z")
+
+    assert appels == ["subscription_active"]
+
+
+def test_pas_d_evenement_sur_annulation(users_db_path, monkeypatch):
+    db.init_schema()
+    uid = _make_user()
+    appels = []
+    monkeypatch.setattr(
+        db.tracking,
+        "track_subscription_goal",
+        lambda action, plan=None, revenue=None: appels.append(action),
+    )
+
+    handle, _ = db.create_pending(uid, "cust-4", "simple", 20)
+    db.update_from_webhook(handle, "trial", "2026-08-05T00:00:00Z")
+    db.update_from_webhook(handle, "cancelled", "2026-08-05T00:00:00Z")
+
+    assert appels == []

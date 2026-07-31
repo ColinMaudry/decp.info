@@ -16,7 +16,8 @@ Spec de référence : `docs/superpowers/specs/2026-07-31-suivi-conversions-abonn
 - Aucun `token_auth` n'est envoyé à Matomo. Les POST utilisent `data=`, jamais `params=`.
 - Aucun émetteur ne lève jamais d'exception : une panne Matomo ne doit casser ni une requête utilisateur, ni un webhook.
 - `pyproject.toml:56` pinne `DEVELOPMENT=true` et `:67` pinne `MATOMO_TRACKING_ENABLED=false` pour toute la suite. Tout test attendant une émission doit lever **les deux** verrous.
-- Commandes de test : `uv run pytest <chemin>` (l'activation du venv dans un shell ne suffit pas ici). **Chaque tâche ne lance que son propre fichier de test.** La suite complète (`uv run pytest` sans chemin) n'est lancée qu'à la tâche 11.
+- Commandes de test : `uv run pytest <chemin>` (l'activation du venv dans un shell ne suffit pas ici). **Chaque tâche se limite aux chemins que ses propres étapes nomment** — son fichier de test, plus le répertoire voisin quand une étape le demande explicitement comme contrôle de non-régression. La suite complète (`uv run pytest` sans chemin) n'est lancée qu'à la tâche 11. Ne jamais élargir de sa propre initiative : un échec ailleurs dans la suite n'appartient pas à la tâche en cours.
+- Baseline de référence sur cette branche avant toute modification : **948 passés, 21 désélectionnés**. Tout écart doit être expliqué par la tâche en cours.
 - Avant tout `git add`, exécuter `pre-commit` : prettier reformate les `.md`/`.js` et ruff les `.py`. Si un hook modifie un fichier, le ré-ajouter avant de commiter.
 - Les clés de plan valides sont `simple` et `soutien` (`src/subscriptions/plans.py:8-23`).
 
@@ -140,11 +141,12 @@ Expected: FAIL — `ImportError: cannot import name 'tracking_enabled' from 'src
 Dans `src/utils/matomo.py`, remplacer l'en-tête `import os` par :
 
 ```python
-import json
 import os
 
 from src.utils import logger
 ```
+
+Ne pas importer `json` ici : il ne sert qu'à la tâche 2, qui l'ajoutera elle-même. Un import inutilisé masqué par un `# noqa: F401` survivrait à la tâche qui devait le justifier.
 
 Puis insérer, avant `def build_tracker_script()` :
 
@@ -288,7 +290,7 @@ Et dans `test_page_dash_emet_le_script_matomo_quand_actif` (`tests/test_matomo.p
     }
 ```
 
-Deux autres fichiers attendent un traqueur non vide et cassent pour la même raison. Dans `tests/test_seo.py:130` (`test_matomo_present_sur_une_page_seo_ssr_quand_active`) et `tests/test_linkedin_consent.py:174` (`test_page_seo_conserve_matomo`), ajouter à la suite du `monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")` déjà présent :
+Un autre fichier attend un traqueur non vide et casse pour la même raison. Dans `tests/test_seo.py` (`test_matomo_present_sur_une_page_seo_ssr_quand_active`), ajouter à la suite du `monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")` déjà présent :
 
 ```python
     monkeypatch.setenv("DEVELOPMENT", "false")
@@ -296,7 +298,9 @@ Deux autres fichiers attendent un traqueur non vide et cassent pour la même rai
     monkeypatch.setenv("MATOMO_SITE_ID", "42")
 ```
 
-Ces deux pages sont rendues côté serveur et appellent `build_tracker_script()` par requête via le `context_processor` de `src/seo/routes.py:65` : `monkeypatch.setenv` y est donc effectif, contrairement au cas Dash qui exige un sous-processus.
+Cette page est rendue côté serveur et appelle `build_tracker_script()` par requête via le `context_processor` de `src/seo/routes.py:49` : `monkeypatch.setenv` y est donc effectif, contrairement au cas Dash qui exige un sous-processus.
+
+> **Note de contexte (2026-07-31).** Le plan mentionnait aussi `tests/test_linkedin_consent.py`. Ce fichier — comme `src/utils/linkedin.py` et `src/assets/consent_pub.js` — a été sorti de `dev` lors de la reconstruction par cherry-pick du 31/07 (sauvegarde sous le tag `backup/pre-split-2026-07-31`) et vit désormais sur la branche `linkedin-banner`, non fusionnée. La bannière publicitaire LinkedIn n'est pas activée. La connexion OAuth LinkedIn, elle, est antérieure et intacte : la tâche 10 n'est pas concernée.
 
 - [ ] **Step 2 : lancer les tests pour vérifier qu'ils échouent**
 
@@ -703,10 +707,12 @@ git commit -m "Migre les émetteurs recherche et MCP sur la convention Matomo un
 Run:
 
 ```bash
-grep -rn "MATOMO_DOMAIN\|MATOMO_ID_SITE\|MATOMO_TOKEN\|MATOMO_BASE_URL" --include=*.py src/ tests/
+grep -rn "MATOMO_DOMAIN\|MATOMO_ID_SITE\|MATOMO_TOKEN\|MATOMO_BASE_URL" --include=*.py src/
 ```
 
-Expected: aucune sortie. Si une occurrence subsiste, elle relève d'une tâche précédente non terminée — la corriger avant de continuer.
+Expected: aucune sortie. Si une occurrence subsiste dans `src/`, elle relève d'une tâche précédente non terminée — la corriger avant de continuer.
+
+Le périmètre est **`src/` uniquement**, délibérément. `tests/mcp/test_tracking.py` pose `MATOMO_TOKEN` dans l'environnement à dessein, pour prouver que l'émetteur l'ignore même lorsqu'elle est présente : c'est la forme adversariale de l'assertion, pas un vestige. Étendre le grep à `tests/` produit ce faux positif.
 
 - [ ] **Step 2 : supprimer les variables mortes du gabarit**
 
@@ -1576,8 +1582,7 @@ Créer `src/assets/goals.js` :
 //
 // Chargé automatiquement par Dash sur ses pages (tout .js de src/assets/).
 // /connexion et /compte/abonnement sont des pages Dash, donc aucune référence
-// explicite n'est nécessaire dans le gabarit SEO SSR — contrairement à
-// consent_pub.js.
+// explicite n'est nécessaire dans le gabarit SEO SSR.
 (function () {
   var METHODES = ["email", "linkedin"];
   var PLANS = ["simple", "soutien"];
@@ -1638,7 +1643,7 @@ Expected: PASS
 C'est la seule tâche qui lance la suite entière, une fois toutes les pièces en place.
 
 Run: `uv run pytest`
-Expected: PASS. Les quatre fichiers de test attendant un traqueur non vide ont été traités en tâche 2 (`tests/test_matomo.py`, `tests/test_seo.py`, `tests/test_linkedin_consent.py`). En cas d'échec ici, la cause la plus probable reste un test qui pose `MATOMO_TRACKING_ENABLED=true` sans lever `DEVELOPMENT` : le repérer avec `grep -rn "MATOMO_TRACKING_ENABLED.*true" tests/`.
+Expected: PASS. Les fichiers de test attendant un traqueur non vide ont été traités en tâche 2 (`tests/test_matomo.py`, `tests/test_seo.py`). En cas d'échec ici, la cause la plus probable reste un test qui pose `MATOMO_TRACKING_ENABLED=true` sans lever `DEVELOPMENT` : le repérer avec `grep -rn "MATOMO_TRACKING_ENABLED.*true" tests/`.
 
 - [ ] **Step 6 : commiter**
 

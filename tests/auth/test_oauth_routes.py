@@ -65,9 +65,13 @@ def test_callback_creates_user_and_logs_in(client, fake_userinfo, users_db_path)
     }
     resp = client.get("/auth/linkedin/callback")
     assert resp.status_code == 302
+    location = resp.headers["Location"]
     # Nouvel utilisateur sans abonnement → _post_login_url renvoie vers
     # /compte/abonnement (et non /compte/admin, réservé aux abonnés actifs).
-    assert resp.headers["Location"].endswith("/compte/abonnement")
+    assert location.startswith("/compte/abonnement")
+    # Création de compte via LinkedIn : déclenche `account_created` côté
+    # navigateur (src/assets/goals.js).
+    assert "compte_cree=linkedin" in location
     assert db.get_user_by_email("newbie@example.com") is not None
 
 

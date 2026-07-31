@@ -43,9 +43,17 @@ from src.utils.chatwoot import (
     build_widget_script,
     subscription_attributes,
 )
-from src.utils.matomo import build_tracker_script
+from src.utils.matomo import avertir_si_config_incomplete, build_tracker_script
 
 load_dotenv()
+
+# Appelé ici, après load_dotenv() et non à l'import de src.utils.matomo : la
+# garde y lit os.environ, qui ne contient pas encore les variables du .env au
+# moment où ce module est importé (ligne 45, avant le load_dotenv() ci-dessus).
+# Un appel au chargement du module verrait donc toujours une configuration
+# absente et ne s'alerterait jamais — c'est précisément le bug que cette
+# fonction existe pour rendre bruyant. Ne pas la redéplacer dans matomo.py.
+avertir_si_config_incomplete()
 
 # if os.getenv("PYTEST_CURRENT_TEST"):
 #     os.environ["DATA_FILE_PARQUET_PATH"]

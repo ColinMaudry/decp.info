@@ -38,6 +38,7 @@ def test_after_request_hook_increments_counter_async(api_client, valid_token_hea
 
 
 def test_matomo_disabled_skips_call(monkeypatch, api_client, valid_token_header):
+    monkeypatch.setenv("DEVELOPMENT", "false")
     monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "false")
     client, _ = api_client
 
@@ -55,6 +56,7 @@ def test_matomo_disabled_skips_call(monkeypatch, api_client, valid_token_header)
 
 
 def test_matomo_enabled_posts_event(monkeypatch, api_client, valid_token_header):
+    monkeypatch.setenv("DEVELOPMENT", "false")
     monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
     monkeypatch.setenv("MATOMO_URL", "https://matomo.example/matomo.php")
     monkeypatch.setenv("MATOMO_SITE_ID", "42")
@@ -78,3 +80,25 @@ def test_matomo_enabled_posts_event(monkeypatch, api_client, valid_token_header)
     assert call["params"]["rec"] == "1"
     assert "token-" in call["params"]["uid"]
     assert call["params"]["dimension2"] == "200"
+
+
+def test_matomo_muet_en_development(monkeypatch, api_client, valid_token_header):
+    """Régression : une instance de test ne doit pas alimenter le Matomo prod."""
+    from src.api import tracking
+
+    monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    monkeypatch.setenv("DEVELOPMENT", "true")
+    monkeypatch.setenv("MATOMO_URL", "https://matomo.example/matomo.php")
+    monkeypatch.setenv("MATOMO_SITE_ID", "42")
+
+    envois = []
+    monkeypatch.setattr(tracking, "_post_matomo", lambda **kw: envois.append(kw))
+
+    tracking.start_worker(":memory:")
+    try:
+        tracking.enqueue_matomo_event(1, "/v1/marches", "", 200, "pytest")
+        tracking.flush()
+    finally:
+        tracking.stop_worker()
+
+    assert envois == []

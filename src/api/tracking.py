@@ -1,4 +1,3 @@
-import os
 import queue
 import threading
 from typing import Optional
@@ -7,6 +6,7 @@ import httpx
 
 from src.api import tokens_db
 from src.utils import logger
+from src.utils.matomo import matomo_config, tracking_enabled
 
 _STOP_SENTINEL = object()
 _queue: Optional[queue.Queue] = None
@@ -53,18 +53,16 @@ def enqueue_matomo_event(
 ) -> None:
     if _queue is None:
         return
-    # `MATOMO_TRACKING_ENABLED` a été introduite ici pour ce suivi côté
-    # serveur de l'API, mais elle conditionne AUSSI, depuis la factorisation
-    # de src/utils/matomo.py, le traqueur <script> émis côté navigateur pour
-    # les pages Dash et SEO (build_tracker_script). Ne pas la couper sans
-    # vérifier les deux usages : une désactivation par erreur ici éteint
-    # aussi silencieusement l'analytique du site.
-    if os.getenv("MATOMO_TRACKING_ENABLED", "false").lower() != "true":
+    # Garde commune aux quatre points d'émission Matomo du projet
+    # (src/utils/matomo.py) : elle combine DEVELOPMENT et
+    # MATOMO_TRACKING_ENABLED. La couper éteint toute l'analytique du site,
+    # pas seulement celle de l'API.
+    if not tracking_enabled():
         return
-    url = os.getenv("MATOMO_URL")
-    site_id = os.getenv("MATOMO_SITE_ID")
-    if not url or not site_id:
+    config = matomo_config()
+    if config is None:
         return
+    url, site_id = config
     full_url = f"https://colibre.fr{path}"
     if query_string:
         full_url += f"?{query_string}"
