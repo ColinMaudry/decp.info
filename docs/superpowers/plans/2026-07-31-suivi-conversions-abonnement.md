@@ -16,7 +16,8 @@ Spec de référence : `docs/superpowers/specs/2026-07-31-suivi-conversions-abonn
 - Aucun `token_auth` n'est envoyé à Matomo. Les POST utilisent `data=`, jamais `params=`.
 - Aucun émetteur ne lève jamais d'exception : une panne Matomo ne doit casser ni une requête utilisateur, ni un webhook.
 - `pyproject.toml:56` pinne `DEVELOPMENT=true` et `:67` pinne `MATOMO_TRACKING_ENABLED=false` pour toute la suite. Tout test attendant une émission doit lever **les deux** verrous.
-- Commandes de test : `uv run pytest <chemin>` (l'activation du venv dans un shell ne suffit pas ici). **Chaque tâche ne lance que son propre fichier de test.** La suite complète (`uv run pytest` sans chemin) n'est lancée qu'à la tâche 11.
+- Commandes de test : `uv run pytest <chemin>` (l'activation du venv dans un shell ne suffit pas ici). **Chaque tâche se limite aux chemins que ses propres étapes nomment** — son fichier de test, plus le répertoire voisin quand une étape le demande explicitement comme contrôle de non-régression. La suite complète (`uv run pytest` sans chemin) n'est lancée qu'à la tâche 11. Ne jamais élargir de sa propre initiative : un échec ailleurs dans la suite n'appartient pas à la tâche en cours.
+- Baseline de référence sur cette branche avant toute modification : **948 passés, 21 désélectionnés**. Tout écart doit être expliqué par la tâche en cours.
 - Avant tout `git add`, exécuter `pre-commit` : prettier reformate les `.md`/`.js` et ruff les `.py`. Si un hook modifie un fichier, le ré-ajouter avant de commiter.
 - Les clés de plan valides sont `simple` et `soutien` (`src/subscriptions/plans.py:8-23`).
 
