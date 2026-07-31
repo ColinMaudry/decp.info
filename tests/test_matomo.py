@@ -22,9 +22,51 @@ def test_active_rend_le_script_trackpageview(monkeypatch):
     from src.utils.matomo import build_tracker_script
 
     monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    monkeypatch.setenv("DEVELOPMENT", "false")
+    monkeypatch.setenv("MATOMO_URL", "https://matomo.example/matomo.php")
+    monkeypatch.setenv("MATOMO_SITE_ID", "42")
     script = build_tracker_script()
     assert "trackPageView" in script
     assert "<script" in script and "</script>" in script
+
+
+def test_script_vide_si_config_incomplete(monkeypatch):
+    """La garde passe mais l'URL manque : pas de script muet à moitié valide."""
+    from src.utils.matomo import build_tracker_script
+
+    monkeypatch.setenv("DEVELOPMENT", "false")
+    monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    monkeypatch.delenv("MATOMO_URL", raising=False)
+    monkeypatch.setenv("MATOMO_SITE_ID", "14")
+    assert build_tracker_script() == ""
+
+
+def test_script_utilise_les_variables_d_environnement(monkeypatch):
+    from src.utils.matomo import build_tracker_script
+
+    monkeypatch.setenv("DEVELOPMENT", "false")
+    monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    monkeypatch.setenv("MATOMO_URL", "https://matomo.example/matomo.php")
+    monkeypatch.setenv("MATOMO_SITE_ID", "42")
+
+    script = build_tracker_script()
+
+    assert "https://matomo.example/" in script
+    assert '"42"' in script
+    # Les anciennes constantes ont disparu du fragment.
+    assert "analytics.maudry.com" not in script
+    assert "'14'" not in script
+
+
+def test_script_vide_en_development(monkeypatch):
+    """Régression : test.colibre.fr ne doit rien émettre vers le site prod."""
+    from src.utils.matomo import build_tracker_script
+
+    monkeypatch.setenv("DEVELOPMENT", "true")
+    monkeypatch.setenv("MATOMO_TRACKING_ENABLED", "true")
+    monkeypatch.setenv("MATOMO_URL", "https://matomo.example/matomo.php")
+    monkeypatch.setenv("MATOMO_SITE_ID", "42")
+    assert build_tracker_script() == ""
 
 
 def test_page_dash_emet_le_script_matomo_quand_actif():
@@ -49,7 +91,13 @@ def test_page_dash_emet_le_script_matomo_quand_actif():
     from pathlib import Path
 
     repo_root = Path(__file__).resolve().parents[1]
-    env = {**os.environ, "MATOMO_TRACKING_ENABLED": "true"}
+    env = {
+        **os.environ,
+        "MATOMO_TRACKING_ENABLED": "true",
+        "DEVELOPMENT": "false",
+        "MATOMO_URL": "https://matomo.example/matomo.php",
+        "MATOMO_SITE_ID": "42",
+    }
     resultat = subprocess.run(
         [sys.executable, "-c", "from src.app import app; print(app.index_string)"],
         cwd=repo_root,
