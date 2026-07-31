@@ -85,6 +85,9 @@ Avant d'ajouter des fichier dans git (`git add` ou `git commit -a`), exécute `p
 ### Environment
 
 - `DEVELOPMENT=true` enables debug logging and is set automatically during tests
+- `DEVELOPMENT=true` désactive aussi tout le suivi Matomo (`tracking_enabled()`
+  dans `src/utils/matomo.py`), pour que les instances de test n'alimentent pas
+  le site de production
 - `.env` file is required at runtime (copy from `template.env`)
 
 ### Migrations de schéma SQLite
