@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+import pytest
+
 from src.utils.table_sql import dashboard_filters_to_sql
 
 
@@ -149,7 +151,8 @@ def test_titulaire_id_present_skips_categorie_and_departement():
     assert params == [2025, "%999%"]
 
 
-def test_marche_techniques_uses_list_has_any():
+def test_marche_techniques_reste_un_ou():
+    """Contrairement aux considérations, cocher plusieurs techniques élargit."""
     where_sql, params = dashboard_filters_to_sql(
         dashboard_year="2025",
         dashboard_marche_techniques=["Enchère", "Accord-cadre"],
@@ -161,28 +164,64 @@ def test_marche_techniques_uses_list_has_any():
     assert params == [2025, ["Enchère", "Accord-cadre"]]
 
 
-def test_considerations_sociales_uses_list_has_any():
+def test_considerations_sociales_uses_list_has_all():
     where_sql, params = dashboard_filters_to_sql(
         dashboard_year="2025",
         dashboard_marche_considerations_sociales=["Clause sociale"],
     )
     assert where_sql == (
         'YEAR("dateNotification") = ? '
-        "AND list_has_any(string_split(\"considerationsSociales\", ', '), ?::VARCHAR[])"
+        "AND list_has_all(string_split(\"considerationsSociales\", ', '), ?::VARCHAR[])"
     )
     assert params == [2025, ["Clause sociale"]]
 
 
-def test_considerations_environnementales_uses_list_has_any():
+def test_considerations_environnementales_uses_list_has_all():
     where_sql, params = dashboard_filters_to_sql(
         dashboard_year="2025",
         dashboard_marche_considerations_environnementales=["Clause env."],
     )
     assert where_sql == (
         'YEAR("dateNotification") = ? '
-        "AND list_has_any(string_split(\"considerationsEnvironnementales\", ', '), ?::VARCHAR[])"
+        "AND list_has_all(string_split(\"considerationsEnvironnementales\", ', '), ?::VARCHAR[])"
     )
     assert params == [2025, ["Clause env."]]
+
+
+@pytest.mark.parametrize(
+    "coche, attendus",
+    [
+        (["Clause sociale"], {"sociale", "sociale+critere", "critere+sociale"}),
+        (["Clause sociale", "Critère social"], {"sociale+critere", "critere+sociale"}),
+        (["Critère social", "Clause sociale"], {"sociale+critere", "critere+sociale"}),
+        (["Clause sociale", "Marché réservé"], set()),
+    ],
+)
+def test_considerations_multi_valeurs_est_un_et(coche, attendus):
+    """Deux valeurs cochées = marchés portant les deux, pas l'une ou l'autre.
+
+    Vérifié en exécutant le SQL produit : la sémantique de `list_has_all`
+    compte plus que la chaîne générée. L'ordre des valeurs dans la colonne
+    comme dans la sélection est indifférent.
+    """
+    duckdb = pytest.importorskip("duckdb")
+    con = duckdb.connect()
+    con.execute("""
+        CREATE TABLE decp AS SELECT * FROM (VALUES
+            ('sociale',         DATE '2025-01-01', 'Clause sociale'),
+            ('critere',         DATE '2025-01-01', 'Critère social'),
+            ('sociale+critere', DATE '2025-01-01', 'Clause sociale, Critère social'),
+            ('critere+sociale', DATE '2025-01-01', 'Critère social, Clause sociale'),
+            ('sans_objet',      DATE '2025-01-01', 'Sans objet')
+        ) t(uid, "dateNotification", "considerationsSociales")
+    """)
+
+    where_sql, params = dashboard_filters_to_sql(
+        dashboard_year="2025",
+        dashboard_marche_considerations_sociales=coche,
+    )
+    rows = con.execute(f"SELECT uid FROM decp WHERE {where_sql}", params).fetchall()
+    assert {r[0] for r in rows} == attendus
 
 
 def test_montant_min_only():
