@@ -147,13 +147,34 @@ def schema():
             "schema": {"type": "string", "enum": ["true", "false"], "default": "true"},
             "description": "Inclure le total (`COUNT(*)`) dans `meta`. Mettre `false` pour accélérer la requête. Ignoré en mode agrégation.",
         },
+        # Objet free-form : OpenAPI n'a pas de nom de paramètre variable, et un
+        # nom littéral `<colonne>__<opérateur>` amenait Swagger UI à envoyer le
+        # placeholder comme nom réel (`?%3Ccolonne%3E__%3Cop%C3%A9rateur%3E=...`)
+        # → 400. Avec `style: form` + `explode: true`, Swagger UI affiche un
+        # champ JSON clé/valeur et sérialise `?colonne__op=valeur`. Le `name`
+        # n'apparaît jamais dans l'URL, il sert juste d'étiquette.
+        #
+        # `additionalProperties: true` plutôt que `{"type": "string"}` : Swagger
+        # UI exige du JSON valide dans ce champ (le YAML est refusé avant même
+        # l'envoi), autant y autoriser les nombres nus et `null` — qui sérialise
+        # en `col__groupby=`, la forme courte des drapeaux d'agrégation.
         {
-            "name": "<colonne>__<opérateur>",
+            "name": "filtres",
             "in": "query",
-            "schema": {"type": "string"},
+            "style": "form",
+            "explode": True,
+            "schema": {"type": "object", "additionalProperties": True},
+            "example": {
+                "acheteur_id__contains": "VILLE",
+                "montant__greater": 1000000,
+            },
             "description": (
-                "Filtre ou agrégation dynamique : `<colonne>__<opérateur>` "
-                "(voir les colonnes via `/schema`).\n\n"
+                "Filtres et agrégations dynamiques, saisis ici en JSON "
+                '`{"<colonne>__<opérateur>": <valeur>}` — chaque paire '
+                "devient un paramètre `?<colonne>__<opérateur>=<valeur>` de "
+                "l'URL (voir les colonnes via `/schema`). Les nombres se "
+                "passent sans guillemets, et les drapeaux sans valeur "
+                "(`groupby`, `count`, `sum`, ...) s'écrivent `null`.\n\n"
                 "**Filtres** (`<colonne>__<op>=<valeur>`) :\n"
                 "- `exact` : égal à la valeur\n"
                 "- `differs` : différent de la valeur (null-safe, `IS DISTINCT FROM`)\n"
@@ -175,9 +196,14 @@ def schema():
                 "`columns` est interdit et `meta` ne contient pas `total`. "
                 "`sort` peut être appliqué sur une colonne `groupby` (ex. `acheteur_departement_code__sort=asc`) ; "
                 "il n'est pas supporté sur les alias d'agrégats (ex. `uid__count__sort=desc` → 400).\n\n"
-                "Exemples : `acheteur_id__contains=VILLE`, `montant__greater=10000`, "
+                "Exemples d'URL : `acheteur_id__contains=VILLE`, `montant__greater=10000`, "
                 "`acheteur_departement_code__groupby&montant__sum`, "
-                "`acheteur_departement_code__groupby&uid__count&acheteur_departement_code__sort=asc`."
+                "`acheteur_departement_code__groupby&uid__count&acheteur_departement_code__sort=asc`.\n\n"
+                "Les mêmes, saisis dans ce champ :\n"
+                '- `{"acheteur_id__contains": "VILLE", "montant__greater": 10000}`\n'
+                '- `{"acheteur_departement_code__groupby": null, "montant__sum": null}`\n'
+                '- `{"acheteur_departement_code__groupby": null, "uid__count": null, '
+                '"acheteur_departement_code__sort": "asc"}`'
             ),
         },
     ],

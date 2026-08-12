@@ -146,6 +146,22 @@ def test_data_aggregation_with_filter(api_client, valid_token_header):
     assert resp.status_code == 200
 
 
+def test_data_aggregation_flags_accept_empty_value(api_client, valid_token_header):
+    """Swagger UI sérialise les drapeaux sans valeur en `col__groupby=`.
+
+    Le champ « filtres » est un objet free-form : une valeur vide produit
+    `key=` et non `key` nu, il faut donc que les deux formes passent.
+    """
+    client, _ = api_client
+    resp = client.get(
+        "/api/v1/data?acheteur_departement_code__groupby=&uid__count=",
+        headers=valid_token_header,
+    )
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+    for row in resp.get_json()["data"]:
+        assert set(row.keys()) == {"acheteur_departement_code", "uid__count"}
+
+
 def test_data_aggregation_with_columns_returns_400(api_client, valid_token_header):
     client, _ = api_client
     resp = client.get(
