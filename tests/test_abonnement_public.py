@@ -49,7 +49,7 @@ def test_subscribe_button_tous_abonnes_visitor_free_signup():
     from src.pages.a_propos import abonnement as page
 
     text = str(page._subscribe_button(False, False, True))
-    assert "Je m'abonne gratuitement" in text
+    assert "Je crée mon compte" in text
     assert "href='/inscription'" in text
     assert "disabled" not in text
 
