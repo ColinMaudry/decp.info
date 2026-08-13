@@ -150,10 +150,23 @@ def layout(acheteur_id=None, **kwargs):
                                         html.P(id="acheteur_titre_stats"),
                                         html.P(id="acheteur_marches_attribues"),
                                         html.P(id="acheteur_titulaires_differents"),
-                                        html.Button(
-                                            "Téléchargement au format Excel",
-                                            id="btn-download-data-acheteur",
-                                            className="btn btn-secondary",
+                                        html.Div(
+                                            className="d-flex flex-wrap gap-2",
+                                            children=[
+                                                html.Button(
+                                                    "Téléchargement au format Excel",
+                                                    id="btn-download-data-acheteur",
+                                                    className="btn btn-secondary",
+                                                ),
+                                                dbc.Button(
+                                                    "📊 Visualiser dans l'observatoire",
+                                                    id="btn-observatoire-acheteur",
+                                                    href=f"/observatoire?acheteur_id={acheteur_id}"
+                                                    if acheteur_id
+                                                    else "/observatoire",
+                                                    color="secondary",
+                                                ),
+                                            ],
                                         ),
                                         dcc.Download(id="download-data-acheteur"),
                                     ],
@@ -368,7 +381,11 @@ def update_acheteur_stats(pathname, ach_year):
 )
 def update_download_button_acheteur(pathname, ach_year):
     where_sql, params = _acheteur_scope(pathname, ach_year)
-    return get_button_properties(count_marches(where_sql, params))
+    download_disabled, download_text, download_title = get_button_properties(
+        count_marches(where_sql, params)
+    )
+    download_title = "Télécharger les marchés publics de cet acheteur au format Excel"
+    return download_disabled, download_text, download_title
 
 
 @callback(

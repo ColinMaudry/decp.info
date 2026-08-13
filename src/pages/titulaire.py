@@ -158,10 +158,23 @@ def layout(titulaire_id=None, **kwargs):
                                         html.P(id="titulaire_titre_stats"),
                                         html.P(id="titulaire_marches_remportes"),
                                         html.P(id="titulaire_acheteurs_differents"),
-                                        html.Button(
-                                            "Téléchargement au format Excel",
-                                            id="btn-download-data-titulaire",
-                                            className="btn btn-secondary",
+                                        html.Div(
+                                            className="d-flex flex-wrap gap-2",
+                                            children=[
+                                                html.Button(
+                                                    "Téléchargement au format Excel",
+                                                    id="btn-download-data-titulaire",
+                                                    className="btn btn-secondary",
+                                                ),
+                                                dbc.Button(
+                                                    "📊 Visualiser dans l'observatoire",
+                                                    id="btn-observatoire-titulaire",
+                                                    href=f"/observatoire?titulaire_id={titulaire_id}"
+                                                    if titulaire_id
+                                                    else "/observatoire",
+                                                    color="secondary",
+                                                ),
+                                            ],
                                         ),
                                         dcc.Download(id="download-data-titulaire"),
                                     ],
@@ -405,7 +418,11 @@ def update_titulaire_stats(pathname, titulaire_year):
 )
 def update_download_button_titulaire(pathname, titulaire_year):
     where_sql, params = _titulaire_scope(pathname, titulaire_year)
-    return get_button_properties(count_marches(where_sql, params))
+    download_disabled, download_text, download_title = get_button_properties(
+        count_marches(where_sql, params)
+    )
+    download_title = "Télécharger les marchés publics de ce titulaire au format Excel"
+    return download_disabled, download_text, download_title
 
 
 @callback(
