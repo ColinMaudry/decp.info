@@ -427,11 +427,13 @@ def test_next_recharge_at_none_after_period_end(users_db_path):
 
 
 def test_next_recharge_at_none_during_trial(users_db_path):
-    """Période d'essai : le vote n'est pas encore ouvert, donc pas de date."""
+    """Période d'essai (#132) : aucune ligne `subscriptions` n'existe tant que
+    l'essai n'a pas débouché sur une souscription, donc aucun vote n'a encore
+    été crédité et aucune date de rechargement n'est à annoncer."""
     db.init_schema()
     uid = _make_user()
-    handle, _ = db.create_pending(uid, "colibre-1", "simple")
-    db.update_from_webhook(handle, "trial", _future())
+    db.start_trial_if_new(uid)
+    assert db.get_current(uid) is None
     assert db.next_recharge_at(uid) is None
 
 
@@ -495,13 +497,18 @@ def test_reactivation_resets_cursor_without_regranting(users_db_path):
     assert db.credit_pending(uid) == db.INITIAL_VOTES
 
 
-def test_trial_to_active_does_not_reset_then_grants_two(users_db_path):
+def test_pending_to_active_via_webhook_grants_initial_votes(users_db_path):
+    """Souscription directe (#132) : `pending` → `active` par webhook accorde
+    les +INITIAL_VOTES initiaux, comme n'importe quelle première activation.
+
+    Distinct de `test_credit_pending_grants_initial_two_on_first_active`, qui
+    active la ligne par UPDATE SQL direct plutôt que par
+    `update_from_webhook` : celui-ci couvre en plus le passage par
+    `freeze_votes_cursor` déclenché par la transition webhook elle-même."""
     db.init_schema()
     uid = _make_user()
     handle, _ = db.create_pending(uid, "colibre-1", "simple")
-    db.update_from_webhook(handle, "trial", _future())
     db.update_from_webhook(handle, "active", _future())
-    # fin d'essai : credit_pending accorde les +INITIAL_VOTES initiaux
     assert db.credit_pending(uid) == db.INITIAL_VOTES
 
 
