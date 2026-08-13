@@ -1172,37 +1172,13 @@ git commit -m "Ajustements de la suite de tests pour le démarrage manuel d'abon
 - Vérifier dans Matomo que l'objectif `subscription_trial` reçoit toujours des
   événements après le changement d'ancrage.
 - **Au moment de désactiver `TOUS_ABONNES`** (passage de `True` à `False`,
-  ouverture du modèle payant) : tous les comptes créés pendant la période
-  gratuite ont déjà un `trial_ends_at` posé à leur activation (vérification
-  d'email ou connexion LinkedIn), qui expire donc bien avant le jour du
-  basculement — `verify_email`/`linkedin_callback` ouvrent la fenêtre d'essai
-  sans regarder `TOUS_ABONNES`. Sans intervention, ces comptes tombent
-  directement sur « Votre essai gratuit est terminé » au moment précis où on
-  voudrait les convertir, sans avoir jamais eu d'essai utile.
-
-  Remède : juste avant de faire passer `TOUS_ABONNES` à `False`, réinitialiser
-  la fenêtre d'essai de tous les comptes existants à `TRIAL_DAYS` jours à
-  partir de maintenant :
-
-  ```sql
-  UPDATE subscriber_state
-  SET trial_ends_at = datetime('now', '+2 days'),
-      updated_at = datetime('now')
-  WHERE user_id IN (SELECT id FROM users WHERE email_verified = 1);
-  -- adapter '+2 days' si TRIAL_DAYS (src/subscriptions/db.py) change avant le
-  -- basculement.
-  ```
-
-  **Pourquoi pas un simple `SET trial_ends_at = NULL`** (proposition initiale
-  de la revue) : `start_trial_if_new` — la seule fonction qui pose
-  `trial_ends_at` — n'est appelée qu'à la vérification d'email et à la
-  connexion LinkedIn (`src/auth/routes.py:130,343`), c'est-à-dire au moment de
-  l'activation du compte. Pour un compte déjà activé pendant la période
-  gratuite, rien ne redéclenche ces chemins : mettre `trial_ends_at` à `NULL`
-  le laisserait simplement `NULL` indéfiniment (pas de nouvel essai, mais pas
-  non plus d'essai expiré — `trial_active`/`trial_ends_at` renverraient
-  `None`/`False`, et `has_access` retomberait uniquement sur
-  `has_active_subscription`). Il n'y a pas de « prochain moment équivalent à
-  une activation » pour ces comptes : il faut donc écrire directement la date
-  de fin d'essai voulue, pas la vider en espérant qu'un chemin de code
-  l'écrive plus tard.
+  ouverture du modèle payant) : aucune migration de données n'est nécessaire.
+  `verify_email`/`linkedin_callback` (`src/auth/routes.py`) vérifient
+  désormais `TOUS_ABONNES` avant d'appeler `start_trial_if_new` : tant que le
+  flag est actif, aucun essai n'est ouvert et `trial_ends_at` reste `NULL`
+  pour les comptes créés pendant la période gratuite. Au basculement, ces
+  comptes tombent sur la vue « Abonnez-vous » ordinaire — identique à celle
+  des comptes créés avant ce déploiement — jamais sur « Votre essai gratuit
+  est terminé ». Les comptes créés après le basculement obtiennent leur essai
+  normalement. Ne pas réintroduire de script `UPDATE subscriber_state` à ce
+  sujet : le problème qu'il visait à corriger n'existe plus côté code.

@@ -51,6 +51,27 @@ def test_verify_email_tous_abonnes_redirects_to_abonnement(
     assert "mes-infos" not in loc
 
 
+def test_verify_email_tous_abonnes_opens_no_trial(client, users_db_path, monkeypatch):
+    """Sous TOUS_ABONNES, l'accès est déjà gratuit pour tout le monde : ouvrir
+    un essai qui expirerait sans jamais avoir été vécu comme tel n'a aucun
+    sens, et `essai=demarre` annoncerait un événement qui n'a pas eu lieu."""
+    monkeypatch.setattr("src.utils.TOUS_ABONNES", True)
+    db.init_schema()
+    sub_db.init_schema()
+    uid = db.create_user("essai-tous-abonnes@b.c", "hash")
+    token = tokens.create_verification_token(uid)
+
+    resp = client.get(f"/auth/verify-email?token={token}")
+
+    assert resp.status_code == 302
+    loc = resp.headers["Location"]
+    assert loc == "/compte/abonnement"
+    assert "essai" not in loc
+    assert sub_db.trial_ends_at(uid) is None
+    with client.session_transaction() as sess:
+        assert sess.get("_user_id") == str(uid)
+
+
 def test_verify_email_invalid_token(client):
     resp = client.get("/auth/verify-email?token=invalide")
     assert "error=invalid_token" in resp.headers["Location"]

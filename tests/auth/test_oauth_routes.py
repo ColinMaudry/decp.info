@@ -80,6 +80,32 @@ def test_callback_creates_user_and_logs_in(client, fake_userinfo, users_db_path)
     assert sub_db.trial_active(new_user["id"]) is True
 
 
+def test_callback_creates_user_tous_abonnes_opens_no_trial(
+    client, fake_userinfo, users_db_path, monkeypatch
+):
+    """Sous TOUS_ABONNES, l'accès est déjà gratuit pour tout le monde :
+    `compte_cree=linkedin` doit toujours être posé (c'est un événement de
+    création de compte), mais aucun essai ne doit être ouvert et
+    `essai=demarre` ne doit pas être posé."""
+    monkeypatch.setattr("src.utils.TOUS_ABONNES", True)
+    db.init_schema()
+    sub_db.init_schema()
+    fake_userinfo["userinfo"] = {
+        "sub": "sub-tous-abonnes",
+        "email": "tous-abonnes@example.com",
+        "email_verified": True,
+    }
+    resp = client.get("/auth/linkedin/callback")
+    assert resp.status_code == 302
+    location = resp.headers["Location"]
+    assert location.startswith("/compte/abonnement")
+    assert "compte_cree=linkedin" in location
+    assert "essai=demarre" not in location
+    new_user = db.get_user_by_email("tous-abonnes@example.com")
+    assert new_user is not None
+    assert sub_db.trial_ends_at(new_user["id"]) is None
+
+
 def test_callback_existing_account_does_not_start_retroactive_trial(
     client, fake_userinfo, users_db_path
 ):
