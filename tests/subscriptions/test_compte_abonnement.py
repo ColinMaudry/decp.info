@@ -51,37 +51,57 @@ def test_active_view_shows_cancel(monkeypatch):
     assert "Me désabonner" in str(view)
 
 
-def test_active_view_trial_banner(monkeypatch):
+def test_active_view_pending_no_longer_mentions_trial_and_offers_resume():
     from src.pages.compte import abonnement as compte_abonnement
 
-    row = {
-        "plan": "simple",
-        "status": "trial",
-        "current_period_end": "2099-01-01T00:00:00+00:00",
-    }
-    assert "Essai gratuit" in str(compte_abonnement._active_view(row))
-
-
-def test_active_view_trial_banner_shows_date_and_time():
-    from src.pages.compte import abonnement as compte_abonnement
-
-    row = {
-        "plan": "simple",
-        "status": "trial",
-        "current_period_end": "2026-07-29T13:57:43.177+00:00",
-    }
+    row = {"plan": "simple", "status": "pending", "current_period_end": None}
     text = str(compte_abonnement._active_view(row))
+    assert "période d'essai" not in text
+    assert "Ajouter une méthode de paiement" in text
+
+
+def test_trial_view_shows_end_date_and_time_and_features():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    text = str(compte_abonnement._trial_view("2026-07-29T13:57:43.177+00:00"))
     # essai de 2 jours : l'heure de fin compte autant que le jour
     assert "29 juillet 2026 à 15h57" in text
+    assert "Votre essai débloque" in text
+    assert "sauvegardez et partagez des" in text
 
 
-def test_active_view_trial_banner_without_end_date():
+def test_trial_view_without_end_date():
     from src.pages.compte import abonnement as compte_abonnement
 
-    row = {"plan": "simple", "status": "trial", "current_period_end": None}
-    text = str(compte_abonnement._active_view(row))
-    assert "Essai gratuit" in text
+    text = str(compte_abonnement._trial_view(None))
+    assert "Essai gratuit en cours" in text
     assert "None" not in text
+
+
+def test_trial_view_offers_early_subscription_with_immediate_charge_notice():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    text = str(compte_abonnement._trial_view(None))
+    assert "M'abonner dès maintenant" in text
+    assert "/compte/abonnement/mes-infos" in text
+    assert "prélèvement a lieu immédiatement" in text
+    assert "jours d'essai restants ne sont pas reportés" in text
+
+
+def test_trial_ended_view_shows_start_subscription_button_and_link():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    text = str(compte_abonnement._trial_ended_view())
+    assert "Commencer mon abonnement" in text
+    assert "/compte/abonnement/mes-infos" in text
+
+
+def test_trial_ended_view_shows_no_amount():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    text = str(compte_abonnement._trial_ended_view())
+    assert "Commencer mon abonnement" in text
+    assert "€" not in text
 
 
 def test_active_view_cancelled_shows_date_and_time():
@@ -111,7 +131,7 @@ def test_active_view_active_shows_date_and_time():
 def test_active_view_never_prints_none_without_end_date():
     from src.pages.compte import abonnement as compte_abonnement
 
-    for status in ("trial", "cancelled", "active"):
+    for status in ("cancelled", "active"):
         row = {"plan": "simple", "status": status, "current_period_end": None}
         assert "None" not in str(compte_abonnement._active_view(row))
 
@@ -141,7 +161,7 @@ def test_banner_absent_when_flag_off(monkeypatch):
 def test_show_active_view_true_for_live_statuses(monkeypatch):
     from src.pages.compte import abonnement as compte_abonnement
 
-    for status in ("pending", "trial", "active", "cancelled"):
+    for status in ("pending", "active", "cancelled"):
         assert compte_abonnement._show_active_view({"status": status}) is True
 
 
@@ -164,17 +184,6 @@ def test_active_view_shows_change_payment_method_for_active():
     text = str(compte_abonnement._active_view(row))
     assert "Changer de méthode de paiement" in text
     assert "/subscriptions/change-payment-method" in text
-
-
-def test_active_view_shows_change_payment_method_for_trial():
-    from src.pages.compte import abonnement as compte_abonnement
-
-    row = {
-        "plan": "simple",
-        "status": "trial",
-        "current_period_end": "2099-01-01T00:00:00+00:00",
-    }
-    assert "Changer de méthode de paiement" in str(compte_abonnement._active_view(row))
 
 
 def test_active_view_hides_change_payment_method_for_cancelled():

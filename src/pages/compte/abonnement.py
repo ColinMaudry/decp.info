@@ -62,6 +62,59 @@ def _free_access_view():
     )
 
 
+def _trial_view(end_raw):
+    from src.pages.a_propos.abonnement import abonnement_features
+
+    end = format_datetime_french(end_raw) if end_raw else None
+    titre = f"Essai gratuit jusqu'au {end}" if end else "Essai gratuit en cours"
+    return html.Div(
+        [
+            html.H5(titre, className="mb-3"),
+            html.P("Votre essai débloque :"),
+            abonnement_features,
+            dcc.Markdown(
+                "À la fin de l'essai, rien n'est prélevé : c'est à vous de "
+                "démarrer votre abonnement depuis cette page.",
+                className="text-muted mt-3",
+            ),
+            html.A(
+                "M'abonner dès maintenant",
+                href="/compte/abonnement/mes-infos",
+                className="btn btn-outline-secondary mt-2",
+            ),
+            # Le débit est immédiat, y compris pendant l'essai : le différer
+            # jusqu'à la fin de l'essai reviendrait au prélèvement automatique
+            # que ce chantier supprime. Les jours restants sont donc perdus, et
+            # il faut le dire avant le clic.
+            html.P(
+                "Le premier prélèvement a lieu immédiatement ; les jours "
+                "d'essai restants ne sont pas reportés.",
+                className="text-muted small mt-2",
+            ),
+        ],
+        className="mb-4",
+    )
+
+
+def _trial_ended_view():
+    return html.Div(
+        [
+            html.H5("Votre essai gratuit est terminé", className="mb-3"),
+            html.P(
+                "Les fonctionnalités réservées aux abonné·es ne sont plus "
+                "accessibles. Vous pouvez démarrer votre abonnement à tout "
+                "moment."
+            ),
+            html.A(
+                "Commencer mon abonnement",
+                href="/compte/abonnement/mes-infos",
+                className="btn btn-secondary mt-2",
+            ),
+        ],
+        className="mb-4",
+    )
+
+
 def _no_sub_view(tous_abonnes: bool, row):
     if tous_abonnes:
         return _free_access_view()
@@ -92,8 +145,8 @@ def _active_view(row):
         blocks.extend(
             [
                 dbc.Alert(
-                    "Sans méthode de paiement enregistrée, votre abonnement sera "
-                    "résilié à la fin de la période d'essai.",
+                    "Votre abonnement n'est pas finalisé : aucune méthode de "
+                    "paiement n'a été enregistrée.",
                     color="warning",
                     className="mb-3",
                 ),
@@ -111,13 +164,6 @@ def _active_view(row):
                 ),
             ]
         )
-    elif row["status"] == "trial":
-        texte = (
-            f"Essai gratuit jusqu'au {end}, puis facturation et débit automatique à chaque date anniversaire."
-            if end
-            else "Essai gratuit en cours, puis facturation et débit automatique à chaque date anniversaire."
-        )
-        blocks.append(dbc.Alert(texte, color="info"))
     elif row["status"] == "cancelled":
         texte = (
             f"Abonnement résilié, actif jusqu'au {end}."
@@ -304,7 +350,15 @@ def layout(**query):
     else:
         from src.utils import TOUS_ABONNES
 
-        body.append(_no_sub_view(TOUS_ABONNES, row))
+        if TOUS_ABONNES:
+            body.append(_no_sub_view(True, row))
+        elif db.trial_active(current_user.id):
+            end = db.trial_ends_at(current_user.id)
+            body.append(_trial_view(end.isoformat() if end else None))
+        elif db.trial_ends_at(current_user.id) is not None:
+            body.append(_trial_ended_view())
+        else:
+            body.append(_no_sub_view(False, row))
 
     body.append(_salaire_modal)
     return account_shell("abonnement", html.Div(body))
