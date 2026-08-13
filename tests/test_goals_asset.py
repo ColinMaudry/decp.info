@@ -33,7 +33,7 @@ def test_garde_sur_paq_et_nettoyage_de_l_url():
     entièrement `if (!window._paq) return;` (un TypeError garanti à chaque
     page chargée traqueur désactivé) laisserait quand même passer cette
     assertion. On pin donc la garde par une regex sur sa forme précise, comme
-    déjà fait pour METHODES/PLANS ci-dessus.
+    déjà fait pour METHODES ci-dessus.
     """
     code = _code_sans_commentaires()
     assert re.search(r"if\s*\(\s*!\s*window\._paq\s*\)\s*return", code)

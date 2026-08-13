@@ -230,6 +230,26 @@ def test_has_active_subscription_bad_datetime_returns_false(users_db_path):
     assert db.has_active_subscription(uid) is False
 
 
+def test_has_active_subscription_naive_datetime_treated_as_utc(users_db_path):
+    """Revue #132 : une valeur naïve (saisie à la main, via l'admin par ex.)
+    ne doit pas lever de TypeError à la comparaison avec un datetime aware."""
+    db.init_schema()
+    uid = _make_user()
+    handle, subscription_id = db.create_pending(uid, "colibre-1", "simple")
+    future_naive = (datetime.now() + timedelta(days=2)).isoformat()
+    get_conn().execute(
+        "UPDATE subscriptions SET status='cancelled', current_period_end=? WHERE id=?",
+        (future_naive, subscription_id),
+    )
+    assert db.has_active_subscription(uid) is True
+    past_naive = (datetime.now() - timedelta(days=2)).isoformat()
+    get_conn().execute(
+        "UPDATE subscriptions SET current_period_end=? WHERE id=?",
+        (past_naive, subscription_id),
+    )
+    assert db.has_active_subscription(uid) is False
+
+
 def test_create_pending_initializes_subscriber_state(users_db_path):
     db.init_schema()
     uid = _make_user()
@@ -721,6 +741,27 @@ def test_trial_active_false_on_unparsable_datetime(users_db_path):
     get_conn().execute(
         "UPDATE subscriber_state SET trial_ends_at = ? WHERE user_id = ?",
         ("not-a-date", uid),
+    )
+    assert db.trial_active(uid) is False
+
+
+def test_trial_active_naive_datetime_treated_as_utc(users_db_path):
+    """Revue #132 : une valeur naïve (saisie à la main, via l'admin par ex.)
+    ne doit pas lever de TypeError à la comparaison avec un datetime aware."""
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    future_naive = (datetime.now() + timedelta(days=2)).isoformat()
+    get_conn().execute(
+        "UPDATE subscriber_state SET trial_ends_at = ? WHERE user_id = ?",
+        (future_naive, uid),
+    )
+    assert db.trial_active(uid) is True
+
+    past_naive = (datetime.now() - timedelta(days=2)).isoformat()
+    get_conn().execute(
+        "UPDATE subscriber_state SET trial_ends_at = ? WHERE user_id = ?",
+        (past_naive, uid),
     )
     assert db.trial_active(uid) is False
 

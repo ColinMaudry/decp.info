@@ -43,9 +43,10 @@ def test_inscription_announces_trial_start_on_email_validation_no_card_required(
     # Import app first to initialize Dash
     from src.app import app  # noqa: F401
     from src.pages import inscription
+    from src.subscriptions.db import TRIAL_DAYS
 
     text = str(inscription.layout())
     assert "Créer le compte" in text
-    assert "essai gratuit de 2 jours" in text
+    assert f"essai gratuit de {TRIAL_DAYS} jours" in text
     assert "démarre dès la validation de votre adresse email" in text
     assert "Aucune carte bancaire n'est demandée" in text

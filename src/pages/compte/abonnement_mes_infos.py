@@ -92,10 +92,13 @@ def _recap(plan_key: str | None, today: date | None = None):
 
 
 def _mode_for(row) -> str:
-    # "trial" couvre le même cas défensif que db._ACCESS_STATUSES : une ligne
+    # "trial" couvre le même cas que db._ACCESS_STATUSES : une ligne
     # subscriptions ne devrait plus jamais porter ce statut (l'essai
-    # applicatif n'en crée aucune), sauf si un plan Frisbii restait configuré
-    # avec un essai malgré no_trial=True (cf. webhooks.map_subscription).
+    # applicatif n'en crée aucune), mais "status" reste éditable depuis
+    # l'admin (src/admin/tables.py, "trial" compris) et une base déployée
+    # avant ce chantier peut porter des lignes historiques à ce statut.
+    # Accessoirement, webhooks.map_subscription peut aussi le renvoyer si un
+    # plan Frisbii restait configuré avec un essai malgré no_trial=True.
     if row is not None and row["status"] in ("active", "trial", "pending"):
         return "configure"
     return "subscribe"

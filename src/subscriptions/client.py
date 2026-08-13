@@ -67,7 +67,8 @@ def create_subscription_session(
     handle: str,
     accept_url: str,
     cancel_url: str,
-    no_trial: bool = False,
+    *,
+    no_trial: bool,
     customer_handle: str | None = None,
     create_customer: dict | None = None,
 ) -> str:

@@ -1,3 +1,89 @@
+from datetime import datetime, timezone
+
+
+class _FakeUser:
+    id = 1
+    is_authenticated = True
+
+
+def _layout(
+    monkeypatch,
+    *,
+    row=None,
+    trial_active=False,
+    trial_ends_at=None,
+    tous_abonnes=False,
+    **query,
+):
+    """Rend layout() en cablant db.get_current/trial_active/trial_ends_at et en
+    court-circuitant account_guard (déjà testé par ailleurs dans
+    tests/test_compte_shell.py) pour isoler le dispatch d'état de layout()."""
+    from src.pages.compte import abonnement as compte_abonnement
+    from src.subscriptions import db as sub_db
+
+    monkeypatch.setattr(compte_abonnement, "account_guard", lambda *a, **k: None)
+    monkeypatch.setattr(compte_abonnement, "current_user", _FakeUser())
+    monkeypatch.setattr("src.utils.TOUS_ABONNES", tous_abonnes)
+    monkeypatch.setattr(sub_db, "get_current", lambda uid: row)
+    monkeypatch.setattr(sub_db, "trial_active", lambda uid: trial_active)
+    monkeypatch.setattr(sub_db, "trial_ends_at", lambda uid: trial_ends_at)
+    return str(compte_abonnement.layout(**query))
+
+
+def test_layout_tous_abonnes_shows_free_access_view(monkeypatch):
+    text = _layout(monkeypatch, row=None, tous_abonnes=True)
+    assert "temporairement accès à toutes les fonctionnalités" in text
+    assert "Essai gratuit" not in text
+    assert "Abonnez-vous" not in text
+
+
+def test_layout_trial_active_shows_trial_view(monkeypatch):
+    end = datetime(2026, 9, 1, tzinfo=timezone.utc)
+    text = _layout(monkeypatch, row=None, trial_active=True, trial_ends_at=end)
+    assert "Essai gratuit jusqu'au" in text
+    assert "temporairement accès" not in text
+    assert "Votre essai gratuit est terminé" not in text
+    assert "Abonnez-vous" not in text
+
+
+def test_layout_trial_ended_shows_trial_ended_view(monkeypatch):
+    past = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    text = _layout(monkeypatch, row=None, trial_active=False, trial_ends_at=past)
+    assert "Votre essai gratuit est terminé" in text
+    assert "Essai gratuit jusqu'au" not in text
+    assert "temporairement accès" not in text
+    assert "Abonnez-vous" not in text
+
+
+def test_layout_never_had_trial_shows_reabo_view(monkeypatch):
+    text = _layout(monkeypatch, row=None, trial_active=False, trial_ends_at=None)
+    assert "Abonnez-vous" in text
+    assert "temporairement accès" not in text
+    assert "Votre essai gratuit est terminé" not in text
+    assert "Essai gratuit" not in text
+
+
+def test_layout_pending_with_active_trial_shows_trial_end_and_resume_payment(
+    monkeypatch,
+):
+    """Revue #132 : un checkout abandonné pendant l'essai ne doit pas faire
+    disparaître la date de fin d'essai ni le moyen de finaliser le paiement."""
+    end = datetime(2026, 9, 1, tzinfo=timezone.utc)
+    row = {"status": "pending", "plan": "simple", "current_period_end": None}
+    text = _layout(monkeypatch, row=row, trial_active=True, trial_ends_at=end)
+    assert "Essai gratuit jusqu'au" in text
+    assert "Ajouter une méthode de paiement" in text
+
+
+def test_layout_pending_without_active_trial_keeps_pending_view(monkeypatch):
+    """Comportement inchangé : ligne pending sans essai actif (jamais eu ou
+    déjà terminé) reste sur la vue "abonnement en cours" (_active_view)."""
+    row = {"status": "pending", "plan": "simple", "current_period_end": None}
+    text = _layout(monkeypatch, row=row, trial_active=False, trial_ends_at=None)
+    assert "Ajouter une méthode de paiement" in text
+    assert "Essai gratuit" not in text
+
+
 def test_reabo_button_links_to_abonnement_page():
     from src.pages.compte import abonnement as compte_abonnement
 

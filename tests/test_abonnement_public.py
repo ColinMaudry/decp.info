@@ -10,13 +10,14 @@ def _plan_env(monkeypatch):
 def test_plan_cards_show_single_trial_mention_above_cards_no_per_card_badge():
     from src.app import app  # noqa: F401
     from src.pages.a_propos import abonnement as page
+    from src.subscriptions.db import TRIAL_DAYS
 
     result = page._plan_cards()
     # La mention d'essai est un élément à part, placé avant la rangée des
     # cartes de formule.
     mention, row = result.children
     mention_text = str(mention)
-    assert "2 jours d'essai gratuit" in mention_text
+    assert f"{TRIAL_DAYS} jours d'essai gratuit" in mention_text
     assert "sans carte bancaire" in mention_text
 
     row_text = str(row)
@@ -101,6 +102,18 @@ def test_subscription_terms_limited_to_commercial_clauses():
     assert "Chatwoot" not in text
     assert "Adresse e-mail (identification du compte)" not in text
     assert "/a-propos/mentions-legales#conditions-utilisation" in text
+
+
+def test_subscription_terms_mentions_trial_days_from_config():
+    """Revue #132 : la durée d'essai citée dans les CGV légalement revues doit
+    suivre TRIAL_DAYS, sinon un changement de durée fait mentir le texte
+    contractuel sans que la suite le remarque."""
+    from src.app import app  # noqa: F401
+    from src.pages.a_propos import abonnement as page
+    from src.subscriptions.db import TRIAL_DAYS
+
+    text = str(page.subscription_terms)
+    assert f"essai gratuit de {TRIAL_DAYS} jours" in text
 
 
 def test_subscription_terms_trial_no_longer_auto_converts_to_paid():

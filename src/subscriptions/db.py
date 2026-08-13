@@ -39,9 +39,14 @@ CREATE TABLE IF NOT EXISTS subscriber_state (
 
 # "trial" ne devrait plus jamais être écrit dans subscriptions.status : l'essai
 # est désormais géré par subscriber_state.trial_ends_at, sans ligne
-# subscriptions. Gardé quand même : si un plan Frisbii restait configuré avec
-# un essai malgré le no_trial=True envoyé à la création (routes.subscribe),
-# webhooks.map_subscription peut encore renvoyer "trial", et il ne faut pas
+# subscriptions. Gardé quand même pour deux raisons certaines : l'admin
+# (src/admin/tables.py) expose "status" en colonne éditable avec "trial" dans
+# son menu déroulant (SUBSCRIPTION_STATUSES), donc un·e admin peut l'écrire à
+# la main aujourd'hui ; et une base déployée avant ce chantier peut encore
+# porter des lignes historiques à ce statut. Accessoirement, ça couvre aussi
+# le cas où un plan Frisbii resterait configuré avec un essai malgré le
+# no_trial=True envoyé à la création (routes.subscribe) : webhooks.
+# map_subscription pourrait alors encore renvoyer "trial", et il ne faut pas
 # couper l'accès d'un abonné dans ce cas.
 _ACCESS_STATUSES = ("trial", "active")
 
@@ -53,6 +58,24 @@ WEEK_SECONDS = 7 * 24 * 3600
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _parse_iso_utc(value: str | None) -> datetime | None:
+    """Parse un horodatage ISO stocké, en garantissant un datetime aware.
+
+    Une valeur naïve (saisie à la main en base ou via l'admin) ferait lever un
+    TypeError à la comparaison avec `datetime.now(timezone.utc)`. Comme cette
+    comparaison est dans `has_access`, l'incident se traduirait par une erreur
+    500 sur tout l'espace abonné, le connecteur MCP et l'écran de consentement
+    OAuth. On normalise donc en UTC plutôt que de supposer le stockage propre.
+    """
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
 def init_schema() -> None:
@@ -330,13 +353,8 @@ def has_active_subscription(user_id: int) -> bool:
     if row["status"] in _ACCESS_STATUSES:
         return True
     if row["status"] == "cancelled" and row["current_period_end"]:
-        try:
-            end = datetime.fromisoformat(
-                row["current_period_end"].replace("Z", "+00:00")
-            )
-            return end > datetime.now(timezone.utc)
-        except ValueError:
-            return False
+        end = _parse_iso_utc(row["current_period_end"])
+        return end is not None and end > datetime.now(timezone.utc)
     return False
 
 
@@ -368,12 +386,9 @@ def start_trial_if_new(user_id: int) -> None:
 
 def trial_ends_at(user_id: int) -> datetime | None:
     row = _get_state(user_id)
-    if row is None or row["trial_ends_at"] is None:
+    if row is None:
         return None
-    try:
-        return datetime.fromisoformat(row["trial_ends_at"].replace("Z", "+00:00"))
-    except ValueError:
-        return None
+    return _parse_iso_utc(row["trial_ends_at"])
 
 
 def trial_active(user_id: int) -> bool:

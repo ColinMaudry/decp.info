@@ -126,7 +126,7 @@ def _trial_hint(trial_ends_at: datetime | None):
         return None
     return dbc.Alert(
         "Le vote est réservé aux abonné·es : il s'ouvrira au début de votre "
-        f"abonnement. Votre essai gratuit court jusqu'au "
+        "abonnement. Votre essai gratuit court jusqu'au "
         f"{trial_ends_at.strftime('%d/%m/%Y')}.",
         color="info",
         className="mb-3",
