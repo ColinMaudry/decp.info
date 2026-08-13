@@ -142,7 +142,7 @@ def _selectable_cards(selected=None):
         cols.append(
             dbc.Col(
                 html.Div(
-                    _plan_card(meta, None),
+                    _plan_card(meta),
                     id=f"plan-card-{key}",
                     n_clicks=0,
                     className=base,

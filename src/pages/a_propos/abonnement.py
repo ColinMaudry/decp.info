@@ -24,10 +24,7 @@ abonnement_features = dcc.Markdown("""
       """)
 
 
-def _plan_card(meta: dict, trial: int | None):
-    badge = (
-        html.Div(f"{trial} jours d'essai gratuit", className="mb-3") if trial else None
-    )
+def _plan_card(meta: dict):
     return dbc.Card(
         dbc.CardBody(
             [
@@ -38,7 +35,6 @@ def _plan_card(meta: dict, trial: int | None):
                     className="text-muted mb-3",
                 ),
                 html.P(meta["description"], className="mb-3"),
-                badge,
             ],
             className="p-4",
         ),
@@ -46,13 +42,25 @@ def _plan_card(meta: dict, trial: int | None):
     )
 
 
-def _plan_cards(trial_for=plans.trial_days):
+def _plan_cards():
+    # L'essai n'est plus adossé à une formule : il est ouvert à la création du
+    # compte, quelle que soit la formule choisie ensuite. D'où une mention
+    # unique au-dessus des cartes plutôt qu'un badge par carte.
     cards = []
     for key in ("simple", "soutien"):
         meta = plans.plan_meta(key)
         if meta:
-            cards.append(_plan_card(meta, trial_for(key)))
-    return dbc.Row([dbc.Col(c, md=6) for c in cards], className="g-4 mb-4")
+            cards.append(_plan_card(meta))
+    return html.Div(
+        [
+            html.P(
+                "2 jours d'essai gratuit à la création de votre compte, sans "
+                "carte bancaire.",
+                className="text-muted mb-3",
+            ),
+            dbc.Row([dbc.Col(c, md=6) for c in cards], className="g-4 mb-4"),
+        ]
+    )
 
 
 def _explainer():

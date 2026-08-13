@@ -17,20 +17,35 @@ def test_linkedin_button_with_next_appends_query():
     assert "/auth/linkedin?next=/compte/abonnement/mes-infos" in html_str
 
 
-def test_inscription_linkedin_targets_mes_infos():
+def test_inscription_linkedin_targets_compte_abonnement():
     # Import app first to initialize Dash
     from src.app import app  # noqa: F401
     from src.pages import inscription
 
-    assert "/auth/linkedin?next=/compte/abonnement/mes-infos" in str(
-        inscription.layout()
-    )
+    assert "/auth/linkedin?next=/compte/abonnement'" in str(inscription.layout())
 
 
-def test_inscription_linkedin_targets_abonnement_when_tous_abonnes(monkeypatch):
+def test_inscription_linkedin_targets_compte_abonnement_even_when_tous_abonnes(
+    monkeypatch,
+):
+    # Il n'y a plus de branche TOUS_ABONNES pour linkedin_next : la page
+    # mes-infos est désormais la seule à ouvrir l'essai, quel que soit
+    # TOUS_ABONNES.
     monkeypatch.setattr("src.utils.TOUS_ABONNES", True)
     # Import app first to initialize Dash
     from src.app import app  # noqa: F401
     from src.pages import inscription
 
     assert "/auth/linkedin?next=/compte/abonnement'" in str(inscription.layout())
+
+
+def test_inscription_announces_trial_start_on_email_validation_no_card_required():
+    # Import app first to initialize Dash
+    from src.app import app  # noqa: F401
+    from src.pages import inscription
+
+    text = str(inscription.layout())
+    assert "Créer le compte" in text
+    assert "essai gratuit de 2 jours" in text
+    assert "démarre dès la validation de votre adresse email" in text
+    assert "Aucune carte bancaire n'est demandée" in text
