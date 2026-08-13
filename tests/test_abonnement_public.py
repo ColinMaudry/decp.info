@@ -103,6 +103,24 @@ def test_subscription_terms_limited_to_commercial_clauses():
     assert "/a-propos/mentions-legales#conditions-utilisation" in text
 
 
+def test_subscription_terms_trial_no_longer_auto_converts_to_paid():
+    # Depuis le passage de l'essai hors Frisbii (aucun prélèvement possible
+    # pendant l'essai), les conditions ne doivent plus décrire de
+    # transformation automatique de l'essai en abonnement payant : c'est la
+    # souscription explicite qui démarre l'abonnement, jamais la fin de
+    # l'essai.
+    from src.app import app  # noqa: F401
+    from src.pages.a_propos import abonnement as page
+
+    text = str(page.subscription_terms)
+    # La nouvelle formulation est bien présente...
+    assert "L'abonnement payant démarre à la souscription à un abonnement" in text
+    # ... et les anciennes formulations décrivant une conversion automatique
+    # de l'essai en abonnement payant ont disparu.
+    assert "l'abonnement payant démarre et la première facture est émise" not in text
+    assert "ne démarre qu'à l'issue de la période d'essai" not in text
+
+
 def test_plan_card_ttc_price_for_current_real_prices():
     from src.app import app  # noqa: F401
     from src.pages.a_propos import abonnement as page

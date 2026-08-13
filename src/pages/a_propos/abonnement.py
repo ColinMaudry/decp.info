@@ -157,9 +157,9 @@ La TVA applicable en France est de 20 %.
         html.H4("Début et durée de l'abonnement"),
         dcc.Markdown(
             """
-La souscription ouvre immédiatement l'accès aux fonctionnalités réservées aux abonné·es, d'abord au titre de la période d'essai gratuite.
+La souscription à un abonnement ouvre immédiatement l'accès aux fonctionnalités réservées aux abonné·es.
 
-**L'abonnement payant ne démarre qu'à l'issue de la période d'essai**, à la date indiquée avant validation. Aucun prélèvement n'a lieu avant cette date. Si vous avez déjà bénéficié d'une période d'essai, l'abonnement payant démarre dès la souscription.
+**L'abonnement payant démarre à la souscription à un abonnement** : le premier prélèvement a lieu à ce moment-là, toujours via une action manuelle de votre part.
 
 L'abonnement est conclu pour une durée d'un mois à compter de son démarrage, et se renouvelle automatiquement de mois en mois jusqu'à résiliation.
 """
@@ -175,17 +175,17 @@ Il est également possible de payer par virement bancaire à condition de payer 
         html.H4("Période d'essai"),
         dcc.Markdown(
             """
-Une période d'essai gratuite est proposée lors de la souscription.
-Ses dates de début et de fin sont indiquées avant validation. Aucun prélèvement n'est effectué pendant cette période.
-À son terme, l'abonnement payant démarre et la première facture est émise.
+Un essai gratuit de 2 jours est automatiquement ouvert à la création de votre compte, sans carte bancaire et sans engagement. Aucun prélèvement n'a lieu pendant cette période.
 
-La période d'essai est accordée une seule fois par compte.
+À son terme, l'accès aux fonctionnalités réservées est suspendu jusqu'à ce que vous souscriviez à un abonnement.
+
+L'essai est accordé une seule fois par compte.
 """
         ),
         html.H4("Facturation et paiement"),
         dcc.Markdown(
             """
-La première facture est émise au démarrage de l'abonnement payant, c'est-à-dire à l'issue de la période d'essai. Les suivantes le sont chaque mois à cette date anniversaire, et non à la date de saisie des informations de paiement.
+La première facture est émise au démarrage de l'abonnement, c'est-à-dire à la souscription d'un abonnement. Les suivantes le sont chaque mois à cette date anniversaire.
 
 Chaque échéance donne lieu à l'émission d'une facture, envoyée par email à l'abonné·e.
 Le paiement est traité par [Frisbii](https://www.frisbii.com), prestataire européen de paiement en ligne.
@@ -197,9 +197,9 @@ Le paiement est exigible à la date de facturation. En cas de retard de paiement
         html.H4("Droit de rétractation"),
         dcc.Markdown(
             """
-Vous disposez d'un délai de rétractation de 14 jours à compter de la souscription.
+Vous disposez d'un délai de rétractation de 14 jours à compter de la souscription à un abonnement.
 
-L'accès aux fonctionnalités réservées aux abonné·es étant ouvert dès la souscription, période d'essai comprise, il vous est demandé de renoncer expressément à ce droit lors de la souscription ; à défaut, la souscription ne peut pas être finalisée.
+L'accès aux fonctionnalités réservées aux abonné·es étant ouvert dès la souscription à un abonnement, il vous est demandé d'y renoncer expressément à ce moment-là ; à défaut, votre abonnement ne peut pas être finalisé.
 """
         ),
         html.H4("Résiliation"),
