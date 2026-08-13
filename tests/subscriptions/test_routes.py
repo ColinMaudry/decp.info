@@ -35,6 +35,35 @@ def test_subscribe_redirects_to_hosted_url(logged_in_client, monkeypatch):
     assert row["frisbii_subscription_handle"] == f"colibre_dev-{uid}-1"
 
 
+def test_subscribe_sends_no_trial_true_in_frisbii_request_body(
+    logged_in_client, fake_httpx
+):
+    """L'essai n'existe plus côté Frisbii (#132) : le corps JSON envoyé à
+    POST /v1/subscription porte `no_trial: True`, y compris pour un
+    utilisateur qui n'a jamais souscrit auparavant (le cas qui bénéficiait
+    autrefois d'un essai). On inspecte le corps réellement capturé par
+    `fake_httpx`, pas seulement le code de retour côté colibre."""
+    test_client, uid = logged_in_client
+    assert db.get_current(uid) is None  # jamais souscrit auparavant
+    Response = fake_httpx["Response"]
+    fake_httpx["queue"].extend(
+        [
+            Response(200, {}),  # PUT /v1/customer/{handle}
+            Response(200, {}),  # POST /v1/subscription
+            Response(200, {"url": "https://checkout.example/session"}),
+        ]
+    )
+
+    resp = test_client.post("/subscriptions/subscribe", data={"plan": "simple"})
+
+    assert resp.status_code == 303
+    create_calls = [
+        c for c in fake_httpx["calls"] if c["url"].endswith("/v1/subscription")
+    ]
+    assert len(create_calls) == 1
+    assert create_calls[0]["json"]["no_trial"] is True
+
+
 def test_subscribe_disables_trial_after_first_use(logged_in_client, monkeypatch):
     client, uid = logged_in_client
     # L'utilisateur a déjà consommé un essai par le passé (abonnement maintenant expiré).

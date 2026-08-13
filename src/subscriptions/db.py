@@ -281,12 +281,6 @@ def update_from_webhook(
         "updated_at = ? WHERE id = ?",
         (status, current_period_end, _now(), prev["id"]),
     )
-    if status in _ACCESS_STATUSES:
-        get_conn().execute(
-            "UPDATE subscriber_state SET trial_used = 1, updated_at = ? "
-            "WHERE user_id = ?",
-            (_now(), prev["user_id"]),
-        )
     if prev["status"] != "active" and status == "active":
         freeze_votes_cursor(prev["user_id"])
         # Couvre trial → active (transformation d'un essai), pending → active
@@ -332,11 +326,6 @@ def has_active_subscription(user_id: int) -> bool:
         except ValueError:
             return False
     return False
-
-
-def has_used_trial(user_id: int) -> bool:
-    row = _get_state(user_id)
-    return bool(row and row["trial_used"])
 
 
 def start_trial_if_new(user_id: int) -> None:

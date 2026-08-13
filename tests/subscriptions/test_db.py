@@ -156,6 +156,20 @@ def test_update_from_webhook_sets_status(users_db_path):
     assert db.customer_known("colibre-1") is True
 
 
+def test_update_from_webhook_active_sets_status_and_period_end(users_db_path):
+    """Le retrait de l'écriture `trial_used` ne doit pas casser le reste de
+    `update_from_webhook` : statut et `current_period_end` continuent d'être
+    mis à jour pour un webhook faisant passer un abonnement à 'active'."""
+    db.init_schema()
+    uid = _make_user()
+    handle, _ = db.create_pending(uid, "colibre-1", "simple")
+    end = _future()
+    db.update_from_webhook(handle, "active", end)
+    row = db.get_current(uid)
+    assert row["status"] == "active"
+    assert row["current_period_end"] == end
+
+
 def test_customer_known_false_for_unknown_customer(users_db_path):
     db.init_schema()
     assert db.customer_known("colibre-inconnu") is False
@@ -214,20 +228,6 @@ def test_has_active_subscription_bad_datetime_returns_false(users_db_path):
         (subscription_id,),
     )
     assert db.has_active_subscription(uid) is False
-
-
-def test_trial_used_is_sticky_across_resubscribe(users_db_path):
-    db.init_schema()
-    uid = _make_user()
-    handle, _ = db.create_pending(uid, "colibre-1", "simple")
-    assert db.has_used_trial(uid) is False
-    # l'abonnement entre en essai → trial_used positionné
-    db.update_from_webhook(handle, "trial", _future())
-    assert db.has_used_trial(uid) is True
-    # essai abandonné, puis nouvelle souscription : trial_used reste vrai
-    db.update_from_webhook(handle, "expired", _past())
-    db.create_pending(uid, "colibre-1", "soutien")
-    assert db.has_used_trial(uid) is True
 
 
 def test_create_pending_initializes_subscriber_state(users_db_path):

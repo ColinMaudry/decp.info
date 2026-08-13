@@ -28,17 +28,10 @@ def subscribe():
         current_user.id, cust, plan_key, meta["prix_ht"] if meta else None
     )
     try:
-        from src.utils import TOUS_ABONNES
-
-        no_trial = db.has_used_trial(current_user.id)
-        # Le discriminant déclenche l'événement `subscription_trial` côté
-        # navigateur (src/assets/goals.js). Il est posé ici, où `no_trial` est
-        # déjà connu : aucune lecture en base au retour, donc aucune course avec
-        # le webhook Frisbii, qui peut ne pas être encore arrivé. Sous
-        # TOUS_ABONNES, aucun abonnement réel n'est à comptabiliser.
+        # L'essai n'existe plus côté Frisbii : il est tenu par colibre
+        # (subscriber_state.trial_ends_at) et se termine sans débit. Toute
+        # souscription est donc immédiatement payante.
         accept_url = f"{base}/compte/abonnement?paiement=succes"
-        if not no_trial and not TOUS_ABONNES:
-            accept_url += f"&souscription=trial&plan={plan_key}"
         cancel_url = f"{base}/compte/abonnement?paiement=annule"
         siret = (request.form.get("siret") or "").strip()
         billing: dict = {
@@ -73,7 +66,7 @@ def subscribe():
                 accept_url,
                 cancel_url,
                 customer_handle=cust,
-                no_trial=no_trial,
+                no_trial=True,
             )
         else:
             create_customer = {"handle": cust, **billing}
@@ -85,7 +78,7 @@ def subscribe():
                 accept_url,
                 cancel_url,
                 create_customer=create_customer,
-                no_trial=no_trial,
+                no_trial=True,
             )
     except client.FrisbiiError:
         logger.exception("Échec de création de session d'abonnement Frisbii")

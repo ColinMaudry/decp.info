@@ -1,9 +1,10 @@
-"""L'URL de retour du checkout porte le discriminant qui déclenche l'événement
-`subscription_trial` côté navigateur (src/assets/goals.js)."""
+"""L'essai n'existe plus côté Frisbii (#132) : l'URL de retour du checkout ne
+porte donc plus aucun discriminant d'essai (`souscription=trial`), toute
+souscription étant immédiatement payante."""
 
 import pytest
 
-from src.subscriptions import client, db
+from src.subscriptions import client
 
 
 @pytest.fixture
@@ -21,43 +22,12 @@ def capture_accept(monkeypatch):
     return captured
 
 
-def test_discriminant_present_pour_un_premier_essai(
-    logged_in_client, capture_accept, monkeypatch
-):
+def test_accept_url_has_no_trial_discriminant(logged_in_client, capture_accept):
     test_client, _ = logged_in_client
-    monkeypatch.setattr("src.utils.TOUS_ABONNES", False)
-    monkeypatch.setattr(db, "has_used_trial", lambda user_id: False)
-
-    test_client.post("/subscriptions/subscribe", data={"plan": "simple"})
-
-    assert "souscription=trial" in capture_accept["accept_url"]
-    assert "plan=simple" in capture_accept["accept_url"]
-
-
-def test_pas_de_discriminant_si_essai_deja_consomme(
-    logged_in_client, capture_accept, monkeypatch
-):
-    """no_trial : souscription directe en payant, comptée côté serveur."""
-    test_client, _ = logged_in_client
-    monkeypatch.setattr("src.utils.TOUS_ABONNES", False)
-    monkeypatch.setattr(db, "has_used_trial", lambda user_id: True)
 
     test_client.post("/subscriptions/subscribe", data={"plan": "simple"})
 
     assert "accept_url" in capture_accept
     assert "paiement=succes" in capture_accept["accept_url"]
-    assert "souscription=" not in capture_accept["accept_url"]
-
-
-def test_pas_de_discriminant_sous_tous_abonnes(
-    logged_in_client, capture_accept, monkeypatch
-):
-    test_client, _ = logged_in_client
-    monkeypatch.setattr("src.utils.TOUS_ABONNES", True)
-    monkeypatch.setattr(db, "has_used_trial", lambda user_id: False)
-
-    test_client.post("/subscriptions/subscribe", data={"plan": "simple"})
-
-    assert "accept_url" in capture_accept
-    assert "paiement=succes" in capture_accept["accept_url"]
-    assert "souscription=" not in capture_accept["accept_url"]
+    assert "souscription=trial" not in capture_accept["accept_url"]
+    assert capture_accept["no_trial"] is True
