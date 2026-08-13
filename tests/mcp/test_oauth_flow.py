@@ -258,9 +258,7 @@ def test_refresh_rotates_and_requires_subscription(flow_app, monkeypatch):
 
     # Abonnement perdu → refresh refusé (invalid_grant).
     new_refresh = r.get_json()["refresh_token"]
-    monkeypatch.setattr(
-        "src.mcp.oauth.consent.has_active_subscription", lambda u: False
-    )
+    monkeypatch.setattr("src.mcp.oauth.consent.has_access", lambda u: False)
     r2 = client.post(
         "/oauth/token",
         data={
