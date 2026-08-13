@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date
 
 import dash_bootstrap_components as dbc
 from dash import Input, Output, State, callback, ctx, dcc, html, register_page
@@ -30,11 +30,6 @@ def _csrf_input():
     return dcc.Input(type="hidden", name="csrf_token", value=generate_csrf())
 
 
-def _trial_for(user_id):
-    used = sub_db.has_used_trial(user_id)
-    return lambda key: None if used else plans.trial_days(key)
-
-
 _VENDEUR = "SAS Colmo (SIRET 98939335000016)"
 
 
@@ -42,9 +37,7 @@ def _jj_mm_aaaa(d: date) -> str:
     return f"{d.day:02d}/{d.month:02d}/{d.year}"
 
 
-def _recap_lines(
-    plan_key: str, trial: int | None, today: date
-) -> list[tuple[str, str]]:
+def _recap_lines(plan_key: str, today: date) -> list[tuple[str, str]]:
     """Récapitulatif de commande affiché avant la saisie de la carte bancaire.
 
     Reprend les informations exigées « in the checkout process » par l'organisme
@@ -52,26 +45,18 @@ def _recap_lines(
     prestation, date de début et durée de l'abonnement, prix et devise. Le
     panneau équivalent côté Frisbii est replié derrière « Aperçu des détails »,
     d'où ce doublon volontaire.
+
+    Plus de ligne d'essai : l'essai est antérieur et sans lien avec cette
+    commande, qui démarre et se facture le jour même.
     """
     meta = plans.plan_meta(plan_key)
     if meta is None:
         return []
-    debut = today + timedelta(days=trial) if trial else today
     ttc = round(meta["prix_ht"] * 1.2, 2)
-    lines = [
+    return [
         ("Vendeur", _VENDEUR),
         ("Prestation", f"{meta['label']}. {meta['description']}"),
-    ]
-    if trial:
-        lines.append(
-            (
-                "Période d'essai gratuite",
-                f"du {_jj_mm_aaaa(today)} au {_jj_mm_aaaa(debut)} "
-                f"({trial} jours). Aucun prélèvement pendant cette période.",
-            )
-        )
-    lines += [
-        ("Début de l'abonnement payant", _jj_mm_aaaa(debut)),
+        ("Début de l'abonnement payant", _jj_mm_aaaa(today)),
         (
             "Durée",
             "1 mois, reconduit automatiquement chaque mois jusqu'à résiliation",
@@ -82,11 +67,10 @@ def _recap_lines(
             "(TVA 20 %), en euros (EUR)",
         ),
     ]
-    return lines
 
 
-def _recap(plan_key: str | None, trial: int | None, today: date | None = None):
-    lines = _recap_lines(plan_key, trial, today or date.today()) if plan_key else []
+def _recap(plan_key: str | None, today: date | None = None):
+    lines = _recap_lines(plan_key, today or date.today()) if plan_key else []
     if not lines:
         return html.Div(
             "Choisissez une formule ci-dessus pour afficher le récapitulatif.",
@@ -128,14 +112,19 @@ def _initial_plan(mode: str, row) -> str:
     return _DEFAULT_PLAN
 
 
-def _submit_button(mode: str):
-    label = (
-        "Mettre à jour mon abonnement"
-        if mode == "configure"
-        else "Ajouter une carte de paiement"
-    )
+def _submit_label(mode: str, plan_key: str | None) -> str:
+    if mode == "configure":
+        return "Mettre à jour mon abonnement"
+    meta = plans.plan_meta(plan_key) if plan_key else None
+    if meta is None:
+        return "Commencer mon abonnement"
+    ttc = round(meta["prix_ht"] * 1.2, 2)
+    return f"Commencer mon abonnement ({ttc:g} € TTC / mois)"
+
+
+def _submit_button(mode: str, plan_key: str | None):
     return html.Button(
-        label,
+        _submit_label(mode, plan_key),
         id="inf-submit",
         type="submit",
         className="btn btn-secondary",
@@ -143,7 +132,7 @@ def _submit_button(mode: str):
     )
 
 
-def _selectable_cards(trial_for, selected=None):
+def _selectable_cards(selected=None):
     cols = []
     for key in ("simple", "soutien"):
         meta = plans.plan_meta(key)
@@ -153,7 +142,7 @@ def _selectable_cards(trial_for, selected=None):
         cols.append(
             dbc.Col(
                 html.Div(
-                    _plan_card(meta, trial_for(key)),
+                    _plan_card(meta, None),
                     id=f"plan-card-{key}",
                     n_clicks=0,
                     className=base,
@@ -196,6 +185,7 @@ def _change_hint(selected: str, sub_info: dict | None) -> tuple[str, str]:
     Output("inf-change-hint", "className"),
     Output("inf-change-hint", "children"),
     Output("inf-recap", "children"),
+    Output("inf-submit", "children"),
     Input("plan-card-simple", "n_clicks"),
     Input("plan-card-soutien", "n_clicks"),
     State("inf-sub-info", "data"),
@@ -206,12 +196,17 @@ def _select_plan(_n_simple, _n_soutien, sub_info):
     value, cls_simple, cls_soutien = _selection_state(selected)
     hint_cls, hint_txt = _change_hint(selected, sub_info)
     sub_info = sub_info or {}
-    recap = (
-        _recap(selected, (sub_info.get("trials") or {}).get(selected))
-        if sub_info.get("mode") == "subscribe"
-        else None
+    mode = sub_info.get("mode")
+    recap = _recap(selected) if mode == "subscribe" else None
+    return (
+        value,
+        cls_simple,
+        cls_soutien,
+        hint_cls,
+        hint_txt,
+        recap,
+        _submit_label(mode, selected),
     )
-    return value, cls_simple, cls_soutien, hint_cls, hint_txt, recap
 
 
 def _legal_note():
@@ -329,9 +324,7 @@ def layout(**query):
         if mode == "configure" and row["current_period_end"]
         else None
     )
-    trial_for = _trial_for(current_user.id)
-    trials = {key: trial_for(key) for key in ("simple", "soutien")}
-    sub_info: dict = {"mode": mode, "trials": trials}
+    sub_info: dict = {"mode": mode}
     if mode == "configure":
         sub_info.update(
             {"current_plan": selected, "status": row["status"], "echeance": echeance}
@@ -482,7 +475,7 @@ def layout(**query):
                 id="inf-plan-invite",
                 className="fw-bold mb-2",
             ),
-            _selectable_cards(trial_for, selected=selected),
+            _selectable_cards(selected=selected),
             html.Div(id="inf-change-hint", className="d-none"),
             dcc.Store(id="inf-sub-info", data=sub_info),
             dcc.Input(
@@ -493,12 +486,12 @@ def layout(**query):
             # Toujours présent, même vide en mode "configure" : _select_plan
             # référence inf-recap en Output inconditionnellement.
             html.Div(
-                _recap(selected, trials.get(selected)) if mode == "subscribe" else None,
+                _recap(selected) if mode == "subscribe" else None,
                 id="inf-recap",
                 className="mt-4",
             ),
             _consent_checklists(hidden=(mode == "configure")),
-            _submit_button(mode),
+            _submit_button(mode, selected),
         ],
     )
 
