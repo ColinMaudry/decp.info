@@ -26,6 +26,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_handle
 CREATE TABLE IF NOT EXISTS subscriber_state (
     user_id                 INTEGER PRIMARY KEY,
     trial_used              INTEGER NOT NULL DEFAULT 0,
+    trial_ends_at           TEXT,
     votes_balance           INTEGER NOT NULL DEFAULT 0,
     votes_last_credited_at  TEXT,
     updated_at              TEXT NOT NULL,
@@ -36,6 +37,7 @@ CREATE TABLE IF NOT EXISTS subscriber_state (
 _ACCESS_STATUSES = ("trial", "active")
 
 INITIAL_VOTES = 3
+TRIAL_DAYS = 2
 VOTES_PER_WEEK = int(os.getenv("VOTES_PER_WEEK", "5"))
 WEEK_SECONDS = 7 * 24 * 3600
 
@@ -335,6 +337,59 @@ def has_active_subscription(user_id: int) -> bool:
 def has_used_trial(user_id: int) -> bool:
     row = _get_state(user_id)
     return bool(row and row["trial_used"])
+
+
+def start_trial_if_new(user_id: int) -> None:
+    """Ouvre la fenêtre d'essai si ce compte n'en a jamais eu.
+
+    Idempotent : la clause `trial_ends_at IS NULL` garantit qu'un second appel
+    ne prolonge jamais l'essai. C'est la seule protection contre une
+    re-vérification d'email ou une reconnexion LinkedIn qui rouvriraient
+    autrement un essai déjà consommé.
+    """
+    now = _now()
+    conn = get_conn()
+    # Le SELECT ... FROM users garantit qu'aucune ligne n'est insérée pour un
+    # user_id inconnu : OR IGNORE n'avale PAS les violations de clé étrangère
+    # (seulement UNIQUE/NOT NULL/CHECK), on aurait donc une IntegrityError.
+    conn.execute(
+        "INSERT OR IGNORE INTO subscriber_state (user_id, updated_at) "
+        "SELECT id, ? FROM users WHERE id = ?",
+        (now, user_id),
+    )
+    ends = datetime.now(timezone.utc) + timedelta(days=TRIAL_DAYS)
+    conn.execute(
+        "UPDATE subscriber_state SET trial_ends_at = ?, updated_at = ? "
+        "WHERE user_id = ? AND trial_ends_at IS NULL",
+        (ends.isoformat(), now, user_id),
+    )
+
+
+def trial_ends_at(user_id: int) -> datetime | None:
+    row = _get_state(user_id)
+    if row is None or row["trial_ends_at"] is None:
+        return None
+    try:
+        return datetime.fromisoformat(row["trial_ends_at"].replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def trial_active(user_id: int) -> bool:
+    end = trial_ends_at(user_id)
+    return end is not None and end > datetime.now(timezone.utc)
+
+
+def has_access(user_id: int) -> bool:
+    """Accès aux fonctionnalités réservées : essai en cours OU abonnement.
+
+    À ne PAS confondre avec `has_active_subscription`, qui ne parle que
+    d'abonnements. Les appelants qui décident d'orienter vers la souscription
+    (garde de `subscribe()`, `_post_login_url`, page /a-propos/abonnement)
+    doivent rester sur cette dernière : s'ils comptaient l'essai, un
+    utilisateur en essai ne pourrait plus s'abonner du tout.
+    """
+    return trial_active(user_id) or has_active_subscription(user_id)
 
 
 def _set_votes(user_id: int, balance: int, cursor_iso: str) -> None:

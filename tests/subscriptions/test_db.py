@@ -622,3 +622,134 @@ def test_pas_d_evenement_sur_annulation(users_db_path, monkeypatch):
     db.update_from_webhook(handle, "cancelled", "2026-08-05T00:00:00Z")
 
     assert appels == []
+
+
+def test_start_trial_if_new_creates_state_with_trial_ends_at_in_two_days(
+    users_db_path,
+):
+    db.init_schema()
+    uid = _make_user()
+    assert db.get_subscriber_state(uid) is None
+
+    db.start_trial_if_new(uid)
+
+    state = db.get_subscriber_state(uid)
+    assert state is not None
+    ends = datetime.fromisoformat(state["trial_ends_at"])
+    expected = datetime.now(timezone.utc) + timedelta(days=db.TRIAL_DAYS)
+    assert abs((ends - expected).total_seconds()) < 5
+
+
+def test_start_trial_if_new_is_idempotent(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    first = db.get_subscriber_state(uid)["trial_ends_at"]
+
+    db.start_trial_if_new(uid)
+
+    second = db.get_subscriber_state(uid)["trial_ends_at"]
+    assert second == first
+
+
+def test_start_trial_if_new_unknown_user_does_not_insert_or_raise(users_db_path):
+    db.init_schema()
+    _make_user()  # garantit que la table users existe
+
+    db.start_trial_if_new(999999)
+
+    assert db.get_subscriber_state(999999) is None
+
+
+def test_trial_active_true_for_future_end(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    assert db.trial_active(uid) is True
+
+
+def test_trial_active_false_for_past_end(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    get_conn().execute(
+        "UPDATE subscriber_state SET trial_ends_at = ? WHERE user_id = ?",
+        (_past(), uid),
+    )
+    assert db.trial_active(uid) is False
+
+
+def test_trial_active_false_when_trial_ends_at_is_null(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    get_conn().execute(
+        "INSERT INTO subscriber_state (user_id, updated_at) VALUES (?, ?)",
+        (uid, datetime.now(timezone.utc).isoformat()),
+    )
+    assert db.trial_active(uid) is False
+
+
+def test_trial_active_false_when_no_subscriber_state_row(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    assert db.get_subscriber_state(uid) is None
+    assert db.trial_active(uid) is False
+
+
+def test_trial_active_tolerates_z_suffix(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    get_conn().execute(
+        "UPDATE subscriber_state SET trial_ends_at = ? WHERE user_id = ?",
+        ("2099-12-31T23:59:59Z", uid),
+    )
+    assert db.trial_active(uid) is True
+
+
+def test_trial_active_false_on_unparsable_datetime(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    get_conn().execute(
+        "UPDATE subscriber_state SET trial_ends_at = ? WHERE user_id = ?",
+        ("not-a-date", uid),
+    )
+    assert db.trial_active(uid) is False
+
+
+def test_has_access_true_during_trial_without_subscriptions_row(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    assert db.get_current(uid) is None
+    assert db.has_access(uid) is True
+
+
+def test_has_access_true_for_active_subscriber_with_expired_trial(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    get_conn().execute(
+        "UPDATE subscriber_state SET trial_ends_at = ? WHERE user_id = ?",
+        (_past(), uid),
+    )
+    handle, _ = db.create_pending(uid, "colibre-1", "simple")
+    db.update_from_webhook(handle, "active", _future())
+    assert db.trial_active(uid) is False
+    assert db.has_access(uid) is True
+
+
+def test_has_access_false_without_trial_or_subscription(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    assert db.has_access(uid) is False
+
+
+def test_has_active_subscription_false_during_trial_alone(users_db_path):
+    """Garde-fou : l'essai ne doit jamais faire basculer has_active_subscription."""
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    assert db.trial_active(uid) is True
+    assert db.has_active_subscription(uid) is False
