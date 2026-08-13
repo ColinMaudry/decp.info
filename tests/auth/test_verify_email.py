@@ -1,19 +1,38 @@
 from src.auth import db, tokens
+from src.subscriptions import db as sub_db
 
 
-def test_verify_email_valid_token_logs_in_and_redirects_to_mes_infos(
+def test_verify_email_valid_token_logs_in_and_redirects_to_abonnement(
     client, users_db_path
 ):
     db.init_schema()
+    sub_db.init_schema()
     uid = db.create_user("a@b.c", "hash")
     token = tokens.create_verification_token(uid)
 
     resp = client.get(f"/auth/verify-email?token={token}")
     assert resp.status_code == 302
-    assert "/compte/abonnement/mes-infos" in resp.headers["Location"]
+    location = resp.headers["Location"]
+    assert location.startswith("/compte/abonnement")
+    assert "mes-infos" not in location
+    assert "essai=demarre" in location
     assert db.get_user_by_id(uid)["email_verified"] == 1
     with client.session_transaction() as sess:
         assert sess.get("_user_id") == str(uid)
+
+
+def test_verify_email_valid_token_starts_trial(client, users_db_path):
+    db.init_schema()
+    sub_db.init_schema()
+    uid = db.create_user("essai@b.c", "hash")
+    token = tokens.create_verification_token(uid)
+
+    assert sub_db.trial_ends_at(uid) is None
+
+    resp = client.get(f"/auth/verify-email?token={token}")
+
+    assert resp.status_code == 302
+    assert sub_db.trial_active(uid) is True
 
 
 def test_verify_email_tous_abonnes_redirects_to_abonnement(
@@ -21,13 +40,14 @@ def test_verify_email_tous_abonnes_redirects_to_abonnement(
 ):
     monkeypatch.setattr("src.utils.TOUS_ABONNES", True)
     db.init_schema()
+    sub_db.init_schema()
     uid = db.create_user("t@b.c", "hash")
     token = tokens.create_verification_token(uid)
 
     resp = client.get(f"/auth/verify-email?token={token}")
     assert resp.status_code == 302
     loc = resp.headers["Location"]
-    assert loc.endswith("/compte/abonnement")
+    assert loc.startswith("/compte/abonnement")
     assert "mes-infos" not in loc
 
 
@@ -43,6 +63,7 @@ def test_verify_email_missing_token(client):
 
 def test_verify_email_single_use(client, users_db_path):
     db.init_schema()
+    sub_db.init_schema()
     uid = db.create_user("a@b.c", "h")
     token = tokens.create_verification_token(uid)
     client.get(f"/auth/verify-email?token={token}")
