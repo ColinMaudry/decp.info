@@ -25,6 +25,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_handle
 
 CREATE TABLE IF NOT EXISTS subscriber_state (
     user_id                 INTEGER PRIMARY KEY,
+    -- Plus lue ni écrite depuis le passage à l'essai applicatif : l'essai est
+    -- désormais porté par trial_ends_at ci-dessous. Conservée pour ne pas
+    -- casser les bases existantes ; retrait prévu dans un nettoyage ultérieur.
     trial_used              INTEGER NOT NULL DEFAULT 0,
     trial_ends_at           TEXT,
     votes_balance           INTEGER NOT NULL DEFAULT 0,
@@ -34,6 +37,12 @@ CREATE TABLE IF NOT EXISTS subscriber_state (
 );
 """
 
+# "trial" ne devrait plus jamais être écrit dans subscriptions.status : l'essai
+# est désormais géré par subscriber_state.trial_ends_at, sans ligne
+# subscriptions. Gardé quand même : si un plan Frisbii restait configuré avec
+# un essai malgré le no_trial=True envoyé à la création (routes.subscribe),
+# webhooks.map_subscription peut encore renvoyer "trial", et il ne faut pas
+# couper l'accès d'un abonné dans ce cas.
 _ACCESS_STATUSES = ("trial", "active")
 
 INITIAL_VOTES = 3
@@ -127,6 +136,9 @@ def get_current(user_id: int) -> sqlite3.Row | None:
     )
 
 
+# Référence pour le menu déroulant admin (src/admin/tables.py) : doit rester
+# synchronisée avec les valeurs que map_subscription peut produire, "trial"
+# inclus (cf. _ACCESS_STATUSES ci-dessus).
 SUBSCRIPTION_STATUSES = ("active", "trial", "cancelled", "expired", "pending")
 
 
@@ -406,6 +418,11 @@ def _accrues_votes(user_id: int) -> bool:
     if TOUS_ABONNES:
         return True
     current = get_current(user_id)
+    # current["status"] == "trial" ne couvre pas l'essai applicatif normal :
+    # celui-ci ne crée aucune ligne subscriptions, donc `current is None`
+    # capte déjà ce cas. Ce deuxième test couvre le même cas défensif que
+    # _ACCESS_STATUSES : un plan Frisbii resté configuré avec un essai malgré
+    # no_trial=True.
     if current is None or current["status"] == "trial":
         return False
     return has_active_subscription(user_id)

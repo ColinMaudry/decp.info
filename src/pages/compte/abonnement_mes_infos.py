@@ -92,6 +92,10 @@ def _recap(plan_key: str | None, today: date | None = None):
 
 
 def _mode_for(row) -> str:
+    # "trial" couvre le même cas défensif que db._ACCESS_STATUSES : une ligne
+    # subscriptions ne devrait plus jamais porter ce statut (l'essai
+    # applicatif n'en crée aucune), sauf si un plan Frisbii restait configuré
+    # avec un essai malgré no_trial=True (cf. webhooks.map_subscription).
     if row is not None and row["status"] in ("active", "trial", "pending"):
         return "configure"
     return "subscribe"
@@ -167,7 +171,7 @@ def _change_hint(selected: str, sub_info: dict | None) -> tuple[str, str]:
     current = sub_info.get("current_plan")
     if (
         not current
-        or sub_info.get("status") not in ("active", "trial")
+        or sub_info.get("status") not in ("active", "trial")  # cf. _mode_for
         or selected == current
     ):
         return "d-none", ""

@@ -128,6 +128,12 @@ def _no_sub_view(tous_abonnes: bool, row):
 
 
 def _active_view(row):
+    # row["status"] peut valoir "trial" ici sans venir de l'essai applicatif
+    # (subscriber_state, qui ne crée aucune ligne subscriptions) : c'est le
+    # mapping défensif de webhooks.map_subscription, pour le cas où un plan
+    # Frisbii resterait configuré avec un essai malgré no_trial=True. Les
+    # tests d'appartenance ci-dessous incluent donc "trial" au même titre que
+    # "active" (cf. db._ACCESS_STATUSES).
     meta = plans.plan_meta(row["plan"]) or {"label": row["plan"]}
     # Horodatages Frisbii en UTC : affichés en heure de Paris et avec l'heure,
     # une fin d'essai de quelques jours se jouant à l'heure près.

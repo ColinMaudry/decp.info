@@ -40,6 +40,12 @@ def map_subscription(sub: dict) -> tuple[str, str | None]:
     if sub.get("is_cancelled") or state == "cancelled":
         return "cancelled", sub.get("expires")
     if _in_future(sub.get("trial_end")):
+        # Toute souscription est créée avec no_trial=True (src/subscriptions/
+        # routes.py::subscribe) : Frisbii ne devrait plus jamais renvoyer de
+        # trial_end futur. Gardé par défense, pour le cas où un plan resterait
+        # configuré avec un essai malgré ce flag. Alimente
+        # db._ACCESS_STATUSES, qui protège l'accès dans ce cas plutôt que de
+        # le couper.
         return "trial", sub.get("trial_end")
     if state == "active":
         return "active", sub.get("next_period_start")
