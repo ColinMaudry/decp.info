@@ -80,10 +80,14 @@ si `trial_ends_at IS NULL`.
 `has_active_subscription()` est aujourd'hui appelée pour deux usages qui
 divergent maintenant :
 
-| Usage                                                       | Appelants                                                                              | Comportement pendant l'essai |
-| ----------------------------------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------- |
-| Ouvrir les fonctionnalités                                  | `_compte_shell`, `mcp/auth`, `mcp/oauth/consent`, `mcp/account`, `a_propos/abonnement` | **oui**                      |
-| Empêcher une souscription en double, router après connexion | `subscriptions/routes.py:22`, `auth/routes.py:22`                                      | **non**                      |
+| Usage                                                           | Appelants                                                                   | Comportement pendant l'essai |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------- |
+| Ouvrir les fonctionnalités                                      | `_compte_shell`, `mcp/auth`, `mcp/oauth/consent`, `mcp/account`             | **oui**                      |
+| Empêcher une souscription en double, orienter vers l'abonnement | `subscriptions/routes.py:22`, `auth/routes.py:22`, `a_propos/abonnement.py` | **non**                      |
+
+`a_propos/abonnement.py` appartient au second groupe : pendant l'essai, cette
+page doit continuer d'afficher « Je m'abonne » vers `/compte/abonnement/mes-infos`,
+et non « Gérer mon abonnement ». C'est la page de conversion.
 
 Si le second groupe comptait l'essai, un utilisateur en essai ne pourrait plus
 s'abonner du tout — exactement le parcours que cette issue cherche à ouvrir.
@@ -119,6 +123,21 @@ l'utilisateur n'a pas encore choisi de formule. Il apparaît sur le bouton de
 (24 € TTC pour la formule simple, 60 € TTC pour le soutien) via le callback
 `_select_plan` qui pilote déjà les cartes de formule et le récapitulatif.
 
+### Souscription anticipée
+
+Un utilisateur peut s'abonner **avant** la fin de son essai : c'est
+précisément pourquoi la garde de `subscribe()` reste sur
+`has_active_subscription()`. La page `/compte/abonnement` propose donc un lien
+« M'abonner dès maintenant » pendant l'essai, en plus de l'affichage de la date
+de fin.
+
+Le débit est alors immédiat et les jours d'essai restants sont perdus. Ce n'est
+pas un choix mais une conséquence de la contrainte : programmer le débit pour
+la fin de l'essai reconstituerait exactement le prélèvement automatique différé
+que ce chantier supprime. Le texte l'annonce donc avant le clic.
+
+### Pas de modale
+
 Pas de modale de confirmation. `/compte/abonnement/mes-infos` remplit déjà ce
 rôle et mieux : elle porte la sélection de formule — que l'utilisateur n'a plus
 faite en amont, puisqu'il n'y a plus de souscription à l'entrée en essai — et
@@ -152,9 +171,14 @@ quel que soit `TOUS_ABONNES`.
 `linkedin_next` → `/compte/abonnement` inconditionnellement.
 
 **`src/pages/_compte_shell.py`**, **`src/mcp/auth.py`**,
-**`src/mcp/oauth/consent.py`**, **`src/mcp/account.py`**,
-**`src/pages/a_propos/abonnement.py`** — `has_active_subscription` →
-`has_access`.
+**`src/mcp/oauth/consent.py`** — `has_active_subscription` → `has_access`.
+`src/mcp/account.py` suit sans modification : il délègue déjà à
+`current_user_has_subscription()`.
+
+**`src/pages/a_propos/abonnement.py`** — le badge « N jours d'essai gratuit »
+par formule (`_plan_card`) disparaît : l'essai n'est plus adossé à un plan. Il
+est remplacé par une mention unique au-dessus des formules. L'appel à
+`has_active_subscription` y reste inchangé (page de conversion).
 
 **`src/pages/compte/abonnement.py`** — vue « essai en cours » et vue « essai
 terminé » avec le bouton ; suppression de la branche `trial` de `_active_view`
