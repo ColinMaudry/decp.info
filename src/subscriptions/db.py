@@ -25,7 +25,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_handle
 
 CREATE TABLE IF NOT EXISTS subscriber_state (
     user_id                 INTEGER PRIMARY KEY,
+    -- Plus lue ni écrite depuis le passage à l'essai applicatif : l'essai est
+    -- désormais porté par trial_ends_at ci-dessous. Conservée pour ne pas
+    -- casser les bases existantes ; retrait prévu dans un nettoyage ultérieur.
     trial_used              INTEGER NOT NULL DEFAULT 0,
+    trial_ends_at           TEXT,
     votes_balance           INTEGER NOT NULL DEFAULT 0,
     votes_last_credited_at  TEXT,
     updated_at              TEXT NOT NULL,
@@ -33,15 +37,45 @@ CREATE TABLE IF NOT EXISTS subscriber_state (
 );
 """
 
+# "trial" ne devrait plus jamais être écrit dans subscriptions.status : l'essai
+# est désormais géré par subscriber_state.trial_ends_at, sans ligne
+# subscriptions. Gardé quand même pour deux raisons certaines : l'admin
+# (src/admin/tables.py) expose "status" en colonne éditable avec "trial" dans
+# son menu déroulant (SUBSCRIPTION_STATUSES), donc un·e admin peut l'écrire à
+# la main aujourd'hui ; et une base déployée avant ce chantier peut encore
+# porter des lignes historiques à ce statut. Accessoirement, ça couvre aussi
+# le cas où un plan Frisbii resterait configuré avec un essai malgré le
+# no_trial=True envoyé à la création (routes.subscribe) : webhooks.
+# map_subscription pourrait alors encore renvoyer "trial", et il ne faut pas
+# couper l'accès d'un abonné dans ce cas.
 _ACCESS_STATUSES = ("trial", "active")
 
 INITIAL_VOTES = 3
+TRIAL_DAYS = 2
 VOTES_PER_WEEK = int(os.getenv("VOTES_PER_WEEK", "5"))
 WEEK_SECONDS = 7 * 24 * 3600
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _parse_iso_utc(value: str | None) -> datetime | None:
+    """Parse un horodatage ISO stocké, en garantissant un datetime aware.
+
+    Une valeur naïve (saisie à la main en base ou via l'admin) ferait lever un
+    TypeError à la comparaison avec `datetime.now(timezone.utc)`. Comme cette
+    comparaison est dans `has_access`, l'incident se traduirait par une erreur
+    500 sur tout l'espace abonné, le connecteur MCP et l'écran de consentement
+    OAuth. On normalise donc en UTC plutôt que de supposer le stockage propre.
+    """
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
 def init_schema() -> None:
@@ -125,6 +159,9 @@ def get_current(user_id: int) -> sqlite3.Row | None:
     )
 
 
+# Référence pour le menu déroulant admin (src/admin/tables.py) : doit rester
+# synchronisée avec les valeurs que map_subscription peut produire, "trial"
+# inclus (cf. _ACCESS_STATUSES ci-dessus).
 SUBSCRIPTION_STATUSES = ("active", "trial", "cancelled", "expired", "pending")
 
 
@@ -279,12 +316,6 @@ def update_from_webhook(
         "updated_at = ? WHERE id = ?",
         (status, current_period_end, _now(), prev["id"]),
     )
-    if status in _ACCESS_STATUSES:
-        get_conn().execute(
-            "UPDATE subscriber_state SET trial_used = 1, updated_at = ? "
-            "WHERE user_id = ?",
-            (_now(), prev["user_id"]),
-        )
     if prev["status"] != "active" and status == "active":
         freeze_votes_cursor(prev["user_id"])
         # Couvre trial → active (transformation d'un essai), pending → active
@@ -322,19 +353,59 @@ def has_active_subscription(user_id: int) -> bool:
     if row["status"] in _ACCESS_STATUSES:
         return True
     if row["status"] == "cancelled" and row["current_period_end"]:
-        try:
-            end = datetime.fromisoformat(
-                row["current_period_end"].replace("Z", "+00:00")
-            )
-            return end > datetime.now(timezone.utc)
-        except ValueError:
-            return False
+        end = _parse_iso_utc(row["current_period_end"])
+        return end is not None and end > datetime.now(timezone.utc)
     return False
 
 
-def has_used_trial(user_id: int) -> bool:
+def start_trial_if_new(user_id: int) -> None:
+    """Ouvre la fenêtre d'essai si ce compte n'en a jamais eu.
+
+    Idempotent : la clause `trial_ends_at IS NULL` garantit qu'un second appel
+    ne prolonge jamais l'essai. C'est la seule protection contre une
+    re-vérification d'email ou une reconnexion LinkedIn qui rouvriraient
+    autrement un essai déjà consommé.
+    """
+    now = _now()
+    conn = get_conn()
+    # Le SELECT ... FROM users garantit qu'aucune ligne n'est insérée pour un
+    # user_id inconnu : OR IGNORE n'avale PAS les violations de clé étrangère
+    # (seulement UNIQUE/NOT NULL/CHECK), on aurait donc une IntegrityError.
+    conn.execute(
+        "INSERT OR IGNORE INTO subscriber_state (user_id, updated_at) "
+        "SELECT id, ? FROM users WHERE id = ?",
+        (now, user_id),
+    )
+    ends = datetime.now(timezone.utc) + timedelta(days=TRIAL_DAYS)
+    conn.execute(
+        "UPDATE subscriber_state SET trial_ends_at = ?, updated_at = ? "
+        "WHERE user_id = ? AND trial_ends_at IS NULL",
+        (ends.isoformat(), now, user_id),
+    )
+
+
+def trial_ends_at(user_id: int) -> datetime | None:
     row = _get_state(user_id)
-    return bool(row and row["trial_used"])
+    if row is None:
+        return None
+    return _parse_iso_utc(row["trial_ends_at"])
+
+
+def trial_active(user_id: int) -> bool:
+    end = trial_ends_at(user_id)
+    return end is not None and end > datetime.now(timezone.utc)
+
+
+def has_access(user_id: int) -> bool:
+    """Accès aux fonctionnalités réservées : essai en cours OU abonnement.
+
+    À ne PAS confondre avec `has_active_subscription`, qui ne parle que
+    d'abonnements. Les appelants qui décident d'orienter vers la souscription
+    (garde de `subscribe()`, `_post_login_url`, page /a-propos/abonnement)
+    doivent rester sur cette dernière : s'ils comptaient l'essai, un
+    utilisateur en essai ne pourrait plus s'abonner du tout.
+    """
+    return trial_active(user_id) or has_active_subscription(user_id)
 
 
 def _set_votes(user_id: int, balance: int, cursor_iso: str) -> None:
@@ -362,6 +433,11 @@ def _accrues_votes(user_id: int) -> bool:
     if TOUS_ABONNES:
         return True
     current = get_current(user_id)
+    # current["status"] == "trial" ne couvre pas l'essai applicatif normal :
+    # celui-ci ne crée aucune ligne subscriptions, donc `current is None`
+    # capte déjà ce cas. Ce deuxième test couvre le même cas défensif que
+    # _ACCESS_STATUSES : un plan Frisbii resté configuré avec un essai malgré
+    # no_trial=True.
     if current is None or current["status"] == "trial":
         return False
     return has_active_subscription(user_id)

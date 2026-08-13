@@ -2,6 +2,7 @@ import pytest
 
 from src.auth import db
 from src.auth import oauth as oauth_module
+from src.subscriptions import db as sub_db
 
 
 @pytest.fixture
@@ -58,6 +59,7 @@ def test_login_route_redirects_to_linkedin(client, monkeypatch):
 
 def test_callback_creates_user_and_logs_in(client, fake_userinfo, users_db_path):
     db.init_schema()
+    sub_db.init_schema()
     fake_userinfo["userinfo"] = {
         "sub": "sub-xyz",
         "email": "newbie@example.com",
@@ -69,10 +71,66 @@ def test_callback_creates_user_and_logs_in(client, fake_userinfo, users_db_path)
     # Nouvel utilisateur sans abonnement → _post_login_url renvoie vers
     # /compte/abonnement (et non /compte/admin, réservé aux abonnés actifs).
     assert location.startswith("/compte/abonnement")
-    # Création de compte via LinkedIn : déclenche `account_created` côté
-    # navigateur (src/assets/goals.js).
+    # Création de compte via LinkedIn : déclenche `account_created` et
+    # `subscription_trial` côté navigateur (src/assets/goals.js).
     assert "compte_cree=linkedin" in location
-    assert db.get_user_by_email("newbie@example.com") is not None
+    assert "essai=demarre" in location
+    new_user = db.get_user_by_email("newbie@example.com")
+    assert new_user is not None
+    assert sub_db.trial_active(new_user["id"]) is True
+
+
+def test_callback_creates_user_tous_abonnes_opens_no_trial(
+    client, fake_userinfo, users_db_path, monkeypatch
+):
+    """Sous TOUS_ABONNES, l'accès est déjà gratuit pour tout le monde :
+    `compte_cree=linkedin` doit toujours être posé (c'est un événement de
+    création de compte), mais aucun essai ne doit être ouvert et
+    `essai=demarre` ne doit pas être posé."""
+    monkeypatch.setattr("src.utils.TOUS_ABONNES", True)
+    db.init_schema()
+    sub_db.init_schema()
+    fake_userinfo["userinfo"] = {
+        "sub": "sub-tous-abonnes",
+        "email": "tous-abonnes@example.com",
+        "email_verified": True,
+    }
+    resp = client.get("/auth/linkedin/callback")
+    assert resp.status_code == 302
+    location = resp.headers["Location"]
+    assert location.startswith("/compte/abonnement")
+    assert "compte_cree=linkedin" in location
+    assert "essai=demarre" not in location
+    new_user = db.get_user_by_email("tous-abonnes@example.com")
+    assert new_user is not None
+    assert sub_db.trial_ends_at(new_user["id"]) is None
+
+
+def test_callback_existing_account_does_not_start_retroactive_trial(
+    client, fake_userinfo, users_db_path
+):
+    """Un compte créé avant ce déploiement, déjà lié à LinkedIn, se connecte de
+    nouveau : `compte_cree` est faux, donc aucun essai ne doit être ouvert."""
+    db.init_schema()
+    sub_db.init_schema()
+    uid = db.create_user("ancien@example.com", "hash")
+    db.set_email_verified(uid)
+    db.link_oauth_identity("linkedin", "sub-existing", uid)
+    fake_userinfo["userinfo"] = {
+        "sub": "sub-existing",
+        "email": "ancien@example.com",
+        "email_verified": True,
+    }
+
+    assert sub_db.trial_ends_at(uid) is None
+
+    resp = client.get("/auth/linkedin/callback")
+
+    assert resp.status_code == 302
+    location = resp.headers["Location"]
+    assert "compte_cree" not in location
+    assert "essai=demarre" not in location
+    assert sub_db.trial_ends_at(uid) is None
 
 
 def test_callback_without_email_fails(client, fake_userinfo, users_db_path):

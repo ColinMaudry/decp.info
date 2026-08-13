@@ -1,6 +1,8 @@
 import hashlib
 import hmac
 
+import pytest
+
 from src.subscriptions import client as frisbii_client
 from src.subscriptions import db
 
@@ -9,6 +11,21 @@ def _sign(secret, timestamp, event_id):
     return hmac.new(
         secret.encode(), (timestamp + event_id).encode(), hashlib.sha256
     ).hexdigest()
+
+
+@pytest.fixture
+def capture_accept(monkeypatch):
+    """Intercepte l'URL d'acceptation transmise à Frisbii."""
+    captured = {}
+
+    def fake_session(plan_handle, handle, accept_url, cancel_url, **kwargs):
+        captured["accept_url"] = accept_url
+        captured["no_trial"] = kwargs.get("no_trial")
+        return "https://checkout.example/session"
+
+    monkeypatch.setattr(frisbii_client, "create_subscription_session", fake_session)
+    monkeypatch.setattr(frisbii_client, "update_customer", lambda handle, data: {})
+    return captured
 
 
 def test_subscribe_redirects_to_hosted_url(logged_in_client, monkeypatch):
@@ -35,26 +52,47 @@ def test_subscribe_redirects_to_hosted_url(logged_in_client, monkeypatch):
     assert row["frisbii_subscription_handle"] == f"colibre_dev-{uid}-1"
 
 
-def test_subscribe_disables_trial_after_first_use(logged_in_client, monkeypatch):
-    client, uid = logged_in_client
-    # L'utilisateur a déjà consommé un essai par le passé (abonnement maintenant expiré).
-    handle, _ = db.create_pending(uid, "colibre-%d" % uid, "simple")
-    db.update_from_webhook(handle, "trial", "2099-01-01T00:00:00+00:00")
-    # L'essai est terminé : abonnement expiré, trial_used reste à 1.
-    db.update_from_webhook(handle, "expired", "2020-01-01T00:00:00+00:00")
-    captured = {}
-    monkeypatch.setattr(frisbii_client, "update_customer", lambda h, d: {})
+def test_subscribe_sends_no_trial_true_in_frisbii_request_body(
+    logged_in_client, fake_httpx
+):
+    """L'essai n'existe plus côté Frisbii (#132) : le corps JSON envoyé à
+    POST /v1/subscription porte `no_trial: True`, y compris pour un
+    utilisateur qui n'a jamais souscrit auparavant (le cas qui bénéficiait
+    autrefois d'un essai). On inspecte le corps réellement capturé par
+    `fake_httpx`, pas seulement le code de retour côté colibre."""
+    test_client, uid = logged_in_client
+    assert db.get_current(uid) is None  # jamais souscrit auparavant
+    Response = fake_httpx["Response"]
+    fake_httpx["queue"].extend(
+        [
+            Response(200, {}),  # PUT /v1/customer/{handle}
+            Response(200, {}),  # POST /v1/subscription
+            Response(200, {"url": "https://checkout.example/session"}),
+        ]
+    )
 
-    def fake_session(
-        plan, handle, ok, ko, no_trial=False, customer_handle=None, create_customer=None
-    ):
-        captured["no_trial"] = no_trial
-        return "https://pay.test/cs_9"
+    resp = test_client.post("/subscriptions/subscribe", data={"plan": "simple"})
 
-    monkeypatch.setattr(frisbii_client, "create_subscription_session", fake_session)
-    resp = client.post("/subscriptions/subscribe", data={"plan": "soutien"})
     assert resp.status_code == 303
-    assert captured["no_trial"] is True
+    create_calls = [
+        c for c in fake_httpx["calls"] if c["url"].endswith("/v1/subscription")
+    ]
+    assert len(create_calls) == 1
+    assert create_calls[0]["json"]["no_trial"] is True
+
+
+def test_accept_url_has_no_trial_discriminant(logged_in_client, capture_accept):
+    """L'essai n'existe plus côté Frisbii (#132) : l'URL de retour du checkout
+    ne porte donc plus aucun discriminant d'essai (`souscription=trial`),
+    toute souscription étant immédiatement payante."""
+    test_client, _ = logged_in_client
+
+    test_client.post("/subscriptions/subscribe", data={"plan": "simple"})
+
+    assert "accept_url" in capture_accept
+    assert "paiement=succes" in capture_accept["accept_url"]
+    assert "souscription=trial" not in capture_accept["accept_url"]
+    assert capture_accept["no_trial"] is True
 
 
 def test_subscribe_unknown_plan(logged_in_client):
@@ -152,8 +190,19 @@ def test_subscribe_skips_if_already_active(logged_in_client, monkeypatch):
     assert db.get_current(uid)["status"] == "active"
 
 
-def test_subscribe_skips_if_trial_active(logged_in_client, monkeypatch):
-    """Fix 1 : un abonné en période d'essai est protégé de la même façon."""
+def test_subscribe_skips_if_legacy_trial_status(logged_in_client, monkeypatch):
+    """Fix 1 : une ligne `subscriptions` historique en statut 'trial' reste
+    protégée comme 'active' (#132).
+
+    L'essai applicatif ne crée plus de ligne `subscriptions` du tout (il vit
+    entièrement dans `subscriber_state.trial_ends_at`) : ce statut ne peut
+    donc plus provenir de la souscription elle-même. Il reste néanmoins une
+    valeur valide de `SUBSCRIPTION_STATUSES`, encore produite par
+    `webhooks.map_subscription` (cf. `test_webhooks.py::test_map_trial`) et
+    encore traitée comme un accès valide par `_ACCESS_STATUSES` /
+    `has_active_subscription`. `subscribe()` ne doit donc pas écraser une
+    telle ligne, qu'elle soit héritée d'avant la migration ou produite par ce
+    chemin webhook générique."""
     client, uid = logged_in_client
     handle, _ = db.create_pending(uid, "colibre-%d" % uid, "simple")
     db.update_from_webhook(handle, "trial", "2099-01-01T00:00:00+00:00")

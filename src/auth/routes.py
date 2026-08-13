@@ -122,12 +122,22 @@ def verify_email():
         return redirect("/verification-email?error=invalid_token")
     db.set_email_verified(user_id)
     login_user(User(db.get_user_by_id(user_id)), remember=True)
+    from src.subscriptions import db as sub_db
     from src.utils import TOUS_ABONNES
 
-    # Sous TOUS_ABONNES, la page carte bancaire (mes-infos) est un cul-de-sac
-    # (pas de prestataire de paiement) : on renvoie vers la page abonnement.
-    dest = "/compte/abonnement" if TOUS_ABONNES else "/compte/abonnement/mes-infos"
-    return redirect(dest)
+    if TOUS_ABONNES:
+        # Accès déjà gratuit pour tout le monde : ouvrir un essai qui
+        # expirerait sans jamais avoir été vécu comme tel n'a aucun sens, et
+        # `essai=demarre` annoncerait un événement qui n'a pas eu lieu.
+        return redirect("/compte/abonnement")
+
+    # L'essai démarre ici et pas à la création du compte : tant que l'email
+    # n'est pas vérifié, `login()` refuse la session (voir plus bas), donc le
+    # compte est strictement inutilisable et l'horloge tournerait dans le vide.
+    sub_db.start_trial_if_new(user_id)
+    # `essai=demarre` déclenche l'événement `subscription_trial` côté navigateur
+    # (src/assets/goals.js).
+    return redirect("/compte/abonnement?essai=demarre")
 
 
 @auth_bp.route("/login", methods=["POST"])
@@ -335,6 +345,17 @@ def linkedin_callback():
     login_user(user, remember=True)
     dest = safe_next(oauth_next, fallback=_post_login_url(user.id))
     if compte_cree:
-        # Déclenche `account_created` côté navigateur (src/assets/goals.js).
+        from src.subscriptions import db as sub_db
+        from src.utils import TOUS_ABONNES
+
+        # Déclenche `account_created` côté navigateur (src/assets/goals.js) ;
+        # cet événement porte sur la création du compte, pas sur l'essai.
         dest = _avec_param(dest, "compte_cree", "linkedin")
+        if not TOUS_ABONNES:
+            sub_db.start_trial_if_new(user.id)
+            # Déclenche `subscription_trial` côté navigateur
+            # (src/assets/goals.js). Sous TOUS_ABONNES, l'accès est déjà
+            # gratuit pour tout le monde : aucun essai n'est ouvert, et
+            # `essai=demarre` annoncerait un événement qui n'a pas eu lieu.
+            dest = _avec_param(dest, "essai", "demarre")
     return redirect(dest)

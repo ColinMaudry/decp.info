@@ -7,15 +7,26 @@ def _plan_env(monkeypatch):
     monkeypatch.setenv("FRISBII_PLAN_SOUTIEN", "plan_soutien")
 
 
-def test_plan_cards_informative_no_button():
+def test_plan_cards_show_single_trial_mention_above_cards_no_per_card_badge():
     from src.app import app  # noqa: F401
     from src.pages.a_propos import abonnement as page
+    from src.subscriptions.db import TRIAL_DAYS
 
-    text = str(page._plan_cards(trial_for=lambda key: 2))
-    assert "Abonnement" in text
-    assert "Abonnement de soutien" in text
-    assert "2 jours d'essai gratuit" in text
-    assert "S'abonner" not in text
+    result = page._plan_cards()
+    # La mention d'essai est un élément à part, placé avant la rangée des
+    # cartes de formule.
+    mention, row = result.children
+    mention_text = str(mention)
+    assert f"{TRIAL_DAYS} jours d'essai gratuit" in mention_text
+    assert "sans carte bancaire" in mention_text
+
+    row_text = str(row)
+    # Les deux cartes de formule sont toujours là...
+    assert "Abonnement" in row_text
+    assert "Abonnement de soutien" in row_text
+    assert "S'abonner" not in row_text
+    # ... mais elles ne portent plus de badge d'essai individuel.
+    assert "essai gratuit" not in row_text
 
 
 def test_subscribe_button_visitor_goes_to_inscription():
@@ -27,12 +38,18 @@ def test_subscribe_button_visitor_goes_to_inscription():
     assert "href='/inscription'" in text
 
 
-def test_subscribe_button_authenticated_no_sub_goes_to_mes_infos():
+def test_subscribe_button_authenticated_no_sub_goes_to_mes_infos_even_during_trial():
+    # Page de conversion : un·e utilisateur·rice authentifié·e sans abonnement
+    # (y compris pendant son essai gratuit, qui n'est plus une propriété
+    # d'abonnement) doit toujours voir « Je m'abonne » vers mes-infos, jamais
+    # « Gérer mon abonnement ».
     from src.app import app  # noqa: F401
     from src.pages.a_propos import abonnement as page
 
     text = str(page._subscribe_button(True, False, False))
+    assert "Je m'abonne" in text
     assert "href='/compte/abonnement/mes-infos'" in text
+    assert "Gérer mon abonnement" not in text
 
 
 def test_subscribe_button_active_sub_manages():
@@ -87,6 +104,36 @@ def test_subscription_terms_limited_to_commercial_clauses():
     assert "/a-propos/mentions-legales#conditions-utilisation" in text
 
 
+def test_subscription_terms_mentions_trial_days_from_config():
+    """Revue #132 : la durée d'essai citée dans les CGV légalement revues doit
+    suivre TRIAL_DAYS, sinon un changement de durée fait mentir le texte
+    contractuel sans que la suite le remarque."""
+    from src.app import app  # noqa: F401
+    from src.pages.a_propos import abonnement as page
+    from src.subscriptions.db import TRIAL_DAYS
+
+    text = str(page.subscription_terms)
+    assert f"essai gratuit de {TRIAL_DAYS} jours" in text
+
+
+def test_subscription_terms_trial_no_longer_auto_converts_to_paid():
+    # Depuis le passage de l'essai hors Frisbii (aucun prélèvement possible
+    # pendant l'essai), les conditions ne doivent plus décrire de
+    # transformation automatique de l'essai en abonnement payant : c'est la
+    # souscription explicite qui démarre l'abonnement, jamais la fin de
+    # l'essai.
+    from src.app import app  # noqa: F401
+    from src.pages.a_propos import abonnement as page
+
+    text = str(page.subscription_terms)
+    # La nouvelle formulation est bien présente...
+    assert "L'abonnement payant démarre à la souscription à un abonnement" in text
+    # ... et les anciennes formulations décrivant une conversion automatique
+    # de l'essai en abonnement payant ont disparu.
+    assert "l'abonnement payant démarre et la première facture est émise" not in text
+    assert "ne démarre qu'à l'issue de la période d'essai" not in text
+
+
 def test_plan_card_ttc_price_for_current_real_prices():
     from src.app import app  # noqa: F401
     from src.pages.a_propos import abonnement as page
@@ -97,8 +144,7 @@ def test_plan_card_ttc_price_for_current_real_prices():
                 "label": "Abonnement",
                 "prix_ht": 20,
                 "description": "desc",
-            },
-            None,
+            }
         )
     )
     assert "24 € TTC" in simple
@@ -109,8 +155,7 @@ def test_plan_card_ttc_price_for_current_real_prices():
                 "label": "Abonnement de soutien",
                 "prix_ht": 50,
                 "description": "desc",
-            },
-            None,
+            }
         )
     )
     assert "60 € TTC" in soutien
@@ -126,8 +171,7 @@ def test_plan_card_ttc_price_avoids_float_artifacts():
                 "label": "Abonnement non-rond",
                 "prix_ht": 24,
                 "description": "desc",
-            },
-            None,
+            }
         )
     )
     assert "28.8 € TTC" in text

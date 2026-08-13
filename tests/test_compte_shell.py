@@ -1,13 +1,27 @@
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
+
+import pytest
 
 from src.pages import _compte_shell as shell
 
 
-def _fake_user(authenticated: bool):
+def _fake_user(authenticated: bool, uid: int = 1):
     user = type("U", (), {})()
     user.is_authenticated = authenticated
-    user.id = 1
+    user.id = uid
     return user
+
+
+@pytest.fixture
+def users_db_path(monkeypatch, tmp_path):
+    from src.auth.db import reset_conn_for_tests
+
+    db_path = tmp_path / "users.test.sqlite"
+    monkeypatch.setenv("USERS_DB_PATH", str(db_path))
+    reset_conn_for_tests()
+    yield db_path
+    reset_conn_for_tests()
 
 
 def test_visible_sections_hides_gated_without_subscription():
@@ -68,9 +82,80 @@ def test_has_subscription_uses_db_when_flag_off(monkeypatch):
     monkeypatch.setattr("src.utils.TOUS_ABONNES", False)
     with (
         patch("src.pages._compte_shell.current_user", _fake_user(True)),
-        patch(
-            "src.subscriptions.db.has_active_subscription", return_value=False
-        ) as mocked,
+        patch("src.subscriptions.db.has_access", return_value=False) as mocked,
     ):
         assert shell.current_user_has_subscription() is False
         mocked.assert_called_once_with(1)
+
+
+def test_has_subscription_true_during_trial_without_subscriptions_row(
+    users_db_path, monkeypatch
+):
+    from src.auth import db as auth_db
+    from src.subscriptions import db as sub_db
+
+    monkeypatch.setattr("src.utils.TOUS_ABONNES", False)
+    auth_db.init_schema()
+    sub_db.init_schema()
+    uid = auth_db.create_user("essai@ex.fr", "hash")
+    sub_db.start_trial_if_new(uid)
+
+    # Ancrage positif : l'essai est bien actif, et aucune ligne subscriptions
+    # n'existe pour cet utilisateur.
+    assert sub_db.trial_active(uid) is True
+    assert sub_db.get_current(uid) is None
+
+    with patch("src.pages._compte_shell.current_user", _fake_user(True, uid)):
+        assert shell.current_user_has_subscription() is True
+
+
+def test_has_subscription_false_after_trial_expires_without_subscriptions_row(
+    users_db_path, monkeypatch
+):
+    from src.auth import db as auth_db
+    from src.auth.db import get_conn
+    from src.subscriptions import db as sub_db
+
+    monkeypatch.setattr("src.utils.TOUS_ABONNES", False)
+    auth_db.init_schema()
+    sub_db.init_schema()
+    uid = auth_db.create_user("essai-expire@ex.fr", "hash")
+    sub_db.start_trial_if_new(uid)
+    past = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    get_conn().execute(
+        "UPDATE subscriber_state SET trial_ends_at = ? WHERE user_id = ?",
+        (past, uid),
+    )
+
+    # Ancrage positif : l'essai a bien basculé côté "expiré", et il n'y a
+    # toujours aucune ligne subscriptions.
+    assert sub_db.trial_active(uid) is False
+    assert sub_db.get_current(uid) is None
+
+    with patch("src.pages._compte_shell.current_user", _fake_user(True, uid)):
+        assert shell.current_user_has_subscription() is False
+
+
+def test_credit_pending_returns_zero_during_trial_without_subscriptions_row(
+    users_db_path, monkeypatch
+):
+    """Verrouille une propriété que rien n'impose explicitement dans le code :
+    les votes roadmap restent fermés pendant l'essai, alors même que
+    has_access() (donc current_user_has_subscription()) vaut déjà True.
+    _accrues_votes() exige une ligne `subscriptions`, absente pendant l'essai.
+    """
+    from src.auth import db as auth_db
+    from src.subscriptions import db as sub_db
+
+    monkeypatch.setattr("src.utils.TOUS_ABONNES", False)
+    auth_db.init_schema()
+    sub_db.init_schema()
+    uid = auth_db.create_user("votes-essai@ex.fr", "hash")
+    sub_db.start_trial_if_new(uid)
+
+    # Ancrage positif : l'accès aux fonctionnalités réservées est bien ouvert
+    # par l'essai, sans aucune ligne subscriptions.
+    assert sub_db.has_access(uid) is True
+    assert sub_db.get_current(uid) is None
+
+    assert sub_db.credit_pending(uid) == 0

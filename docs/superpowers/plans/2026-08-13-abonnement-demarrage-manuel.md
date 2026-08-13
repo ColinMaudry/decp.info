@@ -1171,3 +1171,14 @@ git commit -m "Ajustements de la suite de tests pour le démarrage manuel d'abon
   oubli de `no_trial` réintroduirait la conversion automatique.
 - Vérifier dans Matomo que l'objectif `subscription_trial` reçoit toujours des
   événements après le changement d'ancrage.
+- **Au moment de désactiver `TOUS_ABONNES`** (passage de `True` à `False`,
+  ouverture du modèle payant) : aucune migration de données n'est nécessaire.
+  `verify_email`/`linkedin_callback` (`src/auth/routes.py`) vérifient
+  désormais `TOUS_ABONNES` avant d'appeler `start_trial_if_new` : tant que le
+  flag est actif, aucun essai n'est ouvert et `trial_ends_at` reste `NULL`
+  pour les comptes créés pendant la période gratuite. Au basculement, ces
+  comptes tombent sur la vue « Abonnez-vous » ordinaire — identique à celle
+  des comptes créés avant ce déploiement — jamais sur « Votre essai gratuit
+  est terminé ». Les comptes créés après le basculement obtiennent leur essai
+  normalement. Ne pas réintroduire de script `UPDATE subscriber_state` à ce
+  sujet : le problème qu'il visait à corriger n'existe plus côté code.

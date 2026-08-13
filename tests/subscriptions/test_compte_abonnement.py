@@ -1,3 +1,89 @@
+from datetime import datetime, timezone
+
+
+class _FakeUser:
+    id = 1
+    is_authenticated = True
+
+
+def _layout(
+    monkeypatch,
+    *,
+    row=None,
+    trial_active=False,
+    trial_ends_at=None,
+    tous_abonnes=False,
+    **query,
+):
+    """Rend layout() en cablant db.get_current/trial_active/trial_ends_at et en
+    court-circuitant account_guard (déjà testé par ailleurs dans
+    tests/test_compte_shell.py) pour isoler le dispatch d'état de layout()."""
+    from src.pages.compte import abonnement as compte_abonnement
+    from src.subscriptions import db as sub_db
+
+    monkeypatch.setattr(compte_abonnement, "account_guard", lambda *a, **k: None)
+    monkeypatch.setattr(compte_abonnement, "current_user", _FakeUser())
+    monkeypatch.setattr("src.utils.TOUS_ABONNES", tous_abonnes)
+    monkeypatch.setattr(sub_db, "get_current", lambda uid: row)
+    monkeypatch.setattr(sub_db, "trial_active", lambda uid: trial_active)
+    monkeypatch.setattr(sub_db, "trial_ends_at", lambda uid: trial_ends_at)
+    return str(compte_abonnement.layout(**query))
+
+
+def test_layout_tous_abonnes_shows_free_access_view(monkeypatch):
+    text = _layout(monkeypatch, row=None, tous_abonnes=True)
+    assert "temporairement accès à toutes les fonctionnalités" in text
+    assert "Essai gratuit" not in text
+    assert "Abonnez-vous" not in text
+
+
+def test_layout_trial_active_shows_trial_view(monkeypatch):
+    end = datetime(2026, 9, 1, tzinfo=timezone.utc)
+    text = _layout(monkeypatch, row=None, trial_active=True, trial_ends_at=end)
+    assert "Essai gratuit jusqu'au" in text
+    assert "temporairement accès" not in text
+    assert "Votre essai gratuit est terminé" not in text
+    assert "Abonnez-vous" not in text
+
+
+def test_layout_trial_ended_shows_trial_ended_view(monkeypatch):
+    past = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    text = _layout(monkeypatch, row=None, trial_active=False, trial_ends_at=past)
+    assert "Votre essai gratuit est terminé" in text
+    assert "Essai gratuit jusqu'au" not in text
+    assert "temporairement accès" not in text
+    assert "Abonnez-vous" not in text
+
+
+def test_layout_never_had_trial_shows_reabo_view(monkeypatch):
+    text = _layout(monkeypatch, row=None, trial_active=False, trial_ends_at=None)
+    assert "Abonnez-vous" in text
+    assert "temporairement accès" not in text
+    assert "Votre essai gratuit est terminé" not in text
+    assert "Essai gratuit" not in text
+
+
+def test_layout_pending_with_active_trial_shows_trial_end_and_resume_payment(
+    monkeypatch,
+):
+    """Revue #132 : un checkout abandonné pendant l'essai ne doit pas faire
+    disparaître la date de fin d'essai ni le moyen de finaliser le paiement."""
+    end = datetime(2026, 9, 1, tzinfo=timezone.utc)
+    row = {"status": "pending", "plan": "simple", "current_period_end": None}
+    text = _layout(monkeypatch, row=row, trial_active=True, trial_ends_at=end)
+    assert "Essai gratuit jusqu'au" in text
+    assert "Ajouter une méthode de paiement" in text
+
+
+def test_layout_pending_without_active_trial_keeps_pending_view(monkeypatch):
+    """Comportement inchangé : ligne pending sans essai actif (jamais eu ou
+    déjà terminé) reste sur la vue "abonnement en cours" (_active_view)."""
+    row = {"status": "pending", "plan": "simple", "current_period_end": None}
+    text = _layout(monkeypatch, row=row, trial_active=False, trial_ends_at=None)
+    assert "Ajouter une méthode de paiement" in text
+    assert "Essai gratuit" not in text
+
+
 def test_reabo_button_links_to_abonnement_page():
     from src.pages.compte import abonnement as compte_abonnement
 
@@ -51,37 +137,57 @@ def test_active_view_shows_cancel(monkeypatch):
     assert "Me désabonner" in str(view)
 
 
-def test_active_view_trial_banner(monkeypatch):
+def test_active_view_pending_no_longer_mentions_trial_and_offers_resume():
     from src.pages.compte import abonnement as compte_abonnement
 
-    row = {
-        "plan": "simple",
-        "status": "trial",
-        "current_period_end": "2099-01-01T00:00:00+00:00",
-    }
-    assert "Essai gratuit" in str(compte_abonnement._active_view(row))
-
-
-def test_active_view_trial_banner_shows_date_and_time():
-    from src.pages.compte import abonnement as compte_abonnement
-
-    row = {
-        "plan": "simple",
-        "status": "trial",
-        "current_period_end": "2026-07-29T13:57:43.177+00:00",
-    }
+    row = {"plan": "simple", "status": "pending", "current_period_end": None}
     text = str(compte_abonnement._active_view(row))
+    assert "période d'essai" not in text
+    assert "Ajouter une méthode de paiement" in text
+
+
+def test_trial_view_shows_end_date_and_time_and_features():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    text = str(compte_abonnement._trial_view("2026-07-29T13:57:43.177+00:00"))
     # essai de 2 jours : l'heure de fin compte autant que le jour
     assert "29 juillet 2026 à 15h57" in text
+    assert "Votre essai débloque" in text
+    assert "sauvegardez et partagez des" in text
 
 
-def test_active_view_trial_banner_without_end_date():
+def test_trial_view_without_end_date():
     from src.pages.compte import abonnement as compte_abonnement
 
-    row = {"plan": "simple", "status": "trial", "current_period_end": None}
-    text = str(compte_abonnement._active_view(row))
-    assert "Essai gratuit" in text
+    text = str(compte_abonnement._trial_view(None))
+    assert "Essai gratuit en cours" in text
     assert "None" not in text
+
+
+def test_trial_view_offers_early_subscription_with_immediate_charge_notice():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    text = str(compte_abonnement._trial_view(None))
+    assert "M'abonner dès maintenant" in text
+    assert "/compte/abonnement/mes-infos" in text
+    assert "prélèvement a lieu immédiatement" in text
+    assert "jours d'essai restants ne sont pas reportés" in text
+
+
+def test_trial_ended_view_shows_start_subscription_button_and_link():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    text = str(compte_abonnement._trial_ended_view())
+    assert "Commencer mon abonnement" in text
+    assert "/compte/abonnement/mes-infos" in text
+
+
+def test_trial_ended_view_shows_no_amount():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    text = str(compte_abonnement._trial_ended_view())
+    assert "Commencer mon abonnement" in text
+    assert "€" not in text
 
 
 def test_active_view_cancelled_shows_date_and_time():
@@ -111,7 +217,7 @@ def test_active_view_active_shows_date_and_time():
 def test_active_view_never_prints_none_without_end_date():
     from src.pages.compte import abonnement as compte_abonnement
 
-    for status in ("trial", "cancelled", "active"):
+    for status in ("cancelled", "active"):
         row = {"plan": "simple", "status": status, "current_period_end": None}
         assert "None" not in str(compte_abonnement._active_view(row))
 
@@ -141,7 +247,7 @@ def test_banner_absent_when_flag_off(monkeypatch):
 def test_show_active_view_true_for_live_statuses(monkeypatch):
     from src.pages.compte import abonnement as compte_abonnement
 
-    for status in ("pending", "trial", "active", "cancelled"):
+    for status in ("pending", "active", "cancelled"):
         assert compte_abonnement._show_active_view({"status": status}) is True
 
 
@@ -164,17 +270,6 @@ def test_active_view_shows_change_payment_method_for_active():
     text = str(compte_abonnement._active_view(row))
     assert "Changer de méthode de paiement" in text
     assert "/subscriptions/change-payment-method" in text
-
-
-def test_active_view_shows_change_payment_method_for_trial():
-    from src.pages.compte import abonnement as compte_abonnement
-
-    row = {
-        "plan": "simple",
-        "status": "trial",
-        "current_period_end": "2099-01-01T00:00:00+00:00",
-    }
-    assert "Changer de méthode de paiement" in str(compte_abonnement._active_view(row))
 
 
 def test_active_view_hides_change_payment_method_for_cancelled():

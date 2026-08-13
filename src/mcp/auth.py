@@ -6,7 +6,7 @@ from flask import Flask, jsonify, request
 from src.api import tokens_db
 from src.mcp import usage
 from src.mcp.oauth import metadata, store
-from src.subscriptions.db import has_active_subscription
+from src.subscriptions.db import has_access
 from src.utils import TOUS_ABONNES
 
 
@@ -80,7 +80,7 @@ def _authenticate_mcp():
         return _unauthorized()
     if user_id is None:
         return _forbidden()
-    if not (TOUS_ABONNES or has_active_subscription(user_id)):
+    if not (TOUS_ABONNES or has_access(user_id)):
         return _forbidden()
 
     if request.method == "POST":

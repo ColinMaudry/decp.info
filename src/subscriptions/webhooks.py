@@ -40,6 +40,15 @@ def map_subscription(sub: dict) -> tuple[str, str | None]:
     if sub.get("is_cancelled") or state == "cancelled":
         return "cancelled", sub.get("expires")
     if _in_future(sub.get("trial_end")):
+        # Ce mapping alimente db._ACCESS_STATUSES : l'admin peut écrire
+        # "trial" à la main sur une ligne subscriptions (status y est
+        # éditable, cf. src/admin/tables.py), et une base déployée avant ce
+        # chantier peut porter des lignes historiques à ce statut — dans les
+        # deux cas, l'accès ne doit pas être coupé. Accessoirement, ce
+        # branchement couvre aussi le cas défensif où un plan Frisbii
+        # resterait configuré avec un essai malgré le no_trial=True envoyé à
+        # la création (src/subscriptions/routes.py::subscribe), qui devrait
+        # sinon rendre ce trial_end futur impossible.
         return "trial", sub.get("trial_end")
     if state == "active":
         return "active", sub.get("next_period_start")

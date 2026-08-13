@@ -14,16 +14,6 @@ def test_resolve_handle(monkeypatch):
     assert plans.resolve_handle("inconnu") is None
 
 
-def test_trial_days_returns_configured_value():
-    assert plans.trial_days("simple") == 2
-    assert plans.trial_days("soutien") == 2
-
-
-def test_trial_days_none_when_plan_handle_unset(monkeypatch):
-    monkeypatch.delenv("FRISBII_PLAN_SIMPLE", raising=False)
-    assert plans.trial_days("simple") is None
-
-
 def test_resolve_handle_unset_env_returns_none(monkeypatch):
     """Fix 3 : une variable d'env vide doit donner None, pas une chaîne vide."""
     monkeypatch.delenv("FRISBII_PLAN_SIMPLE", raising=False)

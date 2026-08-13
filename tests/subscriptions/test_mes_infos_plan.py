@@ -22,7 +22,7 @@ def test_layout_redirects_to_abonnement_when_tous_abonnes(monkeypatch):
 def test_selectable_cards_render_both_plans():
     from src.pages.compte import abonnement_mes_infos as m
 
-    text = str(m._selectable_cards(trial_for=lambda key: 2))
+    text = str(m._selectable_cards())
     assert "plan-card-simple" in text
     assert "plan-card-soutien" in text
     assert "plan-selectable" in text
@@ -63,25 +63,25 @@ def test_recap_lines_cover_fields_required_in_checkout():
 
     from src.pages.compte import abonnement_mes_infos as m
 
-    lines = dict(m._recap_lines("simple", 2, date(2026, 7, 27)))
+    lines = dict(m._recap_lines("simple", date(2026, 7, 27)))
     assert "SAS Colmo" in lines["Vendeur"]
     assert "98939335000016" in lines["Vendeur"]
     assert "Abonnement" in lines["Prestation"]
-    assert lines["Période d'essai gratuite"].startswith("du 27/07/2026 au 29/07/2026")
-    # l'abonnement payant démarre à la fin de l'essai, pas à la saisie de carte
-    assert lines["Début de l'abonnement payant"] == "29/07/2026"
+    # Plus d'essai : l'abonnement payant démarre le jour même de la commande.
+    assert lines["Début de l'abonnement payant"] == "27/07/2026"
     assert "1 mois" in lines["Durée"]
     assert "20 € HT" in lines["Prix"]
     assert "24 € TTC" in lines["Prix"]
     assert "EUR" in lines["Prix"]
+    assert "Période d'essai gratuite" not in lines
 
 
-def test_recap_lines_without_trial_start_today():
+def test_recap_lines_start_today():
     from datetime import date
 
     from src.pages.compte import abonnement_mes_infos as m
 
-    lines = dict(m._recap_lines("soutien", None, date(2026, 7, 27)))
+    lines = dict(m._recap_lines("soutien", date(2026, 7, 27)))
     assert "Période d'essai gratuite" not in lines
     assert lines["Début de l'abonnement payant"] == "27/07/2026"
     assert "50 € HT" in lines["Prix"]
@@ -90,7 +90,7 @@ def test_recap_lines_without_trial_start_today():
 def test_recap_placeholder_without_selected_plan():
     from src.pages.compte import abonnement_mes_infos as m
 
-    text = str(m._recap(None, None))
+    text = str(m._recap(None))
     assert "Choisissez une formule" in text
     assert "Vendeur" not in text
 
@@ -131,7 +131,7 @@ def test_default_plan_is_the_20_euros_one():
 def test_selectable_cards_mark_default_plan_selected():
     from src.pages.compte import abonnement_mes_infos as m
 
-    text = str(m._selectable_cards(trial_for=lambda key: 2, selected="simple"))
+    text = str(m._selectable_cards(selected="simple"))
     assert "plan-selectable selected" in text
 
 
@@ -148,15 +148,16 @@ def test_mode_for_derives_from_status():
 def test_submit_button_subscribe_mode():
     from src.pages.compte import abonnement_mes_infos as m
 
-    text = str(m._submit_button("subscribe"))
-    assert "Ajouter une carte de paiement" in text
+    text = str(m._submit_button("subscribe", "simple"))
+    assert "Commencer mon abonnement" in text
+    assert "24 € TTC" in text
     assert "disabled" in text
 
 
 def test_submit_button_configure_mode():
     from src.pages.compte import abonnement_mes_infos as m
 
-    btn = m._submit_button("configure")
+    btn = m._submit_button("configure", "simple")
     text = str(btn)
     assert "Mettre à jour mon abonnement" in text
     assert btn.disabled is False
@@ -165,9 +166,58 @@ def test_submit_button_configure_mode():
 def test_selectable_cards_preselects_current_plan():
     from src.pages.compte import abonnement_mes_infos as m
 
-    text = str(m._selectable_cards(trial_for=lambda key: None, selected="soutien"))
+    text = str(m._selectable_cards(selected="soutien"))
     # la card soutien est marquée sélectionnée, pas la card simple
     assert "plan-selectable selected" in text
+
+
+def test_submit_label_subscribe_mode_names_the_amount():
+    from src.pages.compte import abonnement_mes_infos as m
+    from src.subscriptions import plans
+
+    simple_ttc = round(plans.plan_meta("simple")["prix_ht"] * 1.2, 2)
+    soutien_ttc = round(plans.plan_meta("soutien")["prix_ht"] * 1.2, 2)
+
+    simple_label = m._submit_label("subscribe", "simple")
+    assert "Commencer mon abonnement" in simple_label
+    assert f"{simple_ttc:g} € TTC" in simple_label
+    assert "24 € TTC" in simple_label
+
+    soutien_label = m._submit_label("subscribe", "soutien")
+    assert "Commencer mon abonnement" in soutien_label
+    assert f"{soutien_ttc:g} € TTC" in soutien_label
+    assert "60 € TTC" in soutien_label
+
+
+def test_submit_label_configure_mode_is_constant():
+    from src.pages.compte import abonnement_mes_infos as m
+
+    assert m._submit_label("configure", "simple") == "Mettre à jour mon abonnement"
+    assert m._submit_label("configure", "soutien") == "Mettre à jour mon abonnement"
+    assert m._submit_label("configure", None) == "Mettre à jour mon abonnement"
+
+
+def test_select_plan_returns_seven_outputs_with_submit_label(monkeypatch):
+    from src.pages.compte import abonnement_mes_infos as m
+
+    class _Ctx:
+        triggered_id = "plan-card-soutien"
+
+    monkeypatch.setattr(m, "ctx", _Ctx)
+
+    result = m._select_plan(0, 1, {"mode": "subscribe"})
+    assert len(result) == 7
+    (
+        value,
+        cls_simple,
+        cls_soutien,
+        hint_cls,
+        hint_txt,
+        recap,
+        submit_label,
+    ) = result
+    assert value == "soutien"
+    assert submit_label == m._submit_label("subscribe", "soutien")
 
 
 def test_change_hint_shown_when_plan_differs():

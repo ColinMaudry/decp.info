@@ -78,21 +78,21 @@ TABLES: dict[str, TableConfig] = {
         columns=[
             "user_id",
             "email",
-            "trial_used",
+            "trial_ends_at",
             "votes_balance",
             "votes_last_credited_at",
             "updated_at",
         ],
         editable_columns=frozenset(
-            {"trial_used", "votes_balance", "votes_last_credited_at"}
+            {"trial_ends_at", "votes_balance", "votes_last_credited_at"}
         ),
         pk="user_id",
         column_types={
-            "trial_used": int,
+            "trial_ends_at": str,
             "votes_balance": int,
             "votes_last_credited_at": str,
         },
-        dropdowns={"trial_used": ["0", "1"]},
+        dropdowns={},
         target_user_id=lambda row: row["user_id"],
         sort_by="updated_at",
         join_user_email=True,
