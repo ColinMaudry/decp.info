@@ -1,7 +1,7 @@
 // Émission des deux événements de conversion attribuables à une campagne.
 //
-// Le serveur pose un paramètre sur l'URL de redirection (src/auth/routes.py
-// pour l'inscription, src/subscriptions/routes.py pour le retour de checkout) ;
+// Le serveur pose un paramètre sur l'URL de redirection (src/auth/routes.py,
+// à la fois pour la création de compte et pour le démarrage de l'essai) ;
 // ce script le consomme et le retire. Les événements alimentent deux objectifs
 // Matomo configurés sur « Send an event » avec correspondance exacte sur
 // l'Event Action.
@@ -14,7 +14,6 @@
 // explicite n'est nécessaire dans le gabarit SEO SSR.
 (function () {
   var METHODES = ["email", "linkedin"];
-  var PLANS = ["simple", "soutien"];
 
   function retirerParams(cles) {
     var url = new URL(window.location.href);
@@ -42,15 +41,9 @@
       retirerParams(["compte_cree"]);
     }
 
-    var plan = params.get("plan");
-    if (params.get("souscription") === "trial" && PLANS.indexOf(plan) !== -1) {
-      window._paq.push([
-        "trackEvent",
-        "Abonnement",
-        "subscription_trial",
-        plan,
-      ]);
-      retirerParams(["souscription", "plan"]);
+    if (params.get("essai") === "demarre") {
+      window._paq.push(["trackEvent", "Abonnement", "subscription_trial"]);
+      retirerParams(["essai"]);
     }
   }
 
