@@ -69,7 +69,7 @@ def layout(error: str | None = None, email: str | None = None, **_):
                         className="mb-3",
                     ),
                     html.P(
-                        "Votre essai gratuit de 2 jours démarre dès la "
+                        "Votre essai gratuit de 3 jours démarre dès la "
                         "validation de votre adresse email. Aucune carte "
                         "bancaire n'est demandée.",
                         className="text-muted small mb-3",

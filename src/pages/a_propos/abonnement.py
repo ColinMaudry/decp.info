@@ -54,7 +54,7 @@ def _plan_cards():
     return html.Div(
         [
             html.P(
-                "2 jours d'essai gratuit à la création de votre compte, sans "
+                "3 jours d'essai gratuit à la création de votre compte, sans "
                 "carte bancaire.",
                 className="text-muted mb-3",
             ),
@@ -175,7 +175,7 @@ Il est également possible de payer par virement bancaire à condition de payer 
         html.H4("Période d'essai"),
         dcc.Markdown(
             """
-Un essai gratuit de 2 jours est automatiquement ouvert à la création de votre compte, sans carte bancaire et sans engagement. Aucun prélèvement n'a lieu pendant cette période.
+Un essai gratuit de 3 jours est automatiquement ouvert à la création de votre compte, sans carte bancaire et sans engagement. Aucun prélèvement n'a lieu pendant cette période.
 
 À son terme, l'accès aux fonctionnalités réservées est suspendu jusqu'à ce que vous souscriviez à un abonnement.
 

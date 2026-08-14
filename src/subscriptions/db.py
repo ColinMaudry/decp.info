@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS subscriber_state (
 _ACCESS_STATUSES = ("trial", "active")
 
 INITIAL_VOTES = 3
-TRIAL_DAYS = 2
+TRIAL_DAYS = 3
 VOTES_PER_WEEK = int(os.getenv("VOTES_PER_WEEK", "5"))
 WEEK_SECONDS = 7 * 24 * 3600
 
