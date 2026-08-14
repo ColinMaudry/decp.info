@@ -170,7 +170,7 @@ def _active_view(row):
         if row["current_period_end"]
         else None
     )
-    blocks = [html.H3(meta["label"], className="mb-1")]
+    blocks = []
     price = _price_text(meta)
     if price:
         blocks.append(html.P(price, className="text-muted mb-3"))
@@ -194,7 +194,7 @@ def _active_view(row):
                         html.Button(
                             "Je me réabonne",
                             type="submit",
-                            className="btn btn-outline-primary mt-3",
+                            className="btn btn-outline-secondary mt-3",
                         ),
                     ],
                 )
@@ -208,7 +208,7 @@ def _active_view(row):
                 html.A(
                     "Je me réabonne",
                     href="/compte/abonnement/mes-infos",
-                    className="btn btn-outline-primary mt-3",
+                    className="btn btn-outline-secondary mt-3",
                 )
             )
     elif row["status"] == "active" and end:
