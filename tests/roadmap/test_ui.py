@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-
 from dash import dcc, html
 
 from src.roadmap import ui
@@ -48,81 +46,9 @@ def test_roadmap_content_renders(monkeypatch):
     assert "value='2'" in s
 
 
-def test_roadmap_content_shows_trial_hint(monkeypatch):
-    monkeypatch.setattr(
-        ui.github,
-        "fetch_roadmap_issues",
-        lambda: {"en_cours": [], "au_vote": []},
-    )
-    monkeypatch.setattr(ui.roadmap_db, "vote_counts", lambda: {})
-    trial_ends_at = datetime(2026, 12, 25, 10, 0, tzinfo=timezone.utc)
-    content = ui.roadmap_content(
-        editable=True,
-        balance=0,
-        trial_ends_at=trial_ends_at,
-    )
-    s = str(content)
-    assert "25/12/2026" in s
-    assert (
-        "Le vote est réservé aux abonné·es : il s'ouvrira au début de votre "
-        "abonnement." in s
-    )
-
-
-def test_roadmap_content_no_trial_hint_for_paying_subscriber(monkeypatch):
-    monkeypatch.setattr(
-        ui.github,
-        "fetch_roadmap_issues",
-        lambda: {
-            "en_cours": [],
-            "au_vote": [{"number": 5, "title": "Au vote Y", "html_url": "u5"}],
-        },
-    )
-    monkeypatch.setattr(ui.roadmap_db, "vote_counts", lambda: {})
-    content = ui.roadmap_content(
-        editable=True,
-        balance=5,
-        trial_ends_at=None,
-    )
-    s = str(content)
-    # Assertion positive : le contenu roadmap est bien rendu (un rendu vide
-    # satisferait sinon trivialement l'absence de l'indice ci-dessous).
-    assert "Au vote Y" in s
-    assert "Votes restants" in s
-    assert "il s'ouvrira au début de votre abonnement" not in s
-
-
-def test_roadmap_content_no_trial_hint_when_not_editable(monkeypatch):
-    monkeypatch.setattr(
-        ui.github,
-        "fetch_roadmap_issues",
-        lambda: {
-            "en_cours": [],
-            "au_vote": [{"number": 1, "title": "Feature publique", "html_url": "u1"}],
-        },
-    )
-    monkeypatch.setattr(ui.roadmap_db, "vote_counts", lambda: {})
-    # Un visiteur non abonné (editable=False) ne doit jamais voir l'indice
-    # d'essai, même si trial_ends_at était renseigné par erreur.
-    content = ui.roadmap_content(
-        editable=False,
-        trial_ends_at=datetime(2026, 12, 25, 10, 0, tzinfo=timezone.utc),
-    )
-    s = str(content)
-    assert "Feature publique" in s
-    assert "Abonnez-vous" in s
-    assert "il s'ouvrira au début de votre abonnement" not in s
-
-
-def test_content_for_current_user_wires_trial_ends_at_only_when_trial_active(
-    monkeypatch,
-):
-    """Prouve le câblage de content_for_current_user, pas seulement le rendu.
-
-    C'est précisément la ligne qui était fausse : trial_ends_at venait de la
-    ligne d'abonnement Frisbii (`sub["current_period_end"]`), qui n'existe
-    plus pendant l'essai.
-    """
+def test_content_for_current_user_passes_only_vote_state(monkeypatch):
+    """L'essai vote comme un abonnement : le contenu votable ne dépend que du
+    solde et du rechargement, sans câblage spécifique à l'essai."""
     from src.roadmap import view as roadmap_view
 
     class _FakeUser:
@@ -144,15 +70,5 @@ def test_content_for_current_user_wires_trial_ends_at_only_when_trial_active(
         roadmap_view.roadmap_ui, "roadmap_content", _fake_roadmap_content
     )
 
-    # Abonné payant sans essai en cours : trial_ends_at doit valoir None.
-    monkeypatch.setattr(roadmap_view.subs_db, "trial_active", lambda _: False)
-    monkeypatch.setattr(roadmap_view.subs_db, "trial_ends_at", lambda _: None)
     roadmap_view.content_for_current_user()
-    assert captured["trial_ends_at"] is None
-
-    # Utilisateur en essai : trial_ends_at doit être transmis tel quel.
-    end = datetime(2026, 9, 1, tzinfo=timezone.utc)
-    monkeypatch.setattr(roadmap_view.subs_db, "trial_active", lambda _: True)
-    monkeypatch.setattr(roadmap_view.subs_db, "trial_ends_at", lambda _: end)
-    roadmap_view.content_for_current_user()
-    assert captured["trial_ends_at"] == end
+    assert captured == {"editable": True, "balance": 3, "next_recharge": None}

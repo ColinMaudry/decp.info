@@ -134,28 +134,3 @@ def test_has_subscription_false_after_trial_expires_without_subscriptions_row(
 
     with patch("src.pages._compte_shell.current_user", _fake_user(True, uid)):
         assert shell.current_user_has_subscription() is False
-
-
-def test_credit_pending_returns_zero_during_trial_without_subscriptions_row(
-    users_db_path, monkeypatch
-):
-    """Verrouille une propriété que rien n'impose explicitement dans le code :
-    les votes roadmap restent fermés pendant l'essai, alors même que
-    has_access() (donc current_user_has_subscription()) vaut déjà True.
-    _accrues_votes() exige une ligne `subscriptions`, absente pendant l'essai.
-    """
-    from src.auth import db as auth_db
-    from src.subscriptions import db as sub_db
-
-    monkeypatch.setattr("src.utils.TOUS_ABONNES", False)
-    auth_db.init_schema()
-    sub_db.init_schema()
-    uid = auth_db.create_user("votes-essai@ex.fr", "hash")
-    sub_db.start_trial_if_new(uid)
-
-    # Ancrage positif : l'accès aux fonctionnalités réservées est bien ouvert
-    # par l'essai, sans aucune ligne subscriptions.
-    assert sub_db.has_access(uid) is True
-    assert sub_db.get_current(uid) is None
-
-    assert sub_db.credit_pending(uid) == 0

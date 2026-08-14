@@ -530,7 +530,7 @@ def get_rows_tableau(request):
 def update_meta(total, total_unique):
     total = total or 0
     total_unique = total_unique or 0
-    too_many = total > 65000
+    too_many = False  # total > 65000
     hint = (
         " · Filtrez sous 65 000 lignes pour activer le téléchargement"
         if too_many

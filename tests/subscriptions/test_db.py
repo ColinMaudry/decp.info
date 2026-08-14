@@ -446,15 +446,62 @@ def test_next_recharge_at_none_after_period_end(users_db_path):
     assert db.next_recharge_at(uid) is None
 
 
-def test_next_recharge_at_none_during_trial(users_db_path):
-    """Période d'essai (#132) : aucune ligne `subscriptions` n'existe tant que
-    l'essai n'a pas débouché sur une souscription, donc aucun vote n'a encore
-    été crédité et aucune date de rechargement n'est à annoncer."""
+def test_credit_pending_grants_initial_votes_during_trial(users_db_path):
+    """L'essai ouvre le vote comme un abonnement : crédit initial dès l'essai,
+    sans qu'aucune ligne `subscriptions` n'existe."""
     db.init_schema()
     uid = _make_user()
     db.start_trial_if_new(uid)
     assert db.get_current(uid) is None
+    assert db.credit_pending(uid) == db.INITIAL_VOTES
+
+
+def test_spend_vote_works_during_trial(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    db.credit_pending(uid)
+    assert db.spend_vote(uid) is True
+
+
+def test_trial_expired_without_subscription_freezes_balance(users_db_path):
+    """Essai terminé sans souscription : plus d'accumulation, solde figé."""
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    db.credit_pending(uid)
+    db.spend_vote(uid)  # solde distinct du plafond pour prouver l'absence de recharge
+    get_conn().execute(
+        "UPDATE subscriber_state SET trial_ends_at = ? WHERE user_id = ?",
+        (_past(), uid),
+    )
+    _set_votes_cursor(uid, days_ago=8)
+    assert db.credit_pending(uid) == db.INITIAL_VOTES - 1
     assert db.next_recharge_at(uid) is None
+
+
+def test_next_recharge_at_none_during_trial(users_db_path):
+    """Essai en cours : le prochain rechargement (J+7) tomberait après la fin
+    de l'essai (J+2), donc aucune date à annoncer — comme pour un désabonnement
+    dont la période se termine avant l'échéance."""
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    db.credit_pending(uid)  # pose le curseur
+    assert db.next_recharge_at(uid) is None
+
+
+def test_next_recharge_at_set_when_subscribed_during_trial(users_db_path):
+    """Souscription pendant l'essai : l'accumulation tient à l'abonnement, la
+    fin d'essai ne doit pas masquer la date de rechargement."""
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    db.create_pending(uid, "colibre-1", "simple")
+    _activate(uid, cursor_iso=None)
+    db.credit_pending(uid)
+    assert db.trial_active(uid) is True
+    assert db.next_recharge_at(uid) is not None
 
 
 def test_next_recharge_at_in_future_for_active_subscriber(users_db_path):

@@ -89,7 +89,7 @@ def _trial_view(end):
                 className="text-muted small mt-2",
             ),
             html.A(
-                "M'abonner dès maintenant",
+                "Je m'abonne dès maintenant",
                 href="/compte/abonnement/mes-infos",
                 className="btn btn-outline-secondary mt-2",
             ),

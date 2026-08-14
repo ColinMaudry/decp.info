@@ -419,10 +419,9 @@ def _set_votes(user_id: int, balance: int, cursor_iso: str) -> None:
 def _accrues_votes(user_id: int) -> bool:
     """Vrai si l'utilisateur gagne encore des votes chaque semaine.
 
-    L'accumulation suit l'accès (`has_active_subscription`), l'essai excepté :
-    un désabonnement en cours de période reste payé jusqu'à
-    `current_period_end`, donc continue d'accumuler ; l'essai, lui, n'ouvre pas
-    encore le vote (cf. `_trial_hint` côté UI).
+    L'accumulation suit l'accès (`has_access`) : l'essai vote comme un
+    abonnement, et un désabonnement en cours de période reste payé jusqu'à
+    `current_period_end`, donc continue d'accumuler.
 
     `credit_pending` et `next_recharge_at` DOIVENT partager cette définition :
     dès qu'elles divergent, la page roadmap annonce à un utilisateur qui
@@ -430,17 +429,7 @@ def _accrues_votes(user_id: int) -> bool:
     """
     from src.utils import TOUS_ABONNES
 
-    if TOUS_ABONNES:
-        return True
-    current = get_current(user_id)
-    # current["status"] == "trial" ne couvre pas l'essai applicatif normal :
-    # celui-ci ne crée aucune ligne subscriptions, donc `current is None`
-    # capte déjà ce cas. Ce deuxième test couvre le même cas défensif que
-    # _ACCESS_STATUSES : un plan Frisbii resté configuré avec un essai malgré
-    # no_trial=True.
-    if current is None or current["status"] == "trial":
-        return False
-    return has_active_subscription(user_id)
+    return TOUS_ABONNES or has_access(user_id)
 
 
 def credit_pending(user_id: int) -> int:
@@ -501,8 +490,10 @@ def next_recharge_at(user_id: int) -> datetime | None:
 
     None dès qu'aucun rechargement n'aura lieu : soit l'utilisateur n'accumule
     plus (curseur gelé, la date qu'on en déduirait serait dans le passé), soit
-    son abonnement se termine avant l'échéance.
+    son abonnement ou son essai se termine avant l'échéance.
     """
+    from src.utils import TOUS_ABONNES
+
     row = _get_state(user_id)
     if not row or not row["votes_last_credited_at"]:
         return None
@@ -510,6 +501,12 @@ def next_recharge_at(user_id: int) -> datetime | None:
         return None
     cursor = datetime.fromisoformat(row["votes_last_credited_at"])
     nxt = cursor + timedelta(seconds=WEEK_SECONDS)
+    if not TOUS_ABONNES and not has_active_subscription(user_id):
+        # L'accumulation ne tient qu'à l'essai : pas de rechargement à
+        # annoncer au-delà de sa fin.
+        end = trial_ends_at(user_id)
+        if end is not None and nxt > end:
+            return None
     current = get_current(user_id)
     if current and current["status"] == "cancelled" and current["current_period_end"]:
         try:

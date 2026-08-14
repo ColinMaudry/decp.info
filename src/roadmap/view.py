@@ -34,18 +34,12 @@ def _vote_state() -> tuple[int, object]:
 
 
 def content_for_current_user():
-    """Contenu roadmap, votable si l'utilisateur courant est abonné."""
+    """Contenu roadmap, votable si l'utilisateur courant a accès (essai compris)."""
     if not current_user_has_subscription():
         return roadmap_ui.roadmap_content(editable=False)
     balance, next_recharge = _vote_state()
-    # L'essai vient de subscriber_state, pas d'une ligne subscriptions : il
-    # n'en existe aucune pendant l'essai.
-    en_essai = subs_db.trial_active(current_user.id)
     return roadmap_ui.roadmap_content(
-        editable=True,
-        balance=balance,
-        next_recharge=next_recharge,
-        trial_ends_at=subs_db.trial_ends_at(current_user.id) if en_essai else None,
+        editable=True, balance=balance, next_recharge=next_recharge
     )
 
 

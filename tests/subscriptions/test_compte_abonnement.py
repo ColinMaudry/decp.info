@@ -168,7 +168,7 @@ def test_trial_view_offers_early_subscription_with_immediate_charge_notice():
     from src.pages.compte import abonnement as compte_abonnement
 
     text = str(compte_abonnement._trial_view(None))
-    assert "M'abonner dès maintenant" in text
+    assert "Je m'abonne dès maintenant" in text
     assert "/compte/abonnement/mes-infos" in text
     assert "prélèvement a lieu immédiatement" in text
     assert "jours d'essai restants ne sont pas reportés" in text
