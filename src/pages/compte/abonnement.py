@@ -170,7 +170,7 @@ def _active_view(row):
         if row["current_period_end"]
         else None
     )
-    blocks = []
+    blocks = [html.P(html.Strong(meta["label"]), className="mb-1")]
     price = _price_text(meta)
     if price:
         blocks.append(html.P(price, className="text-muted mb-3"))

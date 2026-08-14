@@ -8,7 +8,7 @@ def _handle(env_name: str) -> str:
 PLANS = {
     "simple": {
         "env": "FRISBII_PLAN_SIMPLE",
-        "label": "Abonnement",
+        "label": "Abonnement simple",
         "prix_ht": 20,
         "description": "Accès aux fonctionnalités supplémentaires de colibre.",
     },
