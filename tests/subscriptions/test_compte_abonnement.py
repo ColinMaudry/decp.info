@@ -272,6 +272,56 @@ def test_active_view_shows_change_payment_method_for_active():
     assert "/subscriptions/change-payment-method" in text
 
 
+def test_active_view_shows_reactivate_button_for_cancelled():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    row = {
+        "plan": "simple",
+        "status": "cancelled",
+        "current_period_end": "2099-01-01T00:00:00+00:00",
+    }
+    text = str(compte_abonnement._active_view(row))
+    assert "Je me réabonne" in text
+    assert "/subscriptions/reactivate" in text
+
+
+def test_active_view_hides_reactivate_button_for_active():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    row = {
+        "plan": "simple",
+        "status": "active",
+        "current_period_end": "2099-01-01T00:00:00+00:00",
+    }
+    assert "Je me réabonne" not in str(compte_abonnement._active_view(row))
+
+
+def test_active_view_expired_cancellation_links_to_mes_infos_instead_of_reactivating():
+    """Un statut "cancelled" dont la période est déjà dépassée n'a plus
+    d'accès en cours (has_active_subscription en jugerait de même) : Frisbii
+    refuse l'uncancel sur un abonnement déjà expiré (erreur API "Subscription
+    expired"), donc le bouton "Je me réabonne" doit renvoyer vers le parcours
+    de souscription normale plutôt que vers /subscriptions/reactivate."""
+    from src.pages.compte import abonnement as compte_abonnement
+
+    row = {
+        "plan": "simple",
+        "status": "cancelled",
+        "current_period_end": "2020-01-01T00:00:00+00:00",
+    }
+    text = str(compte_abonnement._active_view(row))
+    assert "Je me réabonne" in text
+    assert "/compte/abonnement/mes-infos" in text
+    assert "/subscriptions/reactivate" not in text
+
+
+def test_feedback_reactivation_ok():
+    from src.pages.compte import abonnement as compte_abonnement
+
+    text = str(compte_abonnement._feedback({"reactivation": "ok"}))
+    assert "Votre abonnement a été réactivé." in text
+
+
 def test_active_view_hides_change_payment_method_for_cancelled():
     from src.pages.compte import abonnement as compte_abonnement
 

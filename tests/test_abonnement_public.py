@@ -34,7 +34,7 @@ def test_subscribe_button_visitor_goes_to_inscription():
     from src.pages.a_propos import abonnement as page
 
     text = str(page._subscribe_button(False, False, False))
-    assert "Je m'abonne" in text
+    assert "Je crée mon compte" in text
     assert "href='/inscription'" in text
 
 

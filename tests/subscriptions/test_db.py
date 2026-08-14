@@ -564,6 +564,57 @@ def test_reactivation_resets_cursor_without_regranting(users_db_path):
     assert db.credit_pending(uid) == db.INITIAL_VOTES
 
 
+def test_period_end_in_future():
+    assert db.period_end_in_future(_future()) is True
+    assert db.period_end_in_future(_past()) is False
+    assert db.period_end_in_future(None) is False
+
+
+def test_set_reactivated_marks_active_and_updates_period_end(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    handle, _ = db.create_pending(uid, "colibre-1", "simple")
+    db.update_from_webhook(handle, "active", _future())
+    db.set_cancelled(db.get_current(uid)["id"], _future())
+
+    new_end = _future()
+    db.set_reactivated(db.get_current(uid)["id"], new_end)
+
+    row = db.get_current(uid)
+    assert row["status"] == "active"
+    assert row["current_period_end"] == new_end
+
+
+def test_set_reactivated_does_not_reset_votes_cursor(users_db_path):
+    """À la différence de update_from_webhook (cancelled/expired → active),
+    set_reactivated couvre le réabonnement en cours de période payée : l'accès
+    n'a jamais été coupé, donc pas de raison de repartir de maintenant."""
+    db.init_schema()
+    uid = _make_user()
+    handle, _ = db.create_pending(uid, "colibre-1", "simple")
+    _activate(uid, cursor_iso=None)
+    db.credit_pending(uid)  # pose le curseur
+    db.set_cancelled(db.get_current(uid)["id"], _future())
+
+    old_cursor = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    get_conn().execute(
+        "UPDATE subscriber_state SET votes_last_credited_at = ? WHERE user_id = ?",
+        (old_cursor, uid),
+    )
+
+    db.set_reactivated(db.get_current(uid)["id"], _future())
+
+    state = (
+        get_conn()
+        .execute(
+            "SELECT votes_last_credited_at FROM subscriber_state WHERE user_id = ?",
+            (uid,),
+        )
+        .fetchone()
+    )
+    assert state["votes_last_credited_at"] == old_cursor  # pas de freeze
+
+
 def test_pending_to_active_via_webhook_grants_initial_votes(users_db_path):
     """Souscription directe (#132) : `pending` → `active` par webhook accorde
     les +INITIAL_VOTES initiaux, comme n'importe quelle première activation.

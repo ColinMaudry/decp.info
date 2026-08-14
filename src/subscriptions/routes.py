@@ -206,6 +206,26 @@ def cancel():
     return redirect("/compte/abonnement?resiliation=ok")
 
 
+@subscriptions_bp.route("/subscriptions/reactivate", methods=["POST"])
+@login_required
+def reactivate():
+    row = db.get_current(current_user.id)
+    if (
+        row is None
+        or row["status"] != "cancelled"
+        or not row["frisbii_subscription_handle"]
+        or not db.period_end_in_future(row["current_period_end"])
+    ):
+        return "Aucun abonnement résilié à réactiver", 400
+    try:
+        sub = client.uncancel_subscription(row["frisbii_subscription_handle"])
+    except client.FrisbiiError:
+        logger.exception("Échec de réactivation Frisbii")
+        return redirect("/compte/abonnement?error=frisbii")
+    db.set_reactivated(row["id"], sub.get("next_period_start"))
+    return redirect("/compte/abonnement?reactivation=ok")
+
+
 @subscriptions_bp.route("/frisbii/webhook", methods=["POST"])
 def webhook():
     payload = request.get_json(silent=True) or {}

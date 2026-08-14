@@ -40,7 +40,7 @@ def test_subscribe_redirects_to_hosted_url(logged_in_client, monkeypatch):
         ko,
         no_trial=False,
         customer_handle=None,
-        create_customer=None: "https://pay.test/cs_1",
+        create_customer=None: ("https://pay.test/cs_1"),
     )
     resp = client.post("/subscriptions/subscribe", data={"plan": "simple"})
     assert resp.status_code == 303
@@ -139,6 +139,66 @@ def test_cancel_calls_api_and_marks_cancelled(logged_in_client, monkeypatch):
     assert row["current_period_end"] == "2099-02-01T00:00:00+00:00"
 
 
+def test_reactivate_calls_api_and_marks_active(logged_in_client, monkeypatch):
+    client, uid = logged_in_client
+    handle, _ = db.create_pending(uid, "colibre-%d" % uid, "simple")
+    db.update_from_webhook(handle, "active", "2099-01-01T00:00:00+00:00")
+    db.set_cancelled(db.get_current(uid)["id"], "2099-02-01T00:00:00+00:00")
+    monkeypatch.setattr(
+        frisbii_client,
+        "uncancel_subscription",
+        lambda handle: {
+            "state": "active",
+            "next_period_start": "2099-03-01T00:00:00+00:00",
+        },
+    )
+    resp = client.post("/subscriptions/reactivate")
+    assert resp.status_code == 302
+    assert "reactivation=ok" in resp.headers["Location"]
+    row = db.get_current(uid)
+    assert row["status"] == "active"
+    assert row["current_period_end"] == "2099-03-01T00:00:00+00:00"
+
+
+def test_reactivate_requires_cancelled_subscription(logged_in_client):
+    client, uid = logged_in_client
+    handle, _ = db.create_pending(uid, "colibre-%d" % uid, "simple")
+    db.update_from_webhook(handle, "active", "2099-01-01T00:00:00+00:00")
+    resp = client.post("/subscriptions/reactivate")
+    assert resp.status_code == 400
+
+
+def test_reactivate_rejects_already_expired_period(logged_in_client, monkeypatch):
+    """Un statut "cancelled" dont current_period_end est déjà dépassé (webhook
+    "expired" en retard ou perdu) n'a plus d'accès en cours : la réactivation
+    doit être refusée, sinon set_reactivated repasserait "active" sans combler
+    la coupure d'accès (pas de freeze_votes_cursor dans ce chemin)."""
+    client, uid = logged_in_client
+    handle, _ = db.create_pending(uid, "colibre-%d" % uid, "simple")
+    db.update_from_webhook(handle, "active", "2099-01-01T00:00:00+00:00")
+    db.set_cancelled(db.get_current(uid)["id"], "2020-01-01T00:00:00+00:00")
+    resp = client.post("/subscriptions/reactivate")
+    assert resp.status_code == 400
+    assert db.get_current(uid)["status"] == "cancelled"
+
+
+def test_reactivate_api_error_redirects(logged_in_client, monkeypatch):
+    client, uid = logged_in_client
+    handle, _ = db.create_pending(uid, "colibre-%d" % uid, "simple")
+    db.update_from_webhook(handle, "active", "2099-01-01T00:00:00+00:00")
+    db.set_cancelled(db.get_current(uid)["id"], "2099-02-01T00:00:00+00:00")
+
+    def boom(handle):
+        raise frisbii_client.FrisbiiError(500, "boom")
+
+    monkeypatch.setattr(frisbii_client, "uncancel_subscription", boom)
+    resp = client.post("/subscriptions/reactivate")
+    assert resp.status_code == 302
+    assert "error=frisbii" in resp.headers["Location"]
+    row = db.get_current(uid)
+    assert row["status"] == "cancelled"
+
+
 def test_webhook_invalid_signature(sub_app):
     resp = sub_app.test_client().post(
         "/frisbii/webhook", json={"id": "e", "signature": "x"}
@@ -219,9 +279,9 @@ def test_change_payment_method_redirects_to_hosted_url(logged_in_client, monkeyp
     monkeypatch.setattr(
         frisbii_client,
         "get_payment_info_url",
-        lambda h,
-        accept_url,
-        cancel_url: f"https://pay.test/{h}?a={accept_url}&c={cancel_url}",
+        lambda h, accept_url, cancel_url: (
+            f"https://pay.test/{h}?a={accept_url}&c={cancel_url}"
+        ),
     )
     resp = client.post("/subscriptions/change-payment-method")
     assert resp.status_code == 303

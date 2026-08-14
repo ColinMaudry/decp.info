@@ -135,6 +135,10 @@ def cancel_subscription(subscription_handle: str) -> dict:
     return _call("POST", f"/v1/subscription/{subscription_handle}/cancel")
 
 
+def uncancel_subscription(subscription_handle: str) -> dict:
+    return _call("POST", f"/v1/subscription/{subscription_handle}/uncancel")
+
+
 def get_subscription(subscription_handle: str) -> dict:
     return _call("GET", f"/v1/subscription/{subscription_handle}")
 

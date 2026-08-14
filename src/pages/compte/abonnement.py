@@ -72,21 +72,19 @@ def _trial_view(end):
     return html.Div(
         [
             html.H5(titre, className="mb-3"),
-            html.P("Votre essai débloque :"),
+            html.P(
+                "Votre essai débloque les fonctionnalités réservées aux abonné·es :"
+            ),
             abonnement_features,
             dcc.Markdown(
                 "À la fin de l'essai, rien n'est prélevé : c'est à vous de "
                 "démarrer votre abonnement depuis cette page.",
-                className="text-muted mt-3",
+                className="text-muted mt-2",
             ),
-            # Le débit est immédiat, y compris pendant l'essai : le différer
-            # jusqu'à la fin de l'essai reviendrait au prélèvement automatique
-            # que ce chantier supprime. Les jours restants sont donc perdus, et
-            # il faut le dire avant le clic, pas après.
             html.P(
-                "Le premier prélèvement a lieu immédiatement ; les jours "
-                "d'essai restants ne sont pas reportés.",
-                className="text-muted small mt-2",
+                "Vous avez la possibilité d'écourter votre période d'essai et de vous abonner "
+                "dès maintenant, ce qui donnera lieu au premier prélèvement :",
+                className="text-muted mt-3",
             ),
             html.A(
                 "Je m'abonne dès maintenant",
@@ -186,6 +184,33 @@ def _active_view(row):
             else "Abonnement résilié."
         )
         blocks.append(dbc.Alert(texte, color="warning"))
+        if db.period_end_in_future(row["current_period_end"]):
+            blocks.append(
+                html.Form(
+                    method="POST",
+                    action="/subscriptions/reactivate",
+                    children=[
+                        _csrf_input(),
+                        html.Button(
+                            "Je me réabonne",
+                            type="submit",
+                            className="btn btn-outline-primary mt-3",
+                        ),
+                    ],
+                )
+            )
+        else:
+            # Période payée dépassée : Frisbii refuse l'uncancel (abonnement
+            # déjà "expired" côté Reepay, même si le webhook correspondant
+            # n'est pas encore arrivé côté colibre) — seul le parcours de
+            # souscription normale peut créer un nouvel abonnement.
+            blocks.append(
+                html.A(
+                    "Je me réabonne",
+                    href="/compte/abonnement/mes-infos",
+                    className="btn btn-outline-primary mt-3",
+                )
+            )
     elif row["status"] == "active" and end:
         blocks.append(html.P(f"Prochaine facturation : {end}"))
 
@@ -285,6 +310,8 @@ def _feedback(query):
         out.append(dbc.Alert(text, color=color))
     if query.get("resiliation") == "ok":
         out.append(dbc.Alert("Votre abonnement a été résilié.", color="info"))
+    if query.get("reactivation") == "ok":
+        out.append(dbc.Alert("Votre abonnement a été réactivé.", color="success"))
     if query.get("carte") == "succes":
         out.append(dbc.Alert("Méthode de paiement mise à jour.", color="success"))
     if query.get("carte") == "annule":

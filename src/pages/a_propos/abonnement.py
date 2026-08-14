@@ -124,7 +124,7 @@ def _subscribe_button(
     elif authenticated:
         label, href = "Je m'abonne", "/compte/abonnement/mes-infos"
     else:
-        label, href = "Je m'abonne", "/inscription"
+        label, href = "Je crée mon compte", "/inscription"
     return html.Div(
         html.A(label, href=href, className="btn btn-secondary"),
         className="text-center my-4 btn-lg",

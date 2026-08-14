@@ -346,15 +346,35 @@ def set_cancelled(subscription_id: int, current_period_end: str | None) -> None:
     )
 
 
+def set_reactivated(subscription_id: int, current_period_end: str | None) -> None:
+    """Annule une résiliation avant l'échéance (bouton "Je me réabonne").
+
+    Pas de freeze_votes_cursor ici, à la différence de `update_from_webhook` :
+    l'accès (`has_access`) n'a jamais été interrompu pendant la fenêtre
+    "résilié mais encore actif" (`has_active_subscription` reste vrai tant que
+    `current_period_end` n'est pas dépassé), donc les votes continuent de
+    s'accumuler normalement et il n'y a aucune coupure à combler.
+    """
+    get_conn().execute(
+        "UPDATE subscriptions SET status = 'active', current_period_end = ?, "
+        "updated_at = ? WHERE id = ?",
+        (current_period_end, _now(), subscription_id),
+    )
+
+
+def period_end_in_future(current_period_end: str | None) -> bool:
+    end = _parse_iso_utc(current_period_end)
+    return end is not None and end > datetime.now(timezone.utc)
+
+
 def has_active_subscription(user_id: int) -> bool:
     row = get_current(user_id)
     if row is None:
         return False
     if row["status"] in _ACCESS_STATUSES:
         return True
-    if row["status"] == "cancelled" and row["current_period_end"]:
-        end = _parse_iso_utc(row["current_period_end"])
-        return end is not None and end > datetime.now(timezone.utc)
+    if row["status"] == "cancelled":
+        return period_end_in_future(row["current_period_end"])
     return False
 
 
