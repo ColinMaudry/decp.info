@@ -212,14 +212,14 @@ def _active_view(row):
                 )
             )
     elif row["status"] == "active" and end:
-        blocks.append(html.P(f"Prochaine facturation : {end}"))
+        blocks.append(html.P(f"Prochaine facturation et prélèvement : {end}"))
 
     if row["status"] in ("pending", "trial", "active"):
         blocks.append(
             html.A(
                 "Configurer mon abonnement",
                 href="/compte/abonnement/mes-infos",
-                className="btn btn-outline-primary mt-3 me-2",
+                className="btn btn-outline-secondary mt-3 me-2",
             )
         )
 

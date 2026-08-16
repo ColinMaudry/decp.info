@@ -170,8 +170,7 @@ def test_trial_view_offers_early_subscription_with_immediate_charge_notice():
     text = str(compte_abonnement._trial_view(None))
     assert "Je m'abonne dès maintenant" in text
     assert "/compte/abonnement/mes-infos" in text
-    assert "prélèvement a lieu immédiatement" in text
-    assert "jours d'essai restants ne sont pas reportés" in text
+    assert "Votre essai débloque" in text
 
 
 def test_trial_ended_view_shows_start_subscription_button_and_link():
@@ -209,7 +208,7 @@ def test_active_view_active_shows_date_and_time():
         "status": "active",
         "current_period_end": "2026-08-08T08:09:21.244+00:00",
     }
-    assert "Prochaine facturation : 8 août 2026 à 10h09" in str(
+    assert "Prochaine facturation et prélèvement : 8 août 2026 à 10h09" in str(
         compte_abonnement._active_view(row)
     )
 

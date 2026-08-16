@@ -90,6 +90,9 @@ def client_instructions(url: str, token: str):
             dbc.AccordionItem(
                 title="Gemini CLI",
                 children=[
+                    html.P(
+                        "Commande à exécuter dans un terminal en remplaçant <VOTRE_JETON> par un jeton généré (voir plus bas) :"
+                    ),
                     html.Pre(html.Code(gemini)),
                 ],
             ),
@@ -102,7 +105,7 @@ def client_instructions(url: str, token: str):
                     4. Titre : colibre, Description : Base de données ouverte des marchés publics français (par exemple)
                     5. Serveur : `{url}`
                     6. Méthode d'authentification : Authentification par token API
-                    7. Valeur du header : Bearer <VOTRE_JETON>
+                    7. Valeur du header : Bearer <VOTRE_JETON> (à remplacer par un jeton généré ci-dessous)
                     8. Cliquez sur **Créer**
                     """),
             ),
@@ -131,9 +134,9 @@ def prompt_tips():
             html.Ul([html.Li(html.Em(p)) for p in exemples]),
             html.P(
                 "Astuce colonnes : demandez à l'assistant de vous proposer les "
-                "colonnes disponibles pour choisir précisément ce qui s'affiche, si possible sous la forme d'une liste cocher "
+                "colonnes disponibles pour choisir précisément ce qui s'affiche, si possible sous la forme d'une liste à cocher "
                 "(les colonnes par défaut restent pré-sélectionnées). Chaque "
-                "marché renvoyé inclut un lien direct vers sa fiche sur colibre.",
+                "marché renvoyé inclut dans tous les cas un lien direct vers sa fiche sur colibre.",
                 className="text-muted",
             ),
         ]
@@ -302,11 +305,11 @@ def layout(**_):
             html.H4("Connecter un client", className="mt-4"),
             client_instructions(url, snippet_token),
             *alerts,
-            html.H4("Générer un jeton", className="mt-3"),
+            html.H4("Générer un jeton d'authentification", className="mt-3"),
             create_form,
             html.H4("Mes jetons", className="mt-4"),
             table,
-            html.H4("Conseils de prompts", className="mt-4"),
+            html.H4("Exemples de prompts", className="mt-4"),
             prompt_tips(),
         ]
     )
