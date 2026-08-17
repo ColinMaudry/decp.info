@@ -40,7 +40,7 @@ from src.utils.table import (
     get_default_hidden_columns,
     write_styled_excel,
 )
-from src.utils.tracking import track_search
+from src.utils.tracking import track_download, track_search
 
 update_date_timestamp = get_data_update_timestamp(
     os.getenv("DATA_FILE_PARQUET_PATH", ""),
@@ -567,6 +567,7 @@ def download_data(n_clicks, filter_model, column_state):
         write_styled_excel(df, buffer)
 
     date = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    track_download("/tableau")
     return dcc.send_bytes(to_bytes, filename=f"decp_{date}.xlsx")
 
 

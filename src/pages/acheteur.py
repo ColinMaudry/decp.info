@@ -31,6 +31,7 @@ from src.utils.table import (
     get_default_hidden_columns,
     write_styled_excel,
 )
+from src.utils.tracking import track_download
 
 
 def get_title(acheteur_id: str | None = None) -> str:
@@ -428,6 +429,7 @@ def download_acheteur_data(
         )
 
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    track_download("/acheteurs/")
     return dcc.send_bytes(to_bytes, filename=f"decp_{acheteur_nom}_{date}.xlsx")
 
 
