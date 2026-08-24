@@ -1,6 +1,6 @@
 def test_conditions_utilisation_section_presente():
     from src.app import app  # noqa: F401
-    from src.pages.a_propos import mentions_legales as page
+    from src.pages.projet import mentions_legales as page
 
     text = str(page.layout())
     assert "Conditions d'utilisation" in text
@@ -11,7 +11,7 @@ def test_conditions_utilisation_section_presente():
 
 def test_conditions_utilisation_couvrent_le_site_pas_l_abonnement():
     from src.app import app  # noqa: F401
-    from src.pages.a_propos import mentions_legales as page
+    from src.pages.projet import mentions_legales as page
 
     text = str(page.layout())
     # contenu généraliste, dont le bloc RGPD rapatrié depuis la page abonnement
@@ -24,7 +24,7 @@ def test_conditions_utilisation_couvrent_le_site_pas_l_abonnement():
 
 def test_mentions_legales_conservent_leurs_sections():
     from src.app import app  # noqa: F401
-    from src.pages.a_propos import mentions_legales as page
+    from src.pages.projet import mentions_legales as page
 
     text = str(page.layout())
     for ancre in ("publication", "audience", "attributions", "liste_marches"):

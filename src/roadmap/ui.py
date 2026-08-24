@@ -109,7 +109,7 @@ def _en_cours_items(en_cours: list[dict]) -> list:
 def _subscribe_hint() -> html.P:
     return html.P(
         [
-            dcc.Link("Abonnez-vous", href="/a-propos/abonnement"),
+            dcc.Link("Abonnez-vous", href="/projet/abonnement"),
             " pour donner votre voix aux fonctionnalités qui vous seraient utiles.",
         ],
         className="text-muted",

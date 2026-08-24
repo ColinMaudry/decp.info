@@ -4,15 +4,15 @@ from urllib.parse import quote
 import dash_bootstrap_components as dbc
 from dash import dcc, html, register_page
 
-from src.pages._apropos_shell import apropos_shell
+from src.pages._projet_shell import projet_shell
 from src.rencontres import openagenda
 from src.rencontres.calendrier import lien_google, lien_outlook
 from src.utils.seo import META_CONTENT
 
 register_page(
     __name__,
-    path="/a-propos/contact",
-    title="Contact | À propos | colibre",
+    path="/projet/contact",
+    title="Contact | Le projet | colibre",
     description="Contactez Colin Maudry, développeur de colibre.",
     image_url=META_CONTENT["image_url"],
 )
@@ -115,4 +115,4 @@ def layout(**_):
             _section_rencontres(),
         ]
     )
-    return apropos_shell("contact", contenu)
+    return projet_shell("contact", contenu)

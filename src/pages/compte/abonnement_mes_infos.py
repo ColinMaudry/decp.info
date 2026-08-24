@@ -6,7 +6,7 @@ from flask_login import current_user
 
 from src.auth import db as auth_db
 from src.pages._compte_shell import account_guard, account_shell
-from src.pages.a_propos.abonnement import _plan_card, subscription_terms
+from src.pages.projet.abonnement import _plan_card, subscription_terms
 from src.subscriptions import client as frisbii_client
 from src.subscriptions import db as sub_db
 from src.subscriptions import handles, plans
@@ -220,7 +220,7 @@ def _legal_note():
     return dcc.Markdown(
         """\\* Champ obligatoire
 
- Si vous préférez régler par virement bancaire et une facturation annuelle plutôt qu'un réglement mensuel automatique par carte bancaire, [envoyez un message](/a-propos/contact)."""
+ Si vous préférez régler par virement bancaire et une facturation annuelle plutôt qu'un réglement mensuel automatique par carte bancaire, [envoyez un message](/projet/contact)."""
     )
 
 
@@ -248,7 +248,7 @@ def _consent_checklists(hidden: bool = False):
                                 "J'ai lu et accepte les ",
                                 html.A(
                                     "conditions d'utilisation du service",
-                                    href="/a-propos/mentions-legales"
+                                    href="/projet/mentions-legales"
                                     "#conditions-utilisation",
                                     target="_blank",
                                     id="inf-cgu-link",

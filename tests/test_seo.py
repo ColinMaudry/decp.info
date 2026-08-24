@@ -62,17 +62,17 @@ def test_sitemap_pages_lists_static_pages(client):
     assert "https://colibre.fr/observatoire" in body
 
 
-def test_sitemap_pages_inclut_les_sous_pages_a_propos(client):
-    """Les sous-pages « À propos » sont découvertes dans le registre Dash."""
+def test_sitemap_pages_inclut_les_sous_pages_projet(client):
+    """Les sous-pages « Le projet » sont découvertes dans le registre Dash."""
     body = client.get("/sitemap-pages.xml").get_data(as_text=True)
-    for path in ("/a-propos/presentation", "/a-propos/donnees", "/a-propos/contact"):
+    for path in ("/projet/presentation", "/projet/donnees", "/projet/contact"):
         assert f"<loc>https://colibre.fr{path}</loc>" in body
 
 
-def test_sitemap_pages_exclut_la_redirection_a_propos(client):
-    """`/a-propos` est une redirection JS sans contenu : hors sitemap."""
+def test_sitemap_pages_exclut_la_redirection_projet(client):
+    """`/projet` est une redirection JS sans contenu : hors sitemap."""
     body = client.get("/sitemap-pages.xml").get_data(as_text=True)
-    assert "<loc>https://colibre.fr/a-propos</loc>" not in body
+    assert "<loc>https://colibre.fr/projet</loc>" not in body
 
 
 def test_sitemap_couvre_toutes_les_pages_publiques(client):
@@ -548,12 +548,12 @@ def test_jsonld_minimal_pas_pour_une_page_non_organisme(client):
     posait par erreur un bloc JSON-LD de type "Organization" (titulaire) sur
     cette page : on vérifie l'absence de la balise <script ld+json> elle-même.
     `/tableau` a un seul segment de chemin (échoue tôt sur la vérification de
-    longueur) ; `/a-propos/presentation` a deux segments comme une fiche
+    longueur) ; `/projet/presentation` a deux segments comme une fiche
     acheteur/titulaire mais un premier segment différent, ce qui exerce
     réellement le filtre sur le nom du segment plutôt que sur sa seule
     longueur.
     """
-    for chemin in ("/tableau", "/a-propos/presentation"):
+    for chemin in ("/tableau", "/projet/presentation"):
         body = client.get(chemin).get_data(as_text=True)
         assert "application/ld+json" not in body, chemin
 

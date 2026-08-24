@@ -94,7 +94,7 @@ def layout(error: str | None = None, email: str | None = None, **kwargs):
             html.Div("ou", className="text-center text-muted my-2"),
             html.A(
                 "Pas encore de compte ? Voir les abonnements",
-                href="/a-propos/abonnement",
+                href="/projet/abonnement",
                 className="btn btn-secondary w-100",
             ),
         ],

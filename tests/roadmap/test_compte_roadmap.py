@@ -10,10 +10,10 @@ def test_cast_vote_est_partage_par_les_deux_pages():
     Dans une page, Dash le ré-enregistrerait pendant la découverte use_pages
     (« Duplicate callback outputs »).
     """
-    from src.pages.a_propos import roadmap as apropos_roadmap
     from src.pages.compte import roadmap as compte_roadmap
+    from src.pages.projet import roadmap as projet_roadmap
     from src.roadmap import view as roadmap_view
 
     assert callable(roadmap_view.cast_vote)
     assert not hasattr(compte_roadmap, "cast_vote")
-    assert apropos_roadmap.roadmap_view is compte_roadmap.roadmap_view
+    assert projet_roadmap.roadmap_view is compte_roadmap.roadmap_view

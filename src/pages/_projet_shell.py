@@ -2,25 +2,25 @@ import dash_bootstrap_components as dbc
 from dash import Input, Output, State, callback, html
 
 SECTIONS = [
-    {"key": "presentation", "label": "Présentation", "href": "/a-propos/presentation"},
-    {"key": "explorer", "label": "Explorer le projet", "href": "/a-propos/explorer"},
-    {"key": "donnees", "label": "Données", "href": "/a-propos/donnees"},
-    # {"key": "contribuer", "label": "Contribuer", "href": "/a-propos/contribuer"},
+    {"key": "presentation", "label": "Présentation", "href": "/projet/presentation"},
+    {"key": "explorer", "label": "Explorer le projet", "href": "/projet/explorer"},
+    {"key": "donnees", "label": "Données", "href": "/projet/donnees"},
+    # {"key": "contribuer", "label": "Contribuer", "href": "/projet/contribuer"},
     {
         "key": "abonnement",
         "label": "Abonnement",
-        "href": "/a-propos/abonnement",
+        "href": "/projet/abonnement",
     },
     {
         "key": "roadmap",
         "label": "Roadmap",
-        "href": "/a-propos/roadmap",
+        "href": "/projet/roadmap",
     },
-    {"key": "contact", "label": "Contact", "href": "/a-propos/contact"},
+    {"key": "contact", "label": "Contact", "href": "/projet/contact"},
     {
         "key": "mentions-legales",
         "label": "Mentions légales",
-        "href": "/a-propos/mentions-legales",
+        "href": "/projet/mentions-legales",
     },
 ]
 
@@ -33,9 +33,9 @@ def _nav(active: str):
     return dbc.Nav(links, vertical=True, class_name="account-nav")
 
 
-def apropos_shell(active: str, contenu):
+def projet_shell(active: str, contenu):
     sidebar = dbc.Col(
-        html.Div([html.H5("À propos", className="mb-3"), _nav(active)]),
+        html.Div([html.H5("Le projet", className="mb-3"), _nav(active)]),
         md=3,
         className="d-none d-md-block",
     )
@@ -43,15 +43,15 @@ def apropos_shell(active: str, contenu):
         [
             dbc.Button(
                 "☰ Sections",
-                id="apropos-offcanvas-open",
+                id="projet-offcanvas-open",
                 color="secondary",
                 outline=True,
                 className="mb-3",
             ),
             dbc.Offcanvas(
                 _nav(active),
-                id="apropos-offcanvas",
-                title="À propos",
+                id="projet-offcanvas",
+                title="Le projet",
                 is_open=False,
             ),
         ],
@@ -62,10 +62,10 @@ def apropos_shell(active: str, contenu):
 
 
 @callback(
-    Output("apropos-offcanvas", "is_open"),
-    Input("apropos-offcanvas-open", "n_clicks"),
-    State("apropos-offcanvas", "is_open"),
+    Output("projet-offcanvas", "is_open"),
+    Input("projet-offcanvas-open", "n_clicks"),
+    State("projet-offcanvas", "is_open"),
     prevent_initial_call=True,
 )
-def _toggle_apropos_offcanvas(_n, is_open):
+def _toggle_projet_offcanvas(_n, is_open):
     return not is_open

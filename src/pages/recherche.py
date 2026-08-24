@@ -5,7 +5,7 @@ from dash import Input, Output, State, callback, dcc, html, register_page
 
 from src.db import count_unique_marches, schema
 from src.figures import DataTable
-from src.pages.a_propos.abonnement import abonnement_features
+from src.pages.projet.abonnement import abonnement_features
 from src.utils.cache import cache
 from src.utils.data import DF_ACHETEURS, DF_TITULAIRES
 from src.utils.search import search_org
@@ -47,7 +47,7 @@ _features_gratuites = dcc.Markdown("""
 - [Tableau](/tableau) filtrable et personnalisable sur des dizaines de colonnes et exports Excel
 - Cartes, statistiques et [Observatoire](/observatoire) national personnalisable
 - Fiches détaillées : acheteur, titulaire, marché
-- 100 % [open source](/a-propos/explorer) et [Open Data](/a-propos/donnees)
+- 100 % [open source](/projet/explorer) et [Open Data](/projet/donnees)
 """)
 
 home_intro = html.Div(
@@ -163,7 +163,7 @@ home_intro = html.Div(
                         abonnement_features,
                         dcc.Link(
                             "En savoir plus et s'abonner",
-                            href="/a-propos/abonnement",
+                            href="/projet/abonnement",
                             style={"marginLeft": "20px"},
                         ),
                     ],

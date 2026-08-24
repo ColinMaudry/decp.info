@@ -89,7 +89,7 @@ def test_reabo_button_links_to_abonnement_page():
 
     text = str(compte_abonnement._reabo_button())
     assert "Abonnez-vous" in text
-    assert "/a-propos/abonnement" in text
+    assert "/projet/abonnement" in text
 
 
 def test_free_access_view_message():

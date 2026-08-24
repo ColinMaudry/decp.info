@@ -3,14 +3,14 @@ import os
 from dash import dcc, html, register_page
 
 from src.figures import get_duplicate_matrix, get_sources_tables
-from src.pages._apropos_shell import apropos_shell
+from src.pages._projet_shell import projet_shell
 from src.pages.etapes import build_chart, build_mobile
 from src.utils.seo import META_CONTENT
 
 register_page(
     __name__,
-    path="/a-propos/donnees",
-    title="Données | À propos | colibre",
+    path="/projet/donnees",
+    title="Données | Le projet | colibre",
     description="Données brutes, qualité des données et sources utilisées par colibre pour consolider les marchés publics français.",
     image_url=META_CONTENT["image_url"],
 )
@@ -37,7 +37,7 @@ Vous pouvez consommer les données qui alimentent colibre en les téléchargeant
 pensez à lire la description du jeu de données
 
 Une API REST tabulaire (JSON) est également disponible par abonnement mensuel pour accéder aux mêmes données et alimenter une application.
-Documentation interactive : [Swagger UI](/api/v1/swagger). Si vous souhaitez utiliser l'API, [envoyez un message](/a-propos/contact)."""),
+Documentation interactive : [Swagger UI](/api/v1/swagger). Si vous souhaitez utiliser l'API, [envoyez un message](/projet/contact)."""),
             html.H2(
                 "Qualité et exhaustivité des données", id="qualite", className="mt-4"
             ),
@@ -69,4 +69,4 @@ Merci à leurs équipes."""
             get_duplicate_matrix(),
         ]
     )
-    return apropos_shell("donnees", contenu)
+    return projet_shell("donnees", contenu)

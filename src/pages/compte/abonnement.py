@@ -32,7 +32,7 @@ def _reabo_button():
     return html.Div(
         [
             dcc.Markdown(
-                "[Abonnez-vous](/a-propos/abonnement) pour accéder aux fonctionnalités réservées "
+                "[Abonnez-vous](/projet/abonnement) pour accéder aux fonctionnalités réservées "
                 "aux abonné·es.",
                 className="mb-3",
             ),
@@ -42,7 +42,7 @@ def _reabo_button():
 
 
 def _free_access_view():
-    from src.pages.a_propos.abonnement import abonnement_features
+    from src.pages.projet.abonnement import abonnement_features
 
     return html.Div(
         [
@@ -63,7 +63,7 @@ def _free_access_view():
 
 
 def _trial_view(end):
-    from src.pages.a_propos.abonnement import abonnement_features
+    from src.pages.projet.abonnement import abonnement_features
 
     end_text = format_datetime_french(end) if end else None
     titre = (
