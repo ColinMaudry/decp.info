@@ -23,16 +23,11 @@ ERROR_MESSAGES = {
 
 
 def layout(error: str | None = None, email: str | None = None, **_):
-    from src.utils import TOUS_ABONNES
-
     alert = None
     if error and error in ERROR_MESSAGES:
         alert = dbc.Alert(ERROR_MESSAGES[error], color="danger")
 
-    # Sous TOUS_ABONNES, on saute la page carte bancaire (mes-infos).
-    linkedin_next = (
-        "/compte/abonnement" if TOUS_ABONNES else "/compte/abonnement/mes-infos"
-    )
+    linkedin_next = "/compte/abonnement"
 
     return dbc.Container(
         className="py-4",
@@ -72,6 +67,12 @@ def layout(error: str | None = None, email: str | None = None, **_):
                         required=True,
                         minLength=8,
                         className="mb-3",
+                    ),
+                    html.P(
+                        "Votre essai gratuit de 3 jours démarre dès la "
+                        "validation de votre adresse email. Aucune carte "
+                        "bancaire n'est demandée.",
+                        className="text-muted small mb-3",
                     ),
                     dbc.Button("Créer le compte", type="submit", color="secondary"),
                 ],

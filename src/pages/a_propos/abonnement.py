@@ -24,10 +24,7 @@ abonnement_features = dcc.Markdown("""
       """)
 
 
-def _plan_card(meta: dict, trial: int | None):
-    badge = (
-        html.Div(f"{trial} jours d'essai gratuit", className="mb-3") if trial else None
-    )
+def _plan_card(meta: dict):
     return dbc.Card(
         dbc.CardBody(
             [
@@ -38,7 +35,6 @@ def _plan_card(meta: dict, trial: int | None):
                     className="text-muted mb-3",
                 ),
                 html.P(meta["description"], className="mb-3"),
-                badge,
             ],
             className="p-4",
         ),
@@ -46,13 +42,25 @@ def _plan_card(meta: dict, trial: int | None):
     )
 
 
-def _plan_cards(trial_for=plans.trial_days):
+def _plan_cards():
+    # L'essai n'est plus adossé à une formule : il est ouvert à la création du
+    # compte, quelle que soit la formule choisie ensuite. D'où une mention
+    # unique au-dessus des cartes plutôt qu'un badge par carte.
     cards = []
     for key in ("simple", "soutien"):
         meta = plans.plan_meta(key)
         if meta:
-            cards.append(_plan_card(meta, trial_for(key)))
-    return dbc.Row([dbc.Col(c, md=6) for c in cards], className="g-4 mb-4")
+            cards.append(_plan_card(meta))
+    return html.Div(
+        [
+            html.P(
+                "3 jours d'essai gratuit à la création de votre compte, sans "
+                "carte bancaire.",
+                className="text-muted mb-3",
+            ),
+            dbc.Row([dbc.Col(c, md=6) for c in cards], className="g-4 mb-4"),
+        ]
+    )
 
 
 def _explainer():
@@ -116,7 +124,7 @@ def _subscribe_button(
     elif authenticated:
         label, href = "Je m'abonne", "/compte/abonnement/mes-infos"
     else:
-        label, href = "Je m'abonne", "/inscription"
+        label, href = "Je crée mon compte", "/inscription"
     return html.Div(
         html.A(label, href=href, className="btn btn-secondary"),
         className="text-center my-4 btn-lg",
@@ -149,9 +157,9 @@ La TVA applicable en France est de 20 %.
         html.H4("Début et durée de l'abonnement"),
         dcc.Markdown(
             """
-La souscription ouvre immédiatement l'accès aux fonctionnalités réservées aux abonné·es, d'abord au titre de la période d'essai gratuite.
+La souscription à un abonnement ouvre immédiatement l'accès aux fonctionnalités réservées aux abonné·es.
 
-**L'abonnement payant ne démarre qu'à l'issue de la période d'essai**, à la date indiquée avant validation. Aucun prélèvement n'a lieu avant cette date. Si vous avez déjà bénéficié d'une période d'essai, l'abonnement payant démarre dès la souscription.
+**L'abonnement payant démarre à la souscription à un abonnement** : le premier prélèvement a lieu à ce moment-là, toujours via une action manuelle de votre part.
 
 L'abonnement est conclu pour une durée d'un mois à compter de son démarrage, et se renouvelle automatiquement de mois en mois jusqu'à résiliation.
 """
@@ -167,17 +175,17 @@ Il est également possible de payer par virement bancaire à condition de payer 
         html.H4("Période d'essai"),
         dcc.Markdown(
             """
-Une période d'essai gratuite est proposée lors de la souscription.
-Ses dates de début et de fin sont indiquées avant validation. Aucun prélèvement n'est effectué pendant cette période.
-À son terme, l'abonnement payant démarre et la première facture est émise.
+Un essai gratuit de 3 jours est automatiquement ouvert à la création de votre compte, sans carte bancaire et sans engagement. Aucun prélèvement n'a lieu pendant cette période.
 
-La période d'essai est accordée une seule fois par compte.
+À son terme, l'accès aux fonctionnalités réservées est suspendu jusqu'à ce que vous souscriviez à un abonnement.
+
+L'essai est accordé une seule fois par compte.
 """
         ),
         html.H4("Facturation et paiement"),
         dcc.Markdown(
             """
-La première facture est émise au démarrage de l'abonnement payant, c'est-à-dire à l'issue de la période d'essai. Les suivantes le sont chaque mois à cette date anniversaire, et non à la date de saisie des informations de paiement.
+La première facture est émise au démarrage de l'abonnement, c'est-à-dire à la souscription d'un abonnement. Les suivantes le sont chaque mois à cette date anniversaire.
 
 Chaque échéance donne lieu à l'émission d'une facture, envoyée par email à l'abonné·e.
 Le paiement est traité par [Frisbii](https://www.frisbii.com), prestataire européen de paiement en ligne.
@@ -189,9 +197,9 @@ Le paiement est exigible à la date de facturation. En cas de retard de paiement
         html.H4("Droit de rétractation"),
         dcc.Markdown(
             """
-Vous disposez d'un délai de rétractation de 14 jours à compter de la souscription.
+Vous disposez d'un délai de rétractation de 14 jours à compter de la souscription à un abonnement.
 
-L'accès aux fonctionnalités réservées aux abonné·es étant ouvert dès la souscription, période d'essai comprise, il vous est demandé de renoncer expressément à ce droit lors de la souscription ; à défaut, la souscription ne peut pas être finalisée.
+L'accès aux fonctionnalités réservées aux abonné·es étant ouvert dès la souscription à un abonnement, il vous est demandé d'y renoncer expressément à ce moment-là ; à défaut, votre abonnement ne peut pas être finalisé.
 """
         ),
         html.H4("Résiliation"),

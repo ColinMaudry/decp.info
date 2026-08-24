@@ -156,6 +156,20 @@ def test_update_from_webhook_sets_status(users_db_path):
     assert db.customer_known("colibre-1") is True
 
 
+def test_update_from_webhook_active_sets_status_and_period_end(users_db_path):
+    """Le retrait de l'écriture `trial_used` ne doit pas casser le reste de
+    `update_from_webhook` : statut et `current_period_end` continuent d'être
+    mis à jour pour un webhook faisant passer un abonnement à 'active'."""
+    db.init_schema()
+    uid = _make_user()
+    handle, _ = db.create_pending(uid, "colibre-1", "simple")
+    end = _future()
+    db.update_from_webhook(handle, "active", end)
+    row = db.get_current(uid)
+    assert row["status"] == "active"
+    assert row["current_period_end"] == end
+
+
 def test_customer_known_false_for_unknown_customer(users_db_path):
     db.init_schema()
     assert db.customer_known("colibre-inconnu") is False
@@ -216,18 +230,24 @@ def test_has_active_subscription_bad_datetime_returns_false(users_db_path):
     assert db.has_active_subscription(uid) is False
 
 
-def test_trial_used_is_sticky_across_resubscribe(users_db_path):
+def test_has_active_subscription_naive_datetime_treated_as_utc(users_db_path):
+    """Revue #132 : une valeur naïve (saisie à la main, via l'admin par ex.)
+    ne doit pas lever de TypeError à la comparaison avec un datetime aware."""
     db.init_schema()
     uid = _make_user()
-    handle, _ = db.create_pending(uid, "colibre-1", "simple")
-    assert db.has_used_trial(uid) is False
-    # l'abonnement entre en essai → trial_used positionné
-    db.update_from_webhook(handle, "trial", _future())
-    assert db.has_used_trial(uid) is True
-    # essai abandonné, puis nouvelle souscription : trial_used reste vrai
-    db.update_from_webhook(handle, "expired", _past())
-    db.create_pending(uid, "colibre-1", "soutien")
-    assert db.has_used_trial(uid) is True
+    handle, subscription_id = db.create_pending(uid, "colibre-1", "simple")
+    future_naive = (datetime.now() + timedelta(days=2)).isoformat()
+    get_conn().execute(
+        "UPDATE subscriptions SET status='cancelled', current_period_end=? WHERE id=?",
+        (future_naive, subscription_id),
+    )
+    assert db.has_active_subscription(uid) is True
+    past_naive = (datetime.now() - timedelta(days=2)).isoformat()
+    get_conn().execute(
+        "UPDATE subscriptions SET current_period_end=? WHERE id=?",
+        (past_naive, subscription_id),
+    )
+    assert db.has_active_subscription(uid) is False
 
 
 def test_create_pending_initializes_subscriber_state(users_db_path):
@@ -426,13 +446,62 @@ def test_next_recharge_at_none_after_period_end(users_db_path):
     assert db.next_recharge_at(uid) is None
 
 
-def test_next_recharge_at_none_during_trial(users_db_path):
-    """Période d'essai : le vote n'est pas encore ouvert, donc pas de date."""
+def test_credit_pending_grants_initial_votes_during_trial(users_db_path):
+    """L'essai ouvre le vote comme un abonnement : crédit initial dès l'essai,
+    sans qu'aucune ligne `subscriptions` n'existe."""
     db.init_schema()
     uid = _make_user()
-    handle, _ = db.create_pending(uid, "colibre-1", "simple")
-    db.update_from_webhook(handle, "trial", _future())
+    db.start_trial_if_new(uid)
+    assert db.get_current(uid) is None
+    assert db.credit_pending(uid) == db.INITIAL_VOTES
+
+
+def test_spend_vote_works_during_trial(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    db.credit_pending(uid)
+    assert db.spend_vote(uid) is True
+
+
+def test_trial_expired_without_subscription_freezes_balance(users_db_path):
+    """Essai terminé sans souscription : plus d'accumulation, solde figé."""
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    db.credit_pending(uid)
+    db.spend_vote(uid)  # solde distinct du plafond pour prouver l'absence de recharge
+    get_conn().execute(
+        "UPDATE subscriber_state SET trial_ends_at = ? WHERE user_id = ?",
+        (_past(), uid),
+    )
+    _set_votes_cursor(uid, days_ago=8)
+    assert db.credit_pending(uid) == db.INITIAL_VOTES - 1
     assert db.next_recharge_at(uid) is None
+
+
+def test_next_recharge_at_none_during_trial(users_db_path):
+    """Essai en cours : le prochain rechargement (J+7) tomberait après la fin
+    de l'essai (J+2), donc aucune date à annoncer — comme pour un désabonnement
+    dont la période se termine avant l'échéance."""
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    db.credit_pending(uid)  # pose le curseur
+    assert db.next_recharge_at(uid) is None
+
+
+def test_next_recharge_at_set_when_subscribed_during_trial(users_db_path):
+    """Souscription pendant l'essai : l'accumulation tient à l'abonnement, la
+    fin d'essai ne doit pas masquer la date de rechargement."""
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    db.create_pending(uid, "colibre-1", "simple")
+    _activate(uid, cursor_iso=None)
+    db.credit_pending(uid)
+    assert db.trial_active(uid) is True
+    assert db.next_recharge_at(uid) is not None
 
 
 def test_next_recharge_at_in_future_for_active_subscriber(users_db_path):
@@ -495,13 +564,69 @@ def test_reactivation_resets_cursor_without_regranting(users_db_path):
     assert db.credit_pending(uid) == db.INITIAL_VOTES
 
 
-def test_trial_to_active_does_not_reset_then_grants_two(users_db_path):
+def test_period_end_in_future():
+    assert db.period_end_in_future(_future()) is True
+    assert db.period_end_in_future(_past()) is False
+    assert db.period_end_in_future(None) is False
+
+
+def test_set_reactivated_marks_active_and_updates_period_end(users_db_path):
     db.init_schema()
     uid = _make_user()
     handle, _ = db.create_pending(uid, "colibre-1", "simple")
-    db.update_from_webhook(handle, "trial", _future())
     db.update_from_webhook(handle, "active", _future())
-    # fin d'essai : credit_pending accorde les +INITIAL_VOTES initiaux
+    db.set_cancelled(db.get_current(uid)["id"], _future())
+
+    new_end = _future()
+    db.set_reactivated(db.get_current(uid)["id"], new_end)
+
+    row = db.get_current(uid)
+    assert row["status"] == "active"
+    assert row["current_period_end"] == new_end
+
+
+def test_set_reactivated_does_not_reset_votes_cursor(users_db_path):
+    """À la différence de update_from_webhook (cancelled/expired → active),
+    set_reactivated couvre le réabonnement en cours de période payée : l'accès
+    n'a jamais été coupé, donc pas de raison de repartir de maintenant."""
+    db.init_schema()
+    uid = _make_user()
+    handle, _ = db.create_pending(uid, "colibre-1", "simple")
+    _activate(uid, cursor_iso=None)
+    db.credit_pending(uid)  # pose le curseur
+    db.set_cancelled(db.get_current(uid)["id"], _future())
+
+    old_cursor = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    get_conn().execute(
+        "UPDATE subscriber_state SET votes_last_credited_at = ? WHERE user_id = ?",
+        (old_cursor, uid),
+    )
+
+    db.set_reactivated(db.get_current(uid)["id"], _future())
+
+    state = (
+        get_conn()
+        .execute(
+            "SELECT votes_last_credited_at FROM subscriber_state WHERE user_id = ?",
+            (uid,),
+        )
+        .fetchone()
+    )
+    assert state["votes_last_credited_at"] == old_cursor  # pas de freeze
+
+
+def test_pending_to_active_via_webhook_grants_initial_votes(users_db_path):
+    """Souscription directe (#132) : `pending` → `active` par webhook accorde
+    les +INITIAL_VOTES initiaux, comme n'importe quelle première activation.
+
+    Distinct de `test_credit_pending_grants_initial_two_on_first_active`, qui
+    active la ligne par UPDATE SQL direct plutôt que par
+    `update_from_webhook` : celui-ci couvre en plus le passage par
+    `freeze_votes_cursor` déclenché par la transition webhook elle-même."""
+    db.init_schema()
+    uid = _make_user()
+    handle, _ = db.create_pending(uid, "colibre-1", "simple")
+    db.update_from_webhook(handle, "active", _future())
     assert db.credit_pending(uid) == db.INITIAL_VOTES
 
 
@@ -622,3 +747,155 @@ def test_pas_d_evenement_sur_annulation(users_db_path, monkeypatch):
     db.update_from_webhook(handle, "cancelled", "2026-08-05T00:00:00Z")
 
     assert appels == []
+
+
+def test_start_trial_if_new_creates_state_with_trial_ends_at_in_two_days(
+    users_db_path,
+):
+    db.init_schema()
+    uid = _make_user()
+    assert db.get_subscriber_state(uid) is None
+
+    db.start_trial_if_new(uid)
+
+    state = db.get_subscriber_state(uid)
+    assert state is not None
+    ends = datetime.fromisoformat(state["trial_ends_at"])
+    expected = datetime.now(timezone.utc) + timedelta(days=db.TRIAL_DAYS)
+    assert abs((ends - expected).total_seconds()) < 5
+
+
+def test_start_trial_if_new_is_idempotent(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    first = db.get_subscriber_state(uid)["trial_ends_at"]
+
+    db.start_trial_if_new(uid)
+
+    second = db.get_subscriber_state(uid)["trial_ends_at"]
+    assert second == first
+
+
+def test_start_trial_if_new_unknown_user_does_not_insert_or_raise(users_db_path):
+    db.init_schema()
+    _make_user()  # garantit que la table users existe
+
+    db.start_trial_if_new(999999)
+
+    assert db.get_subscriber_state(999999) is None
+
+
+def test_trial_active_true_for_future_end(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    assert db.trial_active(uid) is True
+
+
+def test_trial_active_false_for_past_end(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    get_conn().execute(
+        "UPDATE subscriber_state SET trial_ends_at = ? WHERE user_id = ?",
+        (_past(), uid),
+    )
+    assert db.trial_active(uid) is False
+
+
+def test_trial_active_false_when_trial_ends_at_is_null(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    get_conn().execute(
+        "INSERT INTO subscriber_state (user_id, updated_at) VALUES (?, ?)",
+        (uid, datetime.now(timezone.utc).isoformat()),
+    )
+    assert db.trial_active(uid) is False
+
+
+def test_trial_active_false_when_no_subscriber_state_row(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    assert db.get_subscriber_state(uid) is None
+    assert db.trial_active(uid) is False
+
+
+def test_trial_active_tolerates_z_suffix(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    get_conn().execute(
+        "UPDATE subscriber_state SET trial_ends_at = ? WHERE user_id = ?",
+        ("2099-12-31T23:59:59Z", uid),
+    )
+    assert db.trial_active(uid) is True
+
+
+def test_trial_active_false_on_unparsable_datetime(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    get_conn().execute(
+        "UPDATE subscriber_state SET trial_ends_at = ? WHERE user_id = ?",
+        ("not-a-date", uid),
+    )
+    assert db.trial_active(uid) is False
+
+
+def test_trial_active_naive_datetime_treated_as_utc(users_db_path):
+    """Revue #132 : une valeur naïve (saisie à la main, via l'admin par ex.)
+    ne doit pas lever de TypeError à la comparaison avec un datetime aware."""
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    future_naive = (datetime.now() + timedelta(days=2)).isoformat()
+    get_conn().execute(
+        "UPDATE subscriber_state SET trial_ends_at = ? WHERE user_id = ?",
+        (future_naive, uid),
+    )
+    assert db.trial_active(uid) is True
+
+    past_naive = (datetime.now() - timedelta(days=2)).isoformat()
+    get_conn().execute(
+        "UPDATE subscriber_state SET trial_ends_at = ? WHERE user_id = ?",
+        (past_naive, uid),
+    )
+    assert db.trial_active(uid) is False
+
+
+def test_has_access_true_during_trial_without_subscriptions_row(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    assert db.get_current(uid) is None
+    assert db.has_access(uid) is True
+
+
+def test_has_access_true_for_active_subscriber_with_expired_trial(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    get_conn().execute(
+        "UPDATE subscriber_state SET trial_ends_at = ? WHERE user_id = ?",
+        (_past(), uid),
+    )
+    handle, _ = db.create_pending(uid, "colibre-1", "simple")
+    db.update_from_webhook(handle, "active", _future())
+    assert db.trial_active(uid) is False
+    assert db.has_access(uid) is True
+
+
+def test_has_access_false_without_trial_or_subscription(users_db_path):
+    db.init_schema()
+    uid = _make_user()
+    assert db.has_access(uid) is False
+
+
+def test_has_active_subscription_false_during_trial_alone(users_db_path):
+    """Garde-fou : l'essai ne doit jamais faire basculer has_active_subscription."""
+    db.init_schema()
+    uid = _make_user()
+    db.start_trial_if_new(uid)
+    assert db.trial_active(uid) is True
+    assert db.has_active_subscription(uid) is False

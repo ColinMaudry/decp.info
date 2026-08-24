@@ -46,33 +46,29 @@ def test_roadmap_content_renders(monkeypatch):
     assert "value='2'" in s
 
 
-def test_roadmap_content_shows_trial_hint(monkeypatch):
-    monkeypatch.setattr(
-        ui.github,
-        "fetch_roadmap_issues",
-        lambda: {"en_cours": [], "au_vote": []},
-    )
-    monkeypatch.setattr(ui.roadmap_db, "vote_counts", lambda: {})
-    content = ui.roadmap_content(
-        editable=True,
-        balance=0,
-        sub_status="trial",
-        trial_ends_at="2026-07-20T10:00:00+00:00",
-    )
-    assert "20/07/2026" in str(content)
+def test_content_for_current_user_passes_only_vote_state(monkeypatch):
+    """L'essai vote comme un abonnement : le contenu votable ne dépend que du
+    solde et du rechargement, sans câblage spécifique à l'essai."""
+    from src.roadmap import view as roadmap_view
 
+    class _FakeUser:
+        id = 1
+        is_authenticated = True
 
-def test_roadmap_content_no_trial_hint_when_active(monkeypatch):
+    monkeypatch.setattr(roadmap_view, "current_user_has_subscription", lambda: True)
+    monkeypatch.setattr(roadmap_view, "current_user", _FakeUser())
+    monkeypatch.setattr(roadmap_view.subs_db, "credit_pending", lambda _: 3)
+    monkeypatch.setattr(roadmap_view.subs_db, "next_recharge_at", lambda _: None)
+
+    captured = {}
+
+    def _fake_roadmap_content(**kwargs):
+        captured.update(kwargs)
+        return "content"
+
     monkeypatch.setattr(
-        ui.github,
-        "fetch_roadmap_issues",
-        lambda: {"en_cours": [], "au_vote": []},
+        roadmap_view.roadmap_ui, "roadmap_content", _fake_roadmap_content
     )
-    monkeypatch.setattr(ui.roadmap_db, "vote_counts", lambda: {})
-    content = ui.roadmap_content(
-        editable=True,
-        balance=3,
-        sub_status="active",
-        trial_ends_at=None,
-    )
-    assert "période d'essai" not in str(content)
+
+    roadmap_view.content_for_current_user()
+    assert captured == {"editable": True, "balance": 3, "next_recharge": None}

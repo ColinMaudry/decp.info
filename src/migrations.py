@@ -82,6 +82,10 @@ _MIGRATIONS: list[tuple[str, str]] = [
         "0013_add_token_enc_to_api_tokens",
         "ALTER TABLE api_tokens ADD COLUMN token_enc TEXT",
     ),
+    (
+        "0014_add_trial_ends_at_to_subscriber_state",
+        "ALTER TABLE subscriber_state ADD COLUMN trial_ends_at TEXT",
+    ),
 ]
 
 

@@ -116,26 +116,10 @@ def _subscribe_hint() -> html.P:
     )
 
 
-def _trial_hint(sub_status: str | None, trial_ends_at: str | None):
-    if sub_status != "trial" or not trial_ends_at:
-        return None
-    try:
-        end_date = datetime.fromisoformat(trial_ends_at).strftime("%d/%m/%Y")
-    except (ValueError, TypeError):
-        return None
-    return dbc.Alert(
-        f"Vous pourrez voter à la fin de votre période d'essai, le {end_date}.",
-        color="info",
-        className="mb-3",
-    )
-
-
 def roadmap_content(
     editable: bool,
     balance: int | None = None,
     next_recharge: datetime | None = None,
-    sub_status: str | None = None,
-    trial_ends_at: str | None = None,
 ) -> html.Div:
     try:
         issues = github.fetch_roadmap_issues()
@@ -158,9 +142,6 @@ def roadmap_content(
         # Seule la page publique passe ici : /compte/roadmap est réservée aux
         # abonné·es, donc toujours en editable=True.
         body.append(_subscribe_hint())
-    trial_hint = _trial_hint(sub_status, trial_ends_at) if editable else None
-    if trial_hint is not None:
-        body.append(trial_hint)
     body.append(
         html.Div(
             dbc.ListGroup(

@@ -38,6 +38,7 @@ def test_create_subscription_session_with_customer_handle(fake_httpx):
         "abo-1-1",
         "https://app/ok",
         "https://app/ko",
+        no_trial=False,
         customer_handle="colibre-1",
     )
     assert url == "https://checkout.reepay.com/#/subscription/cs_1"
@@ -82,6 +83,21 @@ def test_create_subscription_session_no_trial(fake_httpx):
         customer_handle="colibre-1",
     )
     assert fake_httpx["calls"][0]["json"]["no_trial"] is True
+
+
+def test_create_subscription_session_requires_no_trial_kwarg():
+    """Revue #132 : no_trial est le seul flag qui empêche un prélèvement
+    automatique en sortie d'essai. Il doit être obligatoire, sans défaut,
+    pour qu'un futur appelant qui l'omet échoue bruyamment plutôt que de
+    réintroduire silencieusement le comportement banni."""
+    with pytest.raises(TypeError):
+        client.create_subscription_session(
+            "plan_simple",
+            "abo-1-3",
+            "https://app/ok",
+            "https://app/ko",
+            customer_handle="colibre-1",
+        )
 
 
 def test_http_error_raises_frisbii_error(fake_httpx):

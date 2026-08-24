@@ -46,7 +46,9 @@ def current_user_has_subscription() -> bool:
         return False
     if TOUS_ABONNES:
         return True
-    return db.has_active_subscription(current_user.id)
+    # has_access, pas has_active_subscription : la période d'essai ouvre les
+    # mêmes fonctionnalités qu'un abonnement.
+    return db.has_access(current_user.id)
 
 
 def visible_sections(has_subscription: bool) -> list[dict]:

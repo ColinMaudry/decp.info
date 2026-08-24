@@ -2,12 +2,12 @@ from urllib.parse import urlparse
 
 from markupsafe import escape
 
-from src.subscriptions.db import has_active_subscription
+from src.subscriptions.db import has_access
 from src.utils import TOUS_ABONNES
 
 
 def subscription_ok(user_id: int) -> bool:
-    return bool(TOUS_ABONNES or has_active_subscription(user_id))
+    return bool(TOUS_ABONNES or has_access(user_id))
 
 
 def render_subscription_required() -> str:

@@ -1,3 +1,11 @@
+##### 3.0.3
+
+- démarrer la période d'essai de l'abonennement ne requiert plus un moyen de paiement
+- possibilité de voter en période d'essai
+- amélioration de l'interface de test de l'API ([https://colibre.fr/api/v1/swagger])
+- bug résolu dans l'observatoire : les filtres sur les considérations sociales et environnementales se cumulent correctement (ET et pas OU)
+- les pages acheteur et titulaire ont un lien vers l'observatoire
+
 ##### 3.0.2
 
 - blocage et limitations dans le trafic des robots, en particulier ceux de Baidu

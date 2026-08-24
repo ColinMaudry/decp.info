@@ -62,6 +62,59 @@ def _free_access_view():
     )
 
 
+def _trial_view(end):
+    from src.pages.a_propos.abonnement import abonnement_features
+
+    end_text = format_datetime_french(end) if end else None
+    titre = (
+        f"Essai gratuit jusqu'au {end_text}" if end_text else "Essai gratuit en cours"
+    )
+    return html.Div(
+        [
+            html.H5(titre, className="mb-3"),
+            html.P(
+                "Votre essai débloque les fonctionnalités réservées aux abonné·es :"
+            ),
+            abonnement_features,
+            dcc.Markdown(
+                "À la fin de l'essai, rien n'est prélevé : c'est à vous de "
+                "démarrer votre abonnement depuis cette page.",
+                className="text-muted mt-2",
+            ),
+            html.P(
+                "Vous avez la possibilité d'écourter votre période d'essai et de vous abonner "
+                "dès maintenant, ce qui donnera lieu au premier prélèvement :",
+                className="text-muted mt-3",
+            ),
+            html.A(
+                "Je m'abonne dès maintenant",
+                href="/compte/abonnement/mes-infos",
+                className="btn btn-outline-secondary mt-2",
+            ),
+        ],
+        className="mb-4",
+    )
+
+
+def _trial_ended_view():
+    return html.Div(
+        [
+            html.H5("Votre essai gratuit est terminé", className="mb-3"),
+            html.P(
+                "Les fonctionnalités réservées aux abonné·es ne sont plus "
+                "accessibles. Vous pouvez démarrer votre abonnement à tout "
+                "moment."
+            ),
+            html.A(
+                "Commencer mon abonnement",
+                href="/compte/abonnement/mes-infos",
+                className="btn btn-secondary mt-2",
+            ),
+        ],
+        className="mb-4",
+    )
+
+
 def _no_sub_view(tous_abonnes: bool, row):
     if tous_abonnes:
         return _free_access_view()
@@ -74,7 +127,41 @@ def _no_sub_view(tous_abonnes: bool, row):
     return html.Div(blocks)
 
 
+def _resume_payment_block():
+    return html.Div(
+        [
+            dbc.Alert(
+                "Votre abonnement n'est pas finalisé : aucune méthode de "
+                "paiement n'a été enregistrée.",
+                color="warning",
+                className="mb-3",
+            ),
+            html.Form(
+                method="POST",
+                action="/subscriptions/add-payment",
+                children=[
+                    _csrf_input(),
+                    html.Button(
+                        "Ajouter une méthode de paiement",
+                        type="submit",
+                        className="btn btn-secondary mb-3",
+                    ),
+                ],
+            ),
+        ]
+    )
+
+
 def _active_view(row):
+    # row["status"] peut valoir "trial" ici sans venir de l'essai applicatif
+    # (subscriber_state, qui ne crée aucune ligne subscriptions) : le statut
+    # "status" d'une ligne subscriptions est éditable depuis l'admin
+    # (src/admin/tables.py), "trial" compris, et une base déployée avant ce
+    # chantier peut porter des lignes historiques à ce statut. Accessoirement,
+    # webhooks.map_subscription peut aussi le renvoyer si un plan Frisbii
+    # restait configuré avec un essai malgré no_trial=True. Les tests
+    # d'appartenance ci-dessous incluent donc "trial" au même titre que
+    # "active" (cf. db._ACCESS_STATUSES).
     meta = plans.plan_meta(row["plan"]) or {"label": row["plan"]}
     # Horodatages Frisbii en UTC : affichés en heure de Paris et avec l'heure,
     # une fin d'essai de quelques jours se jouant à l'heure près.
@@ -83,41 +170,13 @@ def _active_view(row):
         if row["current_period_end"]
         else None
     )
-    blocks = [html.H3(meta["label"], className="mb-1")]
+    blocks = [html.P(html.Strong(meta["label"]), className="mb-1")]
     price = _price_text(meta)
     if price:
         blocks.append(html.P(price, className="text-muted mb-3"))
 
     if row["status"] == "pending":
-        blocks.extend(
-            [
-                dbc.Alert(
-                    "Sans méthode de paiement enregistrée, votre abonnement sera "
-                    "résilié à la fin de la période d'essai.",
-                    color="warning",
-                    className="mb-3",
-                ),
-                html.Form(
-                    method="POST",
-                    action="/subscriptions/add-payment",
-                    children=[
-                        _csrf_input(),
-                        html.Button(
-                            "Ajouter une méthode de paiement",
-                            type="submit",
-                            className="btn btn-secondary mb-3",
-                        ),
-                    ],
-                ),
-            ]
-        )
-    elif row["status"] == "trial":
-        texte = (
-            f"Essai gratuit jusqu'au {end}, puis facturation et débit automatique à chaque date anniversaire."
-            if end
-            else "Essai gratuit en cours, puis facturation et débit automatique à chaque date anniversaire."
-        )
-        blocks.append(dbc.Alert(texte, color="info"))
+        blocks.append(_resume_payment_block())
     elif row["status"] == "cancelled":
         texte = (
             f"Abonnement résilié, actif jusqu'au {end}."
@@ -125,15 +184,42 @@ def _active_view(row):
             else "Abonnement résilié."
         )
         blocks.append(dbc.Alert(texte, color="warning"))
+        if db.period_end_in_future(row["current_period_end"]):
+            blocks.append(
+                html.Form(
+                    method="POST",
+                    action="/subscriptions/reactivate",
+                    children=[
+                        _csrf_input(),
+                        html.Button(
+                            "Je me réabonne",
+                            type="submit",
+                            className="btn btn-outline-secondary mt-3",
+                        ),
+                    ],
+                )
+            )
+        else:
+            # Période payée dépassée : Frisbii refuse l'uncancel (abonnement
+            # déjà "expired" côté Reepay, même si le webhook correspondant
+            # n'est pas encore arrivé côté colibre) — seul le parcours de
+            # souscription normale peut créer un nouvel abonnement.
+            blocks.append(
+                html.A(
+                    "Je me réabonne",
+                    href="/compte/abonnement/mes-infos",
+                    className="btn btn-outline-secondary mt-3",
+                )
+            )
     elif row["status"] == "active" and end:
-        blocks.append(html.P(f"Prochaine facturation : {end}"))
+        blocks.append(html.P(f"Prochaine facturation et prélèvement : {end}"))
 
     if row["status"] in ("pending", "trial", "active"):
         blocks.append(
             html.A(
                 "Configurer mon abonnement",
                 href="/compte/abonnement/mes-infos",
-                className="btn btn-outline-primary mt-3 me-2",
+                className="btn btn-outline-secondary mt-3 me-2",
             )
         )
 
@@ -224,6 +310,8 @@ def _feedback(query):
         out.append(dbc.Alert(text, color=color))
     if query.get("resiliation") == "ok":
         out.append(dbc.Alert("Votre abonnement a été résilié.", color="info"))
+    if query.get("reactivation") == "ok":
+        out.append(dbc.Alert("Votre abonnement a été réactivé.", color="success"))
     if query.get("carte") == "succes":
         out.append(dbc.Alert("Méthode de paiement mise à jour.", color="success"))
     if query.get("carte") == "annule":
@@ -298,13 +386,35 @@ def layout(**query):
         body.append(banner)
     body.extend(_feedback(query))
 
-    if _show_active_view(row):
+    from src.utils import TOUS_ABONNES
+
+    # Un essai en cours doit rester visible même après un abandon de paiement :
+    # sans ce cas particulier, `_show_active_view` (vrai pour "pending")
+    # masquerait la date de fin d'essai dès la création de la ligne "pending"
+    # (create_pending), et rien ne réapparaîtrait à la fin de l'essai — la
+    # personne resterait bloquée sur « Ajouter une méthode de paiement »
+    # indéfiniment.
+    pending_during_trial = (
+        row is not None
+        and row["status"] == "pending"
+        and not TOUS_ABONNES
+        and db.trial_active(current_user.id)
+    )
+
+    if pending_during_trial:
+        body.append(_trial_view(db.trial_ends_at(current_user.id)))
+        body.append(_resume_payment_block())
+    elif _show_active_view(row):
         body.append(_active_view(row))
         body.append(_resiliation_modal(row["current_period_end"]))
+    elif TOUS_ABONNES:
+        body.append(_no_sub_view(True, row))
+    elif db.trial_active(current_user.id):
+        body.append(_trial_view(db.trial_ends_at(current_user.id)))
+    elif db.trial_ends_at(current_user.id) is not None:
+        body.append(_trial_ended_view())
     else:
-        from src.utils import TOUS_ABONNES
-
-        body.append(_no_sub_view(TOUS_ABONNES, row))
+        body.append(_no_sub_view(False, row))
 
     body.append(_salaire_modal)
     return account_shell("abonnement", html.Div(body))

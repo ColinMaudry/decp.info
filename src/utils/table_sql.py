@@ -186,19 +186,26 @@ def dashboard_filters_to_sql(
         clauses.append('"sousTraitanceDeclaree" = ?')
         params.append(dashboard_marche_sous_traitance_declaree)
 
+    # Techniques d'achat : `list_has_any`, cocher plusieurs techniques élargit
+    # la sélection. Les considérations juste en dessous font l'inverse.
     if dashboard_marche_techniques:
         clauses.append("list_has_any(string_split(\"techniques\", ', '), ?::VARCHAR[])")
         params.append(list(dashboard_marche_techniques))
 
+    # `list_has_all` : cocher deux considérations veut dire « marchés portant
+    # les deux », pas « l'une ou l'autre ». Ces colonnes stockent plusieurs
+    # valeurs par ligne, jointes par ', ' (ex. "Critère social, Clause sociale"),
+    # un ET y a donc du sens — contrairement aux dropdowns Département,
+    # scalaires par ligne, qui restent en IN (...).
     if dashboard_marche_considerations_sociales:
         clauses.append(
-            "list_has_any(string_split(\"considerationsSociales\", ', '), ?::VARCHAR[])"
+            "list_has_all(string_split(\"considerationsSociales\", ', '), ?::VARCHAR[])"
         )
         params.append(list(dashboard_marche_considerations_sociales))
 
     if dashboard_marche_considerations_environnementales:
         clauses.append(
-            "list_has_any(string_split(\"considerationsEnvironnementales\", ', '), ?::VARCHAR[])"
+            "list_has_all(string_split(\"considerationsEnvironnementales\", ', '), ?::VARCHAR[])"
         )
         params.append(list(dashboard_marche_considerations_environnementales))
 

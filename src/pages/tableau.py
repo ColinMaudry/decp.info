@@ -40,7 +40,7 @@ from src.utils.table import (
     get_default_hidden_columns,
     write_styled_excel,
 )
-from src.utils.tracking import track_search
+from src.utils.tracking import track_download, track_search
 
 update_date_timestamp = get_data_update_timestamp(
     os.getenv("DATA_FILE_PARQUET_PATH", ""),
@@ -530,7 +530,7 @@ def get_rows_tableau(request):
 def update_meta(total, total_unique):
     total = total or 0
     total_unique = total_unique or 0
-    too_many = total > 65000
+    too_many = False  # total > 65000
     hint = (
         " · Filtrez sous 65 000 lignes pour activer le téléchargement"
         if too_many
@@ -567,6 +567,7 @@ def download_data(n_clicks, filter_model, column_state):
         write_styled_excel(df, buffer)
 
     date = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    track_download("/tableau")
     return dcc.send_bytes(to_bytes, filename=f"decp_{date}.xlsx")
 
 

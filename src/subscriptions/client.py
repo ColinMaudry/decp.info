@@ -67,7 +67,8 @@ def create_subscription_session(
     handle: str,
     accept_url: str,
     cancel_url: str,
-    no_trial: bool = False,
+    *,
+    no_trial: bool,
     customer_handle: str | None = None,
     create_customer: dict | None = None,
 ) -> str:
@@ -132,6 +133,10 @@ def set_subscription_payment_method(sub_handle: str, pm_id: str) -> None:
 
 def cancel_subscription(subscription_handle: str) -> dict:
     return _call("POST", f"/v1/subscription/{subscription_handle}/cancel")
+
+
+def uncancel_subscription(subscription_handle: str) -> dict:
+    return _call("POST", f"/v1/subscription/{subscription_handle}/uncancel")
 
 
 def get_subscription(subscription_handle: str) -> dict:

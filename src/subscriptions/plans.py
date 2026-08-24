@@ -8,17 +8,15 @@ def _handle(env_name: str) -> str:
 PLANS = {
     "simple": {
         "env": "FRISBII_PLAN_SIMPLE",
-        "label": "Abonnement",
+        "label": "Abonnement simple",
         "prix_ht": 20,
         "description": "Accès aux fonctionnalités supplémentaires de colibre.",
-        "trial_days": 2,
     },
     "soutien": {
         "env": "FRISBII_PLAN_SOUTIEN",
         "label": "Abonnement de soutien ✊",
         "prix_ht": 50,
         "description": "Mêmes fonctionnalités, contribution renforcée au projet.",
-        "trial_days": 2,
     },
 }
 
@@ -43,9 +41,3 @@ def plan_meta(key: str) -> dict | None:
         "prix_ht": meta["prix_ht"],
         "description": meta["description"],
     }
-
-
-def trial_days(key: str) -> int | None:
-    if not resolve_handle(key):
-        return None
-    return PLANS[key]["trial_days"]

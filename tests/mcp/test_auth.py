@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from flask import Flask
 
@@ -203,6 +205,54 @@ def test_401_carries_resource_metadata(mcp_app, monkeypatch):
     resp = app.test_client().post("/_mcp")
     assert resp.status_code == 401
     assert "resource_metadata=" in resp.headers["WWW-Authenticate"]
+
+
+def test_mcp_token_trial_active_200(mcp_app):
+    """Propriété 4 du plan : le transport MCP accepte un jeton pendant l'essai,
+    sans aucune ligne `subscriptions` — code HTTP réel, pas un booléen interne.
+    """
+    from src.api import tokens_db
+    from src.auth import db as auth_db
+    from src.subscriptions import db as sub_db
+
+    app, db_path = mcp_app
+    uid = auth_db.create_user("trial-mcp@ex.fr", "hash")
+    sub_db.start_trial_if_new(uid)
+
+    # Ancrage positif : essai actif, aucune ligne subscriptions.
+    assert sub_db.trial_active(uid) is True
+    assert sub_db.get_current(uid) is None
+
+    token, _ = tokens_db.create_token(db_path, "x", user_id=uid, kind="mcp")
+    resp = app.test_client().post("/_mcp", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+
+
+def test_mcp_token_trial_expired_403(mcp_app):
+    """Propriété 4 du plan : le transport MCP refuse le jeton une fois l'essai
+    expiré, toujours sans aucune ligne `subscriptions` — code HTTP réel.
+    """
+    from src.api import tokens_db
+    from src.auth import db as auth_db
+    from src.auth.db import get_conn
+    from src.subscriptions import db as sub_db
+
+    app, db_path = mcp_app
+    uid = auth_db.create_user("trial-mcp-expire@ex.fr", "hash")
+    sub_db.start_trial_if_new(uid)
+    past = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    get_conn().execute(
+        "UPDATE subscriber_state SET trial_ends_at = ? WHERE user_id = ?",
+        (past, uid),
+    )
+
+    # Ancrage positif : essai expiré, toujours aucune ligne subscriptions.
+    assert sub_db.trial_active(uid) is False
+    assert sub_db.get_current(uid) is None
+
+    token, _ = tokens_db.create_token(db_path, "x", user_id=uid, kind="mcp")
+    resp = app.test_client().post("/_mcp", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 403
 
 
 def test_oauth_token_no_subscription_403(mcp_app, monkeypatch):

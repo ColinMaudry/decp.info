@@ -45,6 +45,7 @@ from src.utils.table import (
     prepare_table_data,
     write_styled_excel,
 )
+from src.utils.tracking import track_download
 
 NAME = "Observatoire"
 
@@ -817,6 +818,7 @@ def download_observatoire(_n_clicks, filter_params, hidden_columns):
         write_styled_excel(dff, buffer)
 
     date = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    track_download("/observatoire")
     return dcc.send_bytes(to_bytes, filename=f"decp_observatoire_{date}.xlsx")
 
 
