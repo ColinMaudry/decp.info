@@ -665,6 +665,11 @@ button.show-hide {
   line-height: 1.4;
 }
 
+.ag-cell[col-id="objet"] {
+  font-size: 0.85em;
+  line-height: 0.98em;
+}
+
 /* Infobulle : largeur bornée avec retour à la ligne plutôt qu'une largeur
    qui suit tout le texte. .ag-tooltip = infobulle native (ex. colonne
    "objet" tronquée) ; .ag-tooltip-custom = infobulle rendue par un
