@@ -421,7 +421,7 @@ def has_access(user_id: int) -> bool:
 
     À ne PAS confondre avec `has_active_subscription`, qui ne parle que
     d'abonnements. Les appelants qui décident d'orienter vers la souscription
-    (garde de `subscribe()`, `_post_login_url`, page /a-propos/abonnement)
+    (garde de `subscribe()`, `_post_login_url`, page /projet/abonnement)
     doivent rester sur cette dernière : s'ils comptaient l'essai, un
     utilisateur en essai ne pourrait plus s'abonner du tout.
     """

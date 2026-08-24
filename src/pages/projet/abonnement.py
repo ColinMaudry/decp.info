@@ -2,7 +2,7 @@ import dash_bootstrap_components as dbc
 from dash import dcc, html, register_page
 from flask_login import current_user
 
-from src.pages._apropos_shell import apropos_shell
+from src.pages._projet_shell import projet_shell
 from src.subscriptions import db as sub_db
 from src.subscriptions import plans
 from src.utils import TOUS_ABONNES
@@ -10,8 +10,8 @@ from src.utils.seo import META_CONTENT
 
 register_page(
     __name__,
-    path="/a-propos/abonnement",
-    title="Abonnement | À propos | colibre",
+    path="/projet/abonnement",
+    title="Abonnement | Le projet | colibre",
     description="Conditions d'abonnement à colibre : tarifs, facturation, rétractation et résiliation.",
     image_url=META_CONTENT["image_url"],
 )
@@ -140,7 +140,7 @@ subscription_terms = html.Div(
 L'accès aux fonctionnalités de base de colibre est gratuit et sans inscription. Il est possible de souscrire à un abonnement mensuel qui donne accès à des fonctionnalités supplémentaires.
 L'abonnement est souscrit auprès de la société Colmo dont le SIRET est 98939335000016 ([annuaire des entreprises](https://annuaire-entreprises.data.gouv.fr/etablissement/98939335000016)).
 
-Les présentes conditions régissent l'abonnement. L'utilisation du site est par ailleurs régie par les [conditions d'utilisation](/a-propos/mentions-legales#conditions-utilisation).
+Les présentes conditions régissent l'abonnement. L'utilisation du site est par ailleurs régie par les [conditions d'utilisation](/projet/mentions-legales#conditions-utilisation).
 """
         ),
         html.H4("Tarifs"),
@@ -169,7 +169,7 @@ L'abonnement est conclu pour une durée d'un mois à compter de son démarrage, 
             """
 Les cartes bancaires des réseaux Visa et Mastercard sont acceptées.
 
-Il est également possible de payer par virement bancaire à condition de payer un an d'abonnement. [Envoyez un message](/a-propos/contact) si vous êtes intéressé·e.
+Il est également possible de payer par virement bancaire à condition de payer un an d'abonnement. [Envoyez un message](/projet/contact) si vous êtes intéressé·e.
 """
         ),
         html.H4("Période d'essai"),
@@ -221,9 +221,9 @@ La gestion de l'abonnement implique le traitement de données par Frisbii, prest
 - Historique des factures
 
 Ces données sont utilisées uniquement pour la gestion de votre abonnement et ne sont pas transmises à des tiers à des fins commerciales.
-Vous pouvez demander l'accès, la rectification ou la suppression de vos données en [me contactant](/a-propos/contact).
+Vous pouvez demander l'accès, la rectification ou la suppression de vos données en [me contactant](/projet/contact).
 
-Les données recueillies par colibre en dehors de l'abonnement (compte, conversations, suivi d'audience) sont décrites dans les [conditions d'utilisation](/a-propos/mentions-legales#cu-donnees-personnelles).
+Les données recueillies par colibre en dehors de l'abonnement (compte, conversations, suivi d'audience) sont décrites dans les [conditions d'utilisation](/projet/mentions-legales#cu-donnees-personnelles).
 """
         ),
         html.H4("Loi applicable"),
@@ -236,7 +236,7 @@ En cas de litige, les parties s'efforceront de trouver une solution amiable avan
         ),
         html.H4("Contact"),
         dcc.Markdown(
-            "Pour toute question relative à votre abonnement : [page de contact](/a-propos/contact)."
+            "Pour toute question relative à votre abonnement : [page de contact](/projet/contact)."
         ),
     ]
 )
@@ -253,4 +253,4 @@ def layout(**_):
             subscription_terms,
         ]
     )
-    return apropos_shell("abonnement", body)
+    return projet_shell("abonnement", body)

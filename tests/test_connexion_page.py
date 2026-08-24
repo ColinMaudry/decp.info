@@ -3,5 +3,5 @@ def test_connexion_cta_points_to_abonnement():
     from src.pages import connexion
 
     text = str(connexion.layout())
-    assert "/a-propos/abonnement" in text
+    assert "/projet/abonnement" in text
     assert "Voir les abonnements" in text

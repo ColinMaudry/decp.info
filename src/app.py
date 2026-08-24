@@ -219,6 +219,19 @@ from src.seo.routes import seo_bp  # noqa: E402
 
 app.server.register_blueprint(seo_bp)
 
+
+# Ancienne section « À propos », renommée en « Le projet » : redirige les URLs
+# /a-propos/* déjà indexées ou partagées vers leur équivalent /projet/*.
+@app.server.route("/a-propos")
+def _redirect_a_propos_racine():
+    return redirect("/projet", code=301)
+
+
+@app.server.route("/a-propos/<path:sous_chemin>")
+def _redirect_a_propos(sous_chemin: str):
+    return redirect(f"/projet/{sous_chemin}", code=301)
+
+
 # 404 sur les chemins qui ne correspondent à aucune page (#125). À déclarer
 # après les autres routes : le garde ne s'applique qu'au catch-all de Dash, donc
 # toute route enregistrée ici ou plus haut lui échappe par construction.
@@ -463,7 +476,7 @@ navbar = dbc.Navbar(
                                 [
                                     html.A(
                                         version,
-                                        href="/a-propos/roadmap",
+                                        href="/projet/roadmap",
                                     )
                                 ],
                                 className="version",
@@ -497,14 +510,14 @@ navbar = dbc.Navbar(
                             dbc.NavLink(
                                 page["name"].replace(" ", " "),
                                 href=page["relative_path"] + "/presentation"
-                                if page["name"] == "À propos"
+                                if page["name"] == "Le projet"
                                 else page["relative_path"],
                                 active="exact",
                             )
                         )
                         for page in page_registry.values()
                         if page["name"]
-                        in ["Recherche", "À propos", "Tableau", "Observatoire"]
+                        in ["Recherche", "Le projet", "Tableau", "Observatoire"]
                     ]
                     + [
                         html.Div(id="auth-nav-slot"),

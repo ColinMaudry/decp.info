@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from src.pages.a_propos import contact
+from src.pages.projet import contact
 from src.rencontres import openagenda
 from src.rencontres.openagenda import Evenement
 

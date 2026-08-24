@@ -9,7 +9,7 @@ def _plan_env(monkeypatch):
 
 def test_plan_cards_show_single_trial_mention_above_cards_no_per_card_badge():
     from src.app import app  # noqa: F401
-    from src.pages.a_propos import abonnement as page
+    from src.pages.projet import abonnement as page
     from src.subscriptions.db import TRIAL_DAYS
 
     result = page._plan_cards()
@@ -31,7 +31,7 @@ def test_plan_cards_show_single_trial_mention_above_cards_no_per_card_badge():
 
 def test_subscribe_button_visitor_goes_to_inscription():
     from src.app import app  # noqa: F401
-    from src.pages.a_propos import abonnement as page
+    from src.pages.projet import abonnement as page
 
     text = str(page._subscribe_button(False, False, False))
     assert "Je crée mon compte" in text
@@ -44,7 +44,7 @@ def test_subscribe_button_authenticated_no_sub_goes_to_mes_infos_even_during_tri
     # d'abonnement) doit toujours voir « Je m'abonne » vers mes-infos, jamais
     # « Gérer mon abonnement ».
     from src.app import app  # noqa: F401
-    from src.pages.a_propos import abonnement as page
+    from src.pages.projet import abonnement as page
 
     text = str(page._subscribe_button(True, False, False))
     assert "Je m'abonne" in text
@@ -54,7 +54,7 @@ def test_subscribe_button_authenticated_no_sub_goes_to_mes_infos_even_during_tri
 
 def test_subscribe_button_active_sub_manages():
     from src.app import app  # noqa: F401
-    from src.pages.a_propos import abonnement as page
+    from src.pages.projet import abonnement as page
 
     text = str(page._subscribe_button(True, True, False))
     assert "Gérer mon abonnement" in text
@@ -63,7 +63,7 @@ def test_subscribe_button_active_sub_manages():
 
 def test_subscribe_button_tous_abonnes_visitor_free_signup():
     from src.app import app  # noqa: F401
-    from src.pages.a_propos import abonnement as page
+    from src.pages.projet import abonnement as page
 
     text = str(page._subscribe_button(False, False, True))
     assert "Je crée mon compte" in text
@@ -73,7 +73,7 @@ def test_subscribe_button_tous_abonnes_visitor_free_signup():
 
 def test_subscribe_button_tous_abonnes_authenticated_goes_to_compte():
     from src.app import app  # noqa: F401
-    from src.pages.a_propos import abonnement as page
+    from src.pages.projet import abonnement as page
 
     text = str(page._subscribe_button(True, False, True))
     assert "href='/compte/abonnement'" in text
@@ -82,7 +82,7 @@ def test_subscribe_button_tous_abonnes_authenticated_goes_to_compte():
 
 def test_cgu_terms_trimmed_of_features_section():
     from src.app import app  # noqa: F401
-    from src.pages.a_propos import abonnement as page
+    from src.pages.projet import abonnement as page
 
     text = str(page.subscription_terms)
     assert "Fonctionnalités incluses" not in text
@@ -92,7 +92,7 @@ def test_cgu_terms_trimmed_of_features_section():
 
 def test_subscription_terms_limited_to_commercial_clauses():
     from src.app import app  # noqa: F401
-    from src.pages.a_propos import abonnement as page
+    from src.pages.projet import abonnement as page
 
     text = str(page.subscription_terms)
     assert "Droit de rétractation" in text
@@ -101,7 +101,7 @@ def test_subscription_terms_limited_to_commercial_clauses():
     # les conditions d'utilisation ont migré vers les mentions légales
     assert "Chatwoot" not in text
     assert "Adresse e-mail (identification du compte)" not in text
-    assert "/a-propos/mentions-legales#conditions-utilisation" in text
+    assert "/projet/mentions-legales#conditions-utilisation" in text
 
 
 def test_subscription_terms_mentions_trial_days_from_config():
@@ -109,7 +109,7 @@ def test_subscription_terms_mentions_trial_days_from_config():
     suivre TRIAL_DAYS, sinon un changement de durée fait mentir le texte
     contractuel sans que la suite le remarque."""
     from src.app import app  # noqa: F401
-    from src.pages.a_propos import abonnement as page
+    from src.pages.projet import abonnement as page
     from src.subscriptions.db import TRIAL_DAYS
 
     text = str(page.subscription_terms)
@@ -123,7 +123,7 @@ def test_subscription_terms_trial_no_longer_auto_converts_to_paid():
     # souscription explicite qui démarre l'abonnement, jamais la fin de
     # l'essai.
     from src.app import app  # noqa: F401
-    from src.pages.a_propos import abonnement as page
+    from src.pages.projet import abonnement as page
 
     text = str(page.subscription_terms)
     # La nouvelle formulation est bien présente...
@@ -136,7 +136,7 @@ def test_subscription_terms_trial_no_longer_auto_converts_to_paid():
 
 def test_plan_card_ttc_price_for_current_real_prices():
     from src.app import app  # noqa: F401
-    from src.pages.a_propos import abonnement as page
+    from src.pages.projet import abonnement as page
 
     simple = str(
         page._plan_card(
@@ -163,7 +163,7 @@ def test_plan_card_ttc_price_for_current_real_prices():
 
 def test_plan_card_ttc_price_avoids_float_artifacts():
     from src.app import app  # noqa: F401
-    from src.pages.a_propos import abonnement as page
+    from src.pages.projet import abonnement as page
 
     text = str(
         page._plan_card(

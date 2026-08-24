@@ -1,12 +1,12 @@
 from dash import dcc, html, register_page
 
-from src.pages._apropos_shell import apropos_shell
+from src.pages._projet_shell import projet_shell
 from src.utils.seo import META_CONTENT
 
 register_page(
     __name__,
-    path="/a-propos/mentions-legales",
-    title="Conditions d'utilisation et mentions légales | À propos | colibre",
+    path="/projet/mentions-legales",
+    title="Conditions d'utilisation et mentions légales | Le projet | colibre",
     description=(
         "Conditions d'utilisation de colibre et mentions légales : éditeur, "
         "hébergement, responsabilité, données personnelles, suivi d'audience."
@@ -26,7 +26,7 @@ colibre est un service d'exploration des données de la commande publique franç
 
 L'utilisation du site vaut acceptation des présentes conditions d'utilisation.
 
-Les fonctionnalités de base sont accessibles gratuitement et sans inscription. Certaines fonctionnalités nécessitent un compte et un abonnement : elles sont régies par les [conditions d'abonnement](/a-propos/abonnement), distinctes des présentes conditions.
+Les fonctionnalités de base sont accessibles gratuitement et sans inscription. Certaines fonctionnalités nécessitent un compte et un abonnement : elles sont régies par les [conditions d'abonnement](/projet/abonnement), distinctes des présentes conditions.
 """
             ),
             html.H4("Compte utilisateur", id="cu-compte"),
@@ -34,7 +34,7 @@ Les fonctionnalités de base sont accessibles gratuitement et sans inscription. 
                 """
 La création d'un compte requiert une adresse e-mail valide. Vous êtes responsable de la confidentialité de vos identifiants et des actions effectuées depuis votre compte.
 
-Vous pouvez demander la suppression de votre compte à tout moment depuis la [page de contact](/a-propos/contact).
+Vous pouvez demander la suppression de votre compte à tout moment depuis la [page de contact](/projet/contact).
 """
             ),
             html.H4("Usage du service", id="cu-usage"),
@@ -46,7 +46,7 @@ colibre est mis à disposition pour une consultation normale. Sont notamment pro
 - le partage d'un compte entre plusieurs personnes ;
 - toute action portant atteinte à la disponibilité ou à la sécurité du service.
 
-Les données sont par ailleurs disponibles en [téléchargement libre](/a-propos/donnees#donnees-brutes) : merci de les récupérer par ce biais plutôt que par moissonnage du site.
+Les données sont par ailleurs disponibles en [téléchargement libre](/projet/donnees#donnees-brutes) : merci de les récupérer par ce biais plutôt que par moissonnage du site.
 
 En cas de manquement, l'accès au service peut être suspendu.
 """
@@ -58,7 +58,7 @@ Les données présentées proviennent des Données Essentielles de la Commande P
 
 Elles sont fournies en l'état. colibre s'engage sur une obligation de moyens quant à leur qualité et leur fraîcheur, sans garantie d'exhaustivité ni d'exactitude : celles-ci dépendent de la publication par les acheteurs publics eux-mêmes.
 
-Toute erreur constatée peut être signalée depuis la [page de contact](/a-propos/contact).
+Toute erreur constatée peut être signalée depuis la [page de contact](/projet/contact).
 """
             ),
             html.H4("Disponibilité du service", id="cu-disponibilite"),
@@ -91,9 +91,9 @@ Conformément au RGPD, colibre ne recueille que les données strictement nécess
 
 Le contenu des conversations est transmis au prestataire Chatwoot et au logiciel Slack. Si vous êtes connecté·e, votre adresse e-mail y est jointe pour vous identifier.
 
-Ces données ne sont pas transmises à des tiers à des fins commerciales. Vous pouvez demander l'accès, la rectification ou la suppression de vos données en [me contactant](/a-propos/contact).
+Ces données ne sont pas transmises à des tiers à des fins commerciales. Vous pouvez demander l'accès, la rectification ou la suppression de vos données en [me contactant](/projet/contact).
 
-Les données de facturation et de paiement des abonné·es sont traitées séparément par le prestataire de paiement : voir les [conditions d'abonnement](/a-propos/abonnement).
+Les données de facturation et de paiement des abonné·es sont traitées séparément par le prestataire de paiement : voir les [conditions d'abonnement](/projet/abonnement).
 """
             ),
             html.H4("Loi applicable", id="cu-loi"),
@@ -164,4 +164,4 @@ def layout(**_):
             _mentions_legales(),
         ]
     )
-    return apropos_shell("mentions-legales", contenu)
+    return projet_shell("mentions-legales", contenu)

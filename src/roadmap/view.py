@@ -4,7 +4,7 @@
 l'utilisateur connecté — droits de vote, solde, prochain rechargement — et
 porte le callback de vote.
 
-Les deux pages roadmap (`/a-propos/roadmap`, publique, et `/compte/roadmap`,
+Les deux pages roadmap (`/projet/roadmap`, publique, et `/compte/roadmap`,
 réservée aux abonné·es) partagent tout ce qui est ici : elles rendent le même
 contenu, avec les mêmes droits, et diffèrent seulement par leur coquille.
 

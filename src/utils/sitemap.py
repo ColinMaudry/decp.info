@@ -24,8 +24,8 @@ STATIC_ROOTS = [
 ]
 
 # Préfixes dont les sous-pages sont découvertes automatiquement dans le registre
-# Dash : ajouter une section « À propos » suffit, le sitemap suit.
-AUTO_PREFIXES = ("/a-propos/",)
+# Dash : ajouter une section « Le projet » suffit, le sitemap suit.
+AUTO_PREFIXES = ("/projet/",)
 
 # Pages volontairement hors sitemap. Le test-garde
 # `test_sitemap_couvre_toutes_les_pages_publiques` échoue si une page du
@@ -37,7 +37,7 @@ NON_INDEXABLE_PREFIXES = (
 )
 NON_INDEXABLE_PATHS = frozenset(
     {
-        "/a-propos",  # redirection JS vers /a-propos/presentation, sans contenu
+        "/projet",  # redirection JS vers /projet/presentation, sans contenu
         "/404",
         "/connexion",
         "/inscription",

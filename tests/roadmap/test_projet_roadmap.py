@@ -1,4 +1,4 @@
-"""Page publique /a-propos/roadmap : lecture seule, sauf pour les abonné·es."""
+"""Page publique /projet/roadmap : lecture seule, sauf pour les abonné·es."""
 
 import pytest
 
@@ -40,7 +40,7 @@ def _layout(monkeypatch, *, subscriber: bool, balance: int = 0):
         monkeypatch.setattr(roadmap_view.subs_db, "next_recharge_at", lambda _: None)
         monkeypatch.setattr(roadmap_view.subs_db, "get_current", lambda _: None)
 
-    from src.pages.a_propos import roadmap
+    from src.pages.projet import roadmap
 
     return str(roadmap.layout())
 
@@ -55,7 +55,7 @@ def test_visiteuse_non_abonnee_voit_la_lecture_seule(monkeypatch, fake_issues):
 def test_visiteuse_non_abonnee_voit_l_appel_a_l_abonnement(monkeypatch, fake_issues):
     s = _layout(monkeypatch, subscriber=False)
     assert "Abonnez-vous" in s
-    assert "/a-propos/abonnement" in s
+    assert "/projet/abonnement" in s
 
 
 def test_abonnee_peut_voter_depuis_la_page_publique(monkeypatch, fake_issues):

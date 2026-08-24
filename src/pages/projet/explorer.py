@@ -1,12 +1,12 @@
 from dash import dcc, html, register_page
 
-from src.pages._apropos_shell import apropos_shell
+from src.pages._projet_shell import projet_shell
 from src.utils.seo import META_CONTENT
 
 register_page(
     __name__,
-    path="/a-propos/explorer",
-    title="Explorer le projet | À propos | colibre",
+    path="/projet/explorer",
+    title="Explorer le projet | Le projet | colibre",
     description="Ressources pour explorer le projet colibre : données, code source, blog.",
     image_url=META_CONTENT["image_url"],
 )
@@ -29,4 +29,4 @@ def layout(**_):
             ),
         ]
     )
-    return apropos_shell("explorer", contenu)
+    return projet_shell("explorer", contenu)

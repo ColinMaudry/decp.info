@@ -22,7 +22,7 @@ def client():
         "/db/decp.csv",
         "/acheteur",  # singulier : la page réelle est /acheteurs/<id>
         "/nimportequoi",
-        "/a-propos/inexistant",
+        "/projet/inexistant",
         "/404",  # la page 404 elle-même ne doit pas répondre 200
     ],
 )
@@ -38,12 +38,30 @@ def test_chemins_inconnus_renvoient_404(client, path):
         "/",
         "/tableau",
         "/observatoire",
-        "/a-propos/contact",
+        "/projet/contact",
         "/connexion",
     ],
 )
 def test_pages_statiques_inchangees(client, path):
     assert client.get(path).status_code == 200
+
+
+@pytest.mark.parametrize(
+    "ancien_chemin,nouveau_chemin",
+    [
+        ("/a-propos", "/projet"),
+        ("/a-propos/contact", "/projet/contact"),
+        ("/a-propos/mentions-legales", "/projet/mentions-legales"),
+    ],
+)
+def test_a_propos_redirige_vers_projet(client, ancien_chemin, nouveau_chemin):
+    """La section « À propos » a été renommée « Le projet » : les anciennes
+
+    URLs /a-propos/* doivent continuer à fonctionner via redirection.
+    """
+    resp = client.get(ancien_chemin)
+    assert resp.status_code == 301
+    assert resp.headers["Location"] == nouveau_chemin
 
 
 @pytest.mark.parametrize(
