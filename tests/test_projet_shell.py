@@ -37,6 +37,13 @@ def test_sous_sections_de_donnees_ont_un_libelle_lisible():
     ]
 
 
+def test_barre_laterale_projet_reste_visible_au_defilement():
+    noeuds = list(walk_components(_shell_donnees()))
+    assert any(
+        "shell-nav-sticky" in (getattr(n, "className", "") or "") for n in noeuds
+    )
+
+
 def _shell_donnees():
     from dash import html
 

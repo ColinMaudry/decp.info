@@ -134,3 +134,18 @@ def test_has_subscription_false_after_trial_expires_without_subscriptions_row(
 
     with patch("src.pages._compte_shell.current_user", _fake_user(True, uid)):
         assert shell.current_user_has_subscription() is False
+
+
+def test_barre_laterale_compte_reste_visible_au_defilement():
+    from dash import html
+
+    from src.app import app
+    from tests.helpers import walk_components
+
+    # current_user (Flask-Login) exige un contexte de requête.
+    with app.server.test_request_context("/compte"):
+        noeuds = list(walk_components(shell.account_shell("abonnement", html.Div())))
+
+    assert any(
+        "shell-nav-sticky" in (getattr(n, "className", "") or "") for n in noeuds
+    )

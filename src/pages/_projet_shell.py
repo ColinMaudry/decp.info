@@ -67,7 +67,14 @@ def _nav(active: str, anchors: bool = True):
 
 def projet_shell(active: str, contenu):
     sidebar = dbc.Col(
-        html.Div([html.H5("Le projet", className="mb-3"), _nav(active)]),
+        # La classe collante est sur le bloc intérieur, pas sur la colonne :
+        # dbc.Row étire ses colonnes sur toute la hauteur (flex), ce qui ne
+        # laisse à un `position: sticky` posé sur la Col aucune marge de
+        # défilement — il ne collerait jamais.
+        html.Div(
+            [html.H5("Le projet", className="mb-3"), _nav(active)],
+            className="shell-nav-sticky",
+        ),
         md=3,
         className="d-none d-md-block",
     )

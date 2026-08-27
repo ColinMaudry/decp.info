@@ -1174,3 +1174,16 @@ input[type="number"] {
 [id] {
   scroll-margin-top: 1rem;
 }
+
+/* Nav latérale de /projet et /compte : reste visible pendant le défilement des
+   pages longues. Uniquement à partir de md, où la colonne est affichée (en
+   dessous, la nav est repliée dans un offcanvas). Le `max-height` + `overflow`
+   évitent qu'une nav plus haute que l'écran devienne inatteignable. */
+@media (min-width: 768px) {
+  .shell-nav-sticky {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+}
