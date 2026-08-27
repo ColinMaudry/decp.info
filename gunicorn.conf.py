@@ -39,7 +39,7 @@ timeout = int(os.getenv("GUNICORN_TIMEOUT", "900"))
 graceful_timeout = int(os.getenv("GUNICORN_GRACEFUL_TIMEOUT", "30"))
 
 # Recycle les workers pour amortir une éventuelle fuite mémoire au long cours.
-max_requests = int(os.getenv("GUNICORN_MAX_REQUESTS", "1000"))
+max_requests = int(os.getenv("GUNICORN_MAX_REQUESTS", "5000"))
 max_requests_jitter = int(os.getenv("GUNICORN_MAX_REQUESTS_JITTER", "100"))
 
 # Logs sur stderr : captés par systemd aujourd'hui, par l'orchestrateur
