@@ -4,7 +4,19 @@ from dash import Input, Output, State, callback, html
 SECTIONS = [
     {"key": "presentation", "label": "Présentation", "href": "/projet/presentation"},
     {"key": "explorer", "label": "Explorer le projet", "href": "/projet/explorer"},
-    {"key": "donnees", "label": "Données", "href": "/projet/donnees"},
+    {
+        "key": "donnees",
+        "label": "Données",
+        "href": "/projet/donnees",
+        # Sous-sections dépliées sous le lien quand la section est active :
+        # la page est longue, les ancres évitent de la parcourir au jugé.
+        "anchors": [
+            ("donnees-brutes", "Consommer les données brutes"),
+            ("qualite", "Qualité et exhaustivité"),
+            ("champs", "Liste des champs"),
+            ("sources", "Sources de données"),
+        ],
+    },
     # {"key": "contribuer", "label": "Contribuer", "href": "/projet/contribuer"},
     {
         "key": "abonnement",
@@ -25,11 +37,31 @@ SECTIONS = [
 ]
 
 
-def _nav(active: str):
-    links = [
-        dbc.NavLink(s["label"], href=s["href"], active=(s["key"] == active))
-        for s in SECTIONS
-    ]
+def _nav(active: str, anchors: bool = True):
+    """Nav latérale des pages /projet.
+
+    `anchors=False` pour le menu burger mobile : replié dans un offcanvas, il
+    ne fait découvrir les sous-sections à personne, et cliquer l'une d'elles y
+    défile derrière le panneau — que sa fermeture ramène ensuite en haut de
+    page (Bootstrap restaure la position mémorisée à l'ouverture).
+    """
+    links = []
+    for s in SECTIONS:
+        is_active = s["key"] == active
+        links.append(dbc.NavLink(s["label"], href=s["href"], active=is_active))
+        if not is_active or not anchors:
+            continue
+        links.extend(
+            # Le défilement vers l'ancre est fait par src/assets/anchors.js :
+            # dcc.Link intercepte le clic côté client, donc le saut natif du
+            # navigateur n'a pas lieu.
+            dbc.NavLink(
+                label,
+                href=f"{s['href']}#{anchor}",
+                class_name="projet-subnav-link",
+            )
+            for anchor, label in s.get("anchors", ())
+        )
     return dbc.Nav(links, vertical=True, class_name="account-nav")
 
 
@@ -49,7 +81,7 @@ def projet_shell(active: str, contenu):
                 className="mb-3",
             ),
             dbc.Offcanvas(
-                _nav(active),
+                _nav(active, anchors=False),
                 id="projet-offcanvas",
                 title="Le projet",
                 is_open=False,

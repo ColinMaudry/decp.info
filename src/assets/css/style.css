@@ -1161,3 +1161,16 @@ input[type="number"] {
   background-color: rgba(179, 56, 33, 0.18);
   transition: background-color 0.4s ease-out;
 }
+
+/* Sous-sections de la page active dans la nav latérale /projet : décalées et
+   plus discrètes que les liens de section, dont elles dépendent. */
+.account-nav .projet-subnav-link {
+  padding-left: 26px;
+  font-size: 0.9rem;
+  border-left-width: 1px;
+}
+
+/* Respiration au-dessus d'un titre atteint par une ancre. */
+[id] {
+  scroll-margin-top: 1rem;
+}

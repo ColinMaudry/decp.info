@@ -1,9 +1,14 @@
-/* Deep-link vers un champ du tableau /projet/donnees#nom_du_champ (#136).
+/* Défilement vers les ancres de la page (#136).
  *
- * La grille des champs est rendue par Dash APRÈS le chargement du document :
- * quand le navigateur cherche l'ancre du hash, la ligne n'existe pas encore et
- * le saut natif échoue silencieusement. On attend donc son apparition, on la
- * fait défiler puis on la surligne brièvement.
+ * Deux raisons pour lesquelles le navigateur ne s'en charge pas seul :
+ *  - le contenu est rendu par Dash APRÈS le chargement du document, donc à
+ *    l'instant où le navigateur cherche l'ancre du hash elle n'existe pas
+ *    encore, et le saut échoue silencieusement ;
+ *  - les liens internes (nav latérale) passent par dcc.Link, qui intercepte le
+ *    clic côté client : le saut natif n'a jamais lieu.
+ *
+ * Une ancre pointant sur une ligne du tableau des champs
+ * (/projet/donnees#nom_du_champ) est en plus surlignée brièvement.
  */
 (function () {
   "use strict";
@@ -55,15 +60,20 @@
   }
 
   /* Renvoie true si l'ancre a été atteinte (ou s'il n'y a rien à faire). */
-  function reveal() {
-    var hash = window.location.hash.slice(1);
+  function reveal(wanted) {
+    var hash = (wanted || window.location.hash).replace(/^#/, "");
     if (!hash) {
       return true;
     }
     var cell = document.getElementById(decodeURIComponent(hash));
-    // Une ancre hors grille (#sources, #qualite...) est laissée au navigateur.
-    if (!cell || !cell.closest(".ag-row")) {
+    if (!cell) {
       return false;
+    }
+    // Ancre de titre (#sources, #qualite...) : simple défilement, sans
+    // recalage ni surlignage — sa position ne bouge plus une fois rendue.
+    if (!cell.closest(".ag-row")) {
+      cell.scrollIntoView({ block: "start" });
+      return true;
     }
     // Surlignage seulement une fois le défilement stabilisé : sinon il
     // s'éteint pendant que la grille se recale encore.
@@ -73,12 +83,12 @@
     return true;
   }
 
-  function watch() {
-    if (reveal()) {
+  function watch(wanted) {
+    if (reveal(wanted)) {
       return;
     }
     var observer = new MutationObserver(function () {
-      if (reveal()) {
+      if (reveal(wanted)) {
         observer.disconnect();
       }
     });
@@ -88,9 +98,33 @@
     }, TIMEOUT_MS);
   }
 
-  window.addEventListener("hashchange", watch);
+  window.addEventListener("hashchange", function () {
+    watch();
+  });
+
+  /* Les liens internes de Dash (dcc.Link, dont dbc.NavLink) changent l'URL par
+   * history.pushState, qui n'émet PAS de hashchange : sans cet écouteur, un
+   * clic sur une sous-section de la nav latérale met le hash à jour sans rien
+   * faire défiler. On lit le hash sur le lien plutôt que sur location, dont la
+   * mise à jour par Dash n'a pas forcément eu lieu à cet instant. */
+  document.addEventListener("click", function (event) {
+    var link = event.target.closest && event.target.closest('a[href*="#"]');
+    if (!link) {
+      return;
+    }
+    var hash = link.getAttribute("href").split("#")[1];
+    if (hash) {
+      window.setTimeout(function () {
+        watch("#" + hash);
+      }, 0);
+    }
+  });
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", watch);
+    // Enveloppé : l'écouteur reçoit un Event, que watch() prendrait pour un
+    // hash.
+    document.addEventListener("DOMContentLoaded", function () {
+      watch();
+    });
   } else {
     watch();
   }
