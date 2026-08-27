@@ -2,7 +2,7 @@ import os
 
 from dash import dcc, html, register_page
 
-from src.figures import get_duplicate_matrix, get_sources_tables
+from src.figures import get_duplicate_matrix, get_sources_tables, make_schema_grid
 from src.pages._projet_shell import projet_shell
 from src.pages.etapes import build_chart, build_mobile
 from src.utils.seo import META_CONTENT
@@ -61,6 +61,14 @@ Il faut souligner la belle continuité de la publication par la DGFiP des donné
 [protocole PES](https://www.collectivites-locales.gouv.fr/finances-locales/le-protocole-dechange-standard-pes).
 Merci à leurs équipes."""
             ),
+            html.H2("Liste des champs", id="champs", className="mt-4"),
+            dcc.Markdown(
+                """Liste des champs de données publiés en Open Data et accessibles via l'API.
+L'ensemble de ces champs est également visible sur ce site à l'exception de
+**Données actuelles**, seule la dernière version de chaque marché étant affichée
+(donneesActuelles = "oui")."""
+            ),
+            make_schema_grid(),
             html.H2("Sources de données", id="sources", className="mt-4"),
             get_sources_tables(os.getenv("SOURCE_STATS_CSV_PATH")),
             html.P(

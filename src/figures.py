@@ -16,7 +16,7 @@ from polars.exceptions import ColumnNotFoundError
 
 from src.db import schema
 from src.utils import logger
-from src.utils.data import DATA_SCHEMA, DEPARTEMENTS_GEOJSON
+from src.utils.data import DATA_SCHEMA, DEPARTEMENTS_GEOJSON, schema_field_rows
 from src.utils.table import add_links, format_number, setup_table_columns
 
 
@@ -1051,6 +1051,67 @@ def make_column_picker(page: str):
     return table
 
 
+def make_schema_grid():
+    """Tableau des champs publiés affiché en bas de /projet/donnees (#136).
+
+    Grille client-side (64 lignes) en `domLayout: "autoHeight"` : toutes les
+    lignes sont rendues dans la page, donc les ancres `#nom_du_champ` posées
+    dans la colonne « Nom » existent réellement dans le DOM (lien direct,
+    Ctrl+F) et le défilement reste celui de la page, sans scroll interne.
+    """
+    return dag.AgGrid(
+        id="schema_champs_grid",
+        columnDefs=[
+            {
+                "field": "nom",
+                "headerName": "Nom",
+                "cellRenderer": "markdown",
+                "filter": "agTextColumnFilter",
+                "wrapText": True,
+                "autoHeight": True,
+                "flex": 3,
+                "minWidth": 260,
+            },
+            {
+                "field": "type",
+                "headerName": "Type de données",
+                "filter": "agTextColumnFilter",
+                "flex": 2,
+                # « Chaîne de caractères », le libellé le plus long, doit tenir
+                # sur une ligne sans être tronqué.
+                "minWidth": 210,
+            },
+            {
+                "field": "description",
+                "headerName": "Description",
+                "filter": "agTextColumnFilter",
+                "wrapText": True,
+                "autoHeight": True,
+                "flex": 6,
+                "minWidth": 320,
+            },
+        ],
+        rowData=schema_field_rows(),
+        # rend le <span id=...> d'ancre et le gras de la colonne « Nom »
+        dangerously_allow_code=True,
+        defaultColDef={
+            "resizable": True,
+            "sortable": False,
+            "floatingFilter": True,
+        },
+        dashGridOptions={
+            "domLayout": "autoHeight",
+            "suppressCellFocus": True,
+            "enableCellTextSelection": True,
+            "ensureDomOrder": True,
+            "localeText": AG_GRID_LOCALE_FR,
+            "theme": AG_GRID_THEME,
+        },
+        style={"width": "100%"},
+        persistence=False,
+    )
+
+
 def _top_org_aggregate(data, org_type: str, extra_columns: list):
     """Agrégation « top N » commune à get_top_org_table et get_top_org_ag_grid.
 
@@ -1173,23 +1234,28 @@ def get_top_org_ag_grid(data, org_type: str, extra_columns: list, filters: bool 
             "paginationPageSize": 10,
             "suppressCellFocus": True,
             "localeText": AG_GRID_LOCALE_FR,
-            "theme": {
-                "function": (
-                    "themeQuartz.withParams({"
-                    "accentColor: 'rgb(179, 56, 33)',"
-                    "headerTextColor: 'white',"
-                    "headerBackgroundColor: 'rgb(179, 56, 33)',"
-                    "oddRowBackgroundColor: 'rgba(255, 240, 240, 0.4)',"
-                    "borderColor: '#ccc',"
-                    "fontFamily: 'Inter, sans-serif',"
-                    "fontSize: 16"
-                    "})"
-                )
-            },
+            "theme": AG_GRID_THEME,
         },
         style={"width": "100%"},
         persistence=False,
     )
+
+
+# Thème AG Grid commun à toutes les grilles du site (en-tête rouge brique,
+# lignes alternées, police Inter), aligné sur les dash_table.DataTable.
+AG_GRID_THEME = {
+    "function": (
+        "themeQuartz.withParams({"
+        "accentColor: 'rgb(179, 56, 33)',"
+        "headerTextColor: 'white',"
+        "headerBackgroundColor: 'rgb(179, 56, 33)',"
+        "oddRowBackgroundColor: 'rgba(255, 240, 240, 0.4)',"
+        "borderColor: '#ccc',"
+        "fontFamily: 'Inter, sans-serif',"
+        "fontSize: 16"
+        "})"
+    )
+}
 
 
 # Libellés du menu de filtre AG Grid, traduits en français (option native
@@ -1270,20 +1336,7 @@ def ag_grid(
             # des 2000ms par défaut d'AG Grid).
             "tooltipShowDelay": 200,
             "localeText": AG_GRID_LOCALE_FR,
-            "theme": {
-                "function": (
-                    "themeQuartz.withParams({"
-                    "accentColor: 'rgb(179, 56, 33)',"
-                    "headerTextColor: 'white',"
-                    "headerBackgroundColor: 'rgb(179, 56, 33)',"
-                    "oddRowBackgroundColor: 'rgba(255, 240, 240, 0.4)',"
-                    "borderColor: '#ccc',"
-                    "fontFamily: 'Inter, sans-serif',"
-                    # "headerFontFamily: '\"Inter Tight\", sans-serif',"
-                    "fontSize: 16"
-                    "})"
-                )
-            },
+            "theme": AG_GRID_THEME,
             # Réserve l'espace de la barre de défilement horizontale en permanence
             # (comportement natif de Chrome). Sans effet sur Firefox : le curseur
             # de la barre y reste en overlay au survol, géré par l'OS/le navigateur

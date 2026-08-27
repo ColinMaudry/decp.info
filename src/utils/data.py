@@ -184,3 +184,52 @@ DATA_SCHEMA["marche"] = {
     "title": "Marché",
     "description": "Lien vers la fiche détaillée du marché.",
 }
+
+
+# Libellés français des types Table Schema, alignés sur la documentation
+# francophone du standard (Validata / schema.data.gouv.fr). Le schéma DECP
+# n'utilise aujourd'hui que string, number, integer, boolean et date ; les
+# autres entrées évitent d'afficher un type anglais si le schéma distant
+# évolue.
+TYPE_LABELS_FR = {
+    "string": "Chaîne de caractères",
+    "number": "Nombre décimal",
+    "integer": "Nombre entier",
+    "boolean": "Booléen (oui/non)",
+    "date": "Date",
+    "datetime": "Date et heure",
+    "time": "Heure",
+    "year": "Année",
+}
+
+
+def field_type_label(field: dict) -> str:
+    """Libellé français du type d'un champ Table Schema.
+
+    Repli sur le type brut pour un type non traduit : mieux vaut afficher
+    « geopoint » qu'une case vide.
+    """
+    type_name = field.get("type", "")
+    if type_name == "string" and field.get("format") == "uri":
+        return "URL"
+    return TYPE_LABELS_FR.get(type_name, type_name)
+
+
+def schema_field_rows() -> list[dict]:
+    """Lignes du tableau des champs publiés (/projet/donnees).
+
+    `marche` est exclue : c'est la colonne loupe fabriquée à l'affichage,
+    pas une donnée publiée. Le `<span id=...>` posé dans la colonne « nom »
+    sert d'ancre aux URL de type /projet/donnees#nom_du_champ (cf.
+    src/assets/anchors.js).
+    """
+    return [
+        {
+            "champ": name,
+            "nom": f'<span id="{name}"></span>**{field.get("title", name)}** ({name})',
+            "type": field_type_label(field),
+            "description": field.get("description", ""),
+        }
+        for name, field in DATA_SCHEMA.items()
+        if name != "marche"
+    ]

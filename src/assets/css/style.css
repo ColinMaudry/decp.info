@@ -1153,3 +1153,11 @@ input[type="number"] {
   margin-right: 6px;
   flex-shrink: 0;
 }
+
+/* Ligne du champ ciblé par une ancre /projet/donnees#nom_du_champ : surlignage
+   temporaire posé par src/assets/anchors.js, le temps que l'œil la
+   repère après le défilement automatique. */
+.ag-row.champ-cible {
+  background-color: rgba(179, 56, 33, 0.18);
+  transition: background-color 0.4s ease-out;
+}
