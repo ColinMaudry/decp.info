@@ -36,7 +36,11 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from src.admin.guard import is_admin
 from src.auth.setup import init_auth
 from src.utils import DEVELOPMENT
-from src.utils.cache import cache, cache_threshold_par_defaut
+from src.utils.cache import (
+    cache,
+    cache_dir_par_defaut,
+    cache_threshold_par_defaut,
+)
 from src.utils.chatwoot import (
     build_identity_script,
     build_reset_script,
@@ -88,9 +92,20 @@ server = Flask(__name__)
 # faire servir un canonical pointant vers un domaine tiers.
 server.wsgi_app = ProxyFix(server.wsgi_app, x_proto=1, x_host=0)
 
-cache_dir = os.getenv("CACHE_DIR", "/tmp/colibre-cache")
+cache_dir = cache_dir_par_defaut()
 
-rmtree(cache_dir, ignore_errors=True)
+# En production la purge est faite une seule fois par le master gunicorn (hook
+# `on_starting`, cf. gunicorn.conf.py) : la rejouer ici la ferait exécuter par
+# CHAQUE worker à son import, donc à chaque recyclage `max_requests`, et le
+# cache partagé ne survivrait jamais plus que la vie d'un worker.
+#
+# Reste le développement (`uv run run.py`), sans master gunicorn, où repartir
+# d'un cache propre à chaque lancement évite de traîner des valeurs produites
+# par du code qu'on vient de modifier. La variable est relue ici plutôt que via
+# la constante DEVELOPMENT de src.utils : celle-ci est figée à l'import du
+# module, en amont du load_dotenv() ci-dessus, donc aveugle au .env.
+if os.getenv("DEVELOPMENT", "False").lower() == "true":
+    rmtree(cache_dir, ignore_errors=True)
 
 cache.init_app(
     server,

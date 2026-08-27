@@ -46,3 +46,20 @@ max_requests_jitter = int(os.getenv("GUNICORN_MAX_REQUESTS_JITTER", "100"))
 # de conteneurs demain.
 accesslog = None
 errorlog = "-"
+
+
+def on_starting(server):
+    """Repart d'un cache disque vide au démarrage du service.
+
+    Appelé une seule fois, par le master, avant le premier fork. La purge
+    vivait auparavant au niveau module de src/app.py : faute de `preload_app`,
+    chaque worker l'exécutait à son import et détruisait le cache que les
+    autres venaient de remplir — donc à chaque recyclage `max_requests`. Le
+    TTL de 30 jours de `get_annuaire_data` n'a de sens que depuis ce
+    déplacement.
+    """
+    from shutil import rmtree
+
+    from src.utils.cache import cache_dir_par_defaut
+
+    rmtree(cache_dir_par_defaut(), ignore_errors=True)

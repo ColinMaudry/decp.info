@@ -14,19 +14,42 @@ from src.utils.cache import cache
 logging.getLogger("httpx").setLevel("WARNING")
 
 
-# Mémoïsé 30 jours : infos d'établissement quasi figées, dont la fraîcheur
-# n'a aucun enjeu pour un JSON-LD. Protège recherche-entreprises.api.gouv.fr
-# (quota par IP) du crawl des 242 005 fiches organisme de ce chantier SEO.
-@cache.memoize(timeout=3600 * 24 * 30)
+# Infos d'établissement quasi figées, dont la fraîcheur n'a aucun enjeu pour un
+# JSON-LD : 30 jours. Un échec technique, lui, ne dit rien de durable sur le
+# SIRET — d'où la seconde durée, bien plus courte.
+ANNUAIRE_TTL_SUCCES = 3600 * 24 * 30
+ANNUAIRE_TTL_ECHEC = 900
+
+
 def get_annuaire_data(siret: str) -> dict | None:
+    """Fiche établissement de l'Annuaire des entreprises, mise en cache.
+
+    Deux durées de vie plutôt qu'un `@cache.memoize`, qui applique le même TTL
+    à tout retour : une réponse valide — fiche trouvée comme SIRET inconnu —
+    est une information stable, alors qu'un échec technique (429, 5xx, timeout)
+    condamnerait la fiche à rester vide un mois. Le cache court protège aussi
+    recherche-entreprises.api.gouv.fr (quota par IP) du crawl des 242 005
+    fiches organisme : sans lui, un rate-limit serait retenté à chaque page vue.
+
+    Les valeurs sont enveloppées dans un dict parce que `cache.get` ne
+    distingue pas une clé absente d'un None mémorisé.
+    """
+    key = f"annuaire:{siret}"
+    entree = cache.get(key)
+    if entree is not None:
+        return entree["data"]
+
     url = f"https://recherche-entreprises.api.gouv.fr/search?q={siret}"
     try:
-        response = get(url).raise_for_status()
-        response = response.json()["results"][0]
-    except (HTTPError, IndexError):
-        response = None
-        logger.warning("Could not fetch data from recherche-entreprises.api.")
-    return response
+        results = get(url).raise_for_status().json().get("results") or []
+    except (HTTPError, json.JSONDecodeError) as e:
+        logger.warning(f"Could not fetch data from recherche-entreprises.api: {e}")
+        cache.set(key, {"data": None}, timeout=ANNUAIRE_TTL_ECHEC)
+        return None
+
+    data = results[0] if results else None
+    cache.set(key, {"data": data}, timeout=ANNUAIRE_TTL_SUCCES)
+    return data
 
 
 def get_statistics() -> dict:

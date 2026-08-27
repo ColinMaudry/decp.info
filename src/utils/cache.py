@@ -9,6 +9,16 @@ from flask_caching import Cache
 cache = Cache()
 
 
+def cache_dir_par_defaut() -> str:
+    """Répertoire du cache disque, piloté par CACHE_DIR.
+
+    Lu à la fois par src.app (init du cache) et par le hook `on_starting` de
+    gunicorn.conf.py (purge au démarrage du master) : la valeur par défaut est
+    définie ici pour n'exister qu'à un seul endroit.
+    """
+    return os.getenv("CACHE_DIR", "/tmp/colibre-cache")
+
+
 def cache_threshold_par_defaut() -> int:
     """Seuil du cache, piloté par la variable d'environnement CACHE_THRESHOLD
     (300 000 par défaut).
