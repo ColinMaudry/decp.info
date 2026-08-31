@@ -228,6 +228,10 @@ p.version > a {
   font-weight: 600;
 }
 
+.navbar-nav .nav-link {
+  white-space: nowrap;
+}
+
 .account-nav .nav-link {
   color: inherit;
   padding-left: 10px;
