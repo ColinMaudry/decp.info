@@ -128,25 +128,28 @@ def _no_sub_view(tous_abonnes: bool, row):
 
 
 def _resume_payment_block():
+    """Bloc affiché sur une ligne `pending`, c'est-à-dire un paiement abandonné.
+
+    Depuis le passage à `prepare_subscription` (src/subscriptions/client.py),
+    un checkout non abouti ne laisse aucun abonnement chez Frisbii : `pending`
+    veut dire « tentative de souscription à un abonnement sans aller au bout du
+    paiement », rien de plus. Il n'y a donc aucun abonnement auquel attacher
+    une méthode de paiement — d'où le renvoi vers le parcours normal, qui
+    recollecte les informations de facturation puis ouvre une nouvelle session
+    de paiement.
+    """
     return html.Div(
         [
             dbc.Alert(
-                "Votre abonnement n'est pas finalisé : aucune méthode de "
-                "paiement n'a été enregistrée.",
+                "Votre souscription à un abonnement n'a pas abouti : le "
+                "paiement n'a pas été finalisé.",
                 color="warning",
                 className="mb-3",
             ),
-            html.Form(
-                method="POST",
-                action="/subscriptions/add-payment",
-                children=[
-                    _csrf_input(),
-                    html.Button(
-                        "Ajouter une méthode de paiement",
-                        type="submit",
-                        className="btn btn-secondary mb-3",
-                    ),
-                ],
+            html.A(
+                "Reprendre le paiement",
+                href="/compte/abonnement/mes-infos",
+                className="btn btn-secondary mb-3",
             ),
         ]
     )
@@ -392,8 +395,7 @@ def layout(**query):
     # sans ce cas particulier, `_show_active_view` (vrai pour "pending")
     # masquerait la date de fin d'essai dès la création de la ligne "pending"
     # (create_pending), et rien ne réapparaîtrait à la fin de l'essai — la
-    # personne resterait bloquée sur « Ajouter une méthode de paiement »
-    # indéfiniment.
+    # personne resterait bloquée sur « Reprendre le paiement » indéfiniment.
     pending_during_trial = (
         row is not None
         and row["status"] == "pending"

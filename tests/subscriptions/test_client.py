@@ -26,7 +26,6 @@ def test_update_customer(fake_httpx):
 
 
 def test_create_subscription_session_with_customer_handle(fake_httpx):
-    fake_httpx["queue"].append(fake_httpx["Response"](200, {"handle": "abo-1-1"}))
     fake_httpx["queue"].append(
         fake_httpx["Response"](
             200,
@@ -43,32 +42,74 @@ def test_create_subscription_session_with_customer_handle(fake_httpx):
     )
     assert url == "https://checkout.reepay.com/#/subscription/cs_1"
 
-    create_body = fake_httpx["calls"][0]["json"]
-    assert create_body["plan"] == "plan_simple"
-    assert create_body["handle"] == "abo-1-1"
-    assert create_body["customer"] == "colibre-1"
-    assert create_body["signup_method"] == "link"
-    assert "generate_handle" not in create_body
-    assert "prepare_subscription" not in create_body
-    # accept_url/cancel_url n'existent pas dans CreateSubscription : ils
-    # doivent passer par la session de checkout dédiée, pas ce body.
-    assert "accept_url" not in create_body
-    assert "cancel_url" not in create_body
-
-    session_call = fake_httpx["calls"][1]
+    session_call = fake_httpx["calls"][0]
     assert (
         session_call["url"]
         == "https://checkout-api.frisbii.com/v1/session/subscription"
     )
-    assert session_call["json"] == {
-        "subscription": "abo-1-1",
-        "accept_url": "https://app/ok",
-        "cancel_url": "https://app/ko",
-    }
+    body = session_call["json"]
+    assert body["accept_url"] == "https://app/ok"
+    assert body["cancel_url"] == "https://app/ko"
+    # `subscription` désignerait un abonnement déjà créé : c'est précisément ce
+    # qu'on ne veut plus faire avant le paiement.
+    assert "subscription" not in body
+    prepared = body["prepare_subscription"]
+    assert prepared["plan"] == "plan_simple"
+    assert prepared["handle"] == "abo-1-1"
+    assert prepared["customer"] == "colibre-1"
+    # CreatePreparedSubscription ne connaît pas signup_method : c'est la session
+    # de checkout qui collecte le moyen de paiement.
+    assert "signup_method" not in prepared
+    assert "generate_handle" not in prepared
+
+
+def test_create_subscription_session_ne_cree_pas_l_abonnement_avant_paiement(
+    fake_httpx,
+):
+    """Aucun POST /v1/subscription : l'abonnement n'existe qu'après paiement.
+
+    Le créer d'abord le rendait `active` sans moyen de paiement chez Frisbii ;
+    un checkout abandonné laissait alors un abonnement actif, donc un accès
+    complet sans avoir jamais payé.
+    """
+    fake_httpx["queue"].append(
+        fake_httpx["Response"](
+            200, {"url": "https://checkout.reepay.com/#/subscription/cs_9"}
+        )
+    )
+    client.create_subscription_session(
+        "plan_simple",
+        "abo-1-9",
+        "https://app/ok",
+        "https://app/ko",
+        no_trial=True,
+        customer_handle="colibre-1",
+    )
+    assert [call["url"] for call in fake_httpx["calls"]] == [
+        "https://checkout-api.frisbii.com/v1/session/subscription"
+    ]
+
+
+def test_create_subscription_session_with_create_customer(fake_httpx):
+    fake_httpx["queue"].append(
+        fake_httpx["Response"](
+            200, {"url": "https://checkout.reepay.com/#/subscription/cs_3"}
+        )
+    )
+    client.create_subscription_session(
+        "plan_simple",
+        "abo-1-3",
+        "https://app/ok",
+        "https://app/ko",
+        no_trial=True,
+        create_customer={"handle": "colibre-1", "email": "a@b.fr"},
+    )
+    prepared = fake_httpx["calls"][0]["json"]["prepare_subscription"]
+    assert prepared["create_customer"] == {"handle": "colibre-1", "email": "a@b.fr"}
+    assert "customer" not in prepared
 
 
 def test_create_subscription_session_no_trial(fake_httpx):
-    fake_httpx["queue"].append(fake_httpx["Response"](200, {"handle": "abo-1-2"}))
     fake_httpx["queue"].append(
         fake_httpx["Response"](
             200, {"url": "https://checkout.reepay.com/#/subscription/cs_2"}
@@ -82,7 +123,8 @@ def test_create_subscription_session_no_trial(fake_httpx):
         no_trial=True,
         customer_handle="colibre-1",
     )
-    assert fake_httpx["calls"][0]["json"]["no_trial"] is True
+    prepared = fake_httpx["calls"][0]["json"]["prepare_subscription"]
+    assert prepared["no_trial"] is True
 
 
 def test_create_subscription_session_requires_no_trial_kwarg():

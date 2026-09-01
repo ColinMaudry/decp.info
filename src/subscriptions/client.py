@@ -72,26 +72,33 @@ def create_subscription_session(
     customer_handle: str | None = None,
     create_customer: dict | None = None,
 ) -> str:
-    body: dict = {
+    # `prepare_subscription` plutôt qu'un POST /v1/subscription suivi d'une
+    # session sur le handle : l'abonnement n'est alors créé qu'une fois le
+    # paiement accepté (scénario « prepared → activated » de l'API, cf. le
+    # champ `activated` de l'objet Subscription).
+    #
+    # Le créer d'abord était la cause de l'accès sans paiement : avec
+    # `signup_method: "link"`, Frisbii renvoie immédiatement l'abonnement en
+    # `state: "active"` sans aucun moyen de paiement, et un checkout abandonné
+    # laissait donc un abonnement actif derrière lui.
+    #
+    # CreatePreparedSubscription ne connaît pas `signup_method` : c'est la
+    # session de checkout qui collecte le moyen de paiement.
+    prepared: dict = {
         "plan": plan_handle,
-        "signup_method": "link",
         "handle": handle,
     }
     if customer_handle:
-        body["customer"] = customer_handle
+        prepared["customer"] = customer_handle
     elif create_customer:
-        body["create_customer"] = create_customer
+        prepared["create_customer"] = create_customer
     if no_trial:
-        body["no_trial"] = True
-    _call("POST", "/v1/subscription", json=body)
-    # CreateSubscription (POST /v1/subscription) n'a pas de champs accept_url/
-    # cancel_url. La session de checkout dédiée (Checkout API), elle, les
-    # honore et redirige réellement le navigateur après succès/annulation.
+        prepared["no_trial"] = True
     data = _call(
         "POST",
         "/v1/session/subscription",
         json={
-            "subscription": handle,
+            "prepare_subscription": prepared,
             "accept_url": accept_url,
             "cancel_url": cancel_url,
         },
@@ -100,35 +107,11 @@ def create_subscription_session(
     return data["url"]
 
 
-def create_recurring_session(
-    customer_handle: str, accept_url: str, cancel_url: str
-) -> str:
-    data = _call(
-        "POST",
-        "/v1/session/recurring",
-        json={
-            "customer": customer_handle,
-            "accept_url": accept_url,
-            "cancel_url": cancel_url,
-            "show_terms": False,
-        },
-        base_url=_checkout_url(),
-    )
-    return data["url"]
-
-
-def get_customer_payment_methods(
-    customer_handle: str, reference: str | None = None
-) -> list[dict]:
-    p: dict = {"customer": customer_handle, "state": "active", "size": 10}
-    if reference:
-        p["reference"] = reference
-    data = _call("GET", "/v1/list/payment_method", params=p)
-    return data.get("content", [])
-
-
-def set_subscription_payment_method(sub_handle: str, pm_id: str) -> None:
-    _call("POST", f"/v1/subscription/{sub_handle}/pm", json={"source": pm_id})
+# create_recurring_session, get_customer_payment_methods et
+# set_subscription_payment_method vivaient ici : elles ne servaient qu'à
+# attacher un moyen de paiement à un abonnement déjà créé chez Frisbii, un cas
+# disparu avec le passage à `prepare_subscription` ci-dessus. Changer de carte
+# sur un abonnement actif passe par get_payment_info_url, pas par elles.
 
 
 def cancel_subscription(subscription_handle: str) -> dict:

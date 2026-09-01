@@ -55,18 +55,17 @@ def test_subscribe_redirects_to_hosted_url(logged_in_client, monkeypatch):
 def test_subscribe_sends_no_trial_true_in_frisbii_request_body(
     logged_in_client, fake_httpx
 ):
-    """L'essai n'existe plus côté Frisbii (#132) : le corps JSON envoyé à
-    POST /v1/subscription porte `no_trial: True`, y compris pour un
-    utilisateur qui n'a jamais souscrit auparavant (le cas qui bénéficiait
-    autrefois d'un essai). On inspecte le corps réellement capturé par
-    `fake_httpx`, pas seulement le code de retour côté colibre."""
+    """L'essai n'existe plus côté Frisbii (#132) : l'abonnement préparé porte
+    `no_trial: True`, y compris pour un utilisateur qui n'a jamais souscrit
+    auparavant (le cas qui bénéficiait autrefois d'un essai). On inspecte le
+    corps réellement capturé par `fake_httpx`, pas seulement le code de retour
+    côté colibre."""
     test_client, uid = logged_in_client
     assert db.get_current(uid) is None  # jamais souscrit auparavant
     Response = fake_httpx["Response"]
     fake_httpx["queue"].extend(
         [
             Response(200, {}),  # PUT /v1/customer/{handle}
-            Response(200, {}),  # POST /v1/subscription
             Response(200, {"url": "https://checkout.example/session"}),
         ]
     )
@@ -74,11 +73,11 @@ def test_subscribe_sends_no_trial_true_in_frisbii_request_body(
     resp = test_client.post("/subscriptions/subscribe", data={"plan": "simple"})
 
     assert resp.status_code == 303
-    create_calls = [
-        c for c in fake_httpx["calls"] if c["url"].endswith("/v1/subscription")
+    session_calls = [
+        c for c in fake_httpx["calls"] if c["url"].endswith("/v1/session/subscription")
     ]
-    assert len(create_calls) == 1
-    assert create_calls[0]["json"]["no_trial"] is True
+    assert len(session_calls) == 1
+    assert session_calls[0]["json"]["prepare_subscription"]["no_trial"] is True
 
 
 def test_accept_url_has_no_trial_discriminant(logged_in_client, capture_accept):
@@ -215,7 +214,12 @@ def test_webhook_updates_subscription(sub_app, monkeypatch):
     monkeypatch.setattr(
         frisbii_client,
         "get_subscription",
-        lambda h: {"state": "active", "next_period_start": "2099-01-01T00:00:00+00:00"},
+        lambda h: {
+            "state": "active",
+            "payment_method_added": True,
+            "settled_invoices": 1,
+            "next_period_start": "2099-01-01T00:00:00+00:00",
+        },
     )
     payload = {
         "id": "evt_1",
@@ -230,6 +234,44 @@ def test_webhook_updates_subscription(sub_app, monkeypatch):
     row = db.get_current(uid)
     assert row["status"] == "active"
     assert row["frisbii_subscription_handle"] == handle
+
+
+def test_webhook_sur_abonnement_impaye_n_ouvre_pas_l_acces(sub_app, monkeypatch):
+    """Régression : paiement abandonné au checkout, l'accès doit rester fermé.
+
+    Frisbii renvoie l'abonnement en `state: "active"` alors qu'aucun moyen de
+    paiement n'a été enregistré. Le webhook ne doit pas transformer ça en
+    abonnement actif : c'est ce qui donnait accès au connecteur MCP et aux vues
+    sans avoir jamais payé.
+    """
+    from src.auth import db as auth_db
+
+    auth_db.init_schema()
+    uid = auth_db.create_user("impaye@ex.fr", "hash")
+    handle, _ = db.create_pending(uid, "colibre-%d" % uid, "simple")
+    monkeypatch.setattr(
+        frisbii_client,
+        "get_subscription",
+        lambda h: {
+            "state": "active",
+            "payment_method_added": False,
+            "settled_invoices": 0,
+            "next_period_start": "2099-01-01T00:00:00+00:00",
+        },
+    )
+    payload = {
+        "id": "evt_2",
+        "timestamp": "2026-06-25T10:00:00Z",
+        "event_type": "subscription_created",
+        "customer": "colibre-%d" % uid,
+        "subscription": handle,
+    }
+    payload["signature"] = _sign("s3cr3t", payload["timestamp"], payload["id"])
+    resp = sub_app.test_client().post("/frisbii/webhook", json=payload)
+    assert resp.status_code == 200
+    assert db.get_current(uid)["status"] == "pending"
+    assert db.has_active_subscription(uid) is False
+    assert db.has_access(uid) is False
 
 
 def test_subscribe_skips_if_already_active(logged_in_client, monkeypatch):
