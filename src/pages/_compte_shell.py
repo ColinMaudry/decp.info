@@ -78,31 +78,42 @@ def account_guard(path: str, require_subscription: bool):
     return dcc.Location(href=href, id="compte-guard-redirect") if href else None
 
 
-def _logout_item():
-    return dbc.NavItem(
-        html.Form(
-            method="POST",
-            action="/auth/logout",
-            children=[
-                dcc.Input(
-                    type="hidden",
-                    id={"type": "csrf-input", "index": "sidebar-logout"},
-                    name="csrf_token",
-                ),
-                html.Button(
-                    "Déconnexion",
-                    type="submit",
-                    className="nav-link",
-                    style={
-                        "background": "none",
-                        "border": "none",
-                        "width": "100%",
-                        "textAlign": "left",
-                    },
-                ),
-            ],
-        )
+def logout_form(csrf_index: str, item_class: str = "nav-link"):
+    """Formulaire de déconnexion, partagé par la barre latérale et la navbar.
+
+    `csrf_index` doit être unique par formulaire effectivement rendu : le jeton
+    est rempli par motif (`{"type": "csrf-input", "index": ALL}` dans
+    src/app.py), donc deux champs partageant un index se marcheraient dessus.
+
+    `item_class` porte l'habillage du contexte d'accueil — `nav-link` dans la
+    barre latérale, `dropdown-item` dans le menu de la navbar.
+    """
+    return html.Form(
+        method="POST",
+        action="/auth/logout",
+        children=[
+            dcc.Input(
+                type="hidden",
+                id={"type": "csrf-input", "index": csrf_index},
+                name="csrf_token",
+            ),
+            html.Button(
+                "Déconnexion",
+                type="submit",
+                className=item_class,
+                style={
+                    "background": "none",
+                    "border": "none",
+                    "width": "100%",
+                    "textAlign": "left",
+                },
+            ),
+        ],
     )
+
+
+def _logout_item():
+    return dbc.NavItem(logout_form("sidebar-logout"))
 
 
 def _nav(active: str):

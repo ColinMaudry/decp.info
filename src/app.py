@@ -587,18 +587,42 @@ def toggle_navbar_collapse(n, is_open):
     Input("auth-nav-slot", "id"),
 )
 def _auth_nav(_):
-    if current_user.is_authenticated:
-        # email = current_user.email
-        # display = email if len(email) <= 30 else email[:27] + "..."
-        display = "Mon compte"
-        return dbc.NavItem(
-            dbc.NavLink(
-                display,
-                href="/compte/admin",
-                style={"color": "var(--primary-color-text)"},
-            )
-        )
-    return dbc.NavItem(dbc.NavLink("Connexion", href="/connexion"))
+    """« Mon compte » ouvre la liste des sections plutôt que de naviguer (#133).
+
+    Les entrées viennent de `visible_sections`, la même source que la barre
+    latérale de l'espace compte : les deux navigations ne peuvent pas diverger,
+    et une section réservée est masquée plutôt que grisée.
+
+    Import local : `src.pages._compte_shell` fait partie des pages, découvertes
+    par `use_pages` après l'exécution de ce module.
+    """
+    if not current_user.is_authenticated:
+        return dbc.NavItem(dbc.NavLink("Connexion", href="/connexion"))
+
+    from src.pages._compte_shell import (
+        current_user_has_subscription,
+        logout_form,
+        visible_sections,
+    )
+
+    sections = [
+        dbc.DropdownMenuItem(section["label"], href=section["href"])
+        for section in visible_sections(current_user_has_subscription())
+    ]
+    return dbc.DropdownMenu(
+        label="Mon compte",
+        nav=True,
+        in_navbar=True,
+        # Le menu est en bout de navbar (`ms-auto`) : aligné à gauche, il
+        # déborderait de la fenêtre.
+        align_end=True,
+        toggle_style={"color": "var(--primary-color-text)"},
+        children=sections
+        + [
+            dbc.DropdownMenuItem(divider=True),
+            logout_form("navbar-logout", "dropdown-item"),
+        ],
+    )
 
 
 @callback(
