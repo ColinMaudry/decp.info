@@ -72,7 +72,7 @@ def test_layout_pending_with_active_trial_shows_trial_end_and_resume_payment(
     row = {"status": "pending", "plan": "simple", "current_period_end": None}
     text = _layout(monkeypatch, row=row, trial_active=True, trial_ends_at=end)
     assert "Essai gratuit jusqu'au" in text
-    assert "Ajouter une méthode de paiement" in text
+    assert "Reprendre le paiement" in text
 
 
 def test_layout_pending_without_active_trial_keeps_pending_view(monkeypatch):
@@ -80,8 +80,35 @@ def test_layout_pending_without_active_trial_keeps_pending_view(monkeypatch):
     déjà terminé) reste sur la vue "abonnement en cours" (_active_view)."""
     row = {"status": "pending", "plan": "simple", "current_period_end": None}
     text = _layout(monkeypatch, row=row, trial_active=False, trial_ends_at=None)
-    assert "Ajouter une méthode de paiement" in text
+    assert "Reprendre le paiement" in text
     assert "Essai gratuit" not in text
+
+
+def test_resume_payment_renvoie_vers_mes_infos_pas_add_payment(monkeypatch):
+    """Un checkout abandonné ne laisse plus aucun abonnement chez Frisbii.
+
+    Depuis le passage à `prepare_subscription`, il n'y a donc plus d'abonnement
+    auquel attacher un moyen de paiement : `/subscriptions/add-payment`
+    échouerait en 404. On repasse par le parcours normal, qui recollecte les
+    informations de facturation avant d'ouvrir une nouvelle session.
+    """
+    row = {"status": "pending", "plan": "simple", "current_period_end": None}
+    text = _layout(monkeypatch, row=row, trial_active=False, trial_ends_at=None)
+    assert "/compte/abonnement/mes-infos" in text
+    assert "/subscriptions/add-payment" not in text
+
+
+def test_resume_payment_dit_que_la_souscription_n_a_pas_abouti(monkeypatch):
+    """Le message doit décrire l'état réel : rien n'existe chez Frisbii.
+
+    Parler d'un « abonnement non finalisé » auquel il manquerait une méthode de
+    paiement laissait croire qu'un abonnement attend quelque part, alors qu'une
+    ligne `pending` signifie seulement que le paiement n'est pas allé au bout.
+    """
+    row = {"status": "pending", "plan": "simple", "current_period_end": None}
+    text = _layout(monkeypatch, row=row, trial_active=False, trial_ends_at=None)
+    assert "souscription à un abonnement n'a pas abouti" in text
+    assert "aucune méthode de paiement n'a été enregistrée" not in text
 
 
 def test_reabo_button_links_to_abonnement_page():
@@ -143,7 +170,7 @@ def test_active_view_pending_no_longer_mentions_trial_and_offers_resume():
     row = {"plan": "simple", "status": "pending", "current_period_end": None}
     text = str(compte_abonnement._active_view(row))
     assert "période d'essai" not in text
-    assert "Ajouter une méthode de paiement" in text
+    assert "Reprendre le paiement" in text
 
 
 def test_trial_view_shows_end_date_and_time_and_features():
@@ -340,7 +367,7 @@ def test_active_view_hides_change_payment_method_for_pending():
     row = {"plan": "simple", "status": "pending", "current_period_end": None}
     text = str(compte_abonnement._active_view(row))
     assert "Changer de méthode de paiement" not in text
-    assert "Ajouter une méthode de paiement" in text
+    assert "Reprendre le paiement" in text
 
 
 def test_feedback_carte_succes():

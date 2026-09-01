@@ -87,46 +87,13 @@ def subscribe():
     return redirect(url, code=303)
 
 
-@subscriptions_bp.route("/subscriptions/add-payment", methods=["POST"])
-@login_required
-def add_payment():
-    base = os.getenv("APP_BASE_URL", "")
-    cust = handles.customer_handle(current_user.id)
-    try:
-        url = client.create_recurring_session(
-            cust,
-            f"{base}/subscriptions/add-payment/callback",
-            f"{base}/compte/abonnement?paiement=annule",
-        )
-    except client.FrisbiiError:
-        logger.exception("Échec de création de session de paiement Frisbii")
-        return redirect("/compte/abonnement?error=frisbii")
-    return redirect(url, code=303)
-
-
-@subscriptions_bp.route("/subscriptions/add-payment/callback")
-@login_required
-def add_payment_callback():
-    session_id = request.args.get("id", "")
-    cust = handles.customer_handle(current_user.id)
-    row = db.get_current(current_user.id)
-    sub_handle = row["frisbii_subscription_handle"] if row else None
-    if not sub_handle:
-        return redirect("/compte/abonnement?paiement=succes")
-    try:
-        pms = client.get_customer_payment_methods(cust, reference=session_id or None)
-        if not pms:
-            pms = client.get_customer_payment_methods(cust)
-        if not pms:
-            logger.warning(
-                "Aucune méthode de paiement trouvée pour le customer %s", cust
-            )
-            return redirect("/compte/abonnement?paiement=succes")
-        client.set_subscription_payment_method(sub_handle, pms[0]["id"])
-    except client.FrisbiiError:
-        logger.exception("Échec de l'association méthode de paiement / abonnement")
-        return redirect("/compte/abonnement?error=frisbii")
-    return redirect("/compte/abonnement?paiement=succes")
+# Les routes /subscriptions/add-payment et son callback vivaient ici. Elles
+# attachaient un moyen de paiement à un abonnement déjà créé chez Frisbii : ce
+# cas n'existe plus depuis que la souscription à un abonnement passe par
+# `prepare_subscription` (src/subscriptions/client.py), qui ne crée l'abonnement
+# qu'une fois le paiement accepté. Une ligne `pending` ne désigne donc plus
+# aucun abonnement Frisbii, et le bloc de reprise renvoie vers le parcours
+# normal (/compte/abonnement/mes-infos).
 
 
 @subscriptions_bp.route("/subscriptions/change-payment-method", methods=["POST"])
