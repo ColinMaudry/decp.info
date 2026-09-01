@@ -1,3 +1,7 @@
+##### 3.0.4
+
+- Ajout de la liste des champs et leur description dans [/projet/donnees](https://colibre.fr/projet/donnees#champs)
+
 ##### 3.0.3
 
 - démarrer la période d'essai de l'abonennement ne requiert plus un moyen de paiement
