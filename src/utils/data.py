@@ -43,7 +43,7 @@ def get_annuaire_data(siret: str) -> dict | None:
     try:
         results = get(url).raise_for_status().json().get("results") or []
     except (HTTPError, json.JSONDecodeError) as e:
-        logger.warning(f"Could not fetch data from recherche-entreprises.api: {e}")
+        logger.warning(f"Could not fetch data from recherche-entreprises.api: {e!r}")
         cache.set(key, {"data": None}, timeout=ANNUAIRE_TTL_ECHEC)
         return None
 
@@ -114,7 +114,7 @@ def _fetch_remote_schema(url: str | None) -> dict | None:
         httpx.TimeoutException,
         json.JSONDecodeError,
     ) as e:
-        logger.error(f"Schéma distant indisponible ({url}) : {e}")
+        logger.error(f"Schéma distant indisponible ({url}) : {e!r}")
         return None
     return _validate_schema(raw)
 
@@ -126,7 +126,7 @@ def _load_schema_file(path: str) -> dict | None:
         with open(path) as f:
             raw = json.load(f)
     except (OSError, json.JSONDecodeError) as e:
-        logger.error(f"Schéma local illisible ({path}) : {e}")
+        logger.error(f"Schéma local illisible ({path}) : {e!r}")
         return None
     return _validate_schema(raw)
 
@@ -140,7 +140,7 @@ def _persist_schema_cache(raw: dict, path: str) -> None:
             json.dump(raw, f)
         os.replace(tmp, path)
     except (OSError, ValueError) as e:
-        logger.warning(f"Écriture du cache schéma échouée ({path}) : {e}")
+        logger.warning(f"Écriture du cache schéma échouée ({path}) : {e!r}")
 
 
 def get_data_schema() -> dict:
