@@ -703,6 +703,8 @@ button.show-hide {
 .dropdown-menu {
   --bs-dropdown-link-hover-bg: rgba(255, 240, 240, 1);
   --bs-dropdown-link-active-bg: rgba(255, 240, 240, 1);
+  --bs-dropdown-link-hover-color: var(--primary-color-text);
+  --bs-dropdown-link-active-color: var(--primary-color-text);
 }
 
 .Select-placeholder {
