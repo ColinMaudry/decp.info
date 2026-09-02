@@ -288,7 +288,7 @@ def update_acheteur_infos(url):
         data_etablissement = data_etablissement[0]
 
         code_departement, nom_departement, nom_region = get_departement_region(
-            data_etablissement["code_postal"]
+            data_etablissement["commune"]
         )
         departement = f"{nom_departement} ({code_departement})"
         lien_annuaire = (

@@ -80,12 +80,20 @@ def get_departements_geojson() -> dict:
     return geojson
 
 
-def get_departement_region(code_postal: str | None):
-    if code_postal:
-        if code_postal > "97000":
-            code_departement = code_postal[:3]
+def get_departement_region(code_commune: str | None):
+    """Département et région à partir du code commune INSEE.
+
+    Le code commune (et non le code postal) est utilisé car il distingue
+    nativement les deux départements corses (2A/2B) : le code postal, lui,
+    donne "20" pour toute la Corse et ne permet pas de choisir.
+    """
+    if code_commune:
+        if code_commune[:2] in ("2A", "2B"):
+            code_departement = code_commune[:2]
+        elif code_commune > "97000":
+            code_departement = code_commune[:3]
         else:
-            code_departement = code_postal[:2]
+            code_departement = code_commune[:2]
         nom_departement = DEPARTEMENTS[code_departement]["departement"]
         nom_region = DEPARTEMENTS[code_departement]["region"]
         return code_departement, nom_departement, nom_region

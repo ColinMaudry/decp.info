@@ -1,6 +1,7 @@
 ##### 3.0.5
 
 - Correction d'un bug dans le processus de paiement
+- Le bouton de navigation "Mon compte" devient un menu déroulant
 
 ##### 3.0.4
 
