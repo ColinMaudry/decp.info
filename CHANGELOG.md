@@ -1,3 +1,7 @@
+##### 3.0.6
+
+- Ajout des méthodes de paiement Apple Pay et Google Pay
+
 ##### 3.0.5
 
 - Correction d'un bug dans le processus de paiement
