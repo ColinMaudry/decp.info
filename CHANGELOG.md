@@ -1,3 +1,7 @@
+##### 3.0.5
+
+- Correction d'un bug dans le processus de paiement
+
 ##### 3.0.4
 
 - Ajout de la liste des champs et leur description dans [/projet/donnees](https://colibre.fr/projet/donnees#champs)

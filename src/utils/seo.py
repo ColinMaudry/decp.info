@@ -49,7 +49,7 @@ def make_org_jsonld(
         "sameAs": f"https://annuaire-entreprises.data.gouv.fr/etablissement/{org_id}",
         "identifier": {
             "@type": "PropertyValue",
-            "propertyID": type_org_id.lower(),
+            "propertyID": type_org_id.lower() if type_org_id else None,
             "value": org_id,
         },
     }

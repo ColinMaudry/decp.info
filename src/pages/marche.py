@@ -198,26 +198,27 @@ def update_marche_info(marche, titulaires):
     # pas inclus pour l'instant : lieu d'exécution, modifications
 
     titulaires_lines = []
-    for titulaire in titulaires:
-        if titulaire["titulaire_typeIdentifiant"] == "SIRET":
-            categorie = titulaire.get("titulaire_categorie", "")
-            if titulaire.get("titulaire_distance"):
-                distance = str(titulaire.get("titulaire_distance")) + " km"
-            else:
-                distance = ""
+    if titulaires:
+        for titulaire in titulaires:
+            if titulaire["titulaire_typeIdentifiant"] == "SIRET":
+                categorie = titulaire.get("titulaire_categorie", "")
+                if titulaire.get("titulaire_distance"):
+                    distance = str(titulaire.get("titulaire_distance")) + " km"
+                else:
+                    distance = ""
 
-            content = html.Li(
-                [
-                    html.A(
-                        href=f"/titulaires/{titulaire['titulaire_id']}",
-                        children=titulaire["titulaire_nom"],
-                    ),
-                    f" ({categorie}, {distance})",
-                ]
-            )
-        else:
-            content = html.Li(titulaire["titulaire_nom"])
-        titulaires_lines.append(content)
+                content = html.Li(
+                    [
+                        html.A(
+                            href=f"/titulaires/{titulaire['titulaire_id']}",
+                            children=titulaire["titulaire_nom"],
+                        ),
+                        f" ({categorie}, {distance})",
+                    ]
+                )
+            else:
+                content = html.Li(titulaire["titulaire_nom"])
+            titulaires_lines.append(content)
 
     return marche_objet, marche_infos[:half], marche_infos[half:], titulaires_lines
 
@@ -228,6 +229,8 @@ def update_marche_info(marche, titulaires):
     Input("titulaires_data", "data"),
 )
 def get_marche_jsonld(marche, titulaires) -> str:
+    if not marche or not titulaires:
+        return "{}"
     acheteur_id = marche.get("acheteur_id")
     type_order = (
         "Service" if marche.get("categorie") in ["Services", "Travaux"] else "Product"
