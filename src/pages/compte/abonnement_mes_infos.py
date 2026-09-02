@@ -223,8 +223,7 @@ def _legal_note():
  Méthodes de paiement proposées :
 
  - Visa, Mastercard
- - Google Pay
- - Apple Pay
+ - Expérimental : Google Pay, Apple Pay
 
  Si vous préférez régler par virement bancaire et une facturation annuelle plutôt qu'un réglement mensuel, [envoyez un message](/projet/contact) en indiquant vos noms et adresses ou votre SIRET."""
     )

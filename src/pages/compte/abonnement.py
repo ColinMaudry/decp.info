@@ -136,21 +136,22 @@ def _resume_payment_block():
     paiement », rien de plus. Il n'y a donc aucun abonnement auquel attacher
     une méthode de paiement — d'où le renvoi vers le parcours normal, qui
     recollecte les informations de facturation puis ouvre une nouvelle session
-    de paiement.
+    de paiement — c'est le même parcours qu'en l'absence d'abonnement, d'où la
+    réutilisation de `_reabo_button()` plutôt qu'un bouton dédié.
     """
     return html.Div(
         [
             dbc.Alert(
-                "Votre souscription à un abonnement n'a pas abouti : le "
-                "paiement n'a pas été finalisé.",
+                dcc.Markdown(
+                    "Votre souscription à un abonnement n'a pas abouti : le "
+                    "paiement n'a pas été finalisé. Veuillez réessayer ou "
+                    "[envoyer un message](/projet/contact).",
+                    className="mb-0",
+                ),
                 color="warning",
                 className="mb-3",
             ),
-            html.A(
-                "Reprendre le paiement",
-                href="/compte/abonnement/mes-infos",
-                className="btn btn-secondary mb-3",
-            ),
+            _reabo_button(),
         ]
     )
 
@@ -217,7 +218,7 @@ def _active_view(row):
     elif row["status"] == "active" and end:
         blocks.append(html.P(f"Prochaine facturation et prélèvement : {end}"))
 
-    if row["status"] in ("pending", "trial", "active"):
+    if row["status"] in ("trial", "active"):
         blocks.append(
             html.A(
                 "Configurer mon abonnement",
@@ -243,7 +244,7 @@ def _active_view(row):
             )
         )
 
-    if row["status"] in ("pending", "trial", "active"):
+    if row["status"] in ("trial", "active"):
         blocks.append(
             html.Button(
                 "Me désabonner",
