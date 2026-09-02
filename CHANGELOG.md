@@ -2,6 +2,7 @@
 
 - Correction d'un bug dans le processus de paiement
 - Le bouton de navigation "Mon compte" devient un menu déroulant
+- Correction de plein de petits bugs
 
 ##### 3.0.4
 
