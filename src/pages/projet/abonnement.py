@@ -159,17 +159,16 @@ La TVA applicable en France est de 20 %.
             """
 La souscription à un abonnement ouvre immédiatement l'accès aux fonctionnalités réservées aux abonné·es.
 
-**L'abonnement payant démarre à la souscription à un abonnement** : le premier prélèvement a lieu à ce moment-là, toujours via une action manuelle de votre part.
-
-L'abonnement est conclu pour une durée d'un mois à compter de son démarrage, et se renouvelle automatiquement de mois en mois jusqu'à résiliation.
+**L'abonnement payant démarre à la souscription à un abonnement** : le premier prélèvement a lieu à ce moment-là, toujours via une action manuelle de votre part. L'abonnement est
+conclu pour une durée d'un mois à compter de son démarrage, et se renouvelle automatiquement de mois en mois jusqu'à résiliation par l'abonné·e.
 """
         ),
         html.H4("Modes de paiement"),
         dcc.Markdown(
             """
-Les cartes bancaires des réseaux Visa et Mastercard sont acceptées.
+Les cartes bancaires des réseaux Visa et Mastercard sont acceptées, ainsi que Google Pay et Apple Pay de manière expérimentale.
 
-Il est également possible de payer par virement bancaire à condition de payer un an d'abonnement. [Envoyez un message](/projet/contact) si vous êtes intéressé·e.
+Il est également possible de payer par virement bancaire à condition de payer un an d'abonnement. [Envoyez un message](/projet/contact) avec votre SIRET ou vos coordonnées si vous êtes intéressé·e.
 """
         ),
         html.H4("Période d'essai"),
@@ -185,13 +184,13 @@ L'essai est accordé une seule fois par compte.
         html.H4("Facturation et paiement"),
         dcc.Markdown(
             """
-La première facture est émise au démarrage de l'abonnement, c'est-à-dire à la souscription d'un abonnement. Les suivantes le sont chaque mois à cette date anniversaire.
+La première facture est émise au démarrage de l'abonnement, c'est-à-dire à la souscription d'un abonnement. Les suivantes le sont automatiquement chaque mois à cette date anniversaire.
 
 Chaque échéance donne lieu à l'émission d'une facture, envoyée par email à l'abonné·e.
 Le paiement est traité par [Frisbii](https://www.frisbii.com), prestataire européen de paiement en ligne.
 Les coordonnées bancaires sont conservées exclusivement par Frisbii et ne sont pas transmises à colibre.
 
-Le paiement est exigible à la date de facturation. En cas de retard de paiement, des pénalités sont dues au taux de trois fois le taux d'intérêt légal, ainsi qu'une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du code de commerce). En cas d'échec du prélèvement, l'accès aux fonctionnalités payantes est suspendu.
+Le paiement est exigible à la date de facturation et se fait automatiquement si une méthode de paiement a été renseignée. En cas de retard de paiement, des pénalités sont dues au taux de trois fois le taux d'intérêt légal, ainsi qu'une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du code de commerce). En cas d'échec du prélèvement, l'accès aux fonctionnalités payantes est suspendu.
 """
         ),
         html.H4("Droit de rétractation"),
