@@ -29,7 +29,7 @@ from dash import (
     page_registry,
 )
 from dotenv import load_dotenv
-from flask import Flask, Response, redirect
+from flask import Flask, Response, redirect, send_from_directory
 from flask_login import current_user
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -319,6 +319,14 @@ def sitemap_org(segment: str, page: int):
 @app.server.route("/llms.txt")
 def llms():
     return redirect("/assets/llms.md")
+
+
+_WELL_KNOWN_DIR = Path(__file__).parent / "assets" / ".well-known"
+
+
+@app.server.route("/.well-known/<path:filename>")
+def well_known(filename: str):
+    return send_from_directory(_WELL_KNOWN_DIR, filename)
 
 
 # Fichier .ics d'une rencontre (voir src.rencontres). La route appelle
