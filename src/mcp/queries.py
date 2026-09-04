@@ -151,7 +151,7 @@ def search_marches(
     base = os.getenv("APP_BASE_URL", "").rstrip("/")
     marches = to_json_records(df)
     for marche in marches:
-        marche["lien"] = f"{base}/marche/{marche['uid']}"
+        marche["lien"] = f"{base}/marches/{marche['uid']}"
     return {
         "meta": {"page": page, "page_size": PAGE_SIZE, "total": total},
         "marches": marches,

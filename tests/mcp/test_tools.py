@@ -53,4 +53,4 @@ def test_rechercher_marches_colonnes_passthrough(monkeypatch):
     result = tools.rechercher_marches(acheteur_id="123", colonnes=["objet"])
     m = result["marches"][0]
     assert set(m.keys()) == {"uid", "objet", "lien"}
-    assert m["lien"] == f"https://colibre.fr/marche/{m['uid']}"
+    assert m["lien"] == f"https://colibre.fr/marches/{m['uid']}"

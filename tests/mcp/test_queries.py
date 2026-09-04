@@ -177,7 +177,7 @@ def test_search_marches_default_columns_and_lien(monkeypatch):
     m = result["marches"][0]
     # Toutes les colonnes du défaut + le lien
     assert set(MARCHES_COLUMNS).issubset(m.keys())
-    assert m["lien"] == f"https://colibre.fr/marche/{m['uid']}"
+    assert m["lien"] == f"https://colibre.fr/marches/{m['uid']}"
 
 
 def test_search_marches_custom_columns_replace(monkeypatch):
@@ -214,7 +214,7 @@ def test_search_marches_lien_relative_when_base_unset(monkeypatch):
     monkeypatch.delenv("APP_BASE_URL", raising=False)
     result = search_marches(acheteur_id="123", colonnes=["objet"])
     m = result["marches"][0]
-    assert m["lien"] == f"/marche/{m['uid']}"
+    assert m["lien"] == f"/marches/{m['uid']}"
 
 
 def test_describe_schema_exposes_colonnes_disponibles():
