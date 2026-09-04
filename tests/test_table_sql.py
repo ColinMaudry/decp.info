@@ -5,6 +5,8 @@ SCHEMA = pl.Schema(
         "uid": pl.String,
         "objet": pl.String,
         "acheteur_id": pl.String,
+        "acheteur_nom": pl.String,
+        "titulaire_nom": pl.String,
         "montant": pl.Float64,
         "dureeMois": pl.Int64,
         "dateNotification": pl.Date,
@@ -79,6 +81,34 @@ def test_date_column_treated_as_string_ilike():
     where, params = filter_query_to_sql("{dateNotification} icontains 2024*", SCHEMA)
     assert "ILIKE" in where
     assert params == ["2024%"]
+
+
+def test_icontains_strips_accents_from_search_term_on_acheteur_nom():
+    from src.utils.table_sql import filter_query_to_sql
+
+    where, params = filter_query_to_sql("{acheteur_nom} icontains fréjus", SCHEMA)
+    assert where == (
+        '"acheteur_nom" IS NOT NULL AND "acheteur_nom" <> \'\' '
+        'AND "acheteur_nom" ILIKE ?'
+    )
+    assert params == ["%frejus%"]
+
+
+def test_icontains_strips_accents_from_search_term_on_titulaire_nom():
+    from src.utils.table_sql import filter_query_to_sql
+
+    where, params = filter_query_to_sql("{titulaire_nom} icontains fréjus", SCHEMA)
+    assert params == ["%frejus%"]
+
+
+def test_icontains_on_objet_keeps_accents_untouched():
+    """objet contient de vrais accents (#138) : ni la colonne ni la saisie
+    ne doivent être désaccentuées, contrairement à acheteur_nom/titulaire_nom."""
+    from src.utils.table_sql import filter_query_to_sql
+
+    where, params = filter_query_to_sql("{objet} icontains réfection", SCHEMA)
+    assert where == '"objet" IS NOT NULL AND "objet" <> \'\' AND "objet" ILIKE ?'
+    assert params == ["%réfection%"]
 
 
 def test_multiple_filters_joined_by_and():

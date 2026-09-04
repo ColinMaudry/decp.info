@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 import polars as pl
+from unidecode import unidecode
 
 from src.utils import logger
 from src.utils.table import split_filter_part
@@ -220,6 +221,13 @@ def dashboard_filters_to_sql(
     return " AND ".join(clauses), params
 
 
+# Colonnes dont les valeurs sont déjà stockées sans accents (cf. #138) : la
+# saisie utilisateur est désaccentuée pour matcher, comme sur /recherche.
+# Les autres colonnes texte (ex. "objet") contiennent de vrais accents et ne
+# doivent pas être désaccentuées, ni côté colonne ni côté saisie.
+_ACCENT_INSENSITIVE_COLUMNS = {"acheteur_nom", "titulaire_nom"}
+
+
 def tokenize_text_filter(
     column: str, text: str, col_is_date: bool = False
 ) -> tuple[str, list]:
@@ -233,8 +241,11 @@ def tokenize_text_filter(
     conditions = [f'"{column}" IS NOT NULL', f"{quoted_col} <> ''"]
 
     params = []
+    strip_query_accents = column in _ACCENT_INSENSITIVE_COLUMNS
 
     for term in terms:
+        if strip_query_accents:
+            term = unidecode(term)
         conditions.append(f"{quoted_col} ILIKE ?")
 
         if term.startswith("*") or term.endswith("*"):
