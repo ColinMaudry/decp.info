@@ -1,3 +1,8 @@
+##### 3.0.7
+
+- les filtres par nom d'acheteur et de titulaire ne sont plus sensibles aux accents ([#138](https://github.com/colinmaudry/colibre/issues/138))
+- les liens vers des marchés renvoyés par le connecteur MCP dans l'agent IA est corrigé
+
 ##### 3.0.6
 
 - Ajout des méthodes de paiement Apple Pay et Google Pay
