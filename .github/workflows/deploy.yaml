@@ -35,10 +35,6 @@ jobs:
               set -e
               systemctl stop ${{ vars.APP_NAME }}
               cd /var/www/${{ vars.APP_NAME }}
-              # Dépôt public : le pull en HTTPS ne demande aucune authentification,
-              # contrairement à SSH qui réclamait la passphrase de la clé du serveur.
-              git remote set-url origin https://github.com/ColinMaudry/colibre.git \
-                || git remote add origin https://github.com/ColinMaudry/colibre.git
               git fetch --prune origin
               git reset --hard origin/${{ github.ref_name }}
               source .venv/bin/activate
