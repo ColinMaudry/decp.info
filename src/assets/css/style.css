@@ -1218,9 +1218,9 @@ input[type="number"] {
    — `display` ne s'anime pas, et animer la hauteur d'un viewport virtualisé
    AG Grid se passe mal. La coupure est sans à-coup parce que l'en-tête, lui,
    ne bouge pas d'un pixel. */
-.marches_table.mode-observatoire .ag-body,
-.marches_table.mode-observatoire .ag-body-viewport,
-.marches_table.mode-observatoire .ag-overlay {
+.mode-observatoire .marches_table .ag-body,
+.mode-observatoire .marches_table .ag-body-viewport,
+.mode-observatoire .marches_table .ag-overlay {
   display: none !important;
 }
 
@@ -1229,15 +1229,15 @@ input[type="number"] {
    défilement de l'en-tête. La masquer avec le corps rendrait les filtres des
    colonnes de droite inatteignables — exactement ce que ce mode doit
    permettre. */
-.marches_table.mode-observatoire .ag-body-horizontal-scroll {
+.mode-observatoire .marches_table .ag-body-horizontal-scroll {
   flex: 0 0 auto !important;
 }
 
 /* ag_grid() pose height:70vh en style inline sur la div de la grille ; sans
    !important elle garderait sa hauteur et laisserait un grand vide sous
    l'en-tête. */
-.marches_table.mode-observatoire,
-.marches_table.mode-observatoire > div {
+.mode-observatoire .marches_table,
+.mode-observatoire .marches_table > div {
   height: auto !important;
 }
 
@@ -1247,9 +1247,9 @@ input[type="number"] {
    auto ils tombent à 0, et .ag-root, qui est en overflow:hidden, rogne
    l'en-tête au passage. On les fait donc épouser leur contenu — soit
    l'en-tête seul, puisque .ag-body est masqué. */
-.marches_table.mode-observatoire .ag-root-wrapper,
-.marches_table.mode-observatoire .ag-root-wrapper-body,
-.marches_table.mode-observatoire .ag-root {
+.mode-observatoire .marches_table .ag-root-wrapper,
+.mode-observatoire .marches_table .ag-root-wrapper-body,
+.mode-observatoire .marches_table .ag-root {
   height: auto !important;
 }
 
@@ -1258,13 +1258,25 @@ input[type="number"] {
    .ag-root, lui enfant d'un flex en ligne, la même déclaration couperait la
    croissance HORIZONTALE : l'en-tête retomberait à une largeur nulle, faute de
    corps de grille pour la lui donner. */
-.marches_table.mode-observatoire .ag-root-wrapper-body {
+.mode-observatoire .marches_table .ag-root-wrapper-body {
   flex: 0 0 auto !important;
 }
 
 /* La hauteur libérée par les lignes est reprise par les cards : la page ne se
    rétracte pas pour se redéployer une seconde plus tard, donc ni saut du pied
    de page ni perte de la position de défilement pendant le calcul. */
+/* Le conteneur des cards porte `d-none` en permanence : sa visibilité est
+   révélée ICI, par la seule présence de la classe de mode sur l'enveloppe
+   commune. C'est ce qui réserve la place dès le clic, avant même que le
+   serveur ait répondu — sinon le conteneur resterait masqué pendant tout le
+   calcul, son min-height ne s'appliquerait pas, et le spinner se collerait
+   sous l'en-tête au lieu de se centrer dans la zone libérée.
+   `.d-none` est `display: none !important` ; deux classes l'emportent sur une
+   à !important égal, sans qu'aucun callback n'ait à toucher la className. */
+.mode-observatoire .mode-observatoire-cards {
+  display: flex !important;
+}
+
 .mode-observatoire-cards {
   min-height: 70vh;
   margin-top: 1rem;

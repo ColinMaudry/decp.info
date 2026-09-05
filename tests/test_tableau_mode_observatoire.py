@@ -142,8 +142,8 @@ def feuille_de_style():
 def test_le_css_masque_le_corps_de_la_grille_pas_son_entete(feuille_de_style):
     """L'en-tête et ses filtres flottants restent visibles et actionnables :
     c'est ce qui permet d'affiner les filtres sans quitter le mode."""
-    assert ".mode-observatoire .ag-body" in feuille_de_style
-    assert ".mode-observatoire .ag-header" not in feuille_de_style
+    assert ".mode-observatoire .marches_table .ag-body" in feuille_de_style
+    assert ".mode-observatoire .marches_table .ag-header" not in feuille_de_style
 
 
 def test_le_css_libere_la_hauteur_figee_de_la_grille(feuille_de_style):

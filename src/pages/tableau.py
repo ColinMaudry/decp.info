@@ -246,31 +246,35 @@ layout = [
         id="header",
     ),
     html.Div(id="vue-resolve-feedback"),
-    dcc.Loading(
-        overlay_style={"visibility": "visible", "filter": "blur(2px)"},
-        id="loading-home",
-        type="default",
+    html.Div(
+        id="tableau-mode-wrapper",
+        className="tableau-mode",
         children=[
-            html.Div(
-                [
-                    # Modal du mode d'emploi
-                    dbc.Button(
-                        "⍰ Mode d'emploi",
-                        id="tableau_help_open",
-                        color="secondary",
-                        outline=True,
-                        size="sm",
-                    ),
-                    dbc.Modal(
+            dcc.Loading(
+                overlay_style={"visibility": "visible", "filter": "blur(2px)"},
+                id="loading-home",
+                type="default",
+                children=[
+                    html.Div(
                         [
-                            dbc.ModalHeader(dbc.ModalTitle("Mode d'emploi")),
-                            dbc.ModalBody(
+                            # Modal du mode d'emploi
+                            dbc.Button(
+                                "⍰ Mode d'emploi",
+                                id="tableau_help_open",
+                                color="secondary",
+                                outline=True,
+                                size="sm",
+                            ),
+                            dbc.Modal(
                                 [
-                                    _help_button_legend(),
-                                    html.Hr(),
-                                    dcc.Markdown(
-                                        dangerously_allow_html=True,
-                                        children=f"""
+                                    dbc.ModalHeader(dbc.ModalTitle("Mode d'emploi")),
+                                    dbc.ModalBody(
+                                        [
+                                            _help_button_legend(),
+                                            html.Hr(),
+                                            dcc.Markdown(
+                                                dangerously_allow_html=True,
+                                                children=f"""
             ##### Définition des colonnes
 
             Pour voir la définition d'une colonne et ses valeurs possibles, vous pouvez passer votre souris sur son en-tête ou bien consulter [la liste des champs](/projet/donnees#champs).
@@ -325,225 +329,239 @@ layout = [
             (informations, marchés attribués/remportés, etc.)
 
             """,
+                                            ),
+                                        ],
+                                    ),
+                                    dbc.ModalFooter(
+                                        dbc.Button(
+                                            "Fermer",
+                                            id="tableau_help_close",
+                                            className="ms-auto",
+                                            n_clicks=0,
+                                        )
                                     ),
                                 ],
+                                id="tableau_help",
+                                is_open=False,
+                                fullscreen="md-down",
+                                scrollable=True,
+                                size="lg",
+                            ),
+                            # Bouton modal des colonnes affichées
+                            dbc.Button(
+                                "Colonnes",
+                                id="tableau_columns_open",
+                                color="secondary",
+                                size="sm",
+                                className="column_list",
+                                title="Choisir les colonnes à afficher et masquer",
+                            ),
+                            html.Div(
+                                id="saved-views-bar",
+                                className="d-inline-flex align-items-center gap-2",
+                                children=[
+                                    # Boutons enveloppés dans un <span> : Bootstrap met
+                                    # `pointer-events: none` sur les boutons désactivés,
+                                    # ce qui empêche le survol (et donc le `title`
+                                    # natif) de fonctionner directement dessus. Le
+                                    # `title` est donc porté par le span englobant.
+                                    html.Span(
+                                        id="btn-save-view-wrapper",
+                                        className="d-inline-block",
+                                        children=dbc.Button(
+                                            "Sauvegarder la vue",
+                                            id="btn-save-view",
+                                            color="secondary",
+                                            size="sm",
+                                            # Grisé/désactivé pour les non-abonnés (le
+                                            # callback toggle_saved_views_controls
+                                            # affine au chargement).
+                                            disabled=True,
+                                        ),
+                                    ),
+                                    html.Span(
+                                        id="saved-views-menu-wrapper",
+                                        className="d-inline-block",
+                                        children=dbc.DropdownMenu(
+                                            id="saved-views-menu",
+                                            label="Mes vues",
+                                            color="secondary",
+                                            size="sm",
+                                            children=[],
+                                            disabled=True,
+                                            className="d-inline-block",
+                                        ),
+                                    ),
+                                ],
+                            ),
+                            dcc.Store(id="saved-views-refresh"),
+                            dbc.Modal(
+                                id="save-view-modal",
+                                is_open=False,
+                                children=[
+                                    dbc.ModalHeader(
+                                        dbc.ModalTitle("Sauvegarder la vue")
+                                    ),
+                                    dbc.ModalBody(
+                                        [
+                                            dbc.Label("Nom de la vue"),
+                                            dcc.Input(
+                                                id="save-view-name",
+                                                type="text",
+                                                className="form-control",
+                                            ),
+                                            html.Hr(className="my-3"),
+                                            dbc.Label("Ou remplacer une vue existante"),
+                                            dbc.Select(
+                                                id="overwrite-view-select",
+                                                options=[],
+                                                placeholder="Sélectionner une vue…",
+                                            ),
+                                            html.Div(
+                                                id="save-view-feedback",
+                                                className="mt-2",
+                                            ),
+                                        ]
+                                    ),
+                                    dbc.ModalFooter(
+                                        dbc.Button(
+                                            "Enregistrer",
+                                            id="btn-save-view-confirm",
+                                            color="secondary",
+                                        )
+                                    ),
+                                ],
+                            ),
+                            dbc.Button(
+                                "Télécharger (Excel)",
+                                id="btn-download-data",
+                                color="secondary",
+                                size="sm",
+                                disabled=True,
+                            ),
+                            dcc.Download(id="download-data"),
+                            dcc.Store(id="filtered_data", storage_type="memory"),
+                            dbc.Button(
+                                "Réinitialiser",
+                                id="btn-tableau-reset",
+                                color="danger",
+                                outline=True,
+                                size="sm",
+                                title="Supprime tous les filtres et les tris. Autrement ils sont conservés même si vous fermez la page.",
+                            ),
+                            # Interrupteur lignes ⇄ cards. Comme pour « Sauvegarder la
+                            # vue », le title est porté par le <span> englobant :
+                            # Bootstrap met `pointer-events: none` sur les contrôles
+                            # désactivés, ce qui empêche le survol de les atteindre.
+                            html.Span(
+                                id="tableau-mode-observatoire-wrapper",
+                                className="mode-observatoire-toggle",
+                                title="Fonctionnalité accessible en vous abonnant",
+                                children=[
+                                    html.Span(
+                                        "☰",
+                                        id="tableau-mode-observatoire-icone-lignes",
+                                        className="mode-observatoire-icone active",
+                                        title="Afficher les lignes de données",
+                                    ),
+                                    dbc.Switch(
+                                        id="tableau-mode-observatoire",
+                                        value=False,
+                                        # Grisé/désactivé pour les non-abonnés ; le
+                                        # callback toggle_mode_observatoire_control
+                                        # affine au chargement.
+                                        disabled=True,
+                                        className="mb-0",
+                                    ),
+                                    html.Span(
+                                        "📊",
+                                        id="tableau-mode-observatoire-icone-cards",
+                                        className="mode-observatoire-icone",
+                                        title="Afficher les visualisations de l'observatoire",
+                                    ),
+                                ],
+                            ),
+                        ],
+                        className="table-toolbar",
+                    ),
+                    html.Div(
+                        id="share-url-box",
+                        className="share-url-box d-none",
+                        children=[
+                            dbc.Label(
+                                "Lien direct vers cette vue :",
+                                className="mb-0",
+                                style={"fontSize": "0.9em"},
+                            ),
+                            # URL affichée comme texte sélectionnable : prend exactement
+                            # sa largeur (pas de champ pleine largeur qui encombre) et
+                            # passe à la ligne si le lien est long (pas de troncature).
+                            html.Span(
+                                id="share-url-text",
+                                className="share-url-text",
+                                style={"wordBreak": "break-all", "minWidth": 0},
+                            ),
+                            dcc.Clipboard(
+                                target_id="share-url-text",
+                                title="Copier le lien vers cette vue",
+                                className="btn btn-outline-secondary btn-sm "
+                                "d-inline-flex align-items-center",
+                                children=[
+                                    html.Img(
+                                        src="/assets/copy.svg",
+                                        alt="",
+                                        style={
+                                            "height": "1em",
+                                            "verticalAlign": "-0.15em",
+                                            "marginRight": "0.35em",
+                                        },
+                                    ),
+                                    "Copier le lien",
+                                ],
+                                copied_children="✓ Copié",
+                            ),
+                        ],
+                    ),
+                    html.Div(
+                        className="table-meta",
+                        children=[
+                            html.Span(id="nb_rows"),
+                            html.Span(" · Données mises à jour le " + str(update_date)),
+                            html.Span(id="download-hint"),
+                        ],
+                    ),
+                    dbc.Modal(
+                        [
+                            dbc.ModalHeader(
+                                dbc.ModalTitle("Choix des colonnes à afficher")
+                            ),
+                            dbc.ModalBody(
+                                id="tableau_columns_body",
+                                children=make_column_picker("tableau"),
                             ),
                             dbc.ModalFooter(
                                 dbc.Button(
                                     "Fermer",
-                                    id="tableau_help_close",
+                                    id="tableau_columns_close",
                                     className="ms-auto",
                                     n_clicks=0,
                                 )
                             ),
                         ],
-                        id="tableau_help",
+                        id="tableau_columns",
                         is_open=False,
                         fullscreen="md-down",
                         scrollable=True,
-                        size="lg",
+                        size="xl",
                     ),
-                    # Bouton modal des colonnes affichées
-                    dbc.Button(
-                        "Colonnes",
-                        id="tableau_columns_open",
-                        color="secondary",
-                        size="sm",
-                        className="column_list",
-                        title="Choisir les colonnes à afficher et masquer",
-                    ),
-                    html.Div(
-                        id="saved-views-bar",
-                        className="d-inline-flex align-items-center gap-2",
-                        children=[
-                            # Boutons enveloppés dans un <span> : Bootstrap met
-                            # `pointer-events: none` sur les boutons désactivés,
-                            # ce qui empêche le survol (et donc le `title`
-                            # natif) de fonctionner directement dessus. Le
-                            # `title` est donc porté par le span englobant.
-                            html.Span(
-                                id="btn-save-view-wrapper",
-                                className="d-inline-block",
-                                children=dbc.Button(
-                                    "Sauvegarder la vue",
-                                    id="btn-save-view",
-                                    color="secondary",
-                                    size="sm",
-                                    # Grisé/désactivé pour les non-abonnés (le
-                                    # callback toggle_saved_views_controls
-                                    # affine au chargement).
-                                    disabled=True,
-                                ),
-                            ),
-                            html.Span(
-                                id="saved-views-menu-wrapper",
-                                className="d-inline-block",
-                                children=dbc.DropdownMenu(
-                                    id="saved-views-menu",
-                                    label="Mes vues",
-                                    color="secondary",
-                                    size="sm",
-                                    children=[],
-                                    disabled=True,
-                                    className="d-inline-block",
-                                ),
-                            ),
-                        ],
-                    ),
-                    dcc.Store(id="saved-views-refresh"),
-                    dbc.Modal(
-                        id="save-view-modal",
-                        is_open=False,
-                        children=[
-                            dbc.ModalHeader(dbc.ModalTitle("Sauvegarder la vue")),
-                            dbc.ModalBody(
-                                [
-                                    dbc.Label("Nom de la vue"),
-                                    dcc.Input(
-                                        id="save-view-name",
-                                        type="text",
-                                        className="form-control",
-                                    ),
-                                    html.Hr(className="my-3"),
-                                    dbc.Label("Ou remplacer une vue existante"),
-                                    dbc.Select(
-                                        id="overwrite-view-select",
-                                        options=[],
-                                        placeholder="Sélectionner une vue…",
-                                    ),
-                                    html.Div(id="save-view-feedback", className="mt-2"),
-                                ]
-                            ),
-                            dbc.ModalFooter(
-                                dbc.Button(
-                                    "Enregistrer",
-                                    id="btn-save-view-confirm",
-                                    color="secondary",
-                                )
-                            ),
-                        ],
-                    ),
-                    dbc.Button(
-                        "Télécharger (Excel)",
-                        id="btn-download-data",
-                        color="secondary",
-                        size="sm",
-                        disabled=True,
-                    ),
-                    dcc.Download(id="download-data"),
-                    dcc.Store(id="filtered_data", storage_type="memory"),
-                    dbc.Button(
-                        "Réinitialiser",
-                        id="btn-tableau-reset",
-                        color="danger",
-                        outline=True,
-                        size="sm",
-                        title="Supprime tous les filtres et les tris. Autrement ils sont conservés même si vous fermez la page.",
-                    ),
-                    # Interrupteur lignes ⇄ cards. Comme pour « Sauvegarder la
-                    # vue », le title est porté par le <span> englobant :
-                    # Bootstrap met `pointer-events: none` sur les contrôles
-                    # désactivés, ce qui empêche le survol de les atteindre.
-                    html.Span(
-                        id="tableau-mode-observatoire-wrapper",
-                        className="mode-observatoire-toggle",
-                        title="Fonctionnalité accessible en vous abonnant",
-                        children=[
-                            html.Span(
-                                "☰",
-                                id="tableau-mode-observatoire-icone-lignes",
-                                className="mode-observatoire-icone active",
-                                title="Afficher les lignes de données",
-                            ),
-                            dbc.Switch(
-                                id="tableau-mode-observatoire",
-                                value=False,
-                                # Grisé/désactivé pour les non-abonnés ; le
-                                # callback toggle_mode_observatoire_control
-                                # affine au chargement.
-                                disabled=True,
-                                className="mb-0",
-                            ),
-                            html.Span(
-                                "📊",
-                                id="tableau-mode-observatoire-icone-cards",
-                                className="mode-observatoire-icone",
-                                title="Afficher les visualisations de l'observatoire",
-                            ),
-                        ],
-                    ),
-                ],
-                className="table-toolbar",
-            ),
-            html.Div(
-                id="share-url-box",
-                className="share-url-box d-none",
-                children=[
-                    dbc.Label(
-                        "Lien direct vers cette vue :",
-                        className="mb-0",
-                        style={"fontSize": "0.9em"},
-                    ),
-                    # URL affichée comme texte sélectionnable : prend exactement
-                    # sa largeur (pas de champ pleine largeur qui encombre) et
-                    # passe à la ligne si le lien est long (pas de troncature).
-                    html.Span(
-                        id="share-url-text",
-                        className="share-url-text",
-                        style={"wordBreak": "break-all", "minWidth": 0},
-                    ),
-                    dcc.Clipboard(
-                        target_id="share-url-text",
-                        title="Copier le lien vers cette vue",
-                        className="btn btn-outline-secondary btn-sm "
-                        "d-inline-flex align-items-center",
-                        children=[
-                            html.Img(
-                                src="/assets/copy.svg",
-                                alt="",
-                                style={
-                                    "height": "1em",
-                                    "verticalAlign": "-0.15em",
-                                    "marginRight": "0.35em",
-                                },
-                            ),
-                            "Copier le lien",
-                        ],
-                        copied_children="✓ Copié",
-                    ),
+                    DATATABLE,
                 ],
             ),
-            html.Div(
-                className="table-meta",
-                children=[
-                    html.Span(id="nb_rows"),
-                    html.Span(" · Données mises à jour le " + str(update_date)),
-                    html.Span(id="download-hint"),
-                ],
-            ),
-            dbc.Modal(
-                [
-                    dbc.ModalHeader(dbc.ModalTitle("Choix des colonnes à afficher")),
-                    dbc.ModalBody(
-                        id="tableau_columns_body",
-                        children=make_column_picker("tableau"),
-                    ),
-                    dbc.ModalFooter(
-                        dbc.Button(
-                            "Fermer",
-                            id="tableau_columns_close",
-                            className="ms-auto",
-                            n_clicks=0,
-                        )
-                    ),
-                ],
-                id="tableau_columns",
-                is_open=False,
-                fullscreen="md-down",
-                scrollable=True,
-                size="xl",
-            ),
-            DATATABLE,
+            # Le bloc des cards vit HORS de `loading-home` : ce dcc.Loading enveloppe la
+            # barre d'outils et la grille, et tourne dès qu'un de ses descendants se met
+            # à jour — imbriquer celui des cards dedans affichait deux spinners empilés
+            # pour un seul callback. La modale « Montants » sort pour la même raison :
+            # son `is_open` est piloté par un callback (dans src/pages/observatoire.py).
             dcc.Loading(
                 overlay_style={"visibility": "visible", "filter": "blur(2px)"},
                 type="default",
@@ -1045,13 +1063,13 @@ clientside_callback(
     """
     function(mode_actif) {
         return [
-            mode_actif ? "marches_table mode-observatoire" : "marches_table",
+            mode_actif ? "tableau-mode mode-observatoire" : "tableau-mode",
             mode_actif ? "mode-observatoire-icone" : "mode-observatoire-icone active",
             mode_actif ? "mode-observatoire-icone active" : "mode-observatoire-icone",
         ];
     }
     """,
-    Output("tableau-grid-wrapper", "className"),
+    Output("tableau-mode-wrapper", "className"),
     Output("tableau-mode-observatoire-icone-lignes", "className"),
     Output("tableau-mode-observatoire-icone-cards", "className"),
     Input("tableau-mode-observatoire", "value"),

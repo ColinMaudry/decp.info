@@ -39,8 +39,8 @@ def test_la_classe_masque_le_corps_et_conserve_len_tete(dash_duo: DashComposite)
     hauteur_avec_lignes = enveloppe.size["height"]
 
     driver.execute_script(
-        "document.getElementById('tableau-grid-wrapper')"
-        ".className = 'marches_table mode-observatoire';"
+        "document.getElementById('tableau-mode-wrapper')"
+        ".className = 'tableau-mode mode-observatoire';"
     )
     time.sleep(0.3)
 
@@ -59,8 +59,8 @@ def test_lentete_reste_defilable_horizontalement(dash_duo: DashComposite):
     _charger_le_tableau(dash_duo)
     driver = dash_duo.driver
     driver.execute_script(
-        "document.getElementById('tableau-grid-wrapper')"
-        ".className = 'marches_table mode-observatoire';"
+        "document.getElementById('tableau-mode-wrapper')"
+        ".className = 'tableau-mode mode-observatoire';"
     )
     time.sleep(0.3)
 
