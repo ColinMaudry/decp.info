@@ -1218,8 +1218,18 @@ input[type="number"] {
    — `display` ne s'anime pas, et animer la hauteur d'un viewport virtualisé
    AG Grid se passe mal. La coupure est sans à-coup parce que l'en-tête, lui,
    ne bouge pas d'un pixel. */
-.mode-observatoire .marches_table .ag-body,
-.mode-observatoire .marches_table .ag-body-viewport,
+/* Le corps est replié en hauteur, PAS masqué en `display: none`.
+   AG Grid virtualise horizontalement d'après la largeur de `.ag-body-viewport` :
+   la mettre à zéro lui fait conclure qu'une seule colonne tient, et la
+   prochaine régénération des columnDefs (décocher une colonne) ne rend plus
+   qu'un en-tête. Replier la hauteur cache les lignes tout aussi bien et laisse
+   la largeur intacte. */
+.mode-observatoire .marches_table .ag-body {
+  height: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
 .mode-observatoire .marches_table .ag-overlay {
   display: none !important;
 }

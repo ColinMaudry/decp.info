@@ -80,3 +80,55 @@ def test_lentete_reste_defilable_horizontalement(dash_duo: DashComposite):
     )
     time.sleep(0.4)
     assert driver.execute_script("return arguments[0].scrollLeft;", entete) > 0
+
+
+def test_changer_de_colonnes_en_mode_observatoire_garde_len_tete_complet(
+    dash_duo: DashComposite,
+):
+    """Masquer le corps de la grille ne doit pas casser la virtualisation
+    horizontale d'AG Grid.
+
+    Avec `display: none` sur `.ag-body`, son viewport tombe à une largeur nulle.
+    AG Grid s'en sert pour décider combien de colonnes rendre : à la
+    régénération des columnDefs (décocher une colonne dans « Colonnes »), il en
+    conclut qu'une seule tient et n'affiche plus qu'un en-tête. Le rechargement
+    de la page corrigeait l'affichage, ce qui rendait le défaut déroutant.
+    """
+    _charger_le_tableau(dash_duo)
+    driver = dash_duo.driver
+    driver.execute_script(
+        "document.getElementById('tableau-mode-wrapper')"
+        ".className = 'tableau-mode mode-observatoire';"
+    )
+    time.sleep(0.5)
+    entetes_avant = _entetes_de_la_grille(driver)
+    assert len(entetes_avant) > 2, "il faut plusieurs colonnes pour que le test parle"
+
+    driver.find_element(By.ID, "tableau_columns_open").click()
+    dash_duo.wait_for_element("#tableau_column_list input[type='checkbox']", timeout=8)
+    time.sleep(1)
+    cochees = [
+        c
+        for c in driver.find_elements(
+            By.CSS_SELECTOR, "#tableau_column_list input[type='checkbox']"
+        )
+        if c.is_selected()
+    ]
+    driver.execute_script("arguments[0].scrollIntoView({block:'center'});", cochees[0])
+    cochees[0].click()
+    time.sleep(1.5)
+    driver.find_element(By.ID, "tableau_columns_close").click()
+    time.sleep(2)
+
+    entetes_apres = _entetes_de_la_grille(driver)
+
+    assert len(entetes_apres) == len(entetes_avant) - 1, (
+        f"en-têtes attendus : {len(entetes_avant) - 1}, obtenus : {entetes_apres}"
+    )
+
+
+def _entetes_de_la_grille(driver) -> list[str]:
+    cellules = driver.find_elements(
+        By.CSS_SELECTOR, "#tableau_grid .ag-header-cell-text"
+    )
+    return [c.text for c in cellules if c.text]
