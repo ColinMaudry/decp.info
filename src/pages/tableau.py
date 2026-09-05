@@ -697,10 +697,25 @@ def apply_hidden_columns(hidden_columns, column_state):
 
 @callback(
     Output("tableau_column_list", "selected_rows"),
-    Input("tableau-hidden-columns", "data"),
-    State("tableau_column_list", "selected_rows"),  # pour éviter la boucle infinie
+    Input("tableau_columns", "is_open"),
+    State("tableau-hidden-columns", "data"),
 )
-def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
+def update_checkboxes_from_hidden_columns(is_open, hidden_cols):
+    """Alimente les cases à cocher à l'ouverture de la modale, et seulement là.
+
+    Déclencher sur le store créerait un liage permanent dans les deux sens
+    (store → cases → store). Son écho partirait au chargement avec l'état par
+    défaut et pourrait arriver APRÈS l'application d'une vue partagée, écrasant
+    silencieusement ses colonnes — cf. issue #139. Or les cases vivent dans une
+    modale : les tenir à jour tant qu'elle est fermée ne sert à rien.
+
+    Il reste un écho, à l'ouverture — une action utilisateur, jamais
+    concurrente d'un chargement de page — et il recalcule la valeur que le
+    store contient déjà : l'écriture est sans effet.
+    """
+    if not is_open:
+        return no_update
+
     # None = pas encore de préférence enregistrée (première visite) ; []
     # est un choix explicite (« ne rien masquer »/tout afficher) et doit
     # être respecté tel quel, cf. update_hidden_columns_from_checkboxes.
