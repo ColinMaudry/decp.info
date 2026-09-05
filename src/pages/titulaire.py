@@ -10,6 +10,7 @@ from dash import (
     callback,
     dcc,
     html,
+    no_update,
     register_page,
 )
 
@@ -485,10 +486,22 @@ def update_hidden_columns_from_checkboxes(selected_columns):
 
 @callback(
     Output("titulaire_column_list", "selected_rows"),
-    Input("titulaire-hidden-columns", "data"),
-    State("titulaire_column_list", "selected_rows"),  # pour éviter la boucle infinie
+    Input("titulaire_columns", "is_open"),
+    State("titulaire-hidden-columns", "data"),
 )
-def update_checkboxes_from_hidden_columns(hidden_cols, current_checkboxes):
+def update_checkboxes_from_hidden_columns(is_open, hidden_cols):
+    """Alimente les cases à cocher à l'ouverture de la modale, et seulement là.
+
+    Déclencher en permanence créerait un liage à double sens (store → cases →
+    store), dont l'écho part à chaque chargement de page. Il n'écrase rien ici,
+    faute de second écrivain du store — mais c'est un aller-retour serveur pour
+    rien, et la course réapparaîtrait le jour où un second écrivain serait
+    ajouté. Cf. issue #139 et le même traitement dans src/pages/tableau.py, où
+    ce second écrivain existe (application d'une vue partagée).
+    """
+    if not is_open:
+        return no_update
+
     hidden_cols = hidden_cols or get_default_hidden_columns("titulaire")
 
     # Show all columns that are NOT hidden
