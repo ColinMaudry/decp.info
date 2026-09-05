@@ -22,6 +22,7 @@ from src.figures import (
     build_dashboard_cards,
     make_column_picker,
     montant_modal,
+    observatoire_cards_columns,
 )
 from src.utils import logger
 from src.utils.cache import cache
@@ -656,7 +657,7 @@ def _compute_dashboard_children(filter_params_normalized: tuple):
         k: (list(v) if isinstance(v, tuple) else v) for k, v in filter_params_normalized
     }
 
-    dff = prepare_dashboard_data(**filter_params)
+    dff = prepare_dashboard_data(columns=observatoire_cards_columns(), **filter_params)
     return build_dashboard_cards(dff)
 
 

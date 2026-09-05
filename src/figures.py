@@ -1355,6 +1355,51 @@ def ag_grid(
     )
 
 
+# Colonnes lues par build_dashboard_cards. La projeter dans la requête au lieu
+# d'un SELECT * divise par ~4 le temps de la requête DuckDB et d'autant
+# l'empreinte mémoire du DataFrame : le stockage est colonnaire, et les cards
+# n'exploitent que 21 des 63 colonnes du schéma. Toute card qui lirait une
+# colonne absente d'ici échouerait sur un ColumnNotFoundError — c'est ce que
+# vérifie tests/test_observatoire_cards_columns.py.
+OBSERVATOIRE_CARDS_COLUMNS = [
+    "uid",
+    "montant",
+    "dateNotification",
+    "type",
+    "sourceDataset",
+    "titulaire_distance",
+    "considerationsSociales",
+    "considerationsEnvironnementales",
+    "acheteur_id",
+    "acheteur_nom",
+    "acheteur_categorie",
+    "acheteur_departement_code",
+    "acheteur_latitude",
+    "acheteur_longitude",
+    "titulaire_id",
+    "titulaire_nom",
+    "titulaire_categorie",
+    "titulaire_typeIdentifiant",
+    "titulaire_departement_code",
+    "titulaire_latitude",
+    "titulaire_longitude",
+]
+
+
+def observatoire_cards_columns() -> list[str]:
+    """OBSERVATOIRE_CARDS_COLUMNS restreintes aux colonnes réellement présentes
+    dans la table DuckDB.
+
+    En production les 21 y sont toutes ; mais tests/test.parquet ne porte qu'un
+    sous-ensemble du schéma, et projeter une colonne absente de la table ferait
+    échouer le SELECT. Même précaution que `export_dataframe` dans
+    src/utils/grid.py.
+    """
+    from src.db import schema
+
+    return [c for c in OBSERVATOIRE_CARDS_COLUMNS if c in schema.names()]
+
+
 def build_dashboard_cards(dff: pl.DataFrame) -> list:
     """Cards de l'observatoire pour un jeu de marchés déjà filtré.
 

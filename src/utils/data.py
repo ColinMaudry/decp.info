@@ -171,17 +171,24 @@ def get_data_schema() -> dict:
     return schema
 
 
-def prepare_dashboard_data(**filter_params) -> pl.DataFrame:
+def prepare_dashboard_data(
+    columns: list[str] | None = None, **filter_params
+) -> pl.DataFrame:
     """Exécute la requête DuckDB filtrée pour le tableau de bord.
 
     Retourne une pl.DataFrame matérialisée uniquement pour le sous-ensemble
     correspondant aux filtres. Les appelants qui ont besoin d'une LazyFrame
     appellent `.lazy()` sur le résultat.
+
+    `columns` restreint la projection : les cards n'exploitent que 21 des 63
+    colonnes du schéma, et la table est colonnaire (cf.
+    `src.figures.observatoire_cards_columns`). L'export Excel, lui, laisse
+    `columns` à None puisqu'il a besoin de tout.
     """
     from src.utils.table_sql import dashboard_filters_to_sql
 
     where_sql, params = dashboard_filters_to_sql(**filter_params)
-    return query_marches(where_sql=where_sql, params=params)
+    return query_marches(where_sql=where_sql, params=params, columns=columns)
 
 
 def build_org_frame(org_type: str) -> pl.DataFrame:
