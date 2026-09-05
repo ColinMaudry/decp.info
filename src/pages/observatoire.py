@@ -19,15 +19,9 @@ from dash import (
 from src.db import schema
 from src.figures import (
     DataTable,
-    get_barchart_sources,
-    get_considerations_card_content,
-    get_dashboard_summary_table,
-    get_distance_histogram,
-    get_geographic_maps,
-    get_top_org_table,
-    make_card,
+    build_dashboard_cards,
     make_column_picker,
-    make_donut,
+    montant_modal,
 )
 from src.utils import logger
 from src.utils.cache import cache
@@ -102,34 +96,7 @@ layout = [
     dcc.Store(
         id="filter-cleanup-trigger-observatoire-preview"
     ),  # utilisé juste pour ne pas avoir à adapter les données retournées de prepare_table data
-    dbc.Modal(
-        [
-            dbc.ModalHeader(dbc.ModalTitle("Montants")),
-            dbc.ModalBody(
-                [
-                    dcc.Markdown(
-                        """
-Les données saisies et publiées par les acheteurs comportent de nombreux montants farfelus qui sabotent les statistiques,
-au lieu de montants estimés avec rigueur. Ils atteignent parfois les millions de milliards.
-Certains réutilisateurs des données mettent de côté ces marchés ou bien modifient les montants selon des règles fatalement arbitraires.
-Les données ne sont quasiment pas modifiées afin de visibiliser le problème.
-
-Alors, comment fait-on ?
-
-\\* Les montants composés de plus de 11 chiffres, sans les décimales,
-[sont ramenés](https://github.com/ColinMaudry/decp-processing/blob/main/src/tasks/clean.py#L63-L71) à
-12 311 111 111, un nombre qui reste très élevé et qui est facilement reconnaissable.
-"""
-                    ),
-                ]
-            ),
-            dbc.ModalFooter(
-                dbc.Button("Fermer", id="montant-modal-close", className="ms-auto")
-            ),
-        ],
-        id="montant-modal",
-        is_open=False,
-    ),
+    montant_modal(),
     html.Div(
         className="container-fluid",
         children=[
@@ -690,97 +657,7 @@ def _compute_dashboard_children(filter_params_normalized: tuple):
     }
 
     dff = prepare_dashboard_data(**filter_params)
-    lff = dff.lazy()
-
-    df_per_uid = (
-        dff.select("uid", "montant").group_by("uid").agg(pl.col("montant").first())
-    )
-    nb_marches = df_per_uid.height
-
-    cards = []
-    card_summary_table = get_dashboard_summary_table(dff, df_per_uid, nb_marches)
-    cards.append(make_card(title="Résumé", paragraphs=card_summary_table))
-
-    donut_acheteur_categorie, nb_acheteur_categories = make_donut(
-        lff,
-        "acheteur_categorie",
-        nulls="Autres",
-        per_uid=True,
-        potentially_many_names=True,
-    )
-    cards.append(
-        make_card(
-            title="Catégorie d'acheteur",
-            subtitle="en nombre de marchés attribués",
-            fig=donut_acheteur_categorie,
-            lg=12 if nb_acheteur_categories > 4 else 6,
-            xl=8 if nb_acheteur_categories > 4 else 4,
-        )
-    )
-
-    donut_titulaire_categorie = make_donut(
-        lff, "titulaire_categorie", per_uid=False, nulls="?"
-    )
-    cards.append(
-        make_card(
-            title="Catégorie d'entreprise",
-            subtitle="en nombre de titulaires",
-            fig=donut_titulaire_categorie,
-        )
-    )
-
-    donut_marche_type = make_donut(lff, "type", per_uid=True, nulls="?")
-    cards.append(
-        make_card(
-            title="Type d'achat",
-            subtitle="en nombre de marchés attribués",
-            fig=donut_marche_type,
-        )
-    )
-
-    considerations_content = get_considerations_card_content(lff)
-    cards.append(
-        make_card(
-            title="Considérations sociales et environnementales",
-            subtitle="part des marchés concernés",
-            fig=considerations_content,
-        )
-    )
-
-    distance_histogram = get_distance_histogram(lff)
-    cards.append(
-        make_card(
-            title="Distance acheteur–titulaire",
-            subtitle="en nombre de marchés, échelle logarithmique",
-            fig=distance_histogram,
-        )
-    )
-
-    top_acheteurs = get_top_org_table(
-        lff, org_type="acheteur", filters=False, extra_columns=[]
-    )
-    cards.append(make_card(title="Top acheteurs", fig=top_acheteurs, lg=12, xl=8))
-
-    top_titulaires = get_top_org_table(
-        lff, org_type="titulaire", filters=False, extra_columns=[]
-    )
-    cards.append(make_card(title="Top titulaires", fig=top_titulaires, lg=12, xl=8))
-
-    geographic_maps: list[dbc.Col] | None = get_geographic_maps(dff)
-
-    other_cards = []
-    sources_barchart = get_barchart_sources(lff, type_date="dateNotification")
-    other_cards.append(
-        make_card(
-            title="Sources de données",
-            subtitle="Nombre de marchés attribués par mois de notification et source de données",
-            fig=sources_barchart,
-            lg=12,
-            xl=8,
-        )
-    )
-
-    return cards + geographic_maps + other_cards
+    return build_dashboard_cards(dff)
 
 
 @callback(
