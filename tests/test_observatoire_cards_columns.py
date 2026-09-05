@@ -9,6 +9,7 @@ lèvera ColumnNotFoundError ici plutôt qu'en production.
 import datetime
 
 import polars as pl
+import pytest
 
 
 def _frame(columns: list[str]) -> pl.DataFrame:
@@ -34,11 +35,26 @@ def _frame(columns: list[str]) -> pl.DataFrame:
     return pl.DataFrame(rows)
 
 
-def test_cards_se_construisent_avec_les_seules_colonnes_declarees():
+@pytest.mark.parametrize("liste", ["declarees", "projetees"])
+def test_cards_se_construisent_avec_les_seules_colonnes_declarees(liste):
+    """« declarees » : la liste complète, celle de la production.
+    « projetees » : la liste réellement passée au SELECT, intersectée avec la
+    table — en test elle perd latitude et longitude, absentes de test.parquet,
+    et c'est ce jeu réduit qui alimente les cards."""
     from src.app import app  # noqa: F401  (instancie Dash avant les pages)
-    from src.figures import OBSERVATOIRE_CARDS_COLUMNS, build_dashboard_cards
+    from src.figures import (
+        OBSERVATOIRE_CARDS_COLUMNS,
+        build_dashboard_cards,
+        observatoire_cards_columns,
+    )
 
-    cards = build_dashboard_cards(_frame(OBSERVATOIRE_CARDS_COLUMNS))
+    colonnes = (
+        OBSERVATOIRE_CARDS_COLUMNS
+        if liste == "declarees"
+        else observatoire_cards_columns()
+    )
+
+    cards = build_dashboard_cards(_frame(colonnes))
 
     assert cards, "aucune card produite"
 
