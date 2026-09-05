@@ -130,3 +130,42 @@ def test_linterrupteur_est_desactive_sans_abonnement(monkeypatch):
 
     assert desactive is True
     assert title == "Fonctionnalité accessible en vous abonnant"
+
+
+@pytest.fixture
+def feuille_de_style():
+    from pathlib import Path
+
+    return Path("src/assets/css/style.css").read_text()
+
+
+def test_le_css_masque_le_corps_de_la_grille_pas_son_entete(feuille_de_style):
+    """L'en-tête et ses filtres flottants restent visibles et actionnables :
+    c'est ce qui permet d'affiner les filtres sans quitter le mode."""
+    assert ".mode-observatoire .ag-body" in feuille_de_style
+    assert ".mode-observatoire .ag-header" not in feuille_de_style
+
+
+def test_le_css_libere_la_hauteur_figee_de_la_grille(feuille_de_style):
+    """ag_grid impose height:70vh en style inline ; sans !important la grille
+    garderait sa hauteur et laisserait un grand vide sous l'en-tête."""
+    assert "height: auto !important" in feuille_de_style
+
+
+def test_le_css_reserve_la_place_des_cards(feuille_de_style):
+    """La page ne doit pas se rétracter puis se redéployer une seconde plus
+    tard : le conteneur des cards tient la hauteur qu'occupait la grille."""
+    assert ".mode-observatoire-cards" in feuille_de_style
+    assert "min-height: 70vh" in feuille_de_style
+
+
+def test_le_css_anime_lapparition_des_cards(feuille_de_style):
+    assert "@keyframes mode-observatoire-apparition" in feuille_de_style
+
+
+def test_lanimation_est_conditionnee_a_prefers_reduced_motion(feuille_de_style):
+    """Comme les transitions de .btn déjà en place, l'apparition des cards est
+    déclarée en opt-in : rien ne bouge si le système demande moins d'animation."""
+    blocs = feuille_de_style.split("@media (prefers-reduced-motion: no-preference)")
+
+    assert any("mode-observatoire-apparition" in bloc for bloc in blocs[1:])

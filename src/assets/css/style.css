@@ -1185,3 +1185,100 @@ input[type="number"] {
     overflow-y: auto;
   }
 }
+
+/* --- Mode observatoire de la page Tableau (#137) --- */
+
+/* L'interrupteur ☰ ⇄ 📊 dans la barre d'outils. L'icône du mode actif est en
+   pleine opacité, l'autre en retrait : l'interrupteur indique l'état autant
+   qu'il le change. */
+.mode-observatoire-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.mode-observatoire-toggle .form-switch {
+  margin-bottom: 0;
+}
+
+.mode-observatoire-icone {
+  font-size: 1.05rem;
+  line-height: 1;
+  opacity: 0.4;
+  cursor: default;
+}
+
+.mode-observatoire-icone.active {
+  opacity: 1;
+}
+
+/* Les cards remplacent les lignes de données, pas l'en-tête : celui-ci reste
+   visible et ses filtres actionnables, ce qui permet d'affiner la sélection
+   sans quitter le mode. Le corps de la grille est coupé net plutôt que replié
+   — `display` ne s'anime pas, et animer la hauteur d'un viewport virtualisé
+   AG Grid se passe mal. La coupure est sans à-coup parce que l'en-tête, lui,
+   ne bouge pas d'un pixel. */
+.marches_table.mode-observatoire .ag-body,
+.marches_table.mode-observatoire .ag-body-viewport,
+.marches_table.mode-observatoire .ag-body-horizontal-scroll,
+.marches_table.mode-observatoire .ag-overlay {
+  display: none !important;
+}
+
+/* ag_grid() pose height:70vh en style inline sur la div de la grille ; sans
+   !important elle garderait sa hauteur et laisserait un grand vide sous
+   l'en-tête. */
+.marches_table.mode-observatoire,
+.marches_table.mode-observatoire > div {
+  height: auto !important;
+}
+
+/* Et il ne suffit pas de libérer la hauteur extérieure : AG Grid empile trois
+   conteneurs flex (.ag-root-wrapper > .ag-root-wrapper-body > .ag-root) en
+   `flex: 1 1 auto`, dimensionnés par le parent. Dans un parent en hauteur
+   auto ils tombent à 0, et .ag-root, qui est en overflow:hidden, rogne
+   l'en-tête au passage. On les fait donc épouser leur contenu — soit
+   l'en-tête seul, puisque .ag-body est masqué. */
+.marches_table.mode-observatoire .ag-root-wrapper,
+.marches_table.mode-observatoire .ag-root-wrapper-body,
+.marches_table.mode-observatoire .ag-root {
+  height: auto !important;
+}
+
+/* Seul .ag-root-wrapper-body voit sa croissance coupée : il est enfant d'un
+   flex en colonne, donc `flex: 0 0 auto` y agit bien sur la hauteur. Sur
+   .ag-root, lui enfant d'un flex en ligne, la même déclaration couperait la
+   croissance HORIZONTALE : l'en-tête retomberait à une largeur nulle, faute de
+   corps de grille pour la lui donner. */
+.marches_table.mode-observatoire .ag-root-wrapper-body {
+  flex: 0 0 auto !important;
+}
+
+/* La hauteur libérée par les lignes est reprise par les cards : la page ne se
+   rétracte pas pour se redéployer une seconde plus tard, donc ni saut du pied
+   de page ni perte de la position de défilement pendant le calcul. */
+.mode-observatoire-cards {
+  min-height: 70vh;
+  margin-top: 1rem;
+}
+
+.mode-observatoire-cards .card {
+  margin-bottom: 16px;
+}
+
+@keyframes mode-observatoire-apparition {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mode-observatoire-cards {
+    animation: mode-observatoire-apparition 0.25s ease-out;
+  }
+}
