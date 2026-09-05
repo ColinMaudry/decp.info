@@ -19,18 +19,26 @@ from dash import (
 )
 from flask_login import current_user
 
-from src.db import schema
-from src.figures import ag_grid, make_column_picker
+from src.db import query_marches, schema
+from src.figures import (
+    ag_grid,
+    build_dashboard_cards,
+    make_column_picker,
+    montant_modal,
+    observatoire_cards_columns,
+)
 from src.pages._compte_shell import current_user_has_subscription
 from src.saved_views import db as saved_views_db
 from src.saved_views import resolve as saved_views_resolve
 from src.saved_views import ui as saved_views_ui
 from src.utils import get_data_update_timestamp, logger
+from src.utils.cache import cache
 from src.utils.grid import apply_persisted_layout, fetch_grid_page, grid_column_defs
 from src.utils.query_ast import (
     ast_from_dict,
     ast_to_dict,
     ast_to_filtermodel,
+    ast_to_sql,
     filtermodel_to_ast,
 )
 from src.utils.seo import META_CONTENT
@@ -84,6 +92,7 @@ _SHARE_DRIFT_LISTENERS = {
 }
 
 DATATABLE = html.Div(
+    id="tableau-grid-wrapper",
     className="marches_table",
     children=ag_grid(
         "tableau_grid",
@@ -416,6 +425,38 @@ layout = [
                         size="sm",
                         title="Supprime tous les filtres et les tris. Autrement ils sont conservés même si vous fermez la page.",
                     ),
+                    # Interrupteur lignes ⇄ cards. Comme pour « Sauvegarder la
+                    # vue », le title est porté par le <span> englobant :
+                    # Bootstrap met `pointer-events: none` sur les contrôles
+                    # désactivés, ce qui empêche le survol de les atteindre.
+                    html.Span(
+                        id="tableau-mode-observatoire-wrapper",
+                        className="mode-observatoire-toggle",
+                        title="Fonctionnalité accessible en vous abonnant",
+                        children=[
+                            html.Span(
+                                "☰",
+                                id="tableau-mode-observatoire-icone-lignes",
+                                className="mode-observatoire-icone active",
+                                title="Afficher les lignes de données",
+                            ),
+                            dbc.Switch(
+                                id="tableau-mode-observatoire",
+                                value=False,
+                                # Grisé/désactivé pour les non-abonnés ; le
+                                # callback toggle_mode_observatoire_control
+                                # affine au chargement.
+                                disabled=True,
+                                className="mb-0",
+                            ),
+                            html.Span(
+                                "📊",
+                                id="tableau-mode-observatoire-icone-cards",
+                                className="mode-observatoire-icone",
+                                title="Afficher les visualisations de l'observatoire",
+                            ),
+                        ],
+                    ),
                 ],
                 className="table-toolbar",
             ),
@@ -488,6 +529,16 @@ layout = [
                 size="xl",
             ),
             DATATABLE,
+            dcc.Loading(
+                overlay_style={"visibility": "visible", "filter": "blur(2px)"},
+                type="default",
+                children=dbc.Row(
+                    id="tableau-observatoire-cards",
+                    className="mode-observatoire-cards d-none",
+                    children=[],
+                ),
+            ),
+            montant_modal(),
         ],
     ),
 ]
@@ -884,4 +935,109 @@ clientside_callback(
     Output("save-view-name", "value"),
     Input("overwrite-view-select", "value"),
     prevent_initial_call=True,
+)
+
+
+MODE_OBSERVATOIRE_CLASSES = "mode-observatoire-cards"
+SANS_FILTRE = (
+    "Appliquez au moins un filtre à une colonne pour visualiser les données. "
+    "Sans filtre, les visualisations porteraient sur l'intégralité des marchés "
+    "et seraient longues à calculer."
+)
+
+
+def _normalize_filter_model(filter_model: dict | None) -> str:
+    """Clé de cache déterministe pour un filterModel AG Grid."""
+    return json.dumps(filter_model or {}, sort_keys=True)
+
+
+@cache.memoize()
+def _cards_pour_filtre(filter_model_json: str):
+    """Cards de l'observatoire pour le filtre courant de la grille.
+
+    Mémoïsé sur le filterModel normalisé : basculer d'avant en arrière sur le
+    même filtre ne relance pas la requête. Les colonnes masquées dans la
+    grille sont ignorées — les cards ont besoin de colonnes que l'utilisateur
+    n'affiche pas forcément (cf. issue #137) — et les tris aussi, ils
+    n'influent sur aucune agrégation.
+    """
+    ast = filtermodel_to_ast(json.loads(filter_model_json), schema)
+    where_sql, params = ast_to_sql(ast, schema)
+    dff = query_marches(
+        where_sql=where_sql, params=params, columns=observatoire_cards_columns()
+    )
+    return build_dashboard_cards(dff)
+
+
+@callback(
+    Output("tableau-observatoire-cards", "children"),
+    Output("tableau-observatoire-cards", "className"),
+    Input("tableau-mode-observatoire", "value"),
+    Input("tableau_grid", "filterModel"),
+    prevent_initial_call=True,
+)
+def update_mode_observatoire_cards(mode_actif, filter_model):
+    if not mode_actif:
+        # On masque sans vider : les cards déjà calculées restent montées, donc
+        # le retour au mode observatoire est instantané tant que le filtre n'a
+        # pas bougé.
+        return no_update, f"{MODE_OBSERVATOIRE_CLASSES} d-none"
+
+    if not current_user_has_subscription():
+        return (
+            dbc.Alert(
+                "Fonctionnalité accessible en vous abonnant.",
+                color="secondary",
+                className="w-100",
+            ),
+            MODE_OBSERVATOIRE_CLASSES,
+        )
+
+    if not filter_model:
+        return (
+            dbc.Alert(SANS_FILTRE, color="secondary", className="w-100"),
+            MODE_OBSERVATOIRE_CLASSES,
+        )
+
+    track_search(json.dumps(filter_model), "tab observatoire")
+    return _cards_pour_filtre(_normalize_filter_model(filter_model)), (
+        MODE_OBSERVATOIRE_CLASSES
+    )
+
+
+@callback(
+    Output("tableau-mode-observatoire", "disabled"),
+    Output("tableau-mode-observatoire-wrapper", "title"),
+    Input("tableau_url", "pathname"),
+)
+def toggle_mode_observatoire_control(_pathname):
+    """L'interrupteur reste visible pour tout le monde, mais n'est actionnable
+    que par les abonnés (le gating serveur reste dans
+    update_mode_observatoire_cards). Le title est porté par le <span>
+    englobant, cf. layout."""
+    a_un_abonnement = current_user_has_subscription()
+    return (
+        not a_un_abonnement,
+        "" if a_un_abonnement else "Fonctionnalité accessible en vous abonnant",
+    )
+
+
+# Bascule de l'affichage côté client : la classe pose le masquage du corps de
+# la grille (l'en-tête et ses filtres restent visibles et actifs) et allume
+# l'icône correspondante. Clientside pour que le basculement soit immédiat,
+# sans attendre l'aller-retour serveur qui calcule les cards.
+clientside_callback(
+    """
+    function(mode_actif) {
+        return [
+            mode_actif ? "marches_table mode-observatoire" : "marches_table",
+            mode_actif ? "mode-observatoire-icone" : "mode-observatoire-icone active",
+            mode_actif ? "mode-observatoire-icone active" : "mode-observatoire-icone",
+        ];
+    }
+    """,
+    Output("tableau-grid-wrapper", "className"),
+    Output("tableau-mode-observatoire-icone-lignes", "className"),
+    Output("tableau-mode-observatoire-icone-cards", "className"),
+    Input("tableau-mode-observatoire", "value"),
 )
