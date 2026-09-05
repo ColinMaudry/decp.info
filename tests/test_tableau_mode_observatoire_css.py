@@ -49,3 +49,34 @@ def test_la_classe_masque_le_corps_et_conserve_len_tete(dash_duo: DashComposite)
     # Les filtres flottants restent atteignables pour affiner la sélection.
     assert driver.find_element(By.CSS_SELECTOR, ".ag-floating-filter").is_displayed()
     assert enveloppe.size["height"] < hauteur_avec_lignes
+
+
+def test_lentete_reste_defilable_horizontalement(dash_duo: DashComposite):
+    """Les colonnes débordent de la largeur de l'écran même avec le choix par
+    défaut. Sans barre de défilement, les filtres des colonnes de droite
+    deviendraient inatteignables en mode observatoire — or c'est justement là
+    qu'on veut pouvoir affiner sans quitter le mode."""
+    _charger_le_tableau(dash_duo)
+    driver = dash_duo.driver
+    driver.execute_script(
+        "document.getElementById('tableau-grid-wrapper')"
+        ".className = 'marches_table mode-observatoire';"
+    )
+    time.sleep(0.3)
+
+    entete = driver.find_element(By.CSS_SELECTOR, ".ag-header-viewport")
+    deborde = driver.execute_script(
+        "return arguments[0].scrollWidth > arguments[0].clientWidth;", entete
+    )
+    assert deborde, "l'en-tête ne déborde pas : le test ne prouverait rien"
+
+    barre = driver.find_element(By.CSS_SELECTOR, ".ag-body-horizontal-scroll")
+    assert barre.is_displayed()
+
+    # La barre pilote bien le défilement de l'en-tête.
+    driver.execute_script(
+        "document.querySelector('.ag-body-horizontal-scroll-viewport')"
+        ".scrollLeft = 300;"
+    )
+    time.sleep(0.4)
+    assert driver.execute_script("return arguments[0].scrollLeft;", entete) > 0

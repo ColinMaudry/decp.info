@@ -127,6 +127,21 @@ def _help_button_legend():
             "Supprimer tous les filtres et tris.",
         ),
         (
+            html.Span(
+                id="mode-observatoire-legende",
+                className="mode-observatoire-toggle",
+                children=[
+                    html.Span("☰", className="mode-observatoire-icone active"),
+                    dbc.Switch(value=False, className="mb-0", disabled=True),
+                    html.Span("📊", className="mode-observatoire-icone"),
+                ],
+            ),
+            "Remplacer les lignes de données par les visualisations de "
+            "l'observatoire, calculées sur les marchés que vos filtres "
+            "retiennent (abonnés). Les en-têtes restent en place : vous pouvez "
+            "affiner les filtres sans quitter ce mode.",
+        ),
+        (
             dbc.Button("⍰ Mode d'emploi", color="secondary", outline=True, size="sm"),
             "Ouvrir cette aide.",
         ),

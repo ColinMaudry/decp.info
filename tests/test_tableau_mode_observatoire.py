@@ -169,3 +169,9 @@ def test_lanimation_est_conditionnee_a_prefers_reduced_motion(feuille_de_style):
     blocs = feuille_de_style.split("@media (prefers-reduced-motion: no-preference)")
 
     assert any("mode-observatoire-apparition" in bloc for bloc in blocs[1:])
+
+
+def test_le_mode_demploi_documente_linterrupteur(layout_str):
+    """La légende du mode d'emploi reproduit chaque bouton de la barre d'outils
+    en face de sa fonction : un contrôle de plus doit y figurer aussi."""
+    assert "mode-observatoire-legende" in layout_str

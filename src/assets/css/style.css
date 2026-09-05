@@ -1220,9 +1220,17 @@ input[type="number"] {
    ne bouge pas d'un pixel. */
 .marches_table.mode-observatoire .ag-body,
 .marches_table.mode-observatoire .ag-body-viewport,
-.marches_table.mode-observatoire .ag-body-horizontal-scroll,
 .marches_table.mode-observatoire .ag-overlay {
   display: none !important;
+}
+
+/* La barre de défilement horizontale, elle, reste : les colonnes débordent de
+   la largeur de l'écran dès le choix par défaut, et c'est elle qui pilote le
+   défilement de l'en-tête. La masquer avec le corps rendrait les filtres des
+   colonnes de droite inatteignables — exactement ce que ce mode doit
+   permettre. */
+.marches_table.mode-observatoire .ag-body-horizontal-scroll {
+  flex: 0 0 auto !important;
 }
 
 /* ag_grid() pose height:70vh en style inline sur la div de la grille ; sans
