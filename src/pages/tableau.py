@@ -112,11 +112,11 @@ def _help_button_legend():
         ),
         (
             dbc.Button("Sauvegarder la vue", color="secondary", size="sm"),
-            "Enregistrer les filtres, tris et colonnes actuels sous un nom (abonnés).",
+            "Enregistrer les filtres, tris et colonnes actuels sous un nom (abonné·es).",
         ),
         (
             dbc.Button("Mes vues ▾", color="secondary", size="sm"),
-            "Rouvrir une vue que vous avez enregistrée (abonnés).",
+            "Rouvrir une vue que vous avez enregistrée (abonné·es).",
         ),
         (
             dbc.Button("Télécharger (Excel)", color="secondary", size="sm"),
@@ -138,7 +138,7 @@ def _help_button_legend():
             ),
             "Remplacer les lignes de données par les visualisations de "
             "l'observatoire, calculées sur les marchés que vos filtres "
-            "retiennent (abonnés). Les en-têtes restent en place : vous pouvez "
+            "retiennent (abonné·es). Les en-têtes restent en place : vous pouvez "
             "affiner les filtres sans quitter ce mode.",
         ),
         (
@@ -273,7 +273,7 @@ layout = [
                                         children=f"""
             ##### Définition des colonnes
 
-            Pour voir la définition d'une colonne et ses valeurs possibles, passez votre souris sur son en-tête.
+            Pour voir la définition d'une colonne et ses valeurs possibles, vous pouvez passer votre souris sur son en-tête ou bien consulter [la liste des champs](/projet/donnees#champs).
 
             ##### Vos réglages sont persistents
 
