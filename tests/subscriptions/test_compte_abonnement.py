@@ -63,16 +63,20 @@ def test_layout_never_had_trial_shows_reabo_view(monkeypatch):
     assert "Essai gratuit" not in text
 
 
-def test_layout_pending_with_active_trial_shows_trial_end_and_resume_payment(
+def test_layout_pending_with_active_trial_shows_trial_end_and_reabo(
     monkeypatch,
 ):
     """Revue #132 : un checkout abandonné pendant l'essai ne doit pas faire
-    disparaître la date de fin d'essai ni le moyen de finaliser le paiement."""
+    disparaître la date de fin d'essai ni le moyen de repartir en souscription.
+
+    Depuis 720685a, ce moyen est le bouton de souscription normal
+    (`_reabo_button`) et non plus un bouton « Reprendre le paiement » dédié.
+    """
     end = datetime(2026, 9, 1, tzinfo=timezone.utc)
     row = {"status": "pending", "plan": "simple", "current_period_end": None}
     text = _layout(monkeypatch, row=row, trial_active=True, trial_ends_at=end)
     assert "Essai gratuit jusqu'au" in text
-    assert "Reprendre le paiement" in text
+    assert "Abonnez-vous" in text
 
 
 def test_layout_pending_without_active_trial_keeps_pending_view(monkeypatch):
@@ -80,21 +84,22 @@ def test_layout_pending_without_active_trial_keeps_pending_view(monkeypatch):
     déjà terminé) reste sur la vue "abonnement en cours" (_active_view)."""
     row = {"status": "pending", "plan": "simple", "current_period_end": None}
     text = _layout(monkeypatch, row=row, trial_active=False, trial_ends_at=None)
-    assert "Reprendre le paiement" in text
+    assert "souscription à un abonnement n'a pas abouti" in text
     assert "Essai gratuit" not in text
 
 
-def test_resume_payment_renvoie_vers_mes_infos_pas_add_payment(monkeypatch):
+def test_resume_payment_renvoie_vers_le_parcours_normal_pas_add_payment(monkeypatch):
     """Un checkout abandonné ne laisse plus aucun abonnement chez Frisbii.
 
     Depuis le passage à `prepare_subscription`, il n'y a donc plus d'abonnement
     auquel attacher un moyen de paiement : `/subscriptions/add-payment`
-    échouerait en 404. On repasse par le parcours normal, qui recollecte les
-    informations de facturation avant d'ouvrir une nouvelle session.
+    échouerait en 404. On repasse par le parcours de souscription normal, qui
+    recollecte les informations de facturation avant d'ouvrir une nouvelle
+    session — depuis 720685a son point d'entrée est /projet/abonnement.
     """
     row = {"status": "pending", "plan": "simple", "current_period_end": None}
     text = _layout(monkeypatch, row=row, trial_active=False, trial_ends_at=None)
-    assert "/compte/abonnement/mes-infos" in text
+    assert "/projet/abonnement" in text
     assert "/subscriptions/add-payment" not in text
 
 
@@ -164,13 +169,13 @@ def test_active_view_shows_cancel(monkeypatch):
     assert "Me désabonner" in str(view)
 
 
-def test_active_view_pending_no_longer_mentions_trial_and_offers_resume():
+def test_active_view_pending_no_longer_mentions_trial_and_offers_reabo():
     from src.pages.compte import abonnement as compte_abonnement
 
     row = {"plan": "simple", "status": "pending", "current_period_end": None}
     text = str(compte_abonnement._active_view(row))
     assert "période d'essai" not in text
-    assert "Reprendre le paiement" in text
+    assert "Abonnez-vous" in text
 
 
 def test_trial_view_shows_end_date_and_time_and_features():
@@ -367,7 +372,7 @@ def test_active_view_hides_change_payment_method_for_pending():
     row = {"plan": "simple", "status": "pending", "current_period_end": None}
     text = str(compte_abonnement._active_view(row))
     assert "Changer de méthode de paiement" not in text
-    assert "Reprendre le paiement" in text
+    assert "Abonnez-vous" in text
 
 
 def test_feedback_carte_succes():
@@ -416,11 +421,24 @@ def test_active_view_shows_configure_button_for_active():
     assert "href='/compte/abonnement/mes-infos'" in text
 
 
-def test_active_view_shows_configure_button_for_pending():
+def test_active_view_hides_configure_button_for_pending():
+    """720685a : sur une ligne pending il n'y a rien à configurer — aucun
+    abonnement n'existe chez Frisbii, seule une tentative de paiement a
+    échoué. Le seul chemin proposé est de refaire une souscription."""
     from src.pages.compte import abonnement as compte_abonnement
 
     row = {"plan": "simple", "status": "pending", "current_period_end": None}
-    assert "Configurer mon abonnement" in str(compte_abonnement._active_view(row))
+    assert "Configurer mon abonnement" not in str(compte_abonnement._active_view(row))
+
+
+def test_active_view_hides_cancel_for_pending():
+    """720685a, même raison : on ne résilie pas un abonnement qui n'existe pas.
+    Contraste avec test_active_view_shows_cancel, qui garde le bouton sur une
+    ligne active."""
+    from src.pages.compte import abonnement as compte_abonnement
+
+    row = {"plan": "simple", "status": "pending", "current_period_end": None}
+    assert "Me désabonner" not in str(compte_abonnement._active_view(row))
 
 
 def test_active_view_hides_configure_button_for_cancelled():
