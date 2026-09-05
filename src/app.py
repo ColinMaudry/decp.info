@@ -499,7 +499,7 @@ navbar = dbc.Navbar(
                                 [
                                     html.A(
                                         version,
-                                        href="/projet/roadmap",
+                                        href="/projet/roadmap#versions",
                                     )
                                 ],
                                 className="version",
