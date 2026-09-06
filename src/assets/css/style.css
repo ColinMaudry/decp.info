@@ -1195,6 +1195,7 @@ input[type="number"] {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
+  margin: 0 12px 0 12px;
 }
 
 .mode-observatoire-toggle .form-switch {
@@ -1206,6 +1207,7 @@ input[type="number"] {
   line-height: 1;
   opacity: 0.4;
   cursor: default;
+  margin-left: -8px;
 }
 
 .mode-observatoire-icone.active {
