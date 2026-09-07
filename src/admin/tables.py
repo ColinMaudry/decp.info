@@ -17,8 +17,27 @@ class TableConfig:
     target_user_id: Callable[[dict], int | None]
     sort_by: str
     join_user_email: bool = False
+    row_limit: int | None = None
 
 
+# Plafond appliqué aux seules tables auto-découvertes : `mcp_usage` grossit de
+# plusieurs centaines de lignes par jour et serait envoyée entière au navigateur.
+AUTO_ROW_LIMIT = 2000
+
+# Une colonne dont le nom contient l'un de ces motifs est exclue de la liste
+# `columns`, donc du SELECT : le secret ne quitte jamais le serveur.
+SECRET_PATTERNS = ("hash", "token", "secret", "password", "challenge", "_enc")
+
+# Exceptions au filtre ci-dessus : clés étrangères, pas des secrets.
+SAFE_COLUMNS = frozenset({"token_id"})
+
+# Première colonne trouvée dans cet ordre → tri par défaut d'une table auto.
+SORT_PREFERENCE = ("updated_at", "created_at", "applied_at", "issued_at", "expires_at")
+
+
+# TABLES ne décrit plus que les tables aux réglages particuliers (colonnes
+# éditables, menus déroulants, jointure sur l'email). Toutes les autres sont
+# découvertes et exposées en lecture seule par all_tables().
 TABLES: dict[str, TableConfig] = {
     "users": TableConfig(
         columns=[
@@ -116,8 +135,55 @@ TABLES: dict[str, TableConfig] = {
 }
 
 
+def _is_secret(column: str) -> bool:
+    col = column.lower()
+    if col in SAFE_COLUMNS:
+        return False
+    return any(pattern in col for pattern in SECRET_PATTERNS)
+
+
+def _discover_tables() -> list[str]:
+    rows = get_conn().execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table' "
+        "AND name NOT LIKE 'sqlite_%' ORDER BY name"
+    )
+    return [row[0] for row in rows]
+
+
+def _table_columns(table: str) -> list[str]:
+    return [row[1] for row in get_conn().execute(f"PRAGMA table_info({table})")]
+
+
+def _auto_config(table: str) -> TableConfig | None:
+    """Config lecture seule d'une table non déclarée. None si rien à afficher."""
+    columns = [col for col in _table_columns(table) if not _is_secret(col)]
+    if not columns:
+        return None
+    sort_by = next((col for col in SORT_PREFERENCE if col in columns), columns[0])
+    return TableConfig(
+        columns=columns,
+        editable_columns=frozenset(),
+        pk=columns[0],
+        column_types={},
+        dropdowns={},
+        target_user_id=lambda row: row.get("user_id"),
+        sort_by=sort_by,
+        row_limit=AUTO_ROW_LIMIT,
+    )
+
+
+def all_tables() -> dict[str, TableConfig]:
+    """Tables déclarées dans TABLES + toutes celles présentes en base."""
+    configs = {}
+    for table in _discover_tables():
+        cfg = TABLES.get(table) or _auto_config(table)
+        if cfg is not None:
+            configs[table] = cfg
+    return configs
+
+
 def get_rows(table: str) -> list[dict]:
-    cfg = TABLES[table]
+    cfg = all_tables()[table]
     if cfg.join_user_email:
         real_cols = [col for col in cfg.columns if col != "email"]
         cols_sql = ", ".join(f"{table}.{col}" for col in real_cols)
@@ -129,12 +195,14 @@ def get_rows(table: str) -> list[dict]:
     else:
         cols_sql = ", ".join(cfg.columns)
         query = f"SELECT {cols_sql} FROM {table} ORDER BY {cfg.sort_by} DESC"
+    if cfg.row_limit is not None:
+        query += f" LIMIT {cfg.row_limit}"
     rows = get_conn().execute(query).fetchall()
     return [dict(row) for row in rows]
 
 
 def _coerce_value(table: str, column: str, value):
-    cfg = TABLES[table]
+    cfg = all_tables()[table]
     if column not in cfg.editable_columns:
         raise ValueError(f"Colonne non éditable : {column}")
     if column in cfg.dropdowns and str(value) not in cfg.dropdowns[column]:
@@ -151,9 +219,10 @@ def _coerce_value(table: str, column: str, value):
 
 
 def set_cell(table: str, pk_value, column: str, value) -> None:
-    if table not in TABLES:
+    configs = all_tables()
+    if table not in configs:
         raise ValueError(f"Table inconnue : {table}")
-    cfg = TABLES[table]
+    cfg = configs[table]
     coerced = _coerce_value(table, column, value)
     try:
         cursor = get_conn().execute(

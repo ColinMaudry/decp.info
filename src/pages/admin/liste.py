@@ -15,7 +15,7 @@ from flask_login import current_user
 
 from src.admin.db import log_action
 from src.admin.guard import is_admin
-from src.admin.tables import TABLES, find_changed_cell, get_rows, set_cell
+from src.admin.tables import all_tables, find_changed_cell, get_rows, set_cell
 from src.pages.admin._shell import not_admin
 
 register_page(
@@ -30,7 +30,7 @@ DEFAULT_TABLE = "users"
 
 
 def _columns_for(table: str):
-    cfg = TABLES[table]
+    cfg = all_tables()[table]
     return [
         {
             "name": col,
@@ -43,7 +43,7 @@ def _columns_for(table: str):
 
 
 def _dropdown_for(table: str):
-    cfg = TABLES[table]
+    cfg = all_tables()[table]
     return {
         col: {"options": [{"label": v, "value": v} for v in values]}
         for col, values in cfg.dropdowns.items()
@@ -59,7 +59,7 @@ def layout(**_):
             html.Div(id="admin-alerts"),
             dbc.Select(
                 id="admin-table-select",
-                options=[{"label": name, "value": name} for name in TABLES],
+                options=[{"label": name, "value": name} for name in all_tables()],
                 value=DEFAULT_TABLE,
                 className="mb-3",
                 style={"maxWidth": "300px"},
@@ -112,7 +112,8 @@ def _update_table(selected_table, data, data_previous):
         return no_update, no_update, no_update, None
 
     row_index, column, old_value, new_value = change
-    pk_value = data[row_index][TABLES[selected_table].pk]
+    cfg = all_tables()[selected_table]
+    pk_value = data[row_index][cfg.pk]
     try:
         set_cell(selected_table, pk_value, column, new_value)
     except ValueError as exc:
@@ -123,7 +124,7 @@ def _update_table(selected_table, data, data_previous):
             dbc.Alert(str(exc), color="danger", dismissable=True),
         )
 
-    target_user_id = TABLES[selected_table].target_user_id(data[row_index])
+    target_user_id = cfg.target_user_id(data[row_index])
     log_action(
         current_user.email,
         f"edit_{selected_table}",
