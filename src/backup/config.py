@@ -2,6 +2,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 
 @dataclass(frozen=True)
 class BackupConfig:
@@ -15,6 +17,7 @@ class BackupConfig:
 
 
 def load_config(env: Mapping[str, str]) -> BackupConfig:
+    load_dotenv()
     return BackupConfig(
         db_path=Path(env["USERS_DB_PATH"]),
         bucket=env["S3_BUCKET"],

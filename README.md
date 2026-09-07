@@ -49,7 +49,7 @@ le timer. Pour consulter la dernière exécution : `journalctl -u colibre-backup
 Pour lister les sauvegardes disponibles :
 
 ```bash
-uv run --env-file .env python -m src.backup list
+uv run python -m src.backup list
 ```
 
 `uv run` active le venv du projet mais ne charge **pas** le `.env` : d'où le `--env-file`,
