@@ -1,3 +1,8 @@
+##### 3.1.0
+
+- Dans le Tableau, un bouton permet d'afficher les données filtrées du tableau soit sous forme de lignes, soit sous forme de visualisations de données ([#137](https://github.com/colinmaudry/colibre/issues/137))
+- Sauvegarde automatique de la base de données des utilisateurs et utilisatrices
+
 ##### 3.0.7
 
 - les filtres par nom d'acheteur et de titulaire ne sont plus sensibles aux accents ([#138](https://github.com/colinmaudry/colibre/issues/138))
