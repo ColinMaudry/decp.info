@@ -29,17 +29,37 @@ Ne pas oublier de mettre à jour les fichier .env.
 
 ### Sauvegarde de la base utilisateurs
 
-`users.sqlite` est sauvegardée toutes les heures sur S3 via un timer systemd. Pour lister les sauvegardes disponibles :
+`users.sqlite` est sauvegardée toutes les heures sur S3 via un timer systemd.
+
+Les unités systemd sont versionnées dans `deploy/`. Elles s'installent une seule fois, en root sur le serveur :
 
 ```bash
-python -m src.backup list
+cd /var/www/colibre
+cp deploy/colibre-backup.service deploy/colibre-backup.timer /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now colibre-backup.timer
+systemctl list-timers colibre-backup.timer   # vérifier le prochain déclenchement
 ```
+
+Le service s'exécute sous l'utilisateur `colibre` depuis `/var/www/colibre` et lit ses
+identifiants dans le `.env` de l'app : renseignez `S3_BUCKET`, `S3_ACCESS_KEY_ID`,
+`S3_SECRET_ACCESS_KEY` et `BACKUP_ENCRYPTION_KEY` (voir `.template.env`) avant d'activer
+le timer. Pour consulter la dernière exécution : `journalctl -u colibre-backup.service -n 20`.
+
+Pour lister les sauvegardes disponibles :
+
+```bash
+uv run --env-file .env python -m src.backup list
+```
+
+`uv run` active le venv du projet mais ne charge **pas** le `.env` : d'où le `--env-file`,
+sans lequel la commande échoue sur `KeyError: 'USERS_DB_PATH'`.
 
 Pour restaurer une sauvegarde, arrêtez le service, restaurez la base, puis redémarrez :
 
 ```bash
 systemctl stop colibre
-python -m src.backup restore backups/users-YYYYMMDDTHHMMSSZ.sqlite.gz.enc
+uv run --env-file .env python -m src.backup restore backups/users-YYYYMMDDTHHMMSSZ.sqlite.gz.enc
 systemctl start colibre
 ```
 
