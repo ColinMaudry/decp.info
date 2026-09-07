@@ -66,6 +66,26 @@ def test_login_rejects_absolute_next(client, users_db_path):
     assert resp.headers["Location"].endswith("/compte/abonnement")
 
 
+def test_login_active_subscriber_redirects_home(client, users_db_path):
+    """Sans `next`, un abonné actif atterrit sur l'accueil (le produit), pas
+    sur /compte/admin qui est une page de gestion de compte."""
+    from datetime import datetime, timedelta, timezone
+
+    from src.subscriptions import db as sub_db
+
+    uid = _make_verified_user()
+    sub_db.init_schema()
+    handle, _ = sub_db.create_pending(uid, "colibre-1", "simple")
+    future = (datetime.now(timezone.utc) + timedelta(days=2)).isoformat()
+    sub_db.update_from_webhook(handle, "active", future)
+
+    resp = client.post(
+        "/auth/login",
+        data={"email": "a@b.c", "password": "password12"},
+    )
+    assert resp.headers["Location"] == "/"
+
+
 def test_logout_clears_session(client, users_db_path):
     _make_verified_user()
     client.post("/auth/login", data={"email": "a@b.c", "password": "password12"})

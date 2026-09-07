@@ -1,7 +1,8 @@
 ##### 3.1.0
 
-- Dans le Tableau, un bouton permet d'afficher les données filtrées du tableau soit sous forme de lignes, soit sous forme de visualisations de données ([#137](https://github.com/colinmaudry/colibre/issues/137))
+- Dans le Tableau, un bouton permet d'afficher les données filtrées du tableau soit sous forme de lignes (mode actuel, par défaut), soit sous forme de visualisations de données (réservé aux abonné·es) ([#137](https://github.com/colinmaudry/colibre/issues/137))
 - Sauvegarde automatique de la base de données des utilisateurs et utilisatrices
+- Après s'être connecté·e, on est redirigé vers la page où l'on se trouvait et non sur une page par défaut
 
 ##### 3.0.7
 

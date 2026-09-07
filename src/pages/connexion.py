@@ -90,7 +90,7 @@ def layout(error: str | None = None, email: str | None = None, **kwargs):
                 className="small d-block mt-2",
             ),
             html.Div("ou", className="text-center text-muted my-2"),
-            linkedin_button(),
+            linkedin_button(next_url),
             html.Div("ou", className="text-center text-muted my-2"),
             html.A(
                 "Pas encore de compte ? Voir les abonnements",

@@ -590,11 +590,20 @@ def toggle_navbar_collapse(n, is_open):
     return is_open
 
 
+_AUTH_PAGES = (
+    "/connexion",
+    "/inscription",
+    "/mot-de-passe-oublie",
+    "/verification-email",
+)
+
+
 @callback(
     Output("auth-nav-slot", "children"),
     Input("auth-nav-slot", "id"),
+    Input("_pages_location", "pathname"),
 )
-def _auth_nav(_):
+def _auth_nav(_, pathname=None):
     """« Mon compte » ouvre la liste des sections plutôt que de naviguer (#133).
 
     Les entrées viennent de `visible_sections`, la même source que la barre
@@ -605,7 +614,10 @@ def _auth_nav(_):
     par `use_pages` après l'exécution de ce module.
     """
     if not current_user.is_authenticated:
-        return dbc.NavItem(dbc.NavLink("Connexion", href="/connexion"))
+        href = "/connexion"
+        if pathname and pathname not in _AUTH_PAGES:
+            href += f"?next={pathname}"
+        return dbc.NavItem(dbc.NavLink("Connexion", href=href))
 
     from src.pages._compte_shell import (
         current_user_has_subscription,

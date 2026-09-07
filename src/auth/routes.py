@@ -20,7 +20,7 @@ def _post_login_url(user_id: int) -> str:
         from src.subscriptions import db as sub_db
 
         if sub_db.has_active_subscription(user_id):
-            return "/compte/admin"
+            return "/"
     except Exception:
         pass
     return "/compte/abonnement"

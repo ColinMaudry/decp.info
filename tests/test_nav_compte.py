@@ -81,6 +81,21 @@ def test_visiteur_anonyme_garde_le_lien_connexion(monkeypatch):
     assert "Mon compte" not in rendu
 
 
+def test_lien_connexion_porte_la_page_courante_en_next(monkeypatch):
+    """Cliquer sur « Connexion » depuis /tableau doit ramener l'utilisateur
+    sur /tableau après connexion, pas sur la page par défaut."""
+    monkeypatch.setattr(app_module, "current_user", _fake_user(False))
+    rendu = str(app_module._auth_nav(None, "/tableau"))
+    assert "/connexion?next=/tableau" in rendu
+
+
+def test_lien_connexion_omet_next_depuis_une_page_d_authentification(monkeypatch):
+    """Revenir sur /inscription après connexion n'aurait aucun sens."""
+    monkeypatch.setattr(app_module, "current_user", _fake_user(False))
+    rendu = str(app_module._auth_nav(None, "/inscription"))
+    assert "next=" not in rendu
+
+
 def test_barre_laterale_garde_son_propre_bouton_de_deconnexion(monkeypatch):
     """Non-régression : l'espace compte n'a rien perdu au passage."""
     monkeypatch.setattr(shell, "current_user_has_subscription", lambda: True)

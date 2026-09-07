@@ -165,6 +165,16 @@ def test_connexion_layout_has_linkedin_button():
     assert "/auth/linkedin" in html_str
 
 
+def test_connexion_layout_linkedin_button_forwards_next():
+    """Le bouton LinkedIn de /connexion doit relayer `next`, comme le fait déjà
+    le formulaire email/mot de passe juste au-dessus (champ caché `next`)."""
+    import src.app  # noqa: F401 - Initialize Dash app before importing pages
+    from src.pages.connexion import layout
+
+    html_str = str(layout(next="/tableau"))
+    assert "/auth/linkedin?next=/tableau" in html_str
+
+
 def test_connexion_layout_shows_oauth_error():
     import src.app  # noqa: F401 - Initialize Dash app before importing pages
     from src.pages.connexion import layout
